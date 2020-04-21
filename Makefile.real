@@ -1,0 +1,62 @@
+##################### Configurations #####################
+
+# list of all directories containing .cpp and .h code
+# space separated, no forwardslash in the end, must start with './'
+#
+SRC_DIRS := . 
+
+# additional base directory for #include
+#
+INCLUDE_DIRS := 
+
+# additional g++ compiler flags
+#
+EXTRA_FLAGS := 
+
+##########################################################
+
+DBG=0
+ifeq (${DBG},1)
+  FLAGS := -O0 -DBUILD_FLAVOR=DEBUG -DDEBUG_BUILD
+else
+  FLAGS := -O3 -DNDEBUG -DBUILD_FLAVOR=RELEASE
+endif
+
+SRC_RELDIR = ../../
+FLAGS += -std=c++11 -isystem $(SRC_RELDIR)./gtest/include -pthread -g
+FLAGS += $(EXTRA_FLAGS)
+FLAGS += $(foreach dir,$(INCLUDE_DIRS),-I$(SRC_RELDIR)$(dir))
+SRCS := $(foreach dir,$(SRC_DIRS),$(wildcard $(SRC_RELDIR)$(dir)/*.cpp))
+SRCS_AND_HEADERS := $(foreach dir,$(SRC_DIRS),$(wildcard $(SRC_RELDIR)$(dir)/*.cpp $(SRC_RELDIR)$(dir)/*.h))
+OBJS := $(SRCS:$(SRC_RELDIR)./%=%)
+OBJS := $(subst .cpp,.o,$(OBJS))
+OBJS := $(subst /,.,$(OBJS))
+
+main: $(OBJS) libgtest.a generated.dependency ../../Makefile.real
+	g++ $(FLAGS) $(OBJS) libgtest.a -o main
+
+generated.dependency: $(SRCS_AND_HEADERS) ../../Makefile.real
+	rm -f ./generated.dependency
+	for srcname in $(SRCS) ; do \
+		objname=$${srcname#"$(SRC_RELDIR)./"}; \
+		objname=$$(echo $$objname | sed -e 's/\//./g'); \
+		objname=$${objname%".cpp"}.o; \
+		g++ $(FLAGS) -I$(SRC_RELDIR)./gtest -MM $$srcname -MT $$objname >> ./generated.dependency; \
+		if [ $$? -ne 0 ]; then	\
+			rm -f ./generated.dependency;	\
+			exit 1;	\
+		fi;	\
+		printf "\tg++ \$$(FLAGS) $$srcname -c -o $$objname\n" >> ./generated.dependency; \
+	done
+
+include ./generated.dependency
+
+gtest-all.o:
+	g++ $(FLAGS) -I$(SRC_RELDIR)./gtest -c $(SRC_RELDIR)./gtest/src/gtest-all.cc
+
+libgtest.a: gtest-all.o
+	ar -rv libgtest.a gtest-all.o 
+
+clean:
+	rm *.o libgtest.a main generated.dependency
+
