@@ -3,15 +3,18 @@
 # list of all directories containing .cpp and .h code
 # space separated, no forwardslash in the end, must start with './'
 #
-SRC_DIRS := . 
+SRC_DIRS := . ./src
 
 # additional base directory for #include
 #
-INCLUDE_DIRS := 
+INCLUDE_DIRS := ./src
 
-# additional g++ compiler flags
+# additional clang++ compiler flags
 #
-EXTRA_FLAGS := 
+EXTRA_FLAGS := -I/usr/local/include -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS 
+EXTRA_FLAGS += -DTESTBUILD -std=c++17 -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Werror
+
+LD_EXTRA_FLAGS = $(shell llvm-config --ldflags --system-libs --libs)
 
 ##########################################################
 
@@ -23,7 +26,7 @@ else
 endif
 
 SRC_RELDIR = ../../
-FLAGS += -std=c++11 -isystem $(SRC_RELDIR)./gtest/include -pthread -g
+FLAGS += -isystem $(SRC_RELDIR)./gtest/include -pthread -g
 FLAGS += $(EXTRA_FLAGS)
 FLAGS += $(foreach dir,$(INCLUDE_DIRS),-I$(SRC_RELDIR)$(dir))
 SRCS := $(foreach dir,$(SRC_DIRS),$(wildcard $(SRC_RELDIR)$(dir)/*.cpp))
@@ -33,7 +36,7 @@ OBJS := $(subst .cpp,.o,$(OBJS))
 OBJS := $(subst /,.,$(OBJS))
 
 main: $(OBJS) libgtest.a generated.dependency ../../Makefile.real
-	g++ $(FLAGS) $(OBJS) libgtest.a -o main
+	clang++ $(OBJS) libgtest.a -o main $(FLAGS) $(LD_EXTRA_FLAGS)
 
 generated.dependency: $(SRCS_AND_HEADERS) ../../Makefile.real
 	rm -f ./generated.dependency
@@ -41,18 +44,18 @@ generated.dependency: $(SRCS_AND_HEADERS) ../../Makefile.real
 		objname=$${srcname#"$(SRC_RELDIR)./"}; \
 		objname=$$(echo $$objname | sed -e 's/\//./g'); \
 		objname=$${objname%".cpp"}.o; \
-		g++ $(FLAGS) -I$(SRC_RELDIR)./gtest -MM $$srcname -MT $$objname >> ./generated.dependency; \
+		clang++ $(FLAGS) -I$(SRC_RELDIR)./gtest -MM $$srcname -MT $$objname >> ./generated.dependency; \
 		if [ $$? -ne 0 ]; then	\
 			rm -f ./generated.dependency;	\
 			exit 1;	\
 		fi;	\
-		printf "\tg++ \$$(FLAGS) $$srcname -c -o $$objname\n" >> ./generated.dependency; \
+		printf "\tclang++ \$$(FLAGS) $$srcname -c -o $$objname\n" >> ./generated.dependency; \
 	done
 
 include ./generated.dependency
 
 gtest-all.o:
-	g++ $(FLAGS) -I$(SRC_RELDIR)./gtest -c $(SRC_RELDIR)./gtest/src/gtest-all.cc
+	clang++ -isystem $(SRC_RELDIR)./gtest/include -pthread -g -I$(SRC_RELDIR)./gtest -c $(SRC_RELDIR)./gtest/src/gtest-all.cc 
 
 libgtest.a: gtest-all.o
 	ar -rv libgtest.a gtest-all.o 
