@@ -1,0 +1,38 @@
+#!/usr/bin/python3 
+
+import os
+import sys
+
+path = os.path.realpath(__file__)
+base_dir = os.path.dirname(path)
+
+def PrintUsageGeneralAndDie():
+    print('Usage: pochivm-build <operation> [args...]')
+    sys.exit(1)
+    
+def PrintUsageMakeAndDie():
+    print('Usage: pochivm-build make [debug/release/clean]')
+    sys.exit(1)
+        
+if (len(sys.argv) < 2):
+    PrintUsageGeneralAndDie()
+
+op = sys.argv[1]
+
+if (op == 'make'):
+    if (len(sys.argv) < 3):
+        PrintUsageMakeAndDie()
+        
+    target = sys.argv[2]
+    if (target != 'debug' and target != 'release' and target != 'clean'):
+        print('Unknown make target "%s".' % target)
+        PrintUsageMakeAndDie()
+    
+    cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM && make %s'" % (base_dir, target)
+    r = os.system(cmd)
+    sys.exit(r)
+else:
+	print('Unknown operation "%s".' % op)
+	PrintUsageGeneralAndDie()
+	
+

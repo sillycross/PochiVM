@@ -12,7 +12,7 @@ INCLUDE_DIRS := ./src
 # additional clang++ compiler flags
 #
 EXTRA_FLAGS := -I/usr/local/include -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS 
-EXTRA_FLAGS += -DTESTBUILD -std=c++17 -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Werror
+EXTRA_FLAGS += -DTESTBUILD -std=c++17 -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Werror -ffile-prefix-map=../.././=
 
 LD_EXTRA_FLAGS = $(shell llvm-config --ldflags --system-libs --libs)
 
@@ -55,7 +55,7 @@ generated.dependency: $(SRCS_AND_HEADERS) ../../Makefile.real
 include ./generated.dependency
 
 gtest-all.o:
-	clang++ -isystem $(SRC_RELDIR)./gtest/include -pthread -g -I$(SRC_RELDIR)./gtest -c $(SRC_RELDIR)./gtest/src/gtest-all.cc 
+	clang++ -isystem $(SRC_RELDIR)./gtest/include -pthread -g -I$(SRC_RELDIR)./gtest -ffile-prefix-map=../.././= -c $(SRC_RELDIR)./gtest/src/gtest-all.cc 
 
 libgtest.a: gtest-all.o
 	ar -rv libgtest.a gtest-all.o 

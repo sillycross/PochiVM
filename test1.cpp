@@ -20,33 +20,33 @@ TEST(Sanity, FindNthPrime)
     auto isPrime = fn.NewVariable<bool>("isPrime");
 
     fn.SetBody(
-      Declare(numPrimesFound, 0),
-      Declare(valToTest, 1),
-      While(numPrimesFound.Load() < n.Load()).Do(
-        Increment(valToTest),
-        Declare(isPrime, true),
-        For(
-          Declare(i, 2),
-          i.Load() * i.Load() <= valToTest.Load(),
-          Increment(i)
-        ).Do(
-          If(valToTest.Load() % i.Load() == Literal<int>(0)).Then(
-            Assign(isPrime, Literal<bool>(false)),
-            Break()
-          )
+        Declare(numPrimesFound, 0),
+        Declare(valToTest, 1),
+        While(numPrimesFound.Load() < n.Load()).Do(
+            Increment(valToTest),
+            Declare(isPrime, true),
+            For(
+                Declare(i, 2),
+                i.Load() * i.Load() <= valToTest.Load(),
+                Increment(i)
+            ).Do(
+                If(valToTest.Load() % i.Load() == Literal<int>(0)).Then(
+                    Assign(isPrime, Literal<bool>(false)),
+                    Break()
+                )
+            ),
+            If(isPrime).Then(
+                Increment(numPrimesFound)
+            )
         ),
-        If(isPrime).Then(
-          Increment(numPrimesFound)
-        )
-      ),
-      Return(valToTest.Load())
+        Return(valToTest.Load())
     );
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                GetGeneratedFunctionInterpMode<FnPrototype>("find_nth_prime");
+                           GetGeneratedFunctionInterpMode<FnPrototype>("find_nth_prime");
     int ret = interpFn(1000);
     ReleaseAssert(ret == 7919);
 }
