@@ -223,7 +223,7 @@ Value<T> Trashptr()
 // Stores a m_ptr of type T*
 //
 template<typename T>
-class Variable : protected Value<T>
+class Variable : public Value<T>
 {
 public:
     // CPP types are specialized, should not hit here
@@ -252,6 +252,7 @@ public:
         return Value<T*>(m_varPtr);
     }
 
+    /*
     // All operations supported after implicit cast to Value<T>
     //
     template<typename U, typename = std::enable_if_t<
@@ -298,6 +299,7 @@ public:
     {
         return Load().Deref();
     }
+    */
 
     // Immutable. There is no reason to modify m_varPtr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
@@ -335,7 +337,7 @@ template<typename T>
 Value<void> Increment(const Variable<T>& var)
 {
     static_assert(AstTypeHelper::is_primitive_int_type<T>::value, "may only increment integer");
-    return Assign(var, var.Load() + Literal<T>(1));
+    return Assign(var, var + Literal<T>(1));
 }
 
 }   // namespace Ast

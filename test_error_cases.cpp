@@ -134,7 +134,7 @@ TEST(SanityError, ReuseAstNode)
     using FnPrototype = std::function<int(int)>;
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
 
-    auto x = Call<FnPrototype>("BadFn", param.Load() - Literal<int>(1));
+    auto x = Call<FnPrototype>("BadFn", param - Literal<int>(1));
     fn.SetBody(Return(x * x));
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -156,13 +156,13 @@ TEST(SanityError, UseVarInOtherFn_1)
     auto v = fn.NewVariable<int>();
     fn.SetBody(
         Declare(v, 1),
-        Return(v.Load())
+        Return(v)
     );
 
     auto [fn2] = NewFunction<FnPrototype>("BadFn");
     fn2.SetBody(
         Declare(v, 2),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -186,7 +186,7 @@ TEST(SanityError, UseVarInOtherFn_2)
 
     auto [fn2] = NewFunction<FnPrototype>("BadFn");
     fn2.SetBody(
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -208,12 +208,12 @@ TEST(SanityError, UseVarInOtherFn_3)
     auto v = fn.NewVariable<int>();
     fn.SetBody(
         Declare(v, 1),
-        Return(v.Load())
+        Return(v)
     );
 
     auto [fn2] = NewFunction<FnPrototype>("BadFn");
     fn2.SetBody(
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -235,7 +235,7 @@ TEST(SanityError, UseUndeclaredVar)
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
         Assign(v, Literal<int>(1)),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -258,7 +258,7 @@ TEST(SanityError, RedeclareVar_1)
     fn.SetBody(
         Declare(v, Literal<int>(1)),
         Declare(v, Literal<int>(2)),
-        Return(v.Load())
+        Return(v)
      );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -279,12 +279,12 @@ TEST(SanityError, RedeclareVar_2)
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
-        If(param.Load() > Literal<int>(0)).Then(
+        If(param > Literal<int>(0)).Then(
             Declare(v, Literal<int>(1)),
-            Return(v.Load())
+            Return(v)
         ).Else(
             Declare(v, Literal<int>(2)),
-            Return(v.Load())
+            Return(v)
         )
     );
 
@@ -306,11 +306,11 @@ TEST(SanityError, UseOutOfScopeVar_1)
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
-        If(param.Load() > Literal<int>(0)).Then(
+        If(param > Literal<int>(0)).Then(
             Declare(v, Literal<int>(1)),
-            Return(v.Load())
+            Return(v)
         ).Else(
-            Return(v.Load())
+            Return(v)
         )
     );
 
@@ -337,7 +337,7 @@ TEST(SanityError, UseOutOfScopeVar_2)
             Increment(v)
         ),
         Increment(v),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -362,7 +362,7 @@ TEST(SanityError, UseOutOfScopeVar_3)
             Declare(v, 1),
             Increment(v)
         ),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -386,7 +386,7 @@ TEST(SanityError, UseOutOfScopeVar_4)
         For(Declare(v, 1), Literal<bool>(true), Block()).Do(
             Increment(v)
         ),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
@@ -414,7 +414,7 @@ TEST(Sanity, BlockHasNoScopeEffect)
             Increment(v)
         ),
         Increment(v),
-        Return(v.Load())
+        Return(v)
     );
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
@@ -479,7 +479,7 @@ TEST(SanityError, NoReturnValue)
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
         Block(
-            Declare(v, param.Load()),
+            Declare(v, param),
             Increment(v)
         ),
         Increment(v)

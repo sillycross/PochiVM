@@ -22,24 +22,24 @@ TEST(Sanity, FindNthPrime)
     fn.SetBody(
         Declare(numPrimesFound, 0),
         Declare(valToTest, 1),
-        While(numPrimesFound.Load() < n.Load()).Do(
+        While(numPrimesFound < n).Do(
             Increment(valToTest),
             Declare(isPrime, true),
             For(
                 Declare(i, 2),
-                i.Load() * i.Load() <= valToTest.Load(),
+                i * i <= valToTest,
                 Increment(i)
             ).Do(
-                If(valToTest.Load() % i.Load() == Literal<int>(0)).Then(
+                If(valToTest % i == Literal<int>(0)).Then(
                     Assign(isPrime, Literal<bool>(false)),
                     Break()
                 )
             ),
-            If(isPrime.Load()).Then(
+            If(isPrime).Then(
                 Increment(numPrimesFound)
             )
         ),
-        Return(valToTest.Load())
+        Return(valToTest)
     );
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());

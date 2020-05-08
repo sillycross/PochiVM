@@ -15,11 +15,11 @@ TEST(Sanity, FibonacciSeq)
     auto [fn, n] = NewFunction<FnPrototype>("fib_nth");
 
     fn.SetBody(
-        If(n.Load() <= Literal<int>(2)).Then(
+        If(n <= Literal<int>(2)).Then(
                 Return(Literal<uint64_t>(1))
         ).Else(
-                Return(Call<FnPrototype>("fib_nth", n.Load() - Literal<int>(1))
-                       + Call<FnPrototype>("fib_nth", n.Load() - Literal<int>(2)))
+                Return(Call<FnPrototype>("fib_nth", n - Literal<int>(1))
+                       + Call<FnPrototype>("fib_nth", n - Literal<int>(2)))
         )
     );
 
