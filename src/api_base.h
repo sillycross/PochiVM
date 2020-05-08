@@ -94,7 +94,7 @@ public:
                       "must be a non void* pointer to deref");
 
         using _PointerElementType = typename std::remove_pointer<T>::type;
-        static_assert(!AstTypeHelper::is_cpp_class_type<_PointerElementType>::value);
+        static_assert(!AstTypeHelper::is_cpp_class_type<_PointerElementType>::value, "must not be cpp class type");
         return Value<_PointerElementType>(AstDereferenceExpr(m_ptr));
     }
 
@@ -223,7 +223,7 @@ Value<T> Trashptr()
 // Stores a m_ptr of type T*
 //
 template<typename T>
-class Variable
+class Variable : protected Value<T>
 {
 public:
     // CPP types are specialized, should not hit here
@@ -232,30 +232,24 @@ public:
                   std::is_pointer<T>::value, "Bad type T. Add to for_each_xop_type.h?");
 
     Variable(AstVariable* ptr)
-        : m_ptr(ptr)
+        : Value<T>(new AstDereferenceVariableExpr(ptr))
+        , m_varPtr(ptr)
     {
-        TestAssert(m_ptr->GetTypeId().IsType<T*>());
+        TestAssert(m_varPtr->GetTypeId().IsType<T*>());
     }
 
     // Load the value currently stored in the variable.
     //
     Value<T> Load() const
     {
-        return Value<T>(new AstDereferenceExpr(m_ptr));
-    }
-
-    // Implicit cast to Value<T> by dereference
-    //
-    operator Value<T>() const
-    {
-        return Load();
+        return *static_cast<const Value<T>*>(this);
     }
 
     // Address of this variable
     //
     Value<T*> Addr() const
     {
-        return Value<T*>(m_ptr);
+        return Value<T*>(m_varPtr);
     }
 
     // All operations supported after implicit cast to Value<T>
@@ -305,10 +299,10 @@ public:
         return Load().Deref();
     }
 
-    // Immutable. There is no reason to modify m_ptr after construction, and
+    // Immutable. There is no reason to modify m_varPtr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
-    AstVariable* const m_ptr;
+    AstVariable* const m_varPtr;
 };
 
 template<typename T>
@@ -331,7 +325,7 @@ Variable<typename std::remove_pointer<T>::type> Value<T>::Deref() const
 template<typename T>
 Value<void> Assign(const Variable<T>& lhs, const Value<T>& rhs)
 {
-    return Value<void>(new AstAssignExpr(lhs.m_ptr, rhs.m_ptr));
+    return Value<void>(new AstAssignExpr(lhs.m_varPtr, rhs.m_ptr));
 }
 
 // Language utility: increment an integer

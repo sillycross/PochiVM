@@ -120,6 +120,57 @@ public:
     AstVariable* m_variable;
 };
 
+// Functionality is identical to AstDereferenceExpr, except that
+// (1) This works only directly on an AstVariable
+// (2) This node may be reused in AST tree
+// In metaprogramming frontend, Variable class inherit Value class,
+// and whenever we create a Variable, we create a AstDereferenceVariableExpr node
+// of this variable as its Value base class.
+//
+class AstDereferenceVariableExpr : public AstNodeBase
+{
+public:
+    AstDereferenceVariableExpr(AstVariable* operand)
+        : AstNodeBase(operand->GetTypeId().RemovePointer())
+        , m_operand(operand)
+    {
+        TestAssert(m_operand->GetTypeId().IsPointerType());
+        // cannot dereference a cpp_class* or void*, those do not make sense
+        //
+        TestAssert(!GetTypeId().IsCppClassType() && !GetTypeId().IsVoid());
+    }
+
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    template<typename T>
+    void InterpImpl(T* out)
+    {
+        T* src;
+        m_operand->Interp(&src);
+        *out = *src;
+    }
+
+    GEN_CLASS_METHOD_SELECTOR(SelectImpl,
+                              AstDereferenceVariableExpr,
+                              InterpImpl,
+                              AstTypeHelper::not_cpp_class_or_void_type)
+
+    virtual void SetupInterpImpl() override
+    {
+        m_interpFn = SelectImpl(GetTypeId());
+    }
+
+    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    {
+        fn(m_operand);
+    }
+
+    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDereferenceVariableExpr; }
+
+private:
+    AstVariable* m_operand;
+};
+
 // A syntax sugar holding a list of statements.
 // It has no effect on program behavior.
 //

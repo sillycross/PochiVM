@@ -35,7 +35,7 @@ TEST(Sanity, FindNthPrime)
                     Break()
                 )
             ),
-            If(isPrime).Then(
+            If(isPrime.Load()).Then(
                 Increment(numPrimesFound)
             )
         ),

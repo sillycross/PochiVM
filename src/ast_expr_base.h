@@ -26,6 +26,7 @@ enum class AstNodeType
     AstTrashPtrExpr,
     AstVariable,
     AstDeclareVariable,
+    AstDereferenceVariableExpr,
     AstBlock,
     AstScope,
     AstIfStatement,

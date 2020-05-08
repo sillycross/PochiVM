@@ -195,7 +195,7 @@ FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramN
 template<typename T>
 Value<void> Declare(const Variable<T>& var)
 {
-    return Value<void>(new AstDeclareVariable(var.m_ptr));
+    return Value<void>(new AstDeclareVariable(var.m_varPtr));
 }
 
 // Declare a variable, with initialization expression
@@ -204,8 +204,8 @@ template<typename T>
 Value<void> Declare(const Variable<T>& var, const Value<T>& value)
 {
     return Value<void>(new AstDeclareVariable(
-                           var.m_ptr,
-                           new AstAssignExpr(var.m_ptr, value.m_ptr)));
+                           var.m_varPtr,
+                           new AstAssignExpr(var.m_varPtr, value.m_ptr)));
 }
 
 // Declare a variable, with constant value initialization
@@ -216,8 +216,8 @@ Value<void> Declare(const Variable<T>& var, T value)
     static_assert(AstTypeHelper::is_primitive_type<T>::value,
                   "may only constant-initialize primitive type variable");
     return Value<void>(new AstDeclareVariable(
-                           var.m_ptr,
-                           new AstAssignExpr(var.m_ptr, Literal<T>(value).m_ptr)));
+                           var.m_varPtr,
+                           new AstAssignExpr(var.m_varPtr, Literal<T>(value).m_ptr)));
 }
 
 namespace internal

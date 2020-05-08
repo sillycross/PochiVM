@@ -21,6 +21,11 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     TestAssert(false && "unimplemented");
 }
 
+Value* WARN_UNUSED AstDereferenceVariableExpr::EmitIRImpl()
+{
+    TestAssert(false && "unimplemented");
+}
+
 Value* WARN_UNUSED AstBlock::EmitIRImpl()
 {
     TestAssert(false && "unimplemented");

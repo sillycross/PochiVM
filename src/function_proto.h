@@ -674,14 +674,23 @@ inline bool WARN_UNUSED AstFunction::Validate()
             // All other nodes should only have one parent in AST tree.
             //
             if (nodeType != AstNodeType::AstVariable &&
-                    nodeType != AstNodeType::AstLiteralExpr &&
-                    nodeType != AstNodeType::AstNullptrExpr &&
-                    nodeType != AstNodeType::AstTrashPtrExpr)
+                nodeType != AstNodeType::AstLiteralExpr &&
+                nodeType != AstNodeType::AstNullptrExpr &&
+                nodeType != AstNodeType::AstTrashPtrExpr &&
+                nodeType != AstNodeType::AstDereferenceVariableExpr)
             {
                 REPORT_ERR("Function %s: illegal reuse of AST node type %d",
                            m_name.c_str(), int(nodeType));
                 success = false;
                 return;
+            }
+            if (nodeType == AstNodeType::AstDereferenceVariableExpr)
+            {
+                // For DereferenceVariableExpr, even if we allow them to be reused,
+                // we still need to validate that the variable it is dereferencing
+                // has not gone not out of scope, at each time this node is reused.
+                //
+                Recurse();
             }
             if (nodeType == AstNodeType::AstVariable)
             {
