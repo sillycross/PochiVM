@@ -234,7 +234,7 @@ struct typesafe_populate_parameters_helper
     template<size_t n>
     static void populate_internal(std::vector<AstNodeBase*>& out)
     {
-        static_assert(n == 0, "wrong number of arguments");
+        static_assert(n == 0, "wrong number of arguments supplied to call expression");
         assert(out.size() == numArgs);
         std::ignore = out;
     }
@@ -244,7 +244,7 @@ struct typesafe_populate_parameters_helper
                            Value< ArgType<numArgs-n> > first,
                            Targs... args)
     {
-        static_assert(sizeof...(Targs) == n - 1, "wrong number of arguments");
+        static_assert(sizeof...(Targs) == n - 1, "wrong number of arguments supplied to call expression");
         out.push_back(first.m_ptr);
         populate_internal<n-1>(out, args...);
     }
@@ -252,7 +252,7 @@ struct typesafe_populate_parameters_helper
     template<typename... Targs>
     static std::vector<AstNodeBase*> populate(Targs... args)
     {
-        static_assert(sizeof...(Targs) == numArgs, "wrong number of arguments");
+        static_assert(sizeof...(Targs) == numArgs, "wrong number of arguments supplied to call expression");
         std::vector<AstNodeBase*> ret;
         populate_internal<numArgs>(ret /*out*/, args...);
         return ret;

@@ -250,7 +250,8 @@ public:
 
     AstFunction* NewAstFunction(const std::string& name)
     {
-        assert(!m_functions.count(name));
+        // TODO: this should throw
+        TestAssert(!m_functions.count(name));
         AstFunction* ret = new AstFunction(name);
         m_functions[name] = ret;
         return ret;
@@ -835,7 +836,7 @@ inline bool WARN_UNUSED AstFunction::Validate()
             if (loopStack.size() == 0)
             {
                 AstBreakOrContinueStmt* b = assert_cast<AstBreakOrContinueStmt*>(cur);
-                REPORT_ERR("Function %s: use of '%s' statement while not in a loop.",
+                REPORT_ERR("Function %s: use of '%s' statement while not in a loop",
                            m_name.c_str(), (b->IsBreakStatement() ? "Break" : "Continue"));
                 success = false;
                 return;
