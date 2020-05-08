@@ -32,7 +32,7 @@ if (op == 'make'):
     r = os.system(cmd)
     sys.exit(r)
 else:
-	print('Unknown operation "%s".' % op)
-	PrintUsageGeneralAndDie()
+    print('Unknown operation "%s".' % op)
+    PrintUsageGeneralAndDie()
 	
 

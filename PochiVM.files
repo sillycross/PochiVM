@@ -1,4 +1,3 @@
-test1.cpp
 main.cpp
 src/pochivm_context.h
 src/pochivm.hpp
@@ -29,3 +28,5 @@ src/api_vt_base.h
 src/api_lang_constructs.h
 src/api_function_proto.h
 src/api_base.h
+test_fibonacci.cpp
+test_find_nth_prime.cpp

@@ -26,6 +26,12 @@ struct ErrorContext
 
     bool HasError() const { return m_hasError; }
 
+    void PrintError() const
+    {
+        TestAssert(m_hasError);
+        printf("%s:%u: %s: %s.\n", m_errorFile, m_errorLine, m_errorFunction, m_errorMsg);
+    }
+
     static const size_t x_max_errmsg_len = 2000;
 
     bool m_hasError;

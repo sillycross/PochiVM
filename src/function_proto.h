@@ -11,7 +11,7 @@ namespace internal
 {
 
 template<typename T>
-static void AstFunctionInterpStoreParamsHelper(T* dst, AstNodeBase* src)
+void AstFunctionInterpStoreParamsHelper(T* dst, AstNodeBase* src)
 {
     T value;
     src->Interp(&value);
@@ -149,20 +149,26 @@ public:
     //
     void Interp(AstNodeBase** params, void* returnValueOut)
     {
-        // Setup the new stack frame, saving the old one
+        // Allocate space for the new stack frame
         //
         assert(m_interpStackFrameSize != static_cast<uint32_t>(-1) && m_interpStackFrameSize > 0);
         void* stackFrameBase = alloca(m_interpStackFrameSize);
-        uintptr_t oldStackFrameBase = thread_pochiVMContext->m_interpStackFrameBase;
-        thread_pochiVMContext->m_interpStackFrameBase = reinterpret_cast<uintptr_t>(stackFrameBase);
 
         // Store parameters into stack frame
+        // The parameter expressions must be evaluated in the OLD stack frame,
+        // so it is important we not switch to the new stack frame now.
+        // However, their results should be stored into corrresponding addresses in new stack frame.
         //
         assert(m_interpStoreParamFns.size() == m_params.size());
         for (size_t i = 0; i < GetNumParams(); i++)
         {
-            InterpSetParam(i, params[i]);
+            InterpSetParam(reinterpret_cast<uintptr_t>(stackFrameBase), i, params[i]);
         }
+
+        // Switch to the new stack frame, saving the old one
+        //
+        uintptr_t oldStackFrameBase = thread_pochiVMContext->m_interpStackFrameBase;
+        thread_pochiVMContext->m_interpStackFrameBase = reinterpret_cast<uintptr_t>(stackFrameBase);
 
         // Execute function
         //
@@ -194,10 +200,10 @@ public:
 
 private:
 
-    void InterpSetParam(size_t i, AstNodeBase* param)
+    void InterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
     {
         assert(i < GetNumParams() && param->GetTypeId() == GetParamType(i));
-        uintptr_t addr = thread_pochiVMContext->m_interpStackFrameBase + m_params[i]->m_interpOffset;
+        uintptr_t addr = newStackFrameBase + m_params[i]->m_interpOffset;
         m_interpStoreParamFns[i](reinterpret_cast<void*>(addr), param);
     }
 
@@ -562,16 +568,31 @@ inline void AstFunction::PrepareForInterp()
         if (n % align == 0) return n;
         return n / align * align + align;
     };
+    auto interpSetupFn = [&](AstNodeBase* cur)
+    {
+        assert(cur->GetColorMark().IsNoColor());
+        cur->GetColorMark().MarkColorA();
+        cur->SetupInterpImpl();
+        AstNodeType nodeType = cur->GetAstNodeType();
+        if (nodeType == AstNodeType::AstVariable)
+        {
+            AstVariable* v = assert_cast<AstVariable*>(cur);
+            // pad to natural alignment min(8, storageSize)
+            //
+            size = up_align(size, std::min(8U, v->m_storageSize));
+            v->m_interpOffset = size;
+            size += v->m_storageSize;
+        }
+    };
     // Allocate space for parameters
+    // We need to do these specially, becuase AST traverse would only allocate space
+    // for them if they were used. But space for parameters need to be allocated
+    // even if unused because caller always write into there.
     // TODO: sort by size to save space
     //
     for (size_t i = 0; i < m_params.size(); i++)
     {
-        // pad to natural alignment min(8, storageSize)
-        //
-        size = up_align(size, std::min(8U, m_params[i]->m_storageSize));
-        m_params[i]->m_interpOffset = size;
-        size += m_params[i]->m_storageSize;
+        interpSetupFn(m_params[i]);
     }
     // Allocate space for variables, and do per-node interp preparation
     //
@@ -583,16 +604,7 @@ inline void AstFunction::PrepareForInterp()
         {
             return;
         }
-        cur->GetColorMark().MarkColorA();
-        cur->SetupInterpImpl();
-        AstNodeType nodeType = cur->GetAstNodeType();
-        if (nodeType == AstNodeType::AstVariable)
-        {
-            AstVariable* v = assert_cast<AstVariable*>(cur);
-            size = up_align(size, std::min(8U, v->m_storageSize));
-            v->m_interpOffset = size;
-            size += v->m_storageSize;
-        }
+        interpSetupFn(cur);
         Recurse();
     };
     TraverseFunctionBody(traverseFn);
@@ -788,7 +800,8 @@ inline bool WARN_UNUSED AstFunction::Validate()
             {
                 if (!GetReturnType().IsVoid())
                 {
-                    REPORT_ERR("Function %s: return statement returned void, expects %s",
+                    REPORT_ERR("Function %s: return type does not match function prototype. "
+                               "Return statement returned void, expects %s",
                                m_name.c_str(), GetReturnType().Print().c_str());
                     success = false;
                     return;
@@ -799,13 +812,15 @@ inline bool WARN_UNUSED AstFunction::Validate()
                 if (GetReturnType().IsVoid())
                 {
                     REPORT_ERR("Function %s: returning a void expression is not supported. "
-                               "Instead of 'Return(Expr())', use 'Expr(); Return();'", m_name.c_str());
+                               "Instead of 'Return(VoidExpr())', use 'VoidExpr(); Return();'",
+                               m_name.c_str());
                     success = false;
                     return;
                 }
                 if (r->m_retVal->GetTypeId() != GetReturnType())
                 {
-                    REPORT_ERR("Function %s: return statement returned %s, expects %s",
+                    REPORT_ERR("Function %s: return type does not match function prototype. "
+                               "Return statement returned %s, expects %s",
                                m_name.c_str(),
                                r->m_retVal->GetTypeId().Print().c_str(),
                                GetReturnType().Print().c_str());
