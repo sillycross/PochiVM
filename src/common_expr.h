@@ -67,7 +67,7 @@ public:
         *out = *reinterpret_cast<T*>(m_as_rawdata);
     }
 
-    GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstLiteralExpr, InterpImpl, AstTypeHelper::is_primitive_type)
+    GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstLiteralExpr, InterpImpl, AstTypeHelper::primitive_or_pointer_type)
 
     virtual void SetupInterpImpl() override
     {

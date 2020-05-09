@@ -28,7 +28,9 @@ src/api_vt_base.h
 src/api_lang_constructs.h
 src/api_function_proto.h
 src/api_base.h
+src/test_sanity.cpp
 test_error_cases.cpp
 test_fibonacci.cpp
 test_find_nth_prime.cpp
+test_sanity_typecasts.cpp
 test_util_helper.h
