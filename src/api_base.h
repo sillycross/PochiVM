@@ -95,7 +95,7 @@ public:
 
         using _PointerElementType = typename std::remove_pointer<T>::type;
         static_assert(!AstTypeHelper::is_cpp_class_type<_PointerElementType>::value, "must not be cpp class type");
-        return Value<_PointerElementType>(AstDereferenceExpr(m_ptr));
+        return Value<_PointerElementType>(new AstDereferenceExpr(m_ptr));
     }
 
     template<typename Enable = void, std::enable_if_t<(
