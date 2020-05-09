@@ -4,6 +4,13 @@
 #include "common_expr.h"
 #include "pochivm_context.h"
 
+namespace llvm
+{
+
+class Twine;
+
+}   // namespace llvm
+
 namespace Ast
 {
 
@@ -13,12 +20,12 @@ class AstScope;
 class AstVariable : public AstNodeBase
 {
 public:
-    AstVariable(TypeId typeId, AstFunction* owner, const char* name = "var")
+    AstVariable(TypeId typeId, AstFunction* owner, uint32_t varnameSuffix, const char* name = "var")
         : AstNodeBase(typeId)
         , m_varname(name)
         , m_functionOwner(owner)
         , m_llvmValue(nullptr)
-        , m_varnameSuffix(static_cast<uint32_t>(-1))
+        , m_varnameSuffix(varnameSuffix)
         , m_storageSize(static_cast<uint32_t>(typeId.RemovePointer().Size()))
         , m_interpOffset(static_cast<uint32_t>(-1))
     {
@@ -51,6 +58,30 @@ public:
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstVariable; }
 
+    llvm::Twine GetVarName();
+
+    const char* GetVarNameNoSuffix() const { return m_varname; }
+    uint32_t GetVarSuffix() const { return m_varnameSuffix; }
+    AstFunction* GetFunctionOwner() const { return m_functionOwner; }
+
+    void SetInterpOffset(uint32_t offset)
+    {
+        assert(m_interpOffset == static_cast<uint32_t>(-1) && offset != static_cast<uint32_t>(-1));
+        m_interpOffset = offset;
+    }
+
+    uint32_t GetInterpOffset() const
+    {
+        assert(m_interpOffset != static_cast<uint32_t>(-1));
+        return m_interpOffset;
+    }
+
+    uint32_t GetStorageSize() const
+    {
+        return m_storageSize;
+    }
+
+private:
     // name of the variable
     //
     const char* m_varname;

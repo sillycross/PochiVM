@@ -217,7 +217,7 @@ TEST(Sanity, StaticCastNullptrDisallowed)
     std::ignore = fn;
 }
 
-TEST(Sanity, DynamicCast_1)
+TEST(Sanity, ReinterpretCast_1)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -244,7 +244,7 @@ TEST(Sanity, DynamicCast_1)
     ReleaseAssert(*interpFn(&x) == u.vi);
 }
 
-TEST(Sanity, DynamicCast_2)
+TEST(Sanity, ReinterpretCast_2)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -266,7 +266,7 @@ TEST(Sanity, DynamicCast_2)
     ReleaseAssert(interpFn(&x) == reinterpret_cast<uintptr_t>(&x));
 }
 
-TEST(Sanity, DynamicCast_3)
+TEST(Sanity, ReinterpretCast_3)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;

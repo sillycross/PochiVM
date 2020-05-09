@@ -71,7 +71,7 @@ public:
     template<typename T>
     Variable<T> NewVariable(const char* name = "var")
     {
-        return Variable<T>(new AstVariable(TypeId::Get<T*>(), m_ptr, name));
+        return Variable<T>(new AstVariable(TypeId::Get<T*>(), m_ptr, m_ptr->GetNextVarSuffix(), name));
     }
 
     template<typename... T>

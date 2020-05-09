@@ -168,7 +168,7 @@ TEST(SanityError, UseVarInOtherFn_1)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of local variable var belonging to another function Fn1";
+    const char* expected = "Function BadFn: use of local variable var_0 belonging to another function Fn1";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -192,7 +192,7 @@ TEST(SanityError, UseVarInOtherFn_2)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of local variable var belonging to another function Fn1";
+    const char* expected = "Function BadFn: use of local variable var_0 belonging to another function Fn1";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -219,7 +219,7 @@ TEST(SanityError, UseVarInOtherFn_3)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of local variable var belonging to another function Fn1";
+    const char* expected = "Function BadFn: use of local variable var_0 belonging to another function Fn1";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -241,7 +241,7 @@ TEST(SanityError, UseUndeclaredVar)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of undeclared variable myVarName";
+    const char* expected = "Function BadFn: use of undeclared variable myVarName_0";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -264,7 +264,7 @@ TEST(SanityError, RedeclareVar_1)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: re-declaration of variable myVarName";
+    const char* expected = "Function BadFn: re-declaration of variable myVarName_0";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -291,7 +291,7 @@ TEST(SanityError, RedeclareVar_2)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: re-declaration of variable myVarName";
+    const char* expected = "Function BadFn: re-declaration of variable myVarName_1";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -317,7 +317,7 @@ TEST(SanityError, UseOutOfScopeVar_1)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of out-of-scope variable myVarName";
+    const char* expected = "Function BadFn: use of out-of-scope variable myVarName_1";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -343,7 +343,7 @@ TEST(SanityError, UseOutOfScopeVar_2)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of out-of-scope variable myVarName";
+    const char* expected = "Function BadFn: use of out-of-scope variable myVarName_0";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -368,7 +368,7 @@ TEST(SanityError, UseOutOfScopeVar_3)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of out-of-scope variable myVarName";
+    const char* expected = "Function BadFn: use of out-of-scope variable myVarName_0";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 
@@ -392,7 +392,7 @@ TEST(SanityError, UseOutOfScopeVar_4)
     ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(thread_errorContext->HasError());
 
-    const char* expected = "Function BadFn: use of out-of-scope variable myVarName";
+    const char* expected = "Function BadFn: use of out-of-scope variable myVarName_0";
     ReleaseAssert(strcmp(expected, thread_errorContext->m_errorMsg) == 0);
 }
 

@@ -37,6 +37,7 @@ private:
         , m_name(name)
         , m_body(new AstScope())
         , m_generatedPrototype(nullptr)
+        , m_varSuffixOrdinal(0)
         , m_interpStackFrameSize(static_cast<uint32_t>(-1))
         , m_interpStoreParamFns()
         , m_interpStoreRetValFn(nullptr)
@@ -51,7 +52,7 @@ public:
     // We need to emit all the function definitions before generating any function body,
     // otherwise cross invocation (A calling B and B calling A) would inevitably fail.
     //
-    bool WARN_UNUSED EmitDefinition();
+    void EmitDefinition();
 
     // Emit the function body
     //
@@ -115,9 +116,15 @@ public:
         return m_params;
     }
 
+    uint32_t GetNextVarSuffix()
+    {
+        return m_varSuffixOrdinal++;
+    }
+
     void AddParam(TypeId type, const char* name)
     {
-        m_params.push_back(new AstVariable(type.AddPointer(), this /*owner*/, name));
+        m_params.push_back(new AstVariable(
+                               type.AddPointer(), this /*owner*/, GetNextVarSuffix(), name));
     }
 
     void SetParamName(size_t i, const char* name)
@@ -203,7 +210,7 @@ private:
     void InterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
     {
         assert(i < GetNumParams() && param->GetTypeId() == GetParamType(i));
-        uintptr_t addr = newStackFrameBase + m_params[i]->m_interpOffset;
+        uintptr_t addr = newStackFrameBase + m_params[i]->GetInterpOffset();
         m_interpStoreParamFns[i](reinterpret_cast<void*>(addr), param);
     }
 
@@ -217,6 +224,9 @@ private:
     std::string m_name;
     AstScope* m_body;
     llvm::Function* m_generatedPrototype;
+    // ordinal suffix for the next variable declared
+    //
+    uint32_t m_varSuffixOrdinal;
 
     // Interp data
     //
@@ -580,9 +590,9 @@ inline void AstFunction::PrepareForInterp()
             AstVariable* v = assert_cast<AstVariable*>(cur);
             // pad to natural alignment min(8, storageSize)
             //
-            size = up_align(size, std::min(8U, v->m_storageSize));
-            v->m_interpOffset = size;
-            size += v->m_storageSize;
+            size = up_align(size, std::min(8U, v->GetStorageSize()));
+            v->SetInterpOffset(size);
+            size += v->GetStorageSize();
         }
     };
     // Allocate space for parameters
@@ -695,10 +705,10 @@ inline bool WARN_UNUSED AstFunction::Validate()
             if (nodeType == AstNodeType::AstVariable)
             {
                 AstVariable* v = assert_cast<AstVariable*>(cur);
-                if (v->m_functionOwner != this)
+                if (v->GetFunctionOwner() != this)
                 {
-                    REPORT_ERR("Function %s: use of local variable %s belonging to another function %s",
-                               m_name.c_str(), v->m_varname, v->m_functionOwner->m_name.c_str());
+                    REPORT_ERR("Function %s: use of local variable %s_%u belonging to another function %s",
+                               m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix(), v->GetFunctionOwner()->m_name.c_str());
                     success = false;
                     return;
                 }
@@ -707,8 +717,8 @@ inline bool WARN_UNUSED AstFunction::Validate()
                     // This should not happen. If it is visited, it should be in varScope
                     //
                     TestAssert(false);
-                    REPORT_ERR("Function %s: internal bug? variable %s",
-                               m_name.c_str(), v->m_varname);
+                    REPORT_ERR("Function %s: internal bug? variable %s_%u",
+                               m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix());
                     success = false;
                     return;
                 }
@@ -719,8 +729,8 @@ inline bool WARN_UNUSED AstFunction::Validate()
                 {
                     if (scope->GetColorMark().IsColorB())
                     {
-                        REPORT_ERR("Function %s: use of out-of-scope variable %s",
-                                   m_name.c_str(), v->m_varname);
+                        REPORT_ERR("Function %s: use of out-of-scope variable %s_%u",
+                                   m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix());
                         success = false;
                         return;
                     }
@@ -736,17 +746,17 @@ inline bool WARN_UNUSED AstFunction::Validate()
         if (nodeType == AstNodeType::AstVariable)
         {
             AstVariable* v = assert_cast<AstVariable*>(cur);
-            if (v->m_functionOwner != this)
+            if (v->GetFunctionOwner() != this)
             {
-                REPORT_ERR("Function %s: use of local variable %s belonging to another function %s",
-                           m_name.c_str(), v->m_varname, v->m_functionOwner->m_name.c_str());
+                REPORT_ERR("Function %s: use of local variable %s_%u belonging to another function %s",
+                           m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix(), v->GetFunctionOwner()->m_name.c_str());
                 success = false;
                 return;
             }
             else
             {
-                REPORT_ERR("Function %s: use of undeclared variable %s",
-                           m_name.c_str(), v->m_varname);
+                REPORT_ERR("Function %s: use of undeclared variable %s_%u",
+                           m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix());
                 success = false;
                 return;
             }
@@ -758,17 +768,17 @@ inline bool WARN_UNUSED AstFunction::Validate()
         {
             AstDeclareVariable* d = assert_cast<AstDeclareVariable*>(cur);
             AstVariable* v = d->m_variable;
-            if (v->m_functionOwner != this)
+            if (v->GetFunctionOwner() != this)
             {
-                REPORT_ERR("Function %s: use of local variable %s belonging to another function %s",
-                           m_name.c_str(), v->m_varname, v->m_functionOwner->m_name.c_str());
+                REPORT_ERR("Function %s: use of local variable %s_%u belonging to another function %s",
+                           m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix(), v->GetFunctionOwner()->m_name.c_str());
                 success = false;
                 return;
             }
             if (varScope.count(v))
             {
-                REPORT_ERR("Function %s: re-declaration of variable %s",
-                           m_name.c_str(), v->m_varname);
+                REPORT_ERR("Function %s: re-declaration of variable %s_%u",
+                           m_name.c_str(), v->GetVarNameNoSuffix(), v->GetVarSuffix());
                 success = false;
                 return;
             }

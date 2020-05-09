@@ -16,6 +16,11 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     return m_llvmValue;
 }
 
+Twine AstVariable::GetVarName()
+{
+    return Twine(m_varname).concat("_").concat(Twine(m_varnameSuffix));
+}
+
 Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
 {
     TestAssert(false && "unimplemented");
