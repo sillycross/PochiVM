@@ -1,7 +1,6 @@
 #pragma once
 
-#define FOR_EACH_PRIMITIVE_INT_TYPE \
-F(bool)     \
+#define FOR_EACH_PRIMITIVE_INT_TYPE_EXCEPT_BOOL \
 F(int8_t)   \
 F(int16_t)  \
 F(int32_t)  \
@@ -10,6 +9,10 @@ F(uint8_t)  \
 F(uint16_t) \
 F(uint32_t) \
 F(uint64_t)
+
+#define FOR_EACH_PRIMITIVE_INT_TYPE     \
+F(bool)                                 \
+FOR_EACH_PRIMITIVE_INT_TYPE_EXCEPT_BOOL
 
 #define FOR_EACH_PRIMITIVE_FLOAT_TYPE \
 F(float)    \

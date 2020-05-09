@@ -86,6 +86,8 @@ void TestStaticCastBetweenFloatTypes()
     };
 #pragma clang diagnostic pop
 
+    testFn(static_cast<T>(0));
+
     testFn(static_cast<T>(123.45));
     testFn(static_cast<T>(-123.45));
 

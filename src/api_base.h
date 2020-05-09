@@ -221,6 +221,8 @@ Value<T> Trashptr()
 }
 
 // Stores a m_ptr of type T*
+// This class inherits Value<T>, allowing a Variable to be used in all constructs that
+// expects a Value (and the current value stored in the variable is used)
 //
 template<typename T>
 class Variable : public Value<T>
@@ -238,7 +240,7 @@ public:
         TestAssert(m_varPtr->GetTypeId().IsType<T*>());
     }
 
-    // Load the value currently stored in the variable.
+    // Explicitly load the value currently stored in the variable.
     //
     Value<T> Load() const
     {
@@ -251,55 +253,6 @@ public:
     {
         return Value<T*>(m_varPtr);
     }
-
-    /*
-    // All operations supported after implicit cast to Value<T>
-    //
-    template<typename U, typename = std::enable_if_t<
-                 AstTypeHelper::may_implicit_convert<T, U>::value && !std::is_same<T, U>::value> >
-    operator Value<U>() const
-    {
-        return Load().template StaticCast<U>();
-    }
-
-    template<typename U, typename = std::enable_if_t<AstTypeHelper::may_static_cast<T, U>::value> >
-    Value<U> StaticCast() const
-    {
-        return Load().template StaticCast<U>();
-    }
-
-    template<typename U, typename = std::enable_if_t<AstTypeHelper::may_reinterpret_cast<T, U>::value> >
-    Value<U> ReinterpretCast() const
-    {
-        return Load().template ReinterpretCast<U>();
-    }
-
-    template<typename Enable = void, std::enable_if_t<(
-             std::is_same<Enable, void>::value && !std::is_same<T, void>::value
-    )>* = nullptr >
-    Value<void> StoreIntoAddress(Value<T*> dest) const
-    {
-        return Load().StoreIntoAddress(dest);
-    }
-
-    template<typename Enable = void, std::enable_if_t<(
-             std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
-             !std::is_same<T, void*>::value && !AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
-    )>* = nullptr >
-    Value<typename std::remove_pointer<T>::type> Deref() const
-    {
-        return Load().Deref();
-    }
-
-    template<typename Enable = void, std::enable_if_t<(
-             std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
-             !std::is_same<T, void*>::value && AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
-    )>* = nullptr >
-    Variable<typename std::remove_pointer<T>::type> Deref() const
-    {
-        return Load().Deref();
-    }
-    */
 
     // Immutable. There is no reason to modify m_varPtr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
