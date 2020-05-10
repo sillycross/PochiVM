@@ -4,6 +4,14 @@
 #include "lang_constructs.h"
 #include "error_context.h"
 
+namespace llvm
+{
+
+class BasicBlock;
+class AllocaInst;
+
+}   // namespace llvm
+
 namespace Ast
 {
 
@@ -41,6 +49,9 @@ private:
         , m_interpStackFrameSize(static_cast<uint32_t>(-1))
         , m_interpStoreParamFns()
         , m_interpStoreRetValFn(nullptr)
+        , m_llvmEntryBlock(nullptr)
+        , m_llvmReturnValue(nullptr)
+        , m_llvmFooterBlock(nullptr)
     { }
 
 public:
@@ -56,7 +67,7 @@ public:
 
     // Emit the function body
     //
-    bool WARN_UNUSED EmitIR();
+    void EmitIR();
 
     // Traverse the function body
     // The parameter list is not traversed
@@ -102,6 +113,24 @@ public:
     {
         assert(m_generatedPrototype != nullptr);
         return m_generatedPrototype;
+    }
+
+    llvm::AllocaInst* GetReturnValueStoreLocation() const
+    {
+        assert(m_llvmReturnValue != nullptr);
+        return m_llvmReturnValue;
+    }
+
+    llvm::BasicBlock* GetEntryBlock() const
+    {
+        assert(m_llvmEntryBlock != nullptr);
+        return m_llvmEntryBlock;
+    }
+
+    llvm::BasicBlock* GetFooterBlock() const
+    {
+        assert(m_llvmFooterBlock != nullptr);
+        return m_llvmFooterBlock;
     }
 
     // Validate the semantics of the function
@@ -241,6 +270,12 @@ private:
     //
     using _StoreRetValFn = void(*)(void*, void*);
     _StoreRetValFn m_interpStoreRetValFn;
+
+    // llvm data
+    //
+    llvm::BasicBlock* m_llvmEntryBlock;
+    llvm::AllocaInst* m_llvmReturnValue;
+    llvm::BasicBlock* m_llvmFooterBlock;
 };
 
 // A module, consists of a list of functions
@@ -328,6 +363,7 @@ public:
     template<typename T>
     T GetGeneratedFunctionInterpMode(const std::string& name)
     {
+        assert(m_interpPrepared);
         AstFunction* fn = GetAstFunction(name);
         if (fn == nullptr)
         {
@@ -766,6 +802,9 @@ inline bool WARN_UNUSED AstFunction::Validate()
 
         if (nodeType == AstNodeType::AstDeclareVariable)
         {
+            // We ignore stupid corner cases like Declare(v, v + 1)
+            // Those could be handled by LLVM codegen logic and interp logic with no issue
+            //
             AstDeclareVariable* d = assert_cast<AstDeclareVariable*>(cur);
             AstVariable* v = d->m_variable;
             if (v->GetFunctionOwner() != this)

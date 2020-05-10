@@ -44,8 +44,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
                 //
                 inst = thread_llvmContext->m_builder.CreateIntCast(
                             op /*valueToCast*/,
-                            AstTypeHelper::llvm_type_of(dst,
-                                                        thread_llvmContext->m_llvmContext) /*destType*/,
+                            AstTypeHelper::llvm_type_of(dst) /*destType*/,
                             src.IsSigned() /*isSourceTypeSigned*/);
             }
         }
@@ -58,15 +57,13 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             {
                 inst = thread_llvmContext->m_builder.CreateSIToFP(
                             op /*valueToCast*/,
-                            AstTypeHelper::llvm_type_of(dst,
-                                                        thread_llvmContext->m_llvmContext) /*destType*/);
+                            AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
             else
             {
                 inst = thread_llvmContext->m_builder.CreateUIToFP(
                             op /*valueToCast*/,
-                            AstTypeHelper::llvm_type_of(dst,
-                                                        thread_llvmContext->m_llvmContext) /*destType*/);
+                            AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
         }
     }
@@ -78,8 +75,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             //
             inst = thread_llvmContext->m_builder.CreateFPCast(
                         op /*valueToCast*/,
-                        AstTypeHelper::llvm_type_of(dst,
-                                                    thread_llvmContext->m_llvmContext) /*destType*/);
+                        AstTypeHelper::llvm_type_of(dst) /*destType*/);
         }
     }
     /*

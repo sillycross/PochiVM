@@ -2,6 +2,10 @@
 #include <cstdlib> 
 #include "gtest/gtest.h"
 
+#include "test_util_helper.h"
+
+bool g_is_update_expected_mode = false;
+
 namespace {
 
 void PrintInformation()
@@ -24,6 +28,20 @@ int main(int argc, char **argv)
 {
 	PrintInformation();
 	::testing::InitGoogleTest(&argc, argv);
+
+    for (int i = 1; i < argc; i++)
+    {
+        if (strcmp(argv[i], "--update-expected") == 0)
+        {
+            g_is_update_expected_mode = true;
+        }
+        else
+        {
+            printf("Unknown command-line argument: %s\n", argv[i]);
+            ReleaseAssert(false);
+        }
+    }
+
 	return RUN_ALL_TESTS();
 }
 

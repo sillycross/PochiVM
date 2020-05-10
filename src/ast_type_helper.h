@@ -655,7 +655,8 @@ struct select_template_fn_impl_helper
         };
 
         template<typename T>
-        struct internal<T, typename std::enable_if<(sizeof(T) > 0 && CondV)>::type>
+        struct internal<T, typename std::enable_if<(
+                        (std::is_same<T, void>::value || !std::is_same<T, void>::value) && CondV)>::type>
         {
             constexpr static FnType value = SelectTemplatedFnImplGeneric<F, CondT, Targs..., T>;
         };

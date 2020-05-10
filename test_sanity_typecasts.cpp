@@ -192,7 +192,7 @@ TEST(Sanity, StaticCast)
     TestStaticCastPointerTypes();
 }
 
-TEST(Sanity, StaticCastNullptrDisallowed)
+TEST(SanityError, StaticCastNullptrDisallowed)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -287,4 +287,5 @@ TEST(Sanity, ReinterpretCast_3)
 
     ReleaseAssert(interpFn(reinterpret_cast<uintptr_t>(&x)) == &x);
 }
+
 

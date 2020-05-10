@@ -15,6 +15,13 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 
+namespace Ast
+{
+
+class AstFunction;
+
+}   // namespace Ast;
+
 struct LLVMCodegenContext
 {
     LLVMCodegenContext()
@@ -22,12 +29,22 @@ struct LLVMCodegenContext
         , m_builder(m_llvmContext)
         , m_module()
         , m_namedValues()
+        , m_curFunction(nullptr)
     { }
+
+    Ast::AstFunction* GetCurFunction() const
+    {
+        assert(m_curFunction != nullptr);
+        return m_curFunction;
+    }
 
     llvm::LLVMContext m_llvmContext;
     llvm::IRBuilder<> m_builder;
     std::unique_ptr<llvm::Module> m_module;
     std::map<std::string, llvm::Value *> m_namedValues;
+    // The current function being codegen'ed
+    //
+    Ast::AstFunction* m_curFunction;
 };
 
 extern thread_local LLVMCodegenContext* thread_llvmContext;

@@ -8,6 +8,7 @@ namespace llvm
 {
 
 class Twine;
+class AllocaInst;
 
 }   // namespace llvm
 
@@ -58,11 +59,14 @@ public:
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstVariable; }
 
-    llvm::Twine GetVarName();
-
     const char* GetVarNameNoSuffix() const { return m_varname; }
     uint32_t GetVarSuffix() const { return m_varnameSuffix; }
     AstFunction* GetFunctionOwner() const { return m_functionOwner; }
+    uint32_t GetStorageSize() const { return m_storageSize; }
+
+    // do not use unless in codegen logic
+    //
+    llvm::Twine GetVarNameTwine() const;
 
     void SetInterpOffset(uint32_t offset)
     {
@@ -76,11 +80,6 @@ public:
         return m_interpOffset;
     }
 
-    uint32_t GetStorageSize() const
-    {
-        return m_storageSize;
-    }
-
 private:
     // name of the variable
     //
@@ -88,9 +87,10 @@ private:
     // The function in which this variable is declared
     //
     AstFunction* m_functionOwner;
-    // The llvm Value corresponding to this variable, populated by AstDeclareVariable
+    // The llvm AllocaInst corresponding to this variable,
+    // populated by AstDeclareVariable if it is a local var, or by AstFunction if it is a parameter
     //
-    llvm::Value* m_llvmValue;
+    llvm::AllocaInst* m_llvmValue;
     // The variable name suffix for printing
     //
     uint32_t m_varnameSuffix;
@@ -146,6 +146,7 @@ public:
 
     // An assign statement for primitive type variable initialization.
     // nullptr if no initial value.
+    // TODO: support constructor
     //
     AstAssignExpr* m_assignExpr;
     AstVariable* m_variable;

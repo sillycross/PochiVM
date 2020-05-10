@@ -14,8 +14,9 @@ using namespace llvm;
 // Type* llvm_type_of(TypeId typeId, LLVMContext& C)
 // This function returns the llvm type corresponding to CPP type T
 //
-inline Type* WARN_UNUSED llvm_type_of(TypeId typeId, LLVMContext& C)
+inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
 {
+    LLVMContext& C = thread_llvmContext->m_llvmContext;
     if (typeId.IsVoid())
     {
         return Type::getVoidTy(C);
@@ -64,7 +65,7 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId, LLVMContext& C)
         {
             // Either 'foo**' or 'primitive*', recurse.
             //
-            return llvm_type_of(pointerElementType, C)->getPointerTo();
+            return llvm_type_of(pointerElementType)->getPointerTo();
         }
         else
         {
@@ -83,8 +84,8 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId, LLVMContext& C)
 //
 inline bool WARN_UNUSED llvm_type_has_type(TypeId typeId, Type* type)
 {
-    assert(type != nullptr);
-    return llvm_type_of(typeId, type->getContext()) == type;
+    assert(type != nullptr && (&type->getContext()) == (&thread_llvmContext->m_llvmContext));
+    return llvm_type_of(typeId) == type;
 }
 
 // bool llvm_value_has_type(TypeId typeId, Value* value)

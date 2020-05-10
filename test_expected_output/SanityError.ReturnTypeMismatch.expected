@@ -1,0 +1,1 @@
+Function BadFn: return type does not match function prototype. Return statement returned double, expects int32_t
