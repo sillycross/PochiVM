@@ -219,9 +219,9 @@ public:
         , m_contents(contents)
     {
 #ifdef TESTBUILD
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            TestAssert((*iter)->GetTypeId().IsVoid());
+            TestAssert(stmt->GetTypeId().IsVoid());
         }
 #endif
     }
@@ -229,9 +229,9 @@ public:
     void InterpImpl(InterpControlSignal* ics)
     {
         assert(ics != nullptr && *ics == InterpControlSignal::None);
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            (*iter)->Interp(ics);
+            stmt->Interp(ics);
             if (unlikely(*ics != InterpControlSignal::None))
             {
                 break;
@@ -246,9 +246,9 @@ public:
 
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
     {
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            fn(*iter);
+            fn(stmt);
         }
     }
 
@@ -282,9 +282,9 @@ public:
         , m_contents(contents)
     {
 #ifdef TESTBUILD
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            TestAssert((*iter)->GetTypeId().IsVoid());
+            TestAssert(stmt->GetTypeId().IsVoid());
         }
 #endif
     }
@@ -299,9 +299,9 @@ public:
     void InterpImpl(InterpControlSignal* ics)
     {
         assert(ics != nullptr && *ics == InterpControlSignal::None);
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            (*iter)->Interp(ics);
+            stmt->Interp(ics);
             if (unlikely(*ics != InterpControlSignal::None))
             {
                 break;
@@ -317,9 +317,9 @@ public:
 
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
     {
-        for (auto iter = m_contents.begin(); iter != m_contents.end(); iter++)
+        for (AstNodeBase* stmt : m_contents)
         {
-            fn(*iter);
+            fn(stmt);
         }
     }
 

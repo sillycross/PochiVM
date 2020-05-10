@@ -23,7 +23,7 @@ namespace {
 
 const char* const x_expected_output_dir = "test_expected_output";
 
-std::string inline GetExpectedOutputFileName()
+inline std::string GetExpectedOutputFileName()
 {
     const char* namePart1 = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
     const char* namePart2 = ::testing::UnitTest::GetInstance()->current_test_info()->name();
@@ -31,7 +31,7 @@ std::string inline GetExpectedOutputFileName()
            std::string(namePart1) + std::string(".") + std::string(namePart2) + ".expected";
 }
 
-void inline CreateExpectedOutputFolderIfNeeded()
+inline void CreateExpectedOutputFolderIfNeeded()
 {
     struct stat st;
     if (stat(x_expected_output_dir, &st) == -1)
@@ -46,7 +46,7 @@ void inline CreateExpectedOutputFolderIfNeeded()
     ReleaseAssert(stat(x_expected_output_dir, &st) == 0);
 }
 
-size_t inline GetFileSize(const char *filename) {
+inline size_t GetFileSize(const char *filename) {
     struct stat st;
     if (stat(filename, &st) == 0)
     {

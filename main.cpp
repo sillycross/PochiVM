@@ -12,12 +12,12 @@ void PrintInformation()
 {
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-	printf("--------------- General Information ---------------\n");
-	printf("Host:         ");
-	fflush(stdout);
-	std::ignore = system("whoami | tr -d '\\n' && printf '@' && cat /etc/hostname");
-	printf("Build flavor: %s\n", TOSTRING(BUILD_FLAVOR));
-	printf("---------------------------------------------------\n");
+    printf("--------------- General Information ---------------\n");
+    printf("Host:         ");
+    fflush(stdout);
+    std::ignore = system("whoami | tr -d '\\n' && printf '@' && cat /etc/hostname");
+    printf("Build flavor: %s\n", TOSTRING(BUILD_FLAVOR));
+    printf("---------------------------------------------------\n");
 #undef TOSTRING
 #undef STRINGIFY
 }
@@ -26,8 +26,8 @@ void PrintInformation()
 
 int main(int argc, char **argv)
 {
-	PrintInformation();
-	::testing::InitGoogleTest(&argc, argv);
+    PrintInformation();
+    ::testing::InitGoogleTest(&argc, argv);
 
     for (int i = 1; i < argc; i++)
     {
@@ -42,6 +42,6 @@ int main(int argc, char **argv)
         }
     }
 
-	return RUN_ALL_TESTS();
+    return RUN_ALL_TESTS();
 }
 

@@ -59,12 +59,26 @@ Value* WARN_UNUSED AstDereferenceVariableExpr::EmitIRImpl()
 
 Value* WARN_UNUSED AstBlock::EmitIRImpl()
 {
-    TestAssert(false && "unimplemented");
+    for (AstNodeBase* stmt : m_contents)
+    {
+        Value* value = stmt->EmitIR();
+        TestAssert(value == nullptr);
+        std::ignore = value;
+    }
+    return nullptr;
 }
 
 Value* WARN_UNUSED AstScope::EmitIRImpl()
 {
-    TestAssert(false && "unimplemented");
+    // TODO: more logic needed here when we support destructors
+    //
+    for (AstNodeBase* stmt : m_contents)
+    {
+        Value* value = stmt->EmitIR();
+        TestAssert(value == nullptr);
+        std::ignore = value;
+    }
+    return nullptr;
 }
 
 Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
