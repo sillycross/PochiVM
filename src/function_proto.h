@@ -9,6 +9,7 @@ namespace llvm
 
 class BasicBlock;
 class AllocaInst;
+class Module;
 
 }   // namespace llvm
 
@@ -287,9 +288,11 @@ public:
     AstModule(const std::string& name)
         : m_moduleName(name)
         , m_functions()
+        , m_llvmModule(nullptr)
 #ifndef NDEBUG
         , m_validated(false)
         , m_interpPrepared(false)
+        , m_irEmitted(false)
 #endif
     { }
 
@@ -329,6 +332,8 @@ public:
         }
     }
 
+    void EmitIR();
+
     bool WARN_UNUSED Validate()
     {
         assert(!m_validated);
@@ -343,6 +348,12 @@ public:
             CHECK_ERR(fn->Validate());
         }
         RETURN_TRUE;
+    }
+
+    llvm::Module* GetBuiltLLVMModule() const
+    {
+        assert(m_llvmModule);
+        return m_llvmModule;
     }
 
 private:
@@ -471,9 +482,11 @@ private:
 
     std::string m_moduleName;
     std::unordered_map<std::string, AstFunction*> m_functions;
+    llvm::Module* m_llvmModule;
 #ifndef NDEBUG
     bool m_validated;
     bool m_interpPrepared;
+    bool m_irEmitted;
 #endif
 };
 
@@ -700,9 +713,31 @@ inline bool WARN_UNUSED AstFunction::Validate()
         varScope[m_params[i]] = nullptr;
     }
 
+    // Reachablity analysis
+    //
+    // When encountering a break/continue statement, everything below is unreachable,
+    //   and this status is only resettable by the end of the loop.
+    // When encountering a return statement, everything below is unreachable and nothing can reset it.
+    // When encountering a if statement, the reachability of code after the if-statement
+    //   is determined by the smaller reachability value of the then-clause and else-clause.
+    //
+    // If any statement is hit with reachability != _REACHABLE, we report an error of unreachable code.
+    //
+    enum _Reachability
+    {
+        _REACHABLE = 0,
+        // break has higher value than continue:
+        // break makes for-loop step-clause unreachable while continue does not.
+        //
+        _CONTINUE = 1,
+        _BREAK = 2,
+        _RETURN = 3
+    };
+
     bool success = true;
+    _Reachability reachability = _REACHABLE;
     TraverseAstTreeFn traverseFn = [&](AstNodeBase* cur,
-                                       AstNodeBase* /*parent*/,
+                                       AstNodeBase* parent,
                                        const std::function<void(void)>& Recurse)
     {
         TestAssertIff(thread_errorContext->HasError(), !success);
@@ -725,8 +760,8 @@ inline bool WARN_UNUSED AstFunction::Validate()
                 nodeType != AstNodeType::AstTrashPtrExpr &&
                 nodeType != AstNodeType::AstDereferenceVariableExpr)
             {
-                REPORT_ERR("Function %s: illegal reuse of AST node type %d",
-                           m_name.c_str(), int(nodeType));
+                REPORT_ERR("Function %s: illegal reuse of AST node (AstNodeType = %s)",
+                           m_name.c_str(), nodeType.ToString());
                 success = false;
                 return;
             }
@@ -799,6 +834,45 @@ inline bool WARN_UNUSED AstFunction::Validate()
         }
 
         cur->GetColorMark().MarkColorA();
+
+        _Reachability thenClauseReachability;
+        if (nodeType == AstNodeType::AstScope &&
+            parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstIfStatement)
+        {
+            AstIfStatement* ifStmt = assert_cast<AstIfStatement*>(parent);
+            if (cur == ifStmt->GetElseClause())
+            {
+                // We are traversing the else-clause of a if-statement.
+                // The if-statement is reachable (otherwise an error has been reported),
+                // so the else-clause is always reachable.
+                // We backup the then-clause reachablity, and the reachability value of code
+                // right after the if-statement is the minimum of then-clause and else-clause.
+                //
+                thenClauseReachability = reachability;
+                reachability = _REACHABLE;
+            }
+            else
+            {
+                // We are traversing the then-clause. Since the if-statement is reachable,
+                // there is no reason things become unreachable here.
+                //
+                assert(cur == ifStmt->GetThenClause());
+                assert(reachability == _REACHABLE);
+            }
+        }
+
+        // Ignore unreachable empty blocks/scopes. Those are no-ops so harmless.
+        //
+        if (reachability != _REACHABLE && nodeType != AstNodeType::AstBlock && nodeType != AstNodeType::AstScope)
+        {
+            // This statement is unreachable! Report error.
+            //
+            REPORT_ERR("Function %s: unreachable statement (AstNodeType = %s) due to an earlier %s statement",
+                       m_name.c_str(), nodeType.ToString(),
+                       (reachability == _BREAK ? "Break" : (reachability == _CONTINUE ? "Continue" : "Return")));
+            success = false;
+            return;
+        }
 
         if (nodeType == AstNodeType::AstDeclareVariable)
         {
@@ -901,7 +975,80 @@ inline bool WARN_UNUSED AstFunction::Validate()
             }
         }
 
+        AssertImp(reachability != _REACHABLE,
+                  nodeType == AstNodeType::AstBlock || nodeType == AstNodeType::AstScope);
+
         Recurse();
+
+        if (!success)
+        {
+            assert(thread_errorContext->HasError());
+            return;
+        }
+
+        // Update reachablity flag to reflect the reachablity status of the code right after this statement.
+        //
+        if (nodeType == AstNodeType::AstScope &&
+            parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstIfStatement)
+        {
+            AstIfStatement* ifStmt = assert_cast<AstIfStatement*>(parent);
+            if (cur == ifStmt->GetElseClause())
+            {
+                // We just finished traversing the else-clause. The reachability status of code right
+                // after the if-statement is the minimum of then-clause and else-clause.
+                //
+                reachability = std::min(reachability, thenClauseReachability);
+            }
+            else
+            {
+                // We just finished traversing the then-clause.
+                // If the if-statement has else-clause, we will traverse it next,
+                // and the logic in the branch above will update the reachability.
+                //
+                // However, if the if-statement does not have an else-clause,
+                // then we are responsible for updating the reachability, and the code
+                // after the if-statement is always reachable.
+                //
+                assert(cur == ifStmt->GetThenClause());
+                if (ifStmt->GetElseClause() == nullptr)
+                {
+                    reachability = _REACHABLE;
+                }
+            }
+        }
+
+        if (nodeType == AstNodeType::AstReturnStmt)
+        {
+            reachability = _RETURN;
+        }
+
+        if (nodeType == AstNodeType::AstBreakOrContinueStmt)
+        {
+            AstBreakOrContinueStmt* stmt = assert_cast<AstBreakOrContinueStmt*>(cur);
+            if (stmt->IsBreakStatement())
+            {
+                reachability = _BREAK;
+            }
+            else
+            {
+                reachability = _CONTINUE;
+            }
+        }
+
+        // There is a difference between Break and Continue:
+        // Break makes the step-block of for-loop unreachable while Continue does not.
+        // So we should reset the Continue reachablity flag at the end of the for-loop body,
+        // while the Break reachablity flag at the end of the for loop.
+        //
+        if (reachability == _CONTINUE && nodeType == AstNodeType::AstScope &&
+            parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstForLoop)
+        {
+            AstForLoop* forLoop = assert_cast<AstForLoop*>(parent);
+            if (cur == forLoop->GetBody())
+            {
+                reachability = _REACHABLE;
+            }
+        }
 
         if (nodeType == AstNodeType::AstScope || nodeType == AstNodeType::AstForLoop)
         {
@@ -911,6 +1058,17 @@ inline bool WARN_UNUSED AstFunction::Validate()
         if (nodeType == AstNodeType::AstForLoop || nodeType == AstNodeType::AstWhileLoop)
         {
             loopStack.pop_back();
+            // We are at the end of the loop.
+            // Reset reachability flag if it is _BREAK or _CONTINUE
+            //
+            if (reachability == _BREAK || reachability == _CONTINUE)
+            {
+                // For-loop continue flag should have been reset at end of body,
+                // and we disallow use of continue/break/return inside for-loop step-block
+                //
+                AssertImp(nodeType == AstNodeType::AstForLoop, reachability != _CONTINUE);
+                reachability = _REACHABLE;
+            }
         }
 
         TestAssert(cur->GetColorMark().IsColorA());

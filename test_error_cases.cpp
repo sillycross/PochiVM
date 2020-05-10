@@ -535,3 +535,350 @@ TEST(SanityError, NoReturnValue)
 #endif
     std::ignore = interpFn;
 }
+
+TEST(SanityError, Unreachable_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void()>;
+    auto [fn] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        Return(),
+        Call<FnPrototype>("BadFn")
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        If(param == Literal<int>(1)).Then(
+            Return(Literal<int>(1))
+        ).Else(
+            Return(Literal<int>(2))
+        ),
+        Return(Call<FnPrototype>("BadFn", param))
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        For(Declare(i, 0), i < param, Block()).Do(
+            Break(),
+            Assign(i, i + Literal<int>(2))
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        For(Declare(i, 0), i < param, Block()).Do(
+            If(i % Literal<int>(2) == Literal<int>(0)).Then(
+                Break()
+            ).Else(
+                Continue()
+            ),
+            Assign(i, i + Literal<int>(2))
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_5)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        // the Increment(i) statement is unreachable
+        For(Declare(i, 0), i < param, Increment(i)).Do(
+            Break()
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_6)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        // the Increment(i) statement is unreachable
+        For(Declare(i, 0), i < param, Increment(i)).Do(
+            If(i % Literal<int>(2) == Literal<int>(0)).Then(
+                If(i % Literal<int>(3) == Literal<int>(0)).Then(
+                    Break()
+                ).Else(
+                    Return(param)
+                )
+            ).Else(
+                Break()
+            )
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_7)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        If(param == Literal<int>(1)).Then(
+            Return(Literal<int>(1)),
+            Assign(param, param + Literal<int>(1))
+        ),
+        Return(Call<FnPrototype>("BadFn", param))
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, Unreachable_8)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        While(param > Literal<int>(0)).Do(
+            If(param % Literal<int>(2) == Literal<int>(0)).Then(
+                Return(param)
+            ).Else(
+                Return(param + Literal<int>(1))
+            )
+        ),
+        Return(param + Literal<int>(2))
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(Sanity, NoUnreachable_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    fn.SetBody(
+        If(param == Literal<int>(1)).Then(
+            Return(Literal<int>(1))
+        ),
+        Return(Call<FnPrototype>("GoodFn", param))
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}
+
+TEST(Sanity, NoUnreachable_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    fn.SetBody(
+        If(param == Literal<int>(1)).Then(
+            Return(Literal<int>(1))
+        ).Else(
+            Increment(param)
+        ),
+        Return(Call<FnPrototype>("GoodFn", param))
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}
+
+TEST(Sanity, NoUnreachable_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        For(Declare(i, 0), i < param, Increment(i)).Do(
+            If(i % Literal<int>(2) == Literal<int>(0)).Then(
+                Break()
+            ).Else(
+                Continue()
+            )
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}
+
+TEST(Sanity, NoUnreachable_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    auto i = fn.NewVariable<int>();
+    fn.SetBody(
+        For(Declare(i, 0), i < param, Block()).Do(
+            If(i % Literal<int>(2) == Literal<int>(0)).Then(
+                Break()
+            ).Else(
+                Block(
+                    Scope(
+                        Break()
+                    ),
+                    Block(),
+                    Scope()
+                )
+            )
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}
+
+TEST(Sanity, NoUnreachable_5)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    fn.SetBody(
+        While(param > Literal<int>(0)).Do(
+            Increment(param),
+            If(param % Literal<int>(2) == Literal<int>(0)).Then(
+                Continue()
+            ).Else(
+                Return(param)
+            )
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}
+
+TEST(Sanity, NoUnreachable_6)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    fn.SetBody(
+        While(param > Literal<int>(0)).Do(
+            Increment(param),
+            If(param % Literal<int>(2) == Literal<int>(0)).Then(
+                Return(param)
+            )
+        ),
+        Return(param)
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+}

@@ -1,10 +1,7 @@
-#pragma once
-
 #include "error_context.h"
 #include "lang_constructs.h"
-#include "codegen_context.hpp"
-#include "ast_type_helper.hpp"
 #include "function_proto.h"
+#include "pochivm.hpp"
 
 namespace Ast
 {
@@ -26,14 +23,10 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     thread_llvmContext->m_builder.SetInsertPoint(thread_llvmContext->GetCurFunction()->GetEntryBlock());
     m_llvmValue = thread_llvmContext->m_builder.CreateAlloca(
                       AstTypeHelper::llvm_type_of(GetTypeId().RemovePointer()),
-                      nullptr /*ArraySize*/, GetVarNameTwine() /*name*/);
+                      nullptr /*ArraySize*/,
+                      Twine(m_varname).concat("_").concat(Twine(m_varnameSuffix)) /*name*/);
     thread_llvmContext->m_builder.restoreIP(savedIp);
     return m_llvmValue;
-}
-
-llvm::Twine AstVariable::GetVarNameTwine() const
-{
-    return Twine(m_varname).concat("_").concat(Twine(m_varnameSuffix));
 }
 
 Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()

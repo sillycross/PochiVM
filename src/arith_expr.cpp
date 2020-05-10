@@ -1,9 +1,6 @@
-#pragma once
-
 #include "arith_expr.h"
 #include "error_context.h"
-#include "codegen_context.hpp"
-#include "ast_type_helper.hpp"
+#include "pochivm.hpp"
 
 namespace Ast
 {

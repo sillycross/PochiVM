@@ -64,10 +64,6 @@ public:
     AstFunction* GetFunctionOwner() const { return m_functionOwner; }
     uint32_t GetStorageSize() const { return m_storageSize; }
 
-    // do not use unless in codegen logic
-    //
-    llvm::Twine GetVarNameTwine() const;
-
     void SetInterpOffset(uint32_t offset)
     {
         assert(m_interpOffset == static_cast<uint32_t>(-1) && offset != static_cast<uint32_t>(-1));
@@ -357,6 +353,9 @@ public:
         m_elseClause = elseClause;
     }
 
+    AstScope* GetThenClause() const { return m_thenClause; }
+    AstScope* GetElseClause() const { return m_elseClause; }
+
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
     void InterpImpl(InterpControlSignal* ics)
@@ -381,6 +380,8 @@ public:
 
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
     {
+        // The order is important: reachability analysis relies on this order
+        //
         fn(m_condClause);
         fn(m_thenClause);
         if (m_elseClause != nullptr) { fn(m_elseClause); }
@@ -540,6 +541,8 @@ public:
 
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
     {
+        // The order is important: reachability analysis relies on this order
+        //
         fn(m_startClause);
         fn(m_condClause);
         fn(m_body);
@@ -547,6 +550,8 @@ public:
     }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstForLoop; }
+
+    AstScope* GetBody() const { return m_body; }
 
 private:
     AstBlock* m_startClause;

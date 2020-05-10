@@ -118,7 +118,16 @@ inline void AssertIsExpectedOutput(std::string out)
         FILE* pFile = fopen(filename.c_str(), "r");
         if (pFile == nullptr)
         {
-            printf("Failed to open expected output file %s, errno=%d (%s)\n", filename.c_str(), errno, strerror(errno));
+            printf("!!! TEST CONFIGURATION ISSUE !!!\n");
+            printf("=============== Expected Output ===============\n");
+            printf("[ERROR] Failed to open expected output file %s, errno=%d (%s)\n", filename.c_str(), errno, strerror(errno));
+            printf("================ Actual Output ================\n");
+            for (size_t i = 0; i < out.length(); i++)
+            {
+                printf("%c", out[i]);
+            }
+            printf("\n");
+            printf("===============================================\n");
             ReleaseAssert(false);
         }
         Auto(fclose(pFile));

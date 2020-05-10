@@ -8,7 +8,7 @@ namespace Ast
 
 using namespace llvm;
 
-Value* WARN_UNUSED AstNodeBase::EmitIR()
+inline Value* WARN_UNUSED AstNodeBase::EmitIR()
 {
     Value* value = EmitIRImpl();
     TestAssertImp(GetTypeId().IsVoid(), value == nullptr);

@@ -1,8 +1,5 @@
-#pragma once
-
-#include "ast_type_helper.hpp"
-#include "codegen_context.hpp"
 #include "function_proto.h"
+#include "pochivm.hpp"
 
 namespace Ast
 {
@@ -20,7 +17,7 @@ void AstFunction::EmitDefinition()
     Type* returnType = AstTypeHelper::llvm_type_of(m_returnType);
     FunctionType* funcType = FunctionType::get(returnType, args, false /*isVarArg*/);
     m_generatedPrototype = Function::Create(
-                funcType, Function::ExternalLinkage, m_name, thread_llvmContext->m_module.get());
+                funcType, Function::ExternalLinkage, m_name, thread_llvmContext->m_module);
 
     // Set parameter names
     //
@@ -31,7 +28,13 @@ void AstFunction::EmitDefinition()
             // For clarity purpose, differentiate the name with the LValue variables
             // (which has same name), so LLVM dump won't add suffix
             //
-            arg.setName(Twine("_").concat(m_params[index]->GetVarNameTwine()));
+            // Twine must be constructed in the same expression,
+            // otherwise we hit a use-after-free undefined behavior... such a dangerous construct..
+            //
+            arg.setName(Twine("_")
+                        .concat(m_params[index]->GetVarNameNoSuffix())
+                        .concat("_")
+                        .concat(Twine(m_params[index]->GetVarSuffix())));
             index++;
         }
     }
@@ -67,10 +70,6 @@ void AstFunction::EmitIR()
 
     m_llvmFooterBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
                                            "footer", m_generatedPrototype);
-
-    m_llvmEntryBlock->insertInto(m_generatedPrototype);
-    body->insertInto(m_generatedPrototype);
-    m_llvmFooterBlock->insertInto(m_generatedPrototype);
 
     // Build the entry block: create alloca instruction for return value and each parameter
     // Alloca instructions for local variables will be created as they are later encountered
@@ -115,9 +114,70 @@ void AstFunction::EmitIR()
     TestAssert(bodyRet == nullptr);
     std::ignore = bodyRet;
 
+    // After the body is built, connect the blocks.
+    //
+    // Entry block fallthroughs to body block
+    //
+    thread_llvmContext->m_builder.SetInsertPoint(m_llvmEntryBlock);
+    thread_llvmContext->m_builder.CreateBr(body);
+
+    // Body block fallthroughs to footer block
+    //
+    // TODO: call abort() in testbuild if function returns non-void
+    //
+    thread_llvmContext->m_builder.SetInsertPoint(body);
+    thread_llvmContext->m_builder.CreateBr(m_llvmFooterBlock);
+
+    thread_llvmContext->m_module->print(outs(), nullptr);
+
+    // In test build, validate that the function contains no errors.
+    // llvm::verifyFunction returns false on success
+    //
+    TestAssert(llvm::verifyFunction(*m_generatedPrototype, &outs()) == false);
+
     // Reset curFunction back to nullptr
     //
     thread_llvmContext->m_curFunction = nullptr;
+}
+
+void AstModule::EmitIR()
+{
+    // In debug build, user should always validate module before emitting IR
+    //
+    assert(!m_irEmitted && m_validated);
+#ifndef NDEBUG
+    m_irEmitted = true;
+#endif
+
+    // Setup the LLVM codegen context
+    //
+    TestAssert(m_llvmModule == nullptr);
+    m_llvmModule = new Module(m_moduleName, thread_llvmContext->m_llvmContext);
+
+    TestAssert(thread_llvmContext->m_module == nullptr);
+    thread_llvmContext->m_module = m_llvmModule;
+
+    // First pass: emit all function prototype.
+    //
+    for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
+    {
+        AstFunction* fn = iter->second;
+        fn->EmitDefinition();
+    }
+    // Second pass: emit all function bodies.
+    //
+    for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
+    {
+        AstFunction* fn = iter->second;
+        fn->EmitIR();
+    }
+
+    // In test build, validate that the module contains no errors.
+    // llvm::verifyModule returns false on success
+    //
+    TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
+
+    thread_llvmContext->m_module = nullptr;
 }
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()

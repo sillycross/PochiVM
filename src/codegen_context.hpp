@@ -27,8 +27,7 @@ struct LLVMCodegenContext
     LLVMCodegenContext()
         : m_llvmContext()
         , m_builder(m_llvmContext)
-        , m_module()
-        , m_namedValues()
+        , m_module(nullptr)
         , m_curFunction(nullptr)
     { }
 
@@ -40,8 +39,7 @@ struct LLVMCodegenContext
 
     llvm::LLVMContext m_llvmContext;
     llvm::IRBuilder<> m_builder;
-    std::unique_ptr<llvm::Module> m_module;
-    std::map<std::string, llvm::Value *> m_namedValues;
+    llvm::Module* m_module;
     // The current function being codegen'ed
     //
     Ast::AstFunction* m_curFunction;
