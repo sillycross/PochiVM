@@ -51,8 +51,6 @@ private:
         , m_interpStoreParamFns()
         , m_interpStoreRetValFn(nullptr)
         , m_llvmEntryBlock(nullptr)
-        , m_llvmReturnValue(nullptr)
-        , m_llvmFooterBlock(nullptr)
     { }
 
 public:
@@ -116,22 +114,10 @@ public:
         return m_generatedPrototype;
     }
 
-    llvm::AllocaInst* GetReturnValueStoreLocation() const
-    {
-        assert(m_llvmReturnValue != nullptr);
-        return m_llvmReturnValue;
-    }
-
     llvm::BasicBlock* GetEntryBlock() const
     {
         assert(m_llvmEntryBlock != nullptr);
         return m_llvmEntryBlock;
-    }
-
-    llvm::BasicBlock* GetFooterBlock() const
-    {
-        assert(m_llvmFooterBlock != nullptr);
-        return m_llvmFooterBlock;
     }
 
     // Validate the semantics of the function
@@ -275,8 +261,6 @@ private:
     // llvm data
     //
     llvm::BasicBlock* m_llvmEntryBlock;
-    llvm::AllocaInst* m_llvmReturnValue;
-    llvm::BasicBlock* m_llvmFooterBlock;
 };
 
 // A module, consists of a list of functions
@@ -481,7 +465,11 @@ private:
     };
 
     std::string m_moduleName;
-    std::unordered_map<std::string, AstFunction*> m_functions;
+    // We are using std::map (not std::unordered_map) so that the iteration order is deterministic.
+    // This is required to make tests happy (so IR dump output is deterministic).
+    // The perf hit should be small. TODO: consider use std::unordered_map in release?
+    //
+    std::map<std::string, AstFunction*> m_functions;
     llvm::Module* m_llvmModule;
 #ifndef NDEBUG
     bool m_validated;

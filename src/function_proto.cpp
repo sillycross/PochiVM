@@ -9,13 +9,19 @@ using namespace llvm;
 void AstFunction::EmitDefinition()
 {
     TestAssert(m_generatedPrototype == nullptr);
-    std::vector<Type*> args;
-    for (AstVariable* arg : m_params)
+    Type** args = reinterpret_cast<Type**>(alloca(sizeof(Type*) * m_params.size()));
     {
-        args.push_back(AstTypeHelper::llvm_type_of(arg->GetTypeId().RemovePointer()));
+        size_t index = 0;
+        for (AstVariable* arg : m_params)
+        {
+            args[index] = AstTypeHelper::llvm_type_of(arg->GetTypeId().RemovePointer());
+            index++;
+        }
     }
     Type* returnType = AstTypeHelper::llvm_type_of(m_returnType);
-    FunctionType* funcType = FunctionType::get(returnType, args, false /*isVarArg*/);
+    FunctionType* funcType = FunctionType::get(returnType,
+                                               ArrayRef<Type*>(args, args + m_params.size()),
+                                               false /*isVariadic*/);
     m_generatedPrototype = Function::Create(
                 funcType, Function::ExternalLinkage, m_name, thread_llvmContext->m_module);
 
@@ -46,6 +52,7 @@ void AstFunction::EmitIR()
     //
     TestAssert(thread_llvmContext->m_curFunction == nullptr && m_generatedPrototype != nullptr);
     thread_llvmContext->m_curFunction = this;
+    thread_llvmContext->m_isCursorAtDummyBlock = false;
 
     // Generated code structure:
     //
@@ -68,19 +75,11 @@ void AstFunction::EmitIR()
     BasicBlock* body = BasicBlock::Create(thread_llvmContext->m_llvmContext,
                                           "body", m_generatedPrototype);
 
-    m_llvmFooterBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
-                                           "footer", m_generatedPrototype);
 
     // Build the entry block: create alloca instruction for return value and each parameter
     // Alloca instructions for local variables will be created as they are later encountered
     //
     thread_llvmContext->m_builder.SetInsertPoint(m_llvmEntryBlock);
-    if (!m_returnType.IsVoid())
-    {
-        m_llvmReturnValue = thread_llvmContext->m_builder.CreateAlloca(
-                    AstTypeHelper::llvm_type_of(m_returnType) /*type*/,
-                    nullptr /*ArraySize*/, "__ret__" /*name*/);
-    }
 
     // Build header block: store the parameters of this function (which are RValues)
     // into the space we allocated for parameters, so we can use them as LValues later
@@ -95,18 +94,6 @@ void AstFunction::EmitIR()
         }
     }
 
-    // Build footer block:
-    //    %tmp = load %__ret__
-    //    return %tmp
-    //
-    if (!m_returnType.IsVoid())
-    {
-        thread_llvmContext->m_builder.SetInsertPoint(m_llvmFooterBlock);
-        Value* retVal = thread_llvmContext->m_builder.CreateLoad(m_llvmReturnValue);
-        TestAssert(AstTypeHelper::llvm_value_has_type(m_returnType, retVal));
-        thread_llvmContext->m_builder.CreateRet(retVal);
-    }
-
     // Return insert pointer to end of body, and build the function body
     //
     thread_llvmContext->m_builder.SetInsertPoint(body);
@@ -114,21 +101,39 @@ void AstFunction::EmitIR()
     TestAssert(bodyRet == nullptr);
     std::ignore = bodyRet;
 
-    // After the body is built, connect the blocks.
+    // If the current insert point is not the dummy block, build return statement
     //
+    if (!thread_llvmContext->m_isCursorAtDummyBlock)
+    {
+        if (!m_returnType.IsVoid())
+        {
+            // This is really bad. Execution reached end-of-function for a function
+            // with non-void return value. We just return 0 (forcefully cast to whatever retType).
+            // TODO: call abort() in testbuild
+            //
+            unsigned numBitsRetType = static_cast<unsigned>(m_returnType.Size()) * 8;
+            Value* zeroOfSameWidth = ConstantInt::get(thread_llvmContext->m_llvmContext,
+                                                      APInt(numBitsRetType /*numBits*/,
+                                                            0 /*value*/,
+                                                            false /*isSigned*/));
+            Value* retVal = thread_llvmContext->m_builder.CreateBitCast(
+                    zeroOfSameWidth, AstTypeHelper::llvm_type_of(m_returnType));
+            thread_llvmContext->m_builder.CreateRet(retVal);
+        }
+        else
+        {
+            thread_llvmContext->m_builder.CreateRetVoid();
+        }
+    }
+
     // Entry block fallthroughs to body block
     //
     thread_llvmContext->m_builder.SetInsertPoint(m_llvmEntryBlock);
     thread_llvmContext->m_builder.CreateBr(body);
 
-    // Body block fallthroughs to footer block
+    // Nothing should have been inserted into m_dummyBlock
     //
-    // TODO: call abort() in testbuild if function returns non-void
-    //
-    thread_llvmContext->m_builder.SetInsertPoint(body);
-    thread_llvmContext->m_builder.CreateBr(m_llvmFooterBlock);
-
-    thread_llvmContext->m_module->print(outs(), nullptr);
+    TestAssert(thread_llvmContext->m_dummyBlock->empty());
 
     // In test build, validate that the function contains no errors.
     // llvm::verifyFunction returns false on success
@@ -157,6 +162,8 @@ void AstModule::EmitIR()
     TestAssert(thread_llvmContext->m_module == nullptr);
     thread_llvmContext->m_module = m_llvmModule;
 
+    thread_llvmContext->m_dummyBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext, "dummy");
+
     // First pass: emit all function prototype.
     //
     for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
@@ -178,6 +185,7 @@ void AstModule::EmitIR()
     TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
 
     thread_llvmContext->m_module = nullptr;
+    thread_llvmContext->m_dummyBlock = nullptr;
 }
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
@@ -200,7 +208,13 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
             index++;
         }
     }
-    return thread_llvmContext->m_builder.CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
+    Value* ret = thread_llvmContext->m_builder.CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
+    TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), ret));
+    if (GetTypeId().IsVoid())
+    {
+        ret = nullptr;
+    }
+    return ret;
 }
 
 Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
@@ -211,15 +225,18 @@ Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
         TestAssert(!function->GetReturnType().IsVoid());
         Value* retVal = m_retVal->EmitIR();
         TestAssert(AstTypeHelper::llvm_value_has_type(function->GetReturnType(), retVal));
-        thread_llvmContext->m_builder.CreateStore(retVal, function->GetReturnValueStoreLocation());
+        // TODO: call all destructors
+        //
+        thread_llvmContext->m_builder.CreateRet(retVal);
     }
     else
     {
+        // TODO: call all destructors
+        //
         TestAssert(function->GetReturnType().IsVoid());
+        thread_llvmContext->m_builder.CreateRetVoid();
     }
-    // TODO: call all destructors
-    //
-    thread_llvmContext->m_builder.CreateBr(function->GetFooterBlock());
+    thread_llvmContext->SetInsertPointToDummyBlock();
     return nullptr;
 }
 

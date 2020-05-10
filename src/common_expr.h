@@ -12,7 +12,7 @@ class AstDereferenceExpr : public AstNodeBase
 {
 public:
     AstDereferenceExpr(AstNodeBase* operand)
-        : AstNodeBase(operand->GetTypeId().RemovePointer())
+        : AstNodeBase(operand->GetTypeId().RemovePointer())  
         , m_operand(operand)
     {
         TestAssert(m_operand->GetTypeId().IsPointerType());

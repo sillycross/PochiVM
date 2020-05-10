@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 
 #include "pochivm.h"
+#include "test_util_helper.h"
+#include "codegen_context.hpp"
 
 using namespace Ast;
 
@@ -76,6 +78,7 @@ TEST(Sanity, StoreIntoLocalVar)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -109,6 +112,7 @@ TEST(Sanity, StoreIntoLocalVar)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
 
     {
         FnPrototype2 interpFn = thread_pochiVMContext->m_curModule->
@@ -134,4 +138,11 @@ TEST(Sanity, StoreIntoLocalVar)
         interpFn(&x, 543);
         ReleaseAssert(x == 12345 + 543);
     }
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }

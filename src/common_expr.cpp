@@ -64,7 +64,10 @@ Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
 
 Value* WARN_UNUSED AstAssignExpr::EmitIRImpl()
 {
-    CHECK_REPORT_BUG(false, "unimplemented");
+    Value* src = m_src->EmitIR();
+    Value* dst = m_dst->EmitIR();
+    thread_llvmContext->m_builder.CreateStore(src, dst);
+    return nullptr;
 }
 
 Value* WARN_UNUSED AstNullptrExpr::EmitIRImpl()

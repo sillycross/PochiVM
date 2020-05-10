@@ -28,6 +28,8 @@ struct LLVMCodegenContext
         : m_llvmContext()
         , m_builder(m_llvmContext)
         , m_module(nullptr)
+        , m_dummyBlock(nullptr)
+        , m_isCursorAtDummyBlock(false)
         , m_curFunction(nullptr)
     { }
 
@@ -37,9 +39,30 @@ struct LLVMCodegenContext
         return m_curFunction;
     }
 
+    void SetInsertPointToDummyBlock()
+    {
+        m_builder.SetInsertPoint(m_dummyBlock);
+        m_isCursorAtDummyBlock = true;
+    }
+
     llvm::LLVMContext m_llvmContext;
     llvm::IRBuilder<> m_builder;
     llvm::Module* m_module;
+
+    // After we codegen a control-flow redirection statement (break/continue/return),
+    // we redirect m_builder to m_dummyBlock and set m_isCursorAtDummyBlock to true,
+    // since any statement immediately after those statements are not reachable.
+    //
+    // This is required, since LLVM requires each basic block to contain exactly one terminator
+    // statement at the end (which we have generated when we codegen break/continue/return),
+    // so it is disallowed to further emit any statement into current basic block.
+    //
+    // A well-formed program should not contain unreachable code (this is enforced in Validate()),
+    // so nothing should be outputted into m_dummyBlock in the end, which we assert.
+    //
+    llvm::BasicBlock* m_dummyBlock;
+    bool m_isCursorAtDummyBlock;
+
     // The current function being codegen'ed
     //
     Ast::AstFunction* m_curFunction;

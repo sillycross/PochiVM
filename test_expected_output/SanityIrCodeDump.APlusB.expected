@@ -1,0 +1,17 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+entry:
+  %a_0 = alloca i32
+  %b_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_a_0, i32* %a_0
+  store i32 %_b_1, i32* %b_1
+  %0 = load i32, i32* %a_0
+  %1 = load i32, i32* %b_1
+  %2 = add i32 %0, %1
+  ret i32 %2
+}

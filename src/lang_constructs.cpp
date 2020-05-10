@@ -76,7 +76,89 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
 
 Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
 {
-    TestAssert(false && "unimplemented");
+    // Structure:
+    //    .. evaluate condition ..
+    //    CondBr(cond, thenBlock, hasElse ? elseBlock : afterIf)
+    // thenBlock / elseBlock:
+    //    .. codegen stmts ..
+    //    Br(afterIf) // only emitted if !m_isCursorAtDummyBlock
+    // afterIf:
+    //    (new ip)    // only exists if at least one Br(afterIf) is emitted
+    //
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    Value* cond = m_condClause->EmitIR();
+    BasicBlock* _afterIf = nullptr;
+    auto createOrGetAfterIfBlock = [&_afterIf]() -> BasicBlock*
+    {
+        if (_afterIf != nullptr)
+        {
+            return _afterIf;
+        }
+        _afterIf = BasicBlock::Create(thread_llvmContext->m_llvmContext, "afterIf");
+        return _afterIf;
+    };
+
+    BasicBlock* thenBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+                                               "then",
+                                               thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+    BasicBlock* elseBlock = nullptr;
+    if (!HasElseClause())
+    {
+        thread_llvmContext->m_builder.CreateCondBr(cond, thenBlock /*trueBr*/, createOrGetAfterIfBlock() /*falseBr*/);
+    }
+    else
+    {
+        elseBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+                                       "else",
+                                       thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+        thread_llvmContext->m_builder.CreateCondBr(cond, thenBlock /*trueBr*/, elseBlock /*falseBr*/);
+    }
+
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    thread_llvmContext->m_builder.SetInsertPoint(thenBlock);
+    Value* thenClauseRet = m_thenClause->EmitIR();
+    TestAssert(thenClauseRet == nullptr);
+    std::ignore = thenClauseRet;
+
+    // then-clause control flow fallthrough
+    //
+    if (!thread_llvmContext->m_isCursorAtDummyBlock)
+    {
+        thread_llvmContext->m_builder.CreateBr(createOrGetAfterIfBlock());
+    }
+
+    if (HasElseClause())
+    {
+        thread_llvmContext->m_isCursorAtDummyBlock = false;
+        thread_llvmContext->m_builder.SetInsertPoint(elseBlock);
+        Value* elseClauseRet = m_elseClause->EmitIR();
+        TestAssert(elseClauseRet == nullptr);
+        std::ignore = elseClauseRet;
+
+        // else-clause control flow fallthrough
+        //
+        if (!thread_llvmContext->m_isCursorAtDummyBlock)
+        {
+            thread_llvmContext->m_builder.CreateBr(createOrGetAfterIfBlock());
+        }
+    }
+
+    if (_afterIf != nullptr)
+    {
+        // At least one branch branches to afterIf block
+        // We should insert afterIf block at the end of function, and put ip there
+        //
+        thread_llvmContext->m_isCursorAtDummyBlock = false;
+        _afterIf->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+        thread_llvmContext->m_builder.SetInsertPoint(_afterIf);
+    }
+    else
+    {
+        // No branch branches to afterIf block. The ip must be pointing at dummy block now.
+        //
+        TestAssert(thread_llvmContext->m_isCursorAtDummyBlock);
+    }
+    return nullptr;
 }
 
 Value* WARN_UNUSED AstWhileLoop::EmitIRImpl()

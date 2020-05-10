@@ -1,0 +1,54 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @a_plus_b_plus_233(i32 %_param_0, i32 %_param_1) {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca i32
+  %var_2 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store i32 %_param_1, i32* %param_1
+  %0 = load i32, i32* %param_0
+  call void @store_value(i32* %var_2, i32 %0)
+  %1 = load i32, i32* %param_1
+  call void @inc_value(i32* %var_2, i32 %1)
+  %2 = load i32, i32* %var_2
+  ret i32 %2
+}
+
+define void @inc_value(i32* %_param_0, i32 %_param_1) {
+entry:
+  %param_0 = alloca i32*
+  %param_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32* %_param_0, i32** %param_0
+  store i32 %_param_1, i32* %param_1
+  %0 = load i32*, i32** %param_0
+  %1 = load i32, i32* %0
+  %2 = load i32, i32* %param_1
+  %3 = add i32 %1, %2
+  %4 = load i32*, i32** %param_0
+  store i32 %3, i32* %4
+  ret void
+}
+
+define void @store_value(i32* %_param_0, i32 %_param_1) {
+entry:
+  %param_0 = alloca i32*
+  %param_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32* %_param_0, i32** %param_0
+  store i32 %_param_1, i32* %param_1
+  %0 = load i32, i32* %param_1
+  %1 = add i32 %0, 233
+  %2 = load i32*, i32** %param_0
+  store i32 %1, i32* %2
+  ret void
+}

@@ -1,0 +1,34 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+entry:
+  %a_0 = alloca i32
+  %b_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_a_0, i32* %a_0
+  store i32 %_b_1, i32* %b_1
+  %0 = load i32, i32* %a_0
+  %1 = icmp slt i32 %0, 0
+  br i1 %1, label %then, label %else
+
+then:                                             ; preds = %body
+  %2 = load i32, i32* %b_1
+  %3 = load i32, i32* %a_0
+  %4 = sub i32 %2, %3
+  ret i32 %4
+
+else:                                             ; preds = %body
+  %5 = load i32, i32* %a_0
+  %6 = mul i32 %5, 2
+  store i32 %6, i32* %a_0
+  br label %afterIf
+
+afterIf:                                          ; preds = %else
+  %7 = load i32, i32* %a_0
+  %8 = load i32, i32* %b_1
+  %9 = add i32 %7, %8
+  ret i32 %9
+}

@@ -91,6 +91,11 @@ namespace internal
 
 struct SmartWrapWithScopeHelper
 {
+    static AstScope* handle_one()
+    {
+        TestAssert(false);
+    }
+
     template<typename... T>
     static AstScope* handle_one(Value<void> stmt, T... /*args*/)
     {
