@@ -33,14 +33,15 @@ TEST(Sanity, LinkedListChasing)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     using FnPrototype = std::function<uint64_t(void*)>;
 
     {
-        auto [fn, head] = NewFunction<FnPrototype>("compute_linked_list_sum");
-        auto sum = fn.NewVariable<uint64_t>();
+        auto [fn, head] = NewFunction<FnPrototype>("compute_linked_list_sum", "p");
+        auto sum = fn.NewVariable<uint64_t>("sum");
         fn.SetBody(
             Declare(sum, Literal<uint64_t>(0)),
             While(head.ReinterpretCast<uint64_t>() != Literal<uint64_t>(0)).Do(
@@ -55,6 +56,7 @@ TEST(Sanity, LinkedListChasing)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("compute_linked_list_sum");
@@ -72,6 +74,13 @@ TEST(Sanity, LinkedListChasing)
 
     uint64_t ret = interpFn(head);
     ReleaseAssert(ret == expectedSum);
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, StoreIntoLocalVar)

@@ -47,6 +47,8 @@ private:
         , m_body(new AstScope())
         , m_generatedPrototype(nullptr)
         , m_varSuffixOrdinal(0)
+        , m_ifStmtSuffixOrdinal(0)
+        , m_whileLoopSuffixOrdinal(0)
         , m_interpStackFrameSize(static_cast<uint32_t>(-1))
         , m_interpStoreParamFns()
         , m_interpStoreRetValFn(nullptr)
@@ -132,10 +134,9 @@ public:
         return m_params;
     }
 
-    uint32_t GetNextVarSuffix()
-    {
-        return m_varSuffixOrdinal++;
-    }
+    uint32_t GetNextVarSuffix() { return m_varSuffixOrdinal++; }
+    uint32_t GetNextIfStmtSuffix() { return m_ifStmtSuffixOrdinal++; }
+    uint32_t GetNextWhileLoopSuffix() { return m_whileLoopSuffixOrdinal++; }
 
     void AddParam(TypeId type, const char* name)
     {
@@ -240,9 +241,11 @@ private:
     std::string m_name;
     AstScope* m_body;
     llvm::Function* m_generatedPrototype;
-    // ordinal suffix for the next variable declared
+    // ordinal suffix for various constructs in this function
     //
     uint32_t m_varSuffixOrdinal;
+    uint32_t m_ifStmtSuffixOrdinal;
+    uint32_t m_whileLoopSuffixOrdinal;
 
     // Interp data
     //
@@ -703,9 +706,9 @@ inline bool WARN_UNUSED AstFunction::Validate()
 
     // Reachablity analysis
     //
-    // When encountering a break/continue statement, everything below is unreachable,
-    //   and this status is only resettable by the end of the loop.
-    // When encountering a return statement, everything below is unreachable and nothing can reset it.
+    // When encountering a break/continue/return statement, everything below is unreachable and
+    //   nothing can reset it except end of control-block (end of then-clause/for-loop etc).
+    //
     // When encountering a if statement, the reachability of code after the if-statement
     //   is determined by the smaller reachability value of the then-clause and else-clause.
     //
@@ -719,6 +722,10 @@ inline bool WARN_UNUSED AstFunction::Validate()
         //
         _CONTINUE = 1,
         _BREAK = 2,
+        // Currently _RETURN and _BREAK has no difference in their power.
+        // But if we support do {..} while(cond) syntax in future, there would be a difference.
+        // (end of do-while loop resets _BREAK but not _RETURN since loop body is always executed.
+        //
         _RETURN = 3
     };
 
@@ -1047,16 +1054,13 @@ inline bool WARN_UNUSED AstFunction::Validate()
         {
             loopStack.pop_back();
             // We are at the end of the loop.
-            // Reset reachability flag if it is _BREAK or _CONTINUE
+            // Reset reachability flag, since it is always possible that the loop body is not executed
             //
-            if (reachability == _BREAK || reachability == _CONTINUE)
-            {
-                // For-loop continue flag should have been reset at end of body,
-                // and we disallow use of continue/break/return inside for-loop step-block
-                //
-                AssertImp(nodeType == AstNodeType::AstForLoop, reachability != _CONTINUE);
-                reachability = _REACHABLE;
-            }
+            // For-loop continue flag should have been reset at end of body,
+            // and we disallow use of continue/break/return inside for-loop step-block
+            //
+            AssertImp(nodeType == AstNodeType::AstForLoop, reachability != _CONTINUE);
+            reachability = _REACHABLE;
         }
 
         TestAssert(cur->GetColorMark().IsColorA());

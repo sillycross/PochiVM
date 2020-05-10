@@ -1,25 +1,22 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+define i32 @GoodFn(i32 %_param_0) {
 entry:
-  %a_0 = alloca i32
-  %b_1 = alloca i32
+  %param_0 = alloca i32
   br label %body
 
 body:                                             ; preds = %entry
-  store i32 %_a_0, i32* %a_0
-  store i32 %_b_1, i32* %b_1
-  %0 = load i32, i32* %a_0
-  %if0 = icmp slt i32 %0, 0
+  store i32 %_param_0, i32* %param_0
+  %0 = load i32, i32* %param_0
+  %if0 = icmp eq i32 %0, 1
   br i1 %if0, label %then0, label %after_if0
 
 then0:                                            ; preds = %body
-  %1 = load i32, i32* %a_0
-  %2 = load i32, i32* %b_1
-  %3 = add i32 %1, %2
-  ret i32 %3
+  ret i32 1
 
 after_if0:                                        ; preds = %body
-  ret i32 0
+  %1 = load i32, i32* %param_0
+  %2 = call i32 @GoodFn(i32 %1)
+  ret i32 %2
 }

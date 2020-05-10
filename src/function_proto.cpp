@@ -53,6 +53,8 @@ void AstFunction::EmitIR()
     TestAssert(thread_llvmContext->m_curFunction == nullptr && m_generatedPrototype != nullptr);
     thread_llvmContext->m_curFunction = this;
     thread_llvmContext->m_isCursorAtDummyBlock = false;
+    thread_llvmContext->m_breakStmtTarget.clear();
+    thread_llvmContext->m_continueStmtTarget.clear();
 
     // Generated code structure:
     //
@@ -97,9 +99,7 @@ void AstFunction::EmitIR()
     // Return insert pointer to end of body, and build the function body
     //
     thread_llvmContext->m_builder.SetInsertPoint(body);
-    Value* bodyRet = m_body->EmitIR();
-    TestAssert(bodyRet == nullptr);
-    std::ignore = bodyRet;
+    std::ignore = m_body->EmitIR();
 
     // If the current insert point is not the dummy block, build return statement
     //
@@ -162,6 +162,8 @@ void AstModule::EmitIR()
     TestAssert(thread_llvmContext->m_module == nullptr);
     thread_llvmContext->m_module = m_llvmModule;
 
+    // TODO: does this leak memory?
+    //
     thread_llvmContext->m_dummyBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext, "dummy");
 
     // First pass: emit all function prototype.
@@ -184,6 +186,8 @@ void AstModule::EmitIR()
     //
     TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
 
+    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
+    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
     thread_llvmContext->m_module = nullptr;
     thread_llvmContext->m_dummyBlock = nullptr;
 }

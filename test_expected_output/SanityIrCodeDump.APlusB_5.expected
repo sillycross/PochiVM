@@ -11,18 +11,18 @@ body:                                             ; preds = %entry
   store i32 %_a_0, i32* %a_0
   store i32 %_b_1, i32* %b_1
   %0 = load i32, i32* %a_0
-  %1 = icmp slt i32 %0, 0
-  br i1 %1, label %then, label %else
+  %if0 = icmp slt i32 %0, 0
+  br i1 %if0, label %then0, label %else0
 
-then:                                             ; preds = %body
-  %2 = load i32, i32* %b_1
-  %3 = load i32, i32* %a_0
-  %4 = sub i32 %2, %3
-  ret i32 %4
+then0:                                            ; preds = %body
+  %1 = load i32, i32* %b_1
+  %2 = load i32, i32* %a_0
+  %3 = sub i32 %1, %2
+  ret i32 %3
 
-else:                                             ; preds = %body
-  %5 = load i32, i32* %a_0
-  %6 = load i32, i32* %b_1
-  %7 = add i32 %5, %6
-  ret i32 %7
+else0:                                            ; preds = %body
+  %4 = load i32, i32* %a_0
+  %5 = load i32, i32* %b_1
+  %6 = add i32 %4, %5
+  ret i32 %6
 }

@@ -2,6 +2,7 @@
 
 #include "pochivm.h"
 #include "test_util_helper.h"
+#include "codegen_context.hpp"
 
 using namespace Ast;
 
@@ -197,6 +198,35 @@ TEST(SanityError, UseVarInOtherFn_3)
 
     using FnPrototype = std::function<int(void)>;
     auto [fn] = NewFunction<FnPrototype>("Fn1");
+    auto v = fn.NewVariable<int>();
+    fn.SetBody(
+        Declare(v, 1),
+        Return(v)
+    );
+
+    auto [fn2] = NewFunction<FnPrototype>("BadFn");
+    fn2.SetBody(
+        Return(v)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, UseVarInOtherFn_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(void)>;
+    // We validate functions in alphabetic order of their function names.
+    // This time we are validating AFn1 before BadFn. The error should still be detected.
+    //
+    auto [fn] = NewFunction<FnPrototype>("AFn1");
     auto v = fn.NewVariable<int>();
     fn.SetBody(
         Declare(v, 1),
@@ -430,6 +460,7 @@ TEST(Sanity, BlockHasNoScopeEffect)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -455,6 +486,15 @@ TEST(Sanity, BlockHasNoScopeEffect)
                            GetGeneratedFunctionInterpMode<FnPrototype>("GoodFn");
     int ret = interpFn();
     ReleaseAssert(ret == 3);
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(SanityError, BreakNotInLoop)
@@ -711,36 +751,11 @@ TEST(SanityError, Unreachable_7)
     AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
 }
 
-TEST(SanityError, Unreachable_8)
-{
-    AutoThreadPochiVMContext apv;
-    AutoThreadErrorContext arc;
-
-    thread_pochiVMContext->m_curModule = new AstModule("test");
-
-    using FnPrototype = std::function<int(int)>;
-    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
-    fn.SetBody(
-        While(param > Literal<int>(0)).Do(
-            If(param % Literal<int>(2) == Literal<int>(0)).Then(
-                Return(param)
-            ).Else(
-                Return(param + Literal<int>(1))
-            )
-        ),
-        Return(param + Literal<int>(2))
-    );
-
-    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
-    ReleaseAssert(thread_errorContext->HasError());
-
-    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
-}
-
 TEST(Sanity, NoUnreachable_1)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -755,12 +770,21 @@ TEST(Sanity, NoUnreachable_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, NoUnreachable_2)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -777,6 +801,14 @@ TEST(Sanity, NoUnreachable_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, NoUnreachable_3)
@@ -839,6 +871,7 @@ TEST(Sanity, NoUnreachable_5)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -858,12 +891,21 @@ TEST(Sanity, NoUnreachable_5)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, NoUnreachable_6)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -881,4 +923,45 @@ TEST(Sanity, NoUnreachable_6)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+}
+
+TEST(Sanity, NoUnreachable_7)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
+    fn.SetBody(
+        While(param > Literal<int>(0)).Do(
+            If(param % Literal<int>(2) == Literal<int>(0)).Then(
+                 Return(param)
+            ).Else(
+                 Return(param + Literal<int>(1))
+            )
+        ),
+        Return(param + Literal<int>(2))
+    );
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }

@@ -1,0 +1,70 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+entry:
+  %a_0 = alloca i32
+  %b_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_a_0, i32* %a_0
+  store i32 %_b_1, i32* %b_1
+  %0 = load i32, i32* %a_0
+  %if0 = icmp slt i32 %0, 0
+  br i1 %if0, label %then0, label %else0
+
+then0:                                            ; preds = %body
+  %1 = load i32, i32* %b_1
+  %if1 = icmp slt i32 %1, 0
+  br i1 %if1, label %then1, label %else1
+
+then1:                                            ; preds = %then0
+  %2 = load i32, i32* %a_0
+  %3 = load i32, i32* %b_1
+  %4 = add i32 %2, %3
+  ret i32 %4
+
+else1:                                            ; preds = %then0
+  %5 = load i32, i32* %a_0
+  %6 = add i32 %5, 1
+  store i32 %6, i32* %a_0
+  br label %after_if1
+
+after_if1:                                        ; preds = %else1
+  br label %after_if0
+
+else0:                                            ; preds = %body
+  %7 = load i32, i32* %b_1
+  %if2 = icmp slt i32 %7, 0
+  br i1 %if2, label %then2, label %else2
+
+then2:                                            ; preds = %else0
+  %8 = load i32, i32* %b_1
+  %9 = add i32 %8, 1
+  store i32 %9, i32* %b_1
+  br label %after_if2
+
+else2:                                            ; preds = %else0
+  %10 = load i32, i32* %b_1
+  %if3 = icmp sgt i32 %10, 5
+  br i1 %if3, label %then3, label %after_if3
+
+then3:                                            ; preds = %else2
+  %11 = load i32, i32* %a_0
+  %12 = add i32 %11, 2
+  store i32 %12, i32* %a_0
+  br label %after_if3
+
+after_if3:                                        ; preds = %then3, %else2
+  br label %after_if2
+
+after_if2:                                        ; preds = %after_if3, %then2
+  br label %after_if0
+
+after_if0:                                        ; preds = %after_if2, %after_if1
+  %13 = load i32, i32* %a_0
+  %14 = load i32, i32* %b_1
+  %15 = sub i32 %13, %14
+  ret i32 %15
+}

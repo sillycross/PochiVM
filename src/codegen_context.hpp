@@ -31,6 +31,8 @@ struct LLVMCodegenContext
         , m_dummyBlock(nullptr)
         , m_isCursorAtDummyBlock(false)
         , m_curFunction(nullptr)
+        , m_breakStmtTarget()
+        , m_continueStmtTarget()
     { }
 
     Ast::AstFunction* GetCurFunction() const
@@ -66,6 +68,11 @@ struct LLVMCodegenContext
     // The current function being codegen'ed
     //
     Ast::AstFunction* m_curFunction;
+
+    // Current break/continue target
+    //
+    std::vector<llvm::BasicBlock*> m_breakStmtTarget;
+    std::vector<llvm::BasicBlock*> m_continueStmtTarget;
 };
 
 extern thread_local LLVMCodegenContext* thread_llvmContext;

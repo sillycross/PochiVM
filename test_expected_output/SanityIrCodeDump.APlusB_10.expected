@@ -1,0 +1,160 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+entry:
+  %a_0 = alloca i32
+  %b_1 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_a_0, i32* %a_0
+  store i32 %_b_1, i32* %b_1
+  br label %whileloop_head0
+
+whileloop_head0:                                  ; preds = %after_whileloop2, %then3, %body
+  %0 = load i32, i32* %a_0
+  %1 = icmp sgt i32 %0, 0
+  br i1 %1, label %whileloop_body0, label %after_whileloop0
+
+whileloop_body0:                                  ; preds = %whileloop_head0
+  %2 = load i32, i32* %a_0
+  %3 = add i32 %2, 1
+  store i32 %3, i32* %a_0
+  %4 = load i32, i32* %b_1
+  %5 = sub i32 %4, 1
+  store i32 %5, i32* %b_1
+  %6 = load i32, i32* %a_0
+  %7 = srem i32 %6, 11
+  %if0 = icmp eq i32 %7, 0
+  br i1 %if0, label %then0, label %after_if0
+
+then0:                                            ; preds = %whileloop_body0
+  %8 = load i32, i32* %a_0
+  %9 = sub i32 %8, 1
+  store i32 %9, i32* %a_0
+  %10 = load i32, i32* %b_1
+  %11 = add i32 %10, 1
+  store i32 %11, i32* %b_1
+  br label %after_whileloop0
+
+after_if0:                                        ; preds = %whileloop_body0
+  br label %whileloop_head1
+
+whileloop_head1:                                  ; preds = %after_if1, %then1, %after_if0
+  %12 = load i32, i32* %b_1
+  %13 = srem i32 %12, 23
+  %14 = icmp ne i32 %13, 5
+  br i1 %14, label %whileloop_body1, label %after_whileloop1
+
+whileloop_body1:                                  ; preds = %whileloop_head1
+  %15 = load i32, i32* %b_1
+  %16 = add i32 %15, 1
+  store i32 %16, i32* %b_1
+  %17 = load i32, i32* %b_1
+  %18 = srem i32 %17, 17
+  %if1 = icmp eq i32 %18, 3
+  br i1 %if1, label %then1, label %else1
+
+then1:                                            ; preds = %whileloop_body1
+  %19 = load i32, i32* %b_1
+  %20 = add i32 %19, 3
+  store i32 %20, i32* %b_1
+  br label %whileloop_head1
+
+else1:                                            ; preds = %whileloop_body1
+  %21 = load i32, i32* %b_1
+  %22 = srem i32 %21, 13
+  %if2 = icmp eq i32 %22, 2
+  br i1 %if2, label %then2, label %after_if2
+
+then2:                                            ; preds = %else1
+  %23 = load i32, i32* %b_1
+  %24 = add i32 %23, 2
+  store i32 %24, i32* %b_1
+  br label %after_whileloop1
+
+after_if2:                                        ; preds = %else1
+  br label %after_if1
+
+after_if1:                                        ; preds = %after_if2
+  %25 = load i32, i32* %b_1
+  %26 = add i32 %25, 1
+  store i32 %26, i32* %b_1
+  br label %whileloop_head1
+
+after_whileloop1:                                 ; preds = %then2, %whileloop_head1
+  %27 = load i32, i32* %b_1
+  %28 = srem i32 %27, 19
+  %if3 = icmp eq i32 %28, 4
+  br i1 %if3, label %then3, label %after_if3
+
+then3:                                            ; preds = %after_whileloop1
+  br label %whileloop_head0
+
+after_if3:                                        ; preds = %after_whileloop1
+  %29 = load i32, i32* %b_1
+  %30 = srem i32 %29, 19
+  %if4 = icmp eq i32 %30, 5
+  br i1 %if4, label %then4, label %after_if4
+
+then4:                                            ; preds = %after_if3
+  br label %after_whileloop0
+
+after_if4:                                        ; preds = %after_if3
+  br label %whileloop_head2
+
+whileloop_head2:                                  ; preds = %after_if7, %then6, %after_if4
+  %31 = load i32, i32* %b_1
+  %32 = srem i32 %31, 12
+  %33 = icmp ne i32 %32, 3
+  br i1 %33, label %whileloop_body2, label %after_whileloop2
+
+whileloop_body2:                                  ; preds = %whileloop_head2
+  %34 = load i32, i32* %b_1
+  %35 = add i32 %34, 1
+  store i32 %35, i32* %b_1
+  %36 = load i32, i32* %b_1
+  %37 = srem i32 %36, 29
+  %if5 = icmp eq i32 %37, 3
+  br i1 %if5, label %then5, label %after_if5
+
+then5:                                            ; preds = %whileloop_body2
+  %38 = load i32, i32* %a_0
+  %39 = load i32, i32* %b_1
+  %40 = sub i32 %38, %39
+  ret i32 %40
+
+after_if5:                                        ; preds = %whileloop_body2
+  %41 = load i32, i32* %b_1
+  %42 = srem i32 %41, 31
+  %if6 = icmp eq i32 %42, 4
+  br i1 %if6, label %then6, label %after_if6
+
+then6:                                            ; preds = %after_if5
+  br label %whileloop_head2
+
+after_if6:                                        ; preds = %after_if5
+  %43 = load i32, i32* %b_1
+  %44 = srem i32 %43, 33
+  %if7 = icmp eq i32 %44, 5
+  br i1 %if7, label %then7, label %after_if7
+
+then7:                                            ; preds = %after_if6
+  br label %after_whileloop2
+
+after_if7:                                        ; preds = %after_if6
+  %45 = load i32, i32* %b_1
+  %46 = add i32 %45, 1
+  store i32 %46, i32* %b_1
+  br label %whileloop_head2
+
+after_whileloop2:                                 ; preds = %then7, %whileloop_head2
+  br label %whileloop_head0
+
+after_whileloop0:                                 ; preds = %then4, %then0, %whileloop_head0
+  %47 = load i32, i32* %a_0
+  %48 = load i32, i32* %b_1
+  %49 = add i32 %47, %48
+  ret i32 %49
+}

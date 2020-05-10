@@ -36,9 +36,8 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     //
     if (m_assignExpr != nullptr)
     {
-        Value* ptr = m_variable->EmitIR();
-        Value* val = m_assignExpr->EmitIR();
-        thread_llvmContext->m_builder.CreateStore(val, ptr);
+        std::ignore = m_variable->EmitIR();
+        std::ignore = m_assignExpr->EmitIR();
     }
     return nullptr;
 }
@@ -54,9 +53,7 @@ Value* WARN_UNUSED AstBlock::EmitIRImpl()
 {
     for (AstNodeBase* stmt : m_contents)
     {
-        Value* value = stmt->EmitIR();
-        TestAssert(value == nullptr);
-        std::ignore = value;
+        std::ignore = stmt->EmitIR();
     }
     return nullptr;
 }
@@ -67,9 +64,7 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
     //
     for (AstNodeBase* stmt : m_contents)
     {
-        Value* value = stmt->EmitIR();
-        TestAssert(value == nullptr);
-        std::ignore = value;
+        std::ignore = stmt->EmitIR();
     }
     return nullptr;
 }
@@ -85,21 +80,25 @@ Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
     // afterIf:
     //    (new ip)    // only exists if at least one Br(afterIf) is emitted
     //
+    uint32_t labelSuffix = thread_llvmContext->GetCurFunction()->GetNextIfStmtSuffix();
+
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     Value* cond = m_condClause->EmitIR();
+    cond->setName(Twine("if").concat(Twine(labelSuffix)));
+
     BasicBlock* _afterIf = nullptr;
-    auto createOrGetAfterIfBlock = [&_afterIf]() -> BasicBlock*
+    auto createOrGetAfterIfBlock = [&_afterIf, labelSuffix]() -> BasicBlock*
     {
         if (_afterIf != nullptr)
         {
             return _afterIf;
         }
-        _afterIf = BasicBlock::Create(thread_llvmContext->m_llvmContext, "afterIf");
+        _afterIf = BasicBlock::Create(thread_llvmContext->m_llvmContext, Twine("after_if").concat(Twine(labelSuffix)));
         return _afterIf;
     };
 
     BasicBlock* thenBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
-                                               "then",
+                                               Twine("then").concat(Twine(labelSuffix)),
                                                thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
     BasicBlock* elseBlock = nullptr;
     if (!HasElseClause())
@@ -108,17 +107,15 @@ Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
     }
     else
     {
-        elseBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
-                                       "else",
-                                       thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+        // Do not insert into function yet, for clarity of generated code
+        //
+        elseBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext, Twine("else").concat(Twine(labelSuffix)));
         thread_llvmContext->m_builder.CreateCondBr(cond, thenBlock /*trueBr*/, elseBlock /*falseBr*/);
     }
 
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     thread_llvmContext->m_builder.SetInsertPoint(thenBlock);
-    Value* thenClauseRet = m_thenClause->EmitIR();
-    TestAssert(thenClauseRet == nullptr);
-    std::ignore = thenClauseRet;
+    std::ignore = m_thenClause->EmitIR();
 
     // then-clause control flow fallthrough
     //
@@ -129,11 +126,10 @@ Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
 
     if (HasElseClause())
     {
+        elseBlock->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
         thread_llvmContext->m_isCursorAtDummyBlock = false;
         thread_llvmContext->m_builder.SetInsertPoint(elseBlock);
-        Value* elseClauseRet = m_elseClause->EmitIR();
-        TestAssert(elseClauseRet == nullptr);
-        std::ignore = elseClauseRet;
+        std::ignore = m_elseClause->EmitIR();
 
         // else-clause control flow fallthrough
         //
@@ -148,8 +144,8 @@ Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
         // At least one branch branches to afterIf block
         // We should insert afterIf block at the end of function, and put ip there
         //
-        thread_llvmContext->m_isCursorAtDummyBlock = false;
         _afterIf->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+        thread_llvmContext->m_isCursorAtDummyBlock = false;
         thread_llvmContext->m_builder.SetInsertPoint(_afterIf);
     }
     else
@@ -163,7 +159,59 @@ Value* WARN_UNUSED AstIfStatement::EmitIRImpl()
 
 Value* WARN_UNUSED AstWhileLoop::EmitIRImpl()
 {
-    TestAssert(false && "unimplemented");
+    // Structure:
+    //    Br(loopHead)
+    // loopHead:
+    //    .. evaluate condition ..
+    //    BrCond(cond, loopBody, afterLoop)
+    // loopBody:
+    //    .. codegen loop body ..
+    //    Br(loopHead)  // only emitted if reachable
+    // afterLoop:
+    //
+    uint32_t labelSuffix = thread_llvmContext->GetCurFunction()->GetNextWhileLoopSuffix();
+
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    BasicBlock* loopHead = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+                                              Twine("whileloop_head").concat(Twine(labelSuffix)),
+                                              thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+    BasicBlock* loopBody = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+                                              Twine("whileloop_body").concat(Twine(labelSuffix)));
+    BasicBlock* afterLoop = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+                                               Twine("after_whileloop").concat(Twine(labelSuffix)));
+    thread_llvmContext->m_builder.CreateBr(loopHead);
+
+    thread_llvmContext->m_continueStmtTarget.push_back(loopHead);
+    Auto(thread_llvmContext->m_continueStmtTarget.pop_back());
+
+    thread_llvmContext->m_breakStmtTarget.push_back(afterLoop);
+    Auto(thread_llvmContext->m_breakStmtTarget.pop_back());
+
+    // Codegen loopHead block
+    //
+    thread_llvmContext->m_builder.SetInsertPoint(loopHead);
+    Value* cond = m_condClause->EmitIR();
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    thread_llvmContext->m_builder.CreateCondBr(cond, loopBody /*trueBranch*/, afterLoop /*falseBranch*/);
+
+    // Codegen loopBody block
+    //
+    loopBody->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+    thread_llvmContext->m_builder.SetInsertPoint(loopBody);
+    std::ignore = m_body->EmitIR();
+
+    if (!thread_llvmContext->m_isCursorAtDummyBlock)
+    {
+        thread_llvmContext->m_builder.CreateBr(loopHead);
+    }
+
+    // Set ip to afterLoop
+    //
+    afterLoop->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+    thread_llvmContext->m_isCursorAtDummyBlock = false;
+    thread_llvmContext->m_builder.SetInsertPoint(afterLoop);
+
+    return nullptr;
 }
 
 Value* WARN_UNUSED AstForLoop::EmitIRImpl()
@@ -173,7 +221,19 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
 
 Value* WARN_UNUSED AstBreakOrContinueStmt::EmitIRImpl()
 {
-    TestAssert(false && "unimplemented");
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    TestAssert(thread_llvmContext->m_breakStmtTarget.size() > 0);
+    TestAssert(thread_llvmContext->m_continueStmtTarget.size() > 0);
+    if (IsBreakStatement())
+    {
+        thread_llvmContext->m_builder.CreateBr(thread_llvmContext->m_breakStmtTarget.back());
+    }
+    else
+    {
+        thread_llvmContext->m_builder.CreateBr(thread_llvmContext->m_continueStmtTarget.back());
+    }
+    thread_llvmContext->SetInsertPointToDummyBlock();
+    return nullptr;
 }
 
 }   // namespace Ast

@@ -1,1 +1,0 @@
-Function BadFn: unreachable statement (AstNodeType = AstReturnStmt) due to an earlier Return statement

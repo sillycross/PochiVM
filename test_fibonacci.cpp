@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 
 #include "pochivm.h"
+#include "codegen_context.hpp"
+#include "test_util_helper.h"
 
 using namespace Ast;
 
@@ -8,11 +10,12 @@ TEST(Sanity, FibonacciSeq)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     using FnPrototype = std::function<uint64_t(int)>;
-    auto [fn, n] = NewFunction<FnPrototype>("fib_nth");
+    auto [fn, n] = NewFunction<FnPrototype>("fib_nth", "n");
 
     fn.SetBody(
         If(n <= Literal<int>(2)).Then(
@@ -30,4 +33,13 @@ TEST(Sanity, FibonacciSeq)
                            GetGeneratedFunctionInterpMode<FnPrototype>("fib_nth");
     uint64_t ret = interpFn(20);
     ReleaseAssert(ret == 6765);
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }

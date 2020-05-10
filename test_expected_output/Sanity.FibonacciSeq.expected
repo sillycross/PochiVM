@@ -1,0 +1,27 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i64 @fib_nth(i32 %_n_0) {
+entry:
+  %n_0 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_n_0, i32* %n_0
+  %0 = load i32, i32* %n_0
+  %if0 = icmp sle i32 %0, 2
+  br i1 %if0, label %then0, label %else0
+
+then0:                                            ; preds = %body
+  ret i64 1
+
+else0:                                            ; preds = %body
+  %1 = load i32, i32* %n_0
+  %2 = sub i32 %1, 1
+  %3 = call i64 @fib_nth(i32 %2)
+  %4 = load i32, i32* %n_0
+  %5 = sub i32 %4, 2
+  %6 = call i64 @fib_nth(i32 %5)
+  %7 = add i64 %3, %6
+  ret i64 %7
+}

@@ -95,28 +95,11 @@ Value* WARN_UNUSED AstReinterpretCastExpr::EmitIRImpl()
     Value* op = m_operand->EmitIR();
     TypeId src = m_operand->GetTypeId();
     TypeId dst = GetTypeId();
-
     if (src == dst)
     {
         return op;
     }
-
-    if (src.IsPointerType() && dst.IsPointerType())
-    {
-        // pointer to pointer cast
-        //
-    }
-    else if (src.IsType<uint64_t>() && dst.IsPointerType())
-    {
-        // uint64_t to pointer cast
-        //
-    }
-    else if (src.IsPointerType() && dst.IsType<uint64_t>())
-    {
-        // pointer to uint64_t cast
-        //
-    }
-    CHECK_REPORT_BUG(false, "unhandled reinterpret_cast codepath or llvm internal error");
+    return thread_llvmContext->m_builder.CreateBitOrPointerCast(op, AstTypeHelper::llvm_type_of(dst));
 }
 
 }   // namespace Ast
