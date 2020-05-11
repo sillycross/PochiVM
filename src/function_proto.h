@@ -697,6 +697,10 @@ inline bool WARN_UNUSED AstFunction::Validate()
     //
     std::vector<AstNodeBase*> loopStack;
 
+    // Whether we are inside for-loop init-block or step-block
+    //
+    bool isInsideForLoopInitOrStepBlock = false;
+
     // First of all, all parameters are valid to use at all time.
     //
     for (size_t i = 0; i < m_params.size(); i++)
@@ -973,15 +977,62 @@ inline bool WARN_UNUSED AstFunction::Validate()
             }
         }
 
+        if (isInsideForLoopInitOrStepBlock)
+        {
+            // Inside for-loop init-block or step-block,
+            // we disallow break/continue/return statement, or further nested loops
+            //
+            if (nodeType == AstNodeType::AstBreakOrContinueStmt)
+            {
+                AstBreakOrContinueStmt* b = assert_cast<AstBreakOrContinueStmt*>(cur);
+                REPORT_ERR("Function %s: use of '%s' statement inside for-loop init-block or step-block is unsupported",
+                           m_name.c_str(), (b->IsBreakStatement() ? "Break" : "Continue"));
+                success = false;
+                return;
+            }
+            if (nodeType == AstNodeType::AstReturnStmt)
+            {
+                REPORT_ERR("Function %s: use of 'Return' statement inside for-loop init-block or step-block is unsupported",
+                           m_name.c_str());
+                success = false;
+                return;
+            }
+            if (nodeType == AstNodeType::AstForLoop || nodeType == AstNodeType::AstWhileLoop)
+            {
+                REPORT_ERR("Function %s: use of %s inside a for-loop init-block or step-block is unsupported",
+                           m_name.c_str(), (nodeType == AstNodeType::AstForLoop ? "for-loop" : "while-loop"));
+                success = false;
+                return;
+            }
+        }
+
+        if (nodeType == AstNodeType::AstBlock &&
+            parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstForLoop)
+        {
+#ifdef TESTBUILD
+            AstForLoop* forLoop = assert_cast<AstForLoop*>(parent);
+            TestAssert(cur == forLoop->GetInitBlock() || cur == forLoop->GetStepBlock());
+#endif
+            TestAssert(!isInsideForLoopInitOrStepBlock);
+            isInsideForLoopInitOrStepBlock = true;
+        }
+
         AssertImp(reachability != _REACHABLE,
                   nodeType == AstNodeType::AstBlock || nodeType == AstNodeType::AstScope);
 
         Recurse();
 
+        AssertIff(!success, thread_errorContext->HasError());
         if (!success)
         {
-            assert(thread_errorContext->HasError());
             return;
+        }
+
+        if (nodeType == AstNodeType::AstBlock &&
+            parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstForLoop)
+        {
+            TestAssert(isInsideForLoopInitOrStepBlock);
+            isInsideForLoopInitOrStepBlock = false;
         }
 
         // Update reachablity flag to reflect the reachablity status of the code right after this statement.

@@ -551,7 +551,9 @@ public:
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstForLoop; }
 
+    AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
+    AstBlock* GetStepBlock() const { return m_stepClause; }
 
 private:
     AstBlock* m_startClause;

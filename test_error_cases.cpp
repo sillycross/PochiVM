@@ -751,6 +751,106 @@ TEST(SanityError, Unreachable_7)
     AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
 }
 
+TEST(SanityError, ForLoopInitStepBlockLimitation_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        For(If(param > Literal<int>(0)).Then(Break()), param > Literal<int>(0), Block()).Do(),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, ForLoopInitStepBlockLimitation_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        For(Block(), param > Literal<int>(0), If(param > Literal<int>(0)).Then(Continue())).Do(),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, ForLoopInitStepBlockLimitation_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        For(Block(), param > Literal<int>(0), If(param > Literal<int>(0)).Then(Return(param))).Do(),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, ForLoopInitStepBlockLimitation_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        For(For(Block(), Literal<bool>(true), Block()).Do(), param > Literal<int>(0), Block()).Do(),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
+TEST(SanityError, ForLoopInitStepBlockLimitation_5)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(int)>;
+    auto [fn, param] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        For(Block(), param > Literal<int>(0), While(Literal<bool>(false)).Do()).Do(),
+        Return(param)
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}
+
 TEST(Sanity, NoUnreachable_1)
 {
     AutoThreadPochiVMContext apv;
