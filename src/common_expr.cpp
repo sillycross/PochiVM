@@ -11,7 +11,6 @@ Value* WARN_UNUSED AstDereferenceExpr::EmitIRImpl()
 {
     Value* op = m_operand->EmitIR();
     Value* inst = thread_llvmContext->m_builder.CreateLoad(op);
-    CHECK_REPORT_BUG(inst != nullptr, "llvm internal error");
     return inst;
 }
 
@@ -57,8 +56,13 @@ Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
             inst = ConstantFP::get(thread_llvmContext->m_llvmContext, APFloat(GetDouble()));
         }
     }
-    // TODO: handle pointer
-    CHECK_REPORT_BUG(inst != nullptr, "unhandled literal type or llvm internal error");
+    else if (typeId.IsPointerType())
+    {
+        uint64_t ptrVal = reinterpret_cast<uint64_t>(m_as_voidstar);
+        Value* val = ConstantInt::get(thread_llvmContext->m_llvmContext,
+                                      APInt(64 /*numBits*/, ptrVal /*value*/, false /*isSigned*/));
+        inst = thread_llvmContext->m_builder.CreateBitOrPointerCast(val, AstTypeHelper::llvm_type_of(typeId));
+    }
     return inst;
 }
 

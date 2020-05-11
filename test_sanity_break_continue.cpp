@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 
 #include "pochivm.h"
+#include "test_util_helper.h"
+#include "codegen_context.hpp"
 
 using namespace Ast;
 
@@ -8,16 +10,17 @@ TEST(Sanity, BreakAndContinue)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     using FnPrototype = std::function<int(int)>;
     {
         auto [fn, n] = NewFunction<FnPrototype>("MyFn");
-        auto i = fn.NewVariable<int>();
-        auto j = fn.NewVariable<int>();
-        auto k = fn.NewVariable<int>();
-        auto s = fn.NewVariable<int>();
+        auto i = fn.NewVariable<int>("i");
+        auto j = fn.NewVariable<int>("j");
+        auto k = fn.NewVariable<int>("k");
+        auto s = fn.NewVariable<int>("s");
         fn.SetBody(
             Declare(s, 0),
             For(Declare(i, 1), i < n, Block(Increment(i), Assign(s, s + i))).Do(
@@ -69,6 +72,7 @@ TEST(Sanity, BreakAndContinue)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
@@ -77,4 +81,11 @@ TEST(Sanity, BreakAndContinue)
     ReleaseAssert(gold(30) == interpFn(30));
     ReleaseAssert(gold(50) == interpFn(50));
     ReleaseAssert(gold(100) == interpFn(100));
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }

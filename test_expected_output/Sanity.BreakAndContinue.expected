@@ -1,0 +1,149 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @MyFn(i32 %_param_0) {
+entry:
+  %param_0 = alloca i32
+  %s_4 = alloca i32
+  %i_1 = alloca i32
+  %j_2 = alloca i32
+  %k_3 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store i32 0, i32* %s_4
+  store i32 1, i32* %i_1
+  br label %forloop_head0
+
+forloop_head0:                                    ; preds = %forloop_step0, %body
+  %0 = load i32, i32* %i_1
+  %1 = load i32, i32* %param_0
+  %2 = icmp slt i32 %0, %1
+  br i1 %2, label %forloop_body0, label %after_forloop0
+
+forloop_body0:                                    ; preds = %forloop_head0
+  store i32 1, i32* %j_2
+  br label %forloop_head1
+
+forloop_head1:                                    ; preds = %forloop_step1, %forloop_body0
+  %3 = load i32, i32* %j_2
+  %4 = load i32, i32* %i_1
+  %5 = icmp sle i32 %3, %4
+  br i1 %5, label %forloop_body1, label %after_forloop1
+
+forloop_body1:                                    ; preds = %forloop_head1
+  %6 = load i32, i32* %j_2
+  %7 = srem i32 %6, 3
+  %if0 = icmp eq i32 %7, 0
+  br i1 %if0, label %then0, label %after_if0
+
+then0:                                            ; preds = %forloop_body1
+  br label %forloop_step1
+
+after_if0:                                        ; preds = %forloop_body1
+  %8 = load i32, i32* %s_4
+  %9 = load i32, i32* %j_2
+  %10 = load i32, i32* %j_2
+  %11 = mul i32 %9, %10
+  %12 = add i32 %8, %11
+  %13 = load i32, i32* %j_2
+  %14 = add i32 %12, %13
+  store i32 %14, i32* %s_4
+  %15 = load i32, i32* %j_2
+  store i32 %15, i32* %k_3
+  br label %forloop_head2
+
+forloop_head2:                                    ; preds = %forloop_step2, %after_if0
+  %16 = load i32, i32* %k_3
+  %17 = icmp sgt i32 %16, 0
+  br i1 %17, label %forloop_body2, label %after_forloop2
+
+forloop_body2:                                    ; preds = %forloop_head2
+  %18 = load i32, i32* %s_4
+  %19 = add i32 %18, 1
+  store i32 %19, i32* %s_4
+  %20 = load i32, i32* %s_4
+  %21 = load i32, i32* %k_3
+  %22 = srem i32 %20, %21
+  %23 = mul i32 %22, 10
+  %24 = load i32, i32* %k_3
+  %if1 = icmp sle i32 %23, %24
+  br i1 %if1, label %then1, label %after_if1
+
+then1:                                            ; preds = %forloop_body2
+  br label %after_forloop2
+
+after_if1:                                        ; preds = %forloop_body2
+  %25 = load i32, i32* %s_4
+  %26 = add i32 %25, 2
+  store i32 %26, i32* %s_4
+  br label %forloop_step2
+
+forloop_step2:                                    ; preds = %after_if1
+  %27 = load i32, i32* %k_3
+  %28 = sub i32 %27, 1
+  store i32 %28, i32* %k_3
+  %29 = load i32, i32* %s_4
+  %30 = add i32 %29, 1
+  store i32 %30, i32* %s_4
+  br label %forloop_head2
+
+after_forloop2:                                   ; preds = %then1, %forloop_head2
+  %31 = load i32, i32* %s_4
+  %32 = load i32, i32* %j_2
+  %33 = add i32 %31, %32
+  store i32 %33, i32* %s_4
+  br label %forloop_step1
+
+forloop_step1:                                    ; preds = %after_forloop2, %then0
+  %34 = load i32, i32* %j_2
+  %35 = add i32 %34, 1
+  store i32 %35, i32* %j_2
+  %36 = load i32, i32* %s_4
+  %37 = add i32 %36, 1
+  store i32 %37, i32* %s_4
+  br label %forloop_head1
+
+after_forloop1:                                   ; preds = %forloop_head1
+  %38 = load i32, i32* %i_1
+  %39 = srem i32 %38, 5
+  %if2 = icmp eq i32 %39, 0
+  br i1 %if2, label %then2, label %after_if2
+
+then2:                                            ; preds = %after_forloop1
+  br label %forloop_step0
+
+after_if2:                                        ; preds = %after_forloop1
+  %40 = load i32, i32* %s_4
+  %41 = load i32, i32* %i_1
+  %42 = srem i32 %40, %41
+  %if3 = icmp eq i32 %42, 3
+  br i1 %if3, label %then3, label %after_if3
+
+then3:                                            ; preds = %after_if2
+  br label %forloop_step0
+
+after_if3:                                        ; preds = %after_if2
+  %43 = load i32, i32* %s_4
+  %44 = load i32, i32* %i_1
+  %45 = load i32, i32* %i_1
+  %46 = mul i32 %44, %45
+  %47 = add i32 %43, %46
+  store i32 %47, i32* %s_4
+  br label %forloop_step0
+
+forloop_step0:                                    ; preds = %after_if3, %then3, %then2
+  %48 = load i32, i32* %i_1
+  %49 = add i32 %48, 1
+  store i32 %49, i32* %i_1
+  %50 = load i32, i32* %s_4
+  %51 = load i32, i32* %i_1
+  %52 = add i32 %50, %51
+  store i32 %52, i32* %s_4
+  br label %forloop_head0
+
+after_forloop0:                                   ; preds = %forloop_head0
+  %53 = load i32, i32* %s_4
+  ret i32 %53
+}

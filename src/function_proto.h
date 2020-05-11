@@ -49,6 +49,7 @@ private:
         , m_varSuffixOrdinal(0)
         , m_ifStmtSuffixOrdinal(0)
         , m_whileLoopSuffixOrdinal(0)
+        , m_forLoopSuffixOrdinal(0)
         , m_interpStackFrameSize(static_cast<uint32_t>(-1))
         , m_interpStoreParamFns()
         , m_interpStoreRetValFn(nullptr)
@@ -137,6 +138,7 @@ public:
     uint32_t GetNextVarSuffix() { return m_varSuffixOrdinal++; }
     uint32_t GetNextIfStmtSuffix() { return m_ifStmtSuffixOrdinal++; }
     uint32_t GetNextWhileLoopSuffix() { return m_whileLoopSuffixOrdinal++; }
+    uint32_t GetNextForLoopSuffix() { return m_forLoopSuffixOrdinal++; }
 
     void AddParam(TypeId type, const char* name)
     {
@@ -246,6 +248,7 @@ private:
     uint32_t m_varSuffixOrdinal;
     uint32_t m_ifStmtSuffixOrdinal;
     uint32_t m_whileLoopSuffixOrdinal;
+    uint32_t m_forLoopSuffixOrdinal;
 
     // Interp data
     //

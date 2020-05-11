@@ -815,6 +815,7 @@ TEST(Sanity, NoUnreachable_3)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -834,12 +835,21 @@ TEST(Sanity, NoUnreachable_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, NoUnreachable_4)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -865,6 +875,14 @@ TEST(Sanity, NoUnreachable_4)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
 }
 
 TEST(Sanity, NoUnreachable_5)
