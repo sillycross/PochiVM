@@ -1,0 +1,18 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+; Function Attrs: norecurse nounwind readnone
+define i32 @a_plus_10(i32 %_a_0) local_unnamed_addr #0 {
+entry:
+  %0 = add i32 %_a_0, 10
+  ret i32 %0
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i32 @a_plus_50(i32 %_a_0) local_unnamed_addr #0 {
+entry:
+  %0 = add i32 %_a_0, 50
+  ret i32 %0
+}
+
+attributes #0 = { norecurse nounwind readnone }

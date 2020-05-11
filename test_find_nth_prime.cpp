@@ -58,7 +58,7 @@ TEST(Sanity, FindNthPrime)
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);
     thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
-    std::string& dump = rso.str();
+    std::string &dump = rso.str();
 
     AssertIsExpectedOutput(dump);
 }

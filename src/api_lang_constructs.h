@@ -222,8 +222,6 @@ inline IfWithoutThen If(const Value<bool>& cond)
 // init and step may be one statement or a block of statements
 // loops/break/continue/return is disallowed in init/step block
 //
-// TODO: validate init and step
-//
 class ForLoopWithoutBody
 {
 public:

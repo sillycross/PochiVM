@@ -147,10 +147,10 @@ void AstFunction::EmitIR()
 
 void AstModule::EmitIR()
 {
-    // In debug build, user should always validate module before emitting IR
+    // In test build, user should always validate module before emitting IR
     //
-    assert(!m_irEmitted && m_validated);
-#ifndef NDEBUG
+    TestAssert(!m_irEmitted && m_validated);
+#ifdef TESTBUILD
     m_irEmitted = true;
 #endif
 
@@ -190,6 +190,23 @@ void AstModule::EmitIR()
     TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
     thread_llvmContext->m_module = nullptr;
     thread_llvmContext->m_dummyBlock = nullptr;
+}
+
+void AstModule::OptimizeIR()
+{
+    // According to LLVM Document, should not run optimize pass repeatedly on one module.
+    //
+    TestAssert(m_irEmitted && !m_irOptimized);
+#ifdef TESTBUILD
+    m_irOptimized = true;
+#endif
+
+    thread_llvmContext->RunOptimizationPass(m_llvmModule);
+
+    // Just for sanity, validate that the module still contains no errors.
+    // llvm::verifyModule returns false on success
+    //
+    TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
 }
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()

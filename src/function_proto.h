@@ -279,10 +279,11 @@ public:
         : m_moduleName(name)
         , m_functions()
         , m_llvmModule(nullptr)
-#ifndef NDEBUG
+#ifdef TESTBUILD
         , m_validated(false)
         , m_interpPrepared(false)
         , m_irEmitted(false)
+        , m_irOptimized(false)
 #endif
     { }
 
@@ -310,8 +311,8 @@ public:
 
     void PrepareForInterp()
     {
-        assert(!m_interpPrepared);
-#ifndef NDEBUG
+        TestAssert(!m_interpPrepared);
+#ifdef TESTBUILD
         m_interpPrepared = true;
 #endif
         AstTraverseColorMark::ClearAll();
@@ -323,11 +324,12 @@ public:
     }
 
     void EmitIR();
+    void OptimizeIR();
 
     bool WARN_UNUSED Validate()
     {
-        assert(!m_validated);
-#ifndef NDEBUG
+        TestAssert(!m_validated);
+#ifdef TESTBUILD
         m_validated = true;
 #endif
         assert(!thread_errorContext->HasError());
@@ -477,10 +479,11 @@ private:
     //
     std::map<std::string, AstFunction*> m_functions;
     llvm::Module* m_llvmModule;
-#ifndef NDEBUG
+#ifdef TESTBUILD
     bool m_validated;
     bool m_interpPrepared;
     bool m_irEmitted;
+    bool m_irOptimized;
 #endif
 };
 
