@@ -29,7 +29,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
                 // int to bool cast is special: the cast that makes sense is
                 // bool = (int != 0), not normal truncate cast
                 //
-                inst = thread_llvmContext->m_builder.CreateICmpNE(
+                inst = thread_llvmContext->m_builder->CreateICmpNE(
                             op /*lhs*/,
                             ConstantInt::get(op->getType() /*type*/,
                                              0 /*value*/,
@@ -39,7 +39,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             {
                 // Conventional int-to-int widening or narrowing cast
                 //
-                inst = thread_llvmContext->m_builder.CreateIntCast(
+                inst = thread_llvmContext->m_builder->CreateIntCast(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/,
                             src.IsSigned() /*isSourceTypeSigned*/);
@@ -52,13 +52,13 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             //
             if (src.IsSigned())
             {
-                inst = thread_llvmContext->m_builder.CreateSIToFP(
+                inst = thread_llvmContext->m_builder->CreateSIToFP(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
             else
             {
-                inst = thread_llvmContext->m_builder.CreateUIToFP(
+                inst = thread_llvmContext->m_builder->CreateUIToFP(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
@@ -70,7 +70,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
         {
             // float to float cast
             //
-            inst = thread_llvmContext->m_builder.CreateFPCast(
+            inst = thread_llvmContext->m_builder->CreateFPCast(
                         op /*valueToCast*/,
                         AstTypeHelper::llvm_type_of(dst) /*destType*/);
         }
@@ -99,7 +99,7 @@ Value* WARN_UNUSED AstReinterpretCastExpr::EmitIRImpl()
     {
         return op;
     }
-    return thread_llvmContext->m_builder.CreateBitOrPointerCast(op, AstTypeHelper::llvm_type_of(dst));
+    return thread_llvmContext->m_builder->CreateBitOrPointerCast(op, AstTypeHelper::llvm_type_of(dst));
 }
 
 }   // namespace Ast

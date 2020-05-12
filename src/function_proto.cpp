@@ -71,34 +71,34 @@ void AstFunction::EmitIR()
     // "return" stmt stores return value to allocated address,
     // calls each destructor (like break/continue) and branch to "footer"
     //
-    m_llvmEntryBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+    m_llvmEntryBlock = BasicBlock::Create(*thread_llvmContext->m_llvmContext,
                                           "entry", m_generatedPrototype);
 
-    BasicBlock* body = BasicBlock::Create(thread_llvmContext->m_llvmContext,
+    BasicBlock* body = BasicBlock::Create(*thread_llvmContext->m_llvmContext,
                                           "body", m_generatedPrototype);
 
 
     // Build the entry block: create alloca instruction for return value and each parameter
     // Alloca instructions for local variables will be created as they are later encountered
     //
-    thread_llvmContext->m_builder.SetInsertPoint(m_llvmEntryBlock);
+    thread_llvmContext->m_builder->SetInsertPoint(m_llvmEntryBlock);
 
     // Build header block: store the parameters of this function (which are RValues)
     // into the space we allocated for parameters, so we can use them as LValues later
     //
-    thread_llvmContext->m_builder.SetInsertPoint(body);
+    thread_llvmContext->m_builder->SetInsertPoint(body);
     {
         size_t index = 0;
         for (auto &arg : m_generatedPrototype->args())
         {
-            thread_llvmContext->m_builder.CreateStore(&arg, m_params[index]->EmitIR());
+            thread_llvmContext->m_builder->CreateStore(&arg, m_params[index]->EmitIR());
             index++;
         }
     }
 
     // Return insert pointer to end of body, and build the function body
     //
-    thread_llvmContext->m_builder.SetInsertPoint(body);
+    thread_llvmContext->m_builder->SetInsertPoint(body);
     std::ignore = m_body->EmitIR();
 
     // If the current insert point is not the dummy block, build return statement
@@ -112,24 +112,24 @@ void AstFunction::EmitIR()
             // TODO: call abort() in testbuild
             //
             unsigned numBitsRetType = static_cast<unsigned>(m_returnType.Size()) * 8;
-            Value* zeroOfSameWidth = ConstantInt::get(thread_llvmContext->m_llvmContext,
+            Value* zeroOfSameWidth = ConstantInt::get(*thread_llvmContext->m_llvmContext,
                                                       APInt(numBitsRetType /*numBits*/,
                                                             0 /*value*/,
                                                             false /*isSigned*/));
-            Value* retVal = thread_llvmContext->m_builder.CreateBitCast(
+            Value* retVal = thread_llvmContext->m_builder->CreateBitCast(
                     zeroOfSameWidth, AstTypeHelper::llvm_type_of(m_returnType));
-            thread_llvmContext->m_builder.CreateRet(retVal);
+            thread_llvmContext->m_builder->CreateRet(retVal);
         }
         else
         {
-            thread_llvmContext->m_builder.CreateRetVoid();
+            thread_llvmContext->m_builder->CreateRetVoid();
         }
     }
 
     // Entry block fallthroughs to body block
     //
-    thread_llvmContext->m_builder.SetInsertPoint(m_llvmEntryBlock);
-    thread_llvmContext->m_builder.CreateBr(body);
+    thread_llvmContext->m_builder->SetInsertPoint(m_llvmEntryBlock);
+    thread_llvmContext->m_builder->CreateBr(body);
 
     // Nothing should have been inserted into m_dummyBlock
     //
@@ -155,16 +155,21 @@ void AstModule::EmitIR()
 #endif
 
     // Setup the LLVM codegen context
+    // TODO: OOM error handling
     //
-    TestAssert(m_llvmModule == nullptr);
-    m_llvmModule = new Module(m_moduleName, thread_llvmContext->m_llvmContext);
+    TestAssert(m_llvmContext == nullptr && m_llvmModule == nullptr);
+    m_llvmContext = new llvm::LLVMContext();
 
-    TestAssert(thread_llvmContext->m_module == nullptr);
-    thread_llvmContext->m_module = m_llvmModule;
+    llvm::IRBuilder<>* llvmIrBuilder = new llvm::IRBuilder<>(*m_llvmContext);
+    Auto(TestAssert(m_llvmContext != nullptr); delete llvmIrBuilder);
+
+    m_llvmModule = new Module(m_moduleName, *m_llvmContext);
+
+    thread_llvmContext->SetupModule(m_llvmContext, llvmIrBuilder, m_llvmModule);
 
     // TODO: does this leak memory?
     //
-    thread_llvmContext->m_dummyBlock = BasicBlock::Create(thread_llvmContext->m_llvmContext, "dummy");
+    thread_llvmContext->m_dummyBlock = BasicBlock::Create(*thread_llvmContext->m_llvmContext, "dummy");
 
     // First pass: emit all function prototype.
     //
@@ -188,8 +193,8 @@ void AstModule::EmitIR()
 
     TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
     TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
-    thread_llvmContext->m_module = nullptr;
     thread_llvmContext->m_dummyBlock = nullptr;
+    thread_llvmContext->ClearModule();
 }
 
 void AstModule::OptimizeIR()
@@ -229,7 +234,7 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
             index++;
         }
     }
-    Value* ret = thread_llvmContext->m_builder.CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
+    Value* ret = thread_llvmContext->m_builder->CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
     TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), ret));
     if (GetTypeId().IsVoid())
     {
@@ -248,14 +253,14 @@ Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
         TestAssert(AstTypeHelper::llvm_value_has_type(function->GetReturnType(), retVal));
         // TODO: call all destructors
         //
-        thread_llvmContext->m_builder.CreateRet(retVal);
+        thread_llvmContext->m_builder->CreateRet(retVal);
     }
     else
     {
         // TODO: call all destructors
         //
         TestAssert(function->GetReturnType().IsVoid());
-        thread_llvmContext->m_builder.CreateRetVoid();
+        thread_llvmContext->m_builder->CreateRetVoid();
     }
     thread_llvmContext->SetInsertPointToDummyBlock();
     return nullptr;

@@ -2,6 +2,7 @@
 #include <cstdlib> 
 #include "gtest/gtest.h"
 
+#include "codegen_context.hpp"
 #include "test_util_helper.h"
 
 bool g_is_update_expected_mode = false;
@@ -27,6 +28,11 @@ void PrintInformation()
 int main(int argc, char **argv)
 {
     PrintInformation();
+
+    llvm::InitLLVM X(argc, argv);
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+
     ::testing::InitGoogleTest(&argc, argv);
 
     for (int i = 1; i < argc; i++)

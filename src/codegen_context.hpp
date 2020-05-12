@@ -14,7 +14,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
-
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Passes/PassBuilder.h"
 
 namespace Ast
@@ -32,8 +35,8 @@ struct LLVMCodegenContext
             x_optimizationLevel = llvm::PassBuilder::OptimizationLevel::O2;
 
     LLVMCodegenContext()
-        : m_llvmContext()
-        , m_builder(m_llvmContext)
+        : m_llvmContext(nullptr)
+        , m_builder(nullptr)
         , m_module(nullptr)
         , m_dummyBlock(nullptr)
         , m_isCursorAtDummyBlock(false)
@@ -58,7 +61,8 @@ struct LLVMCodegenContext
 
     void SetInsertPointToDummyBlock()
     {
-        m_builder.SetInsertPoint(m_dummyBlock);
+        assert(m_builder != nullptr);
+        m_builder->SetInsertPoint(m_dummyBlock);
         m_isCursorAtDummyBlock = true;
     }
 
@@ -68,8 +72,24 @@ struct LLVMCodegenContext
         m_MPM.run(*module, m_MAM);
     }
 
-    llvm::LLVMContext m_llvmContext;
-    llvm::IRBuilder<> m_builder;
+    void SetupModule(llvm::LLVMContext* llvmContext, llvm::IRBuilder<>* builder, llvm::Module* module)
+    {
+        TestAssert(m_llvmContext == nullptr && m_builder == nullptr && m_module == nullptr);
+        TestAssert(llvmContext != nullptr && builder != nullptr && module != nullptr);
+        m_llvmContext = llvmContext;
+        m_builder = builder;
+        m_module = module;
+    }
+
+    void ClearModule()
+    {
+        m_llvmContext = nullptr;
+        m_builder = nullptr;
+        m_module = nullptr;
+    }
+
+    llvm::LLVMContext* m_llvmContext;
+    llvm::IRBuilder<>* m_builder;
     llvm::Module* m_module;
 
     llvm::PassBuilder m_passBuilder;

@@ -10,6 +10,7 @@ namespace llvm
 class BasicBlock;
 class AllocaInst;
 class Module;
+class LLVMContext;
 
 }   // namespace llvm
 
@@ -278,6 +279,7 @@ public:
     AstModule(const std::string& name)
         : m_moduleName(name)
         , m_functions()
+        , m_llvmContext(nullptr)
         , m_llvmModule(nullptr)
 #ifdef TESTBUILD
         , m_validated(false)
@@ -478,6 +480,7 @@ private:
     // The perf hit should be small. TODO: consider use std::unordered_map in release?
     //
     std::map<std::string, AstFunction*> m_functions;
+    llvm::LLVMContext* m_llvmContext;
     llvm::Module* m_llvmModule;
 #ifdef TESTBUILD
     bool m_validated;

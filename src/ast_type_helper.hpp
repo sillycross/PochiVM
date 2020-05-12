@@ -16,7 +16,7 @@ using namespace llvm;
 //
 inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
 {
-    LLVMContext& C = thread_llvmContext->m_llvmContext;
+    LLVMContext& C = *thread_llvmContext->m_llvmContext;
     if (typeId.IsVoid())
     {
         return Type::getVoidTy(C);
@@ -84,7 +84,7 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
 //
 inline bool WARN_UNUSED llvm_type_has_type(TypeId typeId, Type* type)
 {
-    assert(type != nullptr && (&type->getContext()) == (&thread_llvmContext->m_llvmContext));
+    assert(type != nullptr && (&type->getContext()) == thread_llvmContext->m_llvmContext);
     return llvm_type_of(typeId) == type;
 }
 
