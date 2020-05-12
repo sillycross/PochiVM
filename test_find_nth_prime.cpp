@@ -48,10 +48,12 @@ TEST(Sanity, FindNthPrime)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("find_nth_prime");
-    int ret = interpFn(1000);
-    ReleaseAssert(ret == 7919);
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("find_nth_prime");
+        int ret = interpFn(1000);
+        ReleaseAssert(ret == 7919);
+    }
 
     thread_pochiVMContext->m_curModule->EmitIR();
 
@@ -61,4 +63,24 @@ TEST(Sanity, FindNthPrime)
     std::string &dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("find_nth_prime");
+        int ret = jitFn(1000);
+        ReleaseAssert(ret == 7919);
+    }
+
+    // just to sanity check GetFunction with CStyle typename works as well
+    //
+    {
+        using CStyleFnPrototype = int(*)(int);
+        CStyleFnPrototype jitFn = jit.GetFunction<CStyleFnPrototype>("find_nth_prime");
+        int ret = jitFn(1000);
+        ReleaseAssert(ret == 7919);
+    }
 }

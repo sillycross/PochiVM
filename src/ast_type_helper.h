@@ -904,6 +904,79 @@ template<typename R, typename... Args>
 struct is_function_prototype< std::function<R(Args...)> > : std::true_type
 { };
 
+// function_addr_to_callable<T>(void* addr):
+//    Converts addr to a callable of type T, which may be a C-style function pointer or a std::function object.
+//
+template<typename T>
+struct function_addr_to_callable
+{
+    static_assert(sizeof(T) == 0, "T must be either a C-style function pointer or a std::function object");
+};
+
+template<typename R, typename... Args>
+struct function_addr_to_callable<R(*)(Args...)>
+{
+    using FnPrototype = R(*)(Args...);
+    static FnPrototype get(void* fnAddr)
+    {
+        return reinterpret_cast<FnPrototype>(fnAddr);
+    }
+};
+
+template<typename R, typename... Args>
+struct function_addr_to_callable<std::function<R(Args...)>>
+{
+    using FnPrototype = std::function<R(Args...)>;
+    static FnPrototype get(void* fnAddr)
+    {
+        return FnPrototype(reinterpret_cast<R(*)(Args...)>(fnAddr));
+    }
+};
+
+// callable_to_c_style_fnptr_type<T>::type
+//    If T is a std::function object, the result is its holding C-style function pointer type
+//    If T is a C-style function pointer type, the result is still T.
+//
+template<typename T>
+struct callable_to_c_style_fnptr_type
+{
+    static_assert(sizeof(T) == 0, "T must be either a C-style function pointer or a std::function object");
+};
+
+template<typename R, typename... Args>
+struct callable_to_c_style_fnptr_type<R(*)(Args...)>
+{
+    using type = R(*)(Args...);
+};
+
+template<typename R, typename... Args>
+struct callable_to_c_style_fnptr_type<std::function<R(Args...)>>
+{
+    using type = R(*)(Args...);
+};
+
+// callable_to_std_function_type<T>::type
+//    If T is a std::function object, the result is still T.
+//    If T is a C-style function pointer type, the result is the std::function object type that holds this type.
+//
+template<typename T>
+struct callable_to_std_function_type
+{
+    static_assert(sizeof(T) == 0, "T must be either a C-style function pointer or a std::function object");
+};
+
+template<typename R, typename... Args>
+struct callable_to_std_function_type<R(*)(Args...)>
+{
+    using type = std::function<R(Args...)>;
+};
+
+template<typename R, typename... Args>
+struct callable_to_std_function_type<std::function<R(Args...)>>
+{
+    using type = std::function<R(Args...)>;
+};
+
 // Concatenate tuple types. Example:
 //   tuple_concat_type<tuple<int, double>, tuple<float, char>> is tuple<int, double, float, char>
 //

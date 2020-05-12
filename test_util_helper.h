@@ -2,6 +2,8 @@
 
 #include "src/common.h"
 #include "gtest/gtest.h"
+#include "codegen_context.hpp"
+#include "src/pochivm.h"
 
 // Whether we are in update-expected-output mode
 //
@@ -144,3 +146,43 @@ inline void AssertIsExpectedOutput(std::string out)
         }
     }
 }
+
+class SimpleJIT
+{
+public:
+    SimpleJIT()
+        : m_jit(nullptr)
+        , m_astModule(nullptr)
+    { }
+
+    // JIT the given module. Transfers ownership of the llvm module.
+    // The previous JIT'd module, if exists, is thrown away
+    //
+    void SetModule(Ast::AstModule* module)
+    {
+        llvm::ExitOnError exitOnErr;
+        std::unique_ptr<llvm::orc::LLJIT>&& jit = exitOnErr(llvm::orc::LLJITBuilder().create());
+        llvm::orc::ThreadSafeModule M = module->GetThreadSafeModule();
+        exitOnErr(jit->addIRModule(std::move(M)));
+        m_jit.reset(jit.release());
+        m_astModule = module;
+    }
+
+    // Get a callable to the function name
+    // FnPrototype may be a C-style pointer or std::function object.
+    // Fires an assert if the function prototype does not match the actual type of the function
+    //
+    template<typename FnPrototype>
+    FnPrototype GetFunction(const std::string& fnName)
+    {
+        ReleaseAssert(m_jit != nullptr && m_astModule != nullptr);
+        ReleaseAssert(m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
+        llvm::ExitOnError exitOnErr;
+        auto sym = exitOnErr(m_jit->lookup(fnName));
+        return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
+                reinterpret_cast<void*>(sym.getAddress()));
+    }
+
+    std::unique_ptr<llvm::orc::LLJIT> m_jit;
+    Ast::AstModule* m_astModule;
+};

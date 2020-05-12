@@ -12,6 +12,10 @@ class AllocaInst;
 class Module;
 class LLVMContext;
 
+namespace orc {
+class ThreadSafeModule;
+}   // namespace orc
+
 }   // namespace llvm
 
 namespace Ast
@@ -327,6 +331,12 @@ public:
 
     void EmitIR();
     void OptimizeIR();
+    void OptimizeIRIfNotDebugMode();
+
+    // Called after emitting IR and optionally optimizing IR.
+    // Transfer ownership of m_llvmContext and m_llvmModule to the returned llvm::ThreadSafeModule object.
+    //
+    llvm::orc::ThreadSafeModule GetThreadSafeModule();
 
     bool WARN_UNUSED Validate()
     {
@@ -374,8 +384,21 @@ public:
         {
             return nullptr;
         }
-        InterpCallFunction<T>::assert_prototype_ok(fn);
+        TestAssert(InterpCallFunction<T>::check_prototype_ok(fn));
         return InterpCallFunction<T>::get(fn);
+    }
+
+    // Check that the function with specified name exists and its prototype matches T
+    // T may be either a C-style function pointer or a std::function object
+    //
+    template<typename T>
+    bool WARN_UNUSED CheckFunctionExistsAndPrototypeMatches(const std::string& name)
+    {
+        AstFunction* fn = GetAstFunction(name);
+        CHECK(fn != nullptr);
+        using _StdFunctionType = typename AstTypeHelper::callable_to_std_function_type<T>::type;
+        CHECK(InterpCallFunction<_StdFunctionType>::check_prototype_ok(fn));
+        return true;
     }
 
 private:
@@ -455,15 +478,15 @@ private:
     {
         using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
 
-        static void assert_prototype_ok(AstFunction* fn)
+        static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
         {
-            TestAssert(FnInfo::numArgs == fn->GetNumParams());
-            TestAssert(TypeId::Get<R>() == fn->GetReturnType());
+            CHECK(FnInfo::numArgs == fn->GetNumParams());
+            CHECK(TypeId::Get<R>() == fn->GetReturnType());
             for (size_t i = 0; i < FnInfo::numArgs; i++)
             {
-                TestAssert(fn->GetParamType(i) == FnInfo::argTypeId[i]);
+                CHECK(fn->GetParamType(i) == FnInfo::argTypeId[i]);
             }
-            std::ignore = fn;
+            return true;
         }
 
         static std::function<R(Args...)> get(AstFunction* fn)

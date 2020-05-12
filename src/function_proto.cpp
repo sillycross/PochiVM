@@ -5,6 +5,7 @@ namespace Ast
 {
 
 using namespace llvm;
+using namespace llvm::orc;
 
 void AstFunction::EmitDefinition()
 {
@@ -158,6 +159,8 @@ void AstModule::EmitIR()
     // TODO: OOM error handling
     //
     TestAssert(m_llvmContext == nullptr && m_llvmModule == nullptr);
+    // Must use std::new. We will later transfer ownership to LLVM using std::unique_ptr. Same for m_llvmModule
+    //
     m_llvmContext = new llvm::LLVMContext();
 
     llvm::IRBuilder<>* llvmIrBuilder = new llvm::IRBuilder<>(*m_llvmContext);
@@ -212,6 +215,23 @@ void AstModule::OptimizeIR()
     // llvm::verifyModule returns false on success
     //
     TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
+}
+
+void AstModule::OptimizeIRIfNotDebugMode()
+{
+#ifdef NDEBUG
+    OptimizeIR();
+#endif
+}
+
+ThreadSafeModule AstModule::GetThreadSafeModule()
+{
+    TestAssert(m_llvmModule != nullptr && m_llvmContext != nullptr);
+    ThreadSafeModule&& r = ThreadSafeModule(std::unique_ptr<Module>(m_llvmModule),
+                                            std::unique_ptr<LLVMContext>(m_llvmContext));
+    m_llvmModule = nullptr;
+    m_llvmContext = nullptr;
+    return std::move(r);
 }
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
