@@ -1,0 +1,15 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define i32 @TronFn() {
+entry:
+  %myVarName_0 = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  %0 = load i32, i32* %myVarName_0
+  %1 = add i32 %0, 1
+  store i32 %1, i32* %myVarName_0
+  %2 = load i32, i32* %myVarName_0
+  ret i32 %2
+}
