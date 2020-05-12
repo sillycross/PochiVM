@@ -29,10 +29,12 @@ TEST(Sanity, FibonacciSeq)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("fib_nth");
-    uint64_t ret = interpFn(20);
-    ReleaseAssert(ret == 6765);
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("fib_nth");
+        uint64_t ret = interpFn(20);
+        ReleaseAssert(ret == 6765);
+    }
 
     thread_pochiVMContext->m_curModule->EmitIR();
 
@@ -42,4 +44,15 @@ TEST(Sanity, FibonacciSeq)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("fib_nth");
+        uint64_t ret = jitFn(20);
+        ReleaseAssert(ret == 6765);
+    }
 }

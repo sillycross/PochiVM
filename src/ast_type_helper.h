@@ -90,6 +90,7 @@ struct GetTypeId;
 
 }   // namespace AstTypeHelper
 
+// TODO: REMOVE
 // Like in C, RValue is an intermediate value that may or may not have a memory address,
 // while LValue is a value known to be residing in memory.
 //
@@ -494,10 +495,10 @@ struct primitive_type_supports_binary_op : std::integral_constant<bool,
         ((primitive_type_supports_binary_op_internal<T>::value & (static_cast<uint64_t>(1) << static_cast<int>(op))) != 0)
 > {};
 
-// static_cast_offset<T, U>::value
+// static_cast_offset<T, U>::get()
 // On static_cast-able <T, U>-pair (T, U must both be pointers),
 // the value is the shift in bytes needed to add to T when converted to U
-// Otherwise, the value is MAX_INT64 to not cause a compilation error when used.
+// Otherwise, the value is std::numeric_limits<ssize_t>::max() to not cause a compilation error when used.
 //
 // E.g.
 //    class A { uint64_t a}; class B { uint64_t b; } class C : public A, public B { uint64_t c };
@@ -506,23 +507,31 @@ struct primitive_type_supports_binary_op : std::integral_constant<bool,
 //    static_cast_offset<B*, C*> = -8
 //    static_cast_offset<C*, A*> = 0
 //    static_cast_offset<C*, B*> = 8
-//    static_cast_offset<A*, B*> = MAX_INT64
-//    static_cast_offset<std::string, int> = MAX_INT64
+//    static_cast_offset<A*, B*> = std::numeric_limits<ssize_t>::max()
+//    static_cast_offset<std::string, int> = std::numeric_limits<ssize_t>::max()
 //
 template<typename T, typename U, typename Enable = void>
 struct static_cast_offset
 {
-    static const uint64_t value = (static_cast<uint64_t>(1) << 63) - 1;
+    static ssize_t get()
+    {
+        return std::numeric_limits<ssize_t>::max();
+    }
 };
 
 template<typename T, typename U>
 struct static_cast_offset<T*, U*, typename std::enable_if<
         std::is_convertible<T*, U*>::value
 >::type > {
-    // Figure out the shift offset by doing a fake cast on 0x1000. Any address should
-    // also work, but nullptr will not, so just to make things obvious..
-    //
-    static const uint64_t value = reinterpret_cast<uintptr_t>(static_cast<U*>(reinterpret_cast<T*>(0x1000))) - 0x1000;
+    static ssize_t get()
+    {
+        // Figure out the shift offset by doing a fake cast on 0x1000. Any address should
+        // also work, but nullptr will not, so just to make things obvious..
+        //
+        return static_cast<ssize_t>(
+            reinterpret_cast<uintptr_t>(static_cast<U*>(reinterpret_cast<T*>(0x1000))) -
+            static_cast<uintptr_t>(0x1000));
+    }
 };
 
 // Get the function address for a class method.
@@ -753,6 +762,34 @@ struct arith_common_type
     }
 };
 
+namespace internal
+{
+
+template<typename T, typename U>
+ssize_t get_static_cast_offset_impl()
+{
+    ssize_t ret = static_cast_offset<T, U>::get();
+    TestAssert(ret != std::numeric_limits<ssize_t>::max());
+    return ret;
+}
+
+GEN_FUNCTION_SELECTOR(get_static_cast_offset_selector,
+                      get_static_cast_offset_impl,
+                      std::is_pointer)
+
+}   // namespace internal
+
+inline ssize_t get_static_cast_offset(TypeId src, TypeId dst)
+{
+    assert(src.IsPointerType() && dst.IsPointerType());
+    using _FnType = ssize_t(*)();
+    _FnType fn = reinterpret_cast<_FnType>(
+            internal::get_static_cast_offset_selector(src, dst));
+    ssize_t ret = fn();
+    TestAssert(ret != std::numeric_limits<ssize_t>::max());
+    return ret;
+}
+
 // Typecheck for but cpp class type (but pointers to cpp class types are OK)
 //
 template<typename T>
@@ -904,7 +941,7 @@ template<typename R, typename... Args>
 struct is_function_prototype< std::function<R(Args...)> > : std::true_type
 { };
 
-// function_addr_to_callable<T>(void* addr):
+// function_addr_to_callable<T>::get(void* addr):
 //    Converts addr to a callable of type T, which may be a C-style function pointer or a std::function object.
 //
 template<typename T>

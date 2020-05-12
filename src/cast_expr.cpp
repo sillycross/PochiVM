@@ -18,8 +18,6 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
         return op;
     }
 
-    Value* inst = nullptr;
-
     if (src.IsPrimitiveIntType())
     {
         if (dst.IsPrimitiveIntType())
@@ -29,7 +27,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
                 // int to bool cast is special: the cast that makes sense is
                 // bool = (int != 0), not normal truncate cast
                 //
-                inst = thread_llvmContext->m_builder->CreateICmpNE(
+                return thread_llvmContext->m_builder->CreateICmpNE(
                             op /*lhs*/,
                             ConstantInt::get(op->getType() /*type*/,
                                              0 /*value*/,
@@ -39,7 +37,7 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             {
                 // Conventional int-to-int widening or narrowing cast
                 //
-                inst = thread_llvmContext->m_builder->CreateIntCast(
+                return thread_llvmContext->m_builder->CreateIntCast(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/,
                             src.IsSigned() /*isSourceTypeSigned*/);
@@ -52,13 +50,13 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
             //
             if (src.IsSigned())
             {
-                inst = thread_llvmContext->m_builder->CreateSIToFP(
+                return thread_llvmContext->m_builder->CreateSIToFP(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
             else
             {
-                inst = thread_llvmContext->m_builder->CreateUIToFP(
+                return thread_llvmContext->m_builder->CreateUIToFP(
                             op /*valueToCast*/,
                             AstTypeHelper::llvm_type_of(dst) /*destType*/);
             }
@@ -70,24 +68,44 @@ Value* WARN_UNUSED AstStaticCastExpr::EmitIRImpl()
         {
             // float to float cast
             //
-            inst = thread_llvmContext->m_builder->CreateFPCast(
+            return thread_llvmContext->m_builder->CreateFPCast(
                         op /*valueToCast*/,
                         AstTypeHelper::llvm_type_of(dst) /*destType*/);
         }
     }
-    /*
-     * TODO: handle pointer
-    else if (std::is_pointer<T>::value && std::is_pointer<U>::value)
+    else if (src.IsPointerType() && dst.IsPointerType())
     {
         // Generate:
         //     assert(op != NULL);  // when U is not void*
         //     return reinterpret_cast<U>(reinterpret_cast<uintptr_t>(op) + offset);
         //
-        uint64_t offset = AstTypeHelper::static_cast_offset<T, U>::value;
+        // TODO: currently we do not generate the assert
+        //
+        ssize_t offset = AstTypeHelper::get_static_cast_offset(src, dst);
+        if (offset == 0)
+        {
+            return thread_llvmContext->m_builder->CreateBitOrPointerCast(op, AstTypeHelper::llvm_type_of(dst));
+        }
+        else
+        {
+            Value* addrU64 = thread_llvmContext->m_builder->CreateBitOrPointerCast(
+                    op, AstTypeHelper::llvm_type_of(TypeId::Get<uint64_t>()));
+            assert(AstTypeHelper::llvm_value_has_type(TypeId::Get<uint64_t>(), addrU64));
+
+            Value* offsetU64 = ConstantInt::get(*thread_llvmContext->m_llvmContext,
+                                                APInt(64 /*numBits*/,
+                                                      static_cast<uint64_t>(offset) /*value*/,
+                                                      false /*isSigned*/));
+            assert(AstTypeHelper::llvm_value_has_type(TypeId::Get<uint64_t>(), offsetU64));
+
+            Value* dstAddrU64 = thread_llvmContext->m_builder->CreateAdd(addrU64, offsetU64);
+            assert(AstTypeHelper::llvm_value_has_type(TypeId::Get<uint64_t>(), dstAddrU64));
+
+            return thread_llvmContext->m_builder->CreateBitOrPointerCast(dstAddrU64, AstTypeHelper::llvm_type_of(dst));
+        }
     }
-    */
-    CHECK_REPORT_BUG(inst != nullptr, "unhandled static_cast codepath or llvm internal error");
-    return inst;
+    TestAssert(false);
+    __builtin_unreachable();
 }
 
 Value* WARN_UNUSED AstReinterpretCastExpr::EmitIRImpl()

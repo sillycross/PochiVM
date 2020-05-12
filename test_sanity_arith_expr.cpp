@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "pochivm.h"
+#include "test_util_helper.h"
 
 using namespace Ast;
 
@@ -32,6 +33,8 @@ void CompareResults(double v1, double v2, double r1, double r2)
     ReleaseAssert(relDiff < tol);
 }
 
+// TODO: currently 'new SimpleJIT()' leaks
+//
 #define GetArithFn(fnName, opName, retType)                                      \
 template<typename T>                                                             \
 std::function<void(T, T)> fnName()                                               \
@@ -44,11 +47,20 @@ std::function<void(T, T)> fnName()                                              
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->                  \
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");  \
     ReleaseAssert(interpFn != nullptr);                                          \
+                                                                                 \
+    thread_pochiVMContext->m_curModule->EmitIR();                                \
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();              \
+                                                                                 \
+    SimpleJIT* jit = new SimpleJIT();                                            \
+    jit->SetModule(thread_pochiVMContext->m_curModule);                          \
+                                                                                 \
+    FnPrototype jitFn = jit->GetFunction<FnPrototype>("MyFn");                   \
     FnPrototype gold = [](T v1, T v2) -> retType {                               \
         return v1 opName v2;                                                     \
     };                                                                           \
-    std::function<void(T,T)> compare = [gold, interpFn](T v1, T v2) {            \
+    std::function<void(T,T)> compare = [gold, interpFn, jitFn](T v1, T v2) {     \
         CompareResults<T, retType>(v1, v2, gold(v1, v2), interpFn(v1,v2));       \
+        CompareResults<T, retType>(v1, v2, gold(v1, v2), jitFn(v1,v2));          \
     };                                                                           \
     return compare;                                                              \
 }
@@ -76,6 +88,7 @@ void TestInterestingIntegerParams(std::function<std::function<void(T, T)>()> fnG
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -132,6 +145,7 @@ void TestInterestingFloatParams(std::function<std::function<void(T, T)>()> fnGen
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -174,6 +188,7 @@ void TestBoolParams(std::function<std::function<void(bool, bool)>()> fnGen)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 

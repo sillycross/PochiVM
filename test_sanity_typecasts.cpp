@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "pochivm.h"
+#include "test_util_helper.h"
 
 using namespace Ast;
 
@@ -38,11 +39,32 @@ std::function<U(T)> GetStaticCastFn()
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    // TODO: this leaks. Fix later
+    //
+    SimpleJIT* jit = new SimpleJIT();
+
+    jit->SetModule(thread_pochiVMContext->m_curModule);
+
+    FnPrototype jitFn = jit->GetFunction<FnPrototype>("MyFn");
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
     ReleaseAssert(interpFn != nullptr);
-    return interpFn;
+
+    return [jitFn, interpFn](T value) -> U {
+        U out1 = interpFn(value);
+        U out2 = jitFn(value);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfloat-equal"
+        // we only test small floats, so should not change value
+        //
+        ReleaseAssert(out1 == out2);
+#pragma clang diagnostic pop
+        return out1;
+    };
 }
 
 template<typename T, typename U>
@@ -50,6 +72,7 @@ void TestStaticCastBetweenIntTypes()
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -69,6 +92,7 @@ void TestStaticCastBetweenFloatTypes()
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -100,6 +124,7 @@ void TestStaticCastIntToFloat()
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -125,6 +150,7 @@ void TestStaticCastPointerTypes()
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -196,6 +222,7 @@ TEST(SanityError, StaticCastNullptrDisallowed)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -210,6 +237,10 @@ TEST(SanityError, StaticCastNullptrDisallowed)
 #pragma clang diagnostic ignored "-Wused-but-marked-unused"
 #pragma clang diagnostic ignored "-Wcovered-switch-default"
 
+    // TODO: This is not good enough, since we want to make sure both interpFn and generatedFn fires assert,
+    // and the death is caused by the assert we expected, not some random other failures.
+    // And furthermore, currently generatedFn does NOT fire the assert. Fix later.
+    //
     ASSERT_DEATH(fn(reinterpret_cast<int*>(0)), "");
 
 #pragma clang diagnostic pop
@@ -221,6 +252,7 @@ TEST(Sanity, ReinterpretCast_1)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -248,6 +280,7 @@ TEST(Sanity, ReinterpretCast_2)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -270,6 +303,7 @@ TEST(Sanity, ReinterpretCast_3)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -287,5 +321,3 @@ TEST(Sanity, ReinterpretCast_3)
 
     ReleaseAssert(interpFn(reinterpret_cast<uintptr_t>(&x)) == &x);
 }
-
-

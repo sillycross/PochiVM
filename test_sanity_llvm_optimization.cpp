@@ -58,4 +58,17 @@ TEST(Sanity, LLVMOptimizationPassEffective)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_10");
+        ReleaseAssert(jitFn(233) == 233 + 10);
+    }
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_50");
+        ReleaseAssert(jitFn(233) == 233 + 50);
+    }
 }

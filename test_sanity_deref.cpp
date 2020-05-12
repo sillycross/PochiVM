@@ -58,9 +58,6 @@ TEST(Sanity, LinkedListChasing)
     thread_pochiVMContext->m_curModule->PrepareForInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("compute_linked_list_sum");
-
     Data* head = BuildLinkedList();
     uint64_t expectedSum = 0;
     {
@@ -72,8 +69,13 @@ TEST(Sanity, LinkedListChasing)
         }
     }
 
-    uint64_t ret = interpFn(head);
-    ReleaseAssert(ret == expectedSum);
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("compute_linked_list_sum");
+
+        uint64_t ret = interpFn(head);
+        ReleaseAssert(ret == expectedSum);
+    }
 
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);
@@ -81,6 +83,17 @@ TEST(Sanity, LinkedListChasing)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("compute_linked_list_sum");
+        uint64_t ret = jitFn(head);
+        ReleaseAssert(ret == expectedSum);
+    }
 }
 
 TEST(Sanity, StoreIntoLocalVar)
@@ -154,4 +167,31 @@ TEST(Sanity, StoreIntoLocalVar)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype2 jitFn = jit.GetFunction<FnPrototype2>("a_plus_b_plus_233");
+
+        ReleaseAssert(jitFn(123, 456) == 123 + 456 + 233);
+    }
+
+    {
+        FnPrototype1 jitFn = jit.GetFunction<FnPrototype1>("store_value");
+
+        int x = 29310923;
+        jitFn(&x, 101);
+        ReleaseAssert(x == 101 + 233);
+    }
+
+    {
+        FnPrototype1 jitFn = jit.GetFunction<FnPrototype1>("inc_value");
+
+        int x = 12345;
+        jitFn(&x, 543);
+        ReleaseAssert(x == 12345 + 543);
+    }
 }

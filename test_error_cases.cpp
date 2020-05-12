@@ -333,10 +333,11 @@ TEST(SanityError, RedeclareVar_3)
     AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
 }
 
-TEST(Sanity, DeclareVarCornerCaseDoesNotCrash)
+TEST(SanityNoError, DeclareVarCornerCaseDoesNotCrash)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -357,6 +358,25 @@ TEST(Sanity, DeclareVarCornerCaseDoesNotCrash)
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("TronFn");
     std::ignore = interpFn();
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string &dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("TronFn");
+        std::ignore = jitFn();
+    }
 }
 
 TEST(SanityError, UseOutOfScopeVar_1)
@@ -495,6 +515,14 @@ TEST(Sanity, BlockHasNoScopeEffect)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("GoodFn");
+        ReleaseAssert(jitFn() == 3);
+    }
 }
 
 TEST(SanityError, BreakNotInLoop)
@@ -851,7 +879,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_5)
     AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
 }
 
-TEST(Sanity, NoUnreachable_1)
+TEST(SanityNoError, NoUnreachable_1)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -880,7 +908,7 @@ TEST(Sanity, NoUnreachable_1)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_2)
+TEST(SanityNoError, NoUnreachable_2)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -911,7 +939,7 @@ TEST(Sanity, NoUnreachable_2)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_3)
+TEST(SanityNoError, NoUnreachable_3)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -945,7 +973,7 @@ TEST(Sanity, NoUnreachable_3)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_4)
+TEST(SanityNoError, NoUnreachable_4)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -985,7 +1013,7 @@ TEST(Sanity, NoUnreachable_4)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_5)
+TEST(SanityNoError, NoUnreachable_5)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1019,7 +1047,7 @@ TEST(Sanity, NoUnreachable_5)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_6)
+TEST(SanityNoError, NoUnreachable_6)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1051,7 +1079,7 @@ TEST(Sanity, NoUnreachable_6)
     AssertIsExpectedOutput(dump);
 }
 
-TEST(Sanity, NoUnreachable_7)
+TEST(SanityNoError, NoUnreachable_7)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;

@@ -74,13 +74,15 @@ TEST(Sanity, BreakAndContinue)
     thread_pochiVMContext->m_curModule->PrepareForInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
 
-    ReleaseAssert(gold(10) == interpFn(10));
-    ReleaseAssert(gold(30) == interpFn(30));
-    ReleaseAssert(gold(50) == interpFn(50));
-    ReleaseAssert(gold(100) == interpFn(100));
+        ReleaseAssert(gold(10) == interpFn(10));
+        ReleaseAssert(gold(30) == interpFn(30));
+        ReleaseAssert(gold(50) == interpFn(50));
+        ReleaseAssert(gold(100) == interpFn(100));
+    }
 
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);
@@ -88,4 +90,17 @@ TEST(Sanity, BreakAndContinue)
     std::string& dump = rso.str();
 
     AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
+        ReleaseAssert(gold(10) == jitFn(10));
+        ReleaseAssert(gold(30) == jitFn(30));
+        ReleaseAssert(gold(50) == jitFn(50));
+        ReleaseAssert(gold(100) == jitFn(100));
+    }
 }
