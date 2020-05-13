@@ -26,6 +26,17 @@ void AstFunction::EmitDefinition()
     m_generatedPrototype = Function::Create(
                 funcType, Function::ExternalLinkage, m_name, thread_llvmContext->m_module);
 
+    // LLVM craziness: bool is i1 in LLVM, but i8 in C++
+    // When a function returns a bool, LLVM is free to fill whatever it wants into the first 7 bits
+    // of the bool (and this actually happens), but C++ would not expect this, since the standard says the only
+    // legal binary representations of a bool are 0 and 1. This actually results in random bugs in -O3.
+    // Set the return value attribute to tell LLVM that it must ZeroExt the return value.
+    //
+    if (m_returnType.IsBool())
+    {
+        m_generatedPrototype->addAttribute(AttributeList::AttrIndex::ReturnIndex, Attribute::AttrKind::ZExt);
+    }
+
     // Set parameter names
     //
     {

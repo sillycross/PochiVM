@@ -6,6 +6,7 @@
 #include "common_expr.h"
 #include "arith_expr.h"
 #include "lang_constructs.h"
+#include "logical_operator.h"
 
 namespace Ast
 {
@@ -191,6 +192,21 @@ template<typename T, typename = std::enable_if_t<
 Value<bool> operator>=(const Value<T>& lhs, const Value<T>& rhs)
 {
     return Value<bool>(new AstComparisonExpr(">=", lhs.m_ptr, rhs.m_ptr));
+}
+
+inline Value<bool> operator&&(const Value<bool>& lhs, const Value<bool>& rhs)
+{
+    return Value<bool>(new AstLogicalAndOrExpr(true /*isAnd*/, lhs.m_ptr, rhs.m_ptr));
+}
+
+inline Value<bool> operator||(const Value<bool>& lhs, const Value<bool>& rhs)
+{
+    return Value<bool>(new AstLogicalAndOrExpr(false /*isAnd*/, lhs.m_ptr, rhs.m_ptr));
+}
+
+inline Value<bool> operator!(const Value<bool>& op)
+{
+    return Value<bool>(new AstLogicalNotExpr(op.m_ptr));
 }
 
 // Language utility: construct a literal

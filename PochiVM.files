@@ -4,6 +4,8 @@ src/cast_expr.cpp
 src/common_expr.cpp
 src/function_proto.cpp
 src/lang_constructs.cpp
+src/logical_operator.cpp
+src/logical_operator.h
 src/pochivm.hpp
 src/pochivm_context.h
 src/pochivm.h
@@ -37,5 +39,6 @@ test_sanity_break_continue.cpp
 test_sanity_deref.cpp
 test_sanity_irdump.cpp
 test_sanity_llvm_optimization.cpp
+test_sanity_logical_op.cpp
 test_sanity_typecasts.cpp
 test_util_helper.h

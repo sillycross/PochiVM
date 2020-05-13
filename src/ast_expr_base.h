@@ -37,7 +37,9 @@ public:
         AstForLoop,
         AstBreakOrContinueStmt,
         AstCallExpr,
-        AstReturnStmt
+        AstReturnStmt,
+        AstLogicalAndOrExpr,
+        AstLogicalNotExpr
     };
 
     AstNodeType() {}
@@ -72,6 +74,8 @@ public:
         case AstNodeType::AstBreakOrContinueStmt: return "AstBreakOrContinueStmt";
         case AstNodeType::AstCallExpr: return "AstCallExpr";
         case AstNodeType::AstReturnStmt: return "AstReturnStmt";
+        case AstNodeType::AstLogicalAndOrExpr: return "AstLogicalAndOrExpr";
+        case AstNodeType::AstLogicalNotExpr: return "AstLogicalNotExpr";
         }
         __builtin_unreachable();
     }
