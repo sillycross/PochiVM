@@ -14,7 +14,7 @@ body:                                             ; preds = %entry
 
 whileloop_head0:                                  ; preds = %whileloop_body0, %body
   %0 = load i32, i32* %a_0
-  %1 = icmp sgt i32 %0, 0
+  %1 = icmp slt i32 %0, 0
   br i1 %1, label %whileloop_body0, label %after_whileloop0
 
 whileloop_body0:                                  ; preds = %whileloop_head0
