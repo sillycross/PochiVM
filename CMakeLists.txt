@@ -36,7 +36,8 @@ endif()
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread ")
 
 # If debug symbols are emitted, redirect them to point at the right location
-# In docker the build root is always /home/u/PochiVM/, remove this prefix
+# The reference to source code files always have prefix ../../ (since we are building 
+# in directory build/flavor/), remove this prefix
 #
 if((BUILD_FLAVOR STREQUAL "DEBUG") OR (BUILD_FLAVOR STREQUAL "RELEASE"))
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffile-prefix-map=../../= ")

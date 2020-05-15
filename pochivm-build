@@ -100,7 +100,7 @@ if (op == 'make'):
     isClean = False
     if (len(sys.argv) == 4):
         if (sys.argv[3] != 'clean'):
-            PrintUsageCMakeAndDie()
+            PrintUsageMakeAndDie()
         isClean = True
     
     if (not os.path.exists(GetBuildDirFlavor(target))):
