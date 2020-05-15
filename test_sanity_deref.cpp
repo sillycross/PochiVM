@@ -195,3 +195,72 @@ TEST(Sanity, StoreIntoLocalVar)
         ReleaseAssert(x == 12345 + 543);
     }
 }
+
+TEST(Sanity, BoolDeref)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(bool*, bool)>;
+    {
+        auto [fn, addr, value] = NewFunction<FnPrototype>("store_bool");
+        fn.SetBody(
+            value.StoreIntoAddress(addr)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("store_bool");
+
+        bool x;
+        interpFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+
+        interpFn(&x, false);
+        ReleaseAssert(x == false);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 0);
+
+        interpFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+    }
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("store_bool");
+
+        bool x;
+        jitFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+
+        jitFn(&x, false);
+        ReleaseAssert(x == false);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 0);
+
+        jitFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+    }
+}

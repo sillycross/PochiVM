@@ -1,12 +1,10 @@
 FROM ubuntu:18.04
 
-RUN apt update
-
 # install misc dependency
 #
-RUN apt install -y git wget tar xz-utils sudo cmake make 
+RUN apt update && apt install -y git wget tar xz-utils sudo cmake make ninja-build
 
-RUN apt-get install -y g++ libtinfo-dev 
+RUN apt update && apt-get install -y g++ libtinfo-dev 
 
 # install llvm 10.0.0
 #

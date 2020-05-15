@@ -1,0 +1,10 @@
+add_library(PochiVM 
+  arith_expr.cpp  
+  common_expr.cpp     
+  global_vars.cpp      
+  logical_operator.cpp
+  cast_expr.cpp   
+  function_proto.cpp  
+  lang_constructs.cpp
+)
+

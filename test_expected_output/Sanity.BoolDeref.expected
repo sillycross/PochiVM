@@ -1,0 +1,17 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+define void @store_bool(i1* %_param_0, i1 %_param_1) {
+entry:
+  %param_0 = alloca i1*
+  %param_1 = alloca i1
+  br label %body
+
+body:                                             ; preds = %entry
+  store i1* %_param_0, i1** %param_0
+  store i1 %_param_1, i1* %param_1
+  %0 = load i1, i1* %param_1
+  %1 = load i1*, i1** %param_0
+  store i1 %0, i1* %1
+  ret void
+}

@@ -2,37 +2,131 @@
 
 import os
 import sys
+import shutil
 
 path = os.path.realpath(__file__)
 base_dir = os.path.dirname(path)
 
 def PrintUsageGeneralAndDie():
-    print('Usage: pochivm-build <operation> [args...]')
+    print('Usage: pochivm-build <update-docker-image|cmake|make> [args...]')
     sys.exit(1)
-    
+
+def PrintUsageCMakeAndDie():
+    print('Usage: pochivm-build cmake <debug|release|production> [clean]')
+    sys.exit(1)
+
 def PrintUsageMakeAndDie():
-    print('Usage: pochivm-build make [debug/release/clean]')
+    print('Usage: pochivm-build make <debug|release|production> [clean]')
     sys.exit(1)
-        
+
+def GetBuildDir():
+    return os.path.join(base_dir, 'build')
+
+def GetBuildDirFlavor(flavor):
+    assert(flavor == 'debug' or flavor == 'release' or flavor == 'production')
+    return os.path.join(GetBuildDir(), flavor)
+    
+def CreateDirIfNotExist(dirname):
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
 if (len(sys.argv) < 2):
     PrintUsageGeneralAndDie()
 
 op = sys.argv[1]
 
+if (op != 'update-docker-image' and op != 'cmake' and op != 'make'):
+    print('Unknown operation "%s".' % op)
+    PrintUsageGeneralAndDie()
+
+def BuildOrUpdateDockerImage():
+    if not os.path.exists(os.path.join(base_dir, 'Dockerfile')):
+        print('[ERROR] Dockerfile not found!')
+        sys.exit(1)
+    cmd = 'docker build --tag pochivm-build:latest %s' % base_dir
+    r = os.system(cmd)
+    if (r != 0):
+        print('[ERROR] Failed to build docker image, exit code = %d' % r)
+        sys.exit(r)
+
+if (op == 'update-docker-image'):
+    BuildOrUpdateDockerImage();
+    sys.exit(0)
+
+r = os.system('docker inspect --type=image pochivm-build:latest >/dev/null 2>&1')
+if (r != 0):
+    print("Docker image 'pochivm-build:latest' does not exist.")
+    print('Building docker image, this may take a while...')
+    BuildOrUpdateDockerImage();
+    print('Docker image successfully built.')
+    
+if (op == 'cmake'):
+    if (len(sys.argv) < 3 or len(sys.argv) > 4):
+        PrintUsageCMakeAndDie()
+        
+    target = sys.argv[2]
+    if (target != 'debug' and target != 'release' and target != 'production'):
+        print('Unknown cmake target "%s".' % target)
+        PrintUsageCMakeAndDie()
+    
+    isClean = False
+    if (len(sys.argv) == 4):
+        if (sys.argv[3] != 'clean'):
+            PrintUsageCMakeAndDie()
+        isClean = True
+        
+    if (isClean):
+        dirname = GetBuildDirFlavor(target)
+        print('Removing directory: %s' % dirname)
+        shutil.rmtree(dirname)
+        sys.exit(0)
+    
+    CreateDirIfNotExist(GetBuildDir())
+    CreateDirIfNotExist(GetBuildDirFlavor(target))
+    
+    cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && cmake ../../ -DBUILD_FLAVOR=%s -GNinja'" % (base_dir, target, target.upper())
+    r = os.system(cmd)
+    sys.exit(r)
+    
 if (op == 'make'):
-    if (len(sys.argv) < 3):
+    if (len(sys.argv) < 3 or len(sys.argv) > 4):
         PrintUsageMakeAndDie()
         
     target = sys.argv[2]
-    if (target != 'debug' and target != 'release' and target != 'clean'):
+    if (target != 'debug' and target != 'release' and target != 'production'):
         print('Unknown make target "%s".' % target)
         PrintUsageMakeAndDie()
     
-    cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM && make %s'" % (base_dir, target)
+    isClean = False
+    if (len(sys.argv) == 4):
+        if (sys.argv[3] != 'clean'):
+            PrintUsageCMakeAndDie()
+        isClean = True
+    
+    if (not os.path.exists(GetBuildDirFlavor(target))):
+        print("[ERROR] Build directory 'build/%s' does not exist." % target)
+        print("Have you already run './pochivm-build cmake %s'?" % target)
+        sys.exit(1)
+       
+    if (isClean):
+        option = "clean"
+    else:
+        option = "-j6"  # hardcode parallelism=6 for now
+    cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && ninja %s'" % (base_dir, target, option)
     r = os.system(cmd)
-    sys.exit(r)
-else:
-    print('Unknown operation "%s".' % op)
-    PrintUsageGeneralAndDie()
-	
+    if (r != 0):
+        sys.exit(r)
+        
+    if (not isClean):
+        # copy executable to project root
+        print('Copying built artifact to project root directory..')
+        src = os.path.join(GetBuildDirFlavor(target), "main")
+        dst = os.path.join(base_dir, "main")
+        shutil.copyfile(src, dst)
+        print('Build completed successfully.') 
+        
+    sys.exit(0)
+
+assert(False)
+
 

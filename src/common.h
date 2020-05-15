@@ -142,6 +142,18 @@ static_assert(false, "NDEBUG should always be defined in non-testbuild");
 #define TestAssertIff(a, b) TestAssert((!!(a)) == (!!(b)))
 #define TestAssertImp(a, b) TestAssert((!(a)) || (b))
 
+#ifdef TESTBUILD
+#define TESTBUILD_ONLY(...) __VA_ARGS__
+#else
+#define TESTBUILD_ONLY(...)
+#endif
+
+#ifndef NDEBUG
+#define DEBUG_ONLY(...) __VA_ARGS__
+#else
+#define DEBUG_ONLY(...)
+#endif
+
 struct FalseOrNullptr
 {
     operator bool() { return false; }

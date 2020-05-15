@@ -93,7 +93,7 @@ struct SmartWrapWithScopeHelper
 {
     static AstScope* handle_one()
     {
-        TestAssert(false);
+        ReleaseAssert(false);
     }
 
     template<typename... T>

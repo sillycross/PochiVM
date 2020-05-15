@@ -46,7 +46,7 @@ public:
     template<typename T>
     struct assert_not_nullptr_helper<T*>
     {
-        static void execute(T** value)
+        static void execute(T** TESTBUILD_ONLY(value))
         {
             TestAssert(*value != nullptr);
         }
