@@ -307,18 +307,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
-    std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
-    std::string outputFileName = std::string("extracted.") + uniqueSymbolHash + ".bc";
     {
-        int fd = creat(outputFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-        if (fd == -1)
-        {
-            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                    outputFileName.c_str(), errno, strerror(errno));
-            abort();
-        }
-        raw_fd_ostream fdStream(fd, true /*shouldClose*/);
-
         // Copied from llvm_extract.cpp
         // Delete dead declarations
         // TODO: switch to new pass manager?
@@ -342,12 +331,34 @@ static void ExtractFunction(const std::string& generatedFileDir,
         //
         Passes.add(createStripDeadPrototypesPass());
 
-        // output file
-        //
-        Passes.add(createBitcodeWriterPass(fdStream));
-
         Passes.run(*module.get());
+    }
 
+    // Finally, change the linkage type of our target function to 'available externally'
+    //
+    functionTarget = module->getFunction(functionName);
+    ReleaseAssert(functionTarget != nullptr);
+    ReleaseAssert(!functionTarget->empty());
+    functionTarget->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+    // AvailableExternallyLinkage is not allowed to have comdat.
+    // It should be fine that we simply drop the comdat, since C++ always follows ODR rule.
+    //
+    functionTarget->setComdat(nullptr);
+
+    // Output extracted bitcode file
+    //
+    std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
+    std::string outputFileName = std::string("extracted.") + uniqueSymbolHash + ".bc";
+    {
+        int fd = creat(outputFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if (fd == -1)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    outputFileName.c_str(), errno, strerror(errno));
+            abort();
+        }
+        raw_fd_ostream fdStream(fd, true /*shouldClose*/);
+        WriteBitcodeToFile(*module.get(), fdStream);
         if (fdStream.has_error())
         {
             std::error_code ec = fdStream.error();
@@ -363,7 +374,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
     // of symbols kept by the dead code elimination pass
     //
     {
-        // Load the optimized module and replace the current context and module
+        // Load the extracted bitcode file, replace the current context and module
         //
         std::unique_ptr<LLVMContext> newContext(new LLVMContext);
         std::unique_ptr<Module> newModule = parseIRFile(outputFileName, llvmErr, *newContext.get());
@@ -424,6 +435,9 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
+    // Generate data file in header file format
+    // build_runtime_lib will generate the CPP file that include these headers
+    //
     size_t bitcodeSize;
     uint8_t* bitcodeRawData = nullptr;
     {
