@@ -1,5 +1,26 @@
 #pragma once
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Mangler.h"
+#include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/IR/DebugInfo.h"
+
 #include "src/common.h"
 #include "gtest/gtest.h"
 #include "codegen_context.hpp"
@@ -152,6 +173,7 @@ public:
     SimpleJIT()
         : m_jit(nullptr)
         , m_astModule(nullptr)
+        , m_allowResolveSymbolInHostProcess(false)
     { }
 
     // JIT the given module. Transfers ownership of the llvm module.
@@ -160,11 +182,40 @@ public:
     void SetModule(Ast::AstModule* module)
     {
         llvm::ExitOnError exitOnErr;
-        std::unique_ptr<llvm::orc::LLJIT>&& jit = exitOnErr(llvm::orc::LLJITBuilder().create());
+        std::unique_ptr<llvm::orc::LLJIT>&& jit = GetJIT();
         llvm::orc::ThreadSafeModule M = module->GetThreadSafeModule();
         exitOnErr(jit->addIRModule(std::move(M)));
         m_jit.reset(jit.release());
         m_astModule = module;
+    }
+
+    void SetNonAstModule(std::unique_ptr<llvm::orc::ThreadSafeModule> module)
+    {
+        llvm::ExitOnError exitOnErr;
+        std::unique_ptr<llvm::orc::LLJIT> jit = GetJIT();
+        exitOnErr(jit->addIRModule(std::move(*module.release())));
+        m_jit.reset(jit.release());
+        m_astModule = nullptr;
+    }
+
+    std::unique_ptr<llvm::orc::LLJIT> GetJIT()
+    {
+        llvm::ExitOnError exitOnErr;
+        std::unique_ptr<llvm::orc::LLJIT> jit = exitOnErr(llvm::orc::LLJITBuilder().create());
+        if (m_allowResolveSymbolInHostProcess)
+        {
+            char Prefix = llvm::EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
+            std::unique_ptr<llvm::orc::DynamicLibrarySearchGenerator> R =
+                    exitOnErr(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
+            ReleaseAssert(R != nullptr);
+            jit->getMainJITDylib().addGenerator(std::move(R));
+        }
+        return jit;
+    }
+
+    void SetAllowResolveSymbolInHostProcess(bool value)
+    {
+        m_allowResolveSymbolInHostProcess = value;
     }
 
     // Get a callable to the function name
@@ -174,8 +225,8 @@ public:
     template<typename FnPrototype>
     FnPrototype GetFunction(const std::string& fnName)
     {
-        ReleaseAssert(m_jit != nullptr && m_astModule != nullptr);
-        ReleaseAssert(m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
+        ReleaseAssert(m_jit != nullptr);
+        ReleaseAssert(!m_astModule || m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
         llvm::ExitOnError exitOnErr;
         auto sym = exitOnErr(m_jit->lookup(fnName));
         return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
@@ -184,4 +235,5 @@ public:
 
     std::unique_ptr<llvm::orc::LLJIT> m_jit;
     Ast::AstModule* m_astModule;
+    bool m_allowResolveSymbolInHostProcess;
 };

@@ -61,6 +61,7 @@ test_error_cases.cpp
 test_fibonacci.cpp
 test_find_nth_prime.cpp
 test_sanity_arith_expr.cpp
+test_sanity_bitcode.cpp
 test_sanity_break_continue.cpp
 test_sanity_deref.cpp
 test_sanity_irdump.cpp

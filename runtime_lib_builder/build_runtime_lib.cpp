@@ -139,6 +139,32 @@ int main(int argc, char** argv)
         fclose(fp);
     }
 
+    {
+        std::string headerFilename = generatedFileFolder + "/pochivm_runtime_library_bitcodes.generated.h";
+        FILE* fp = fopen(headerFilename.c_str(), "w");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    headerFilename.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+
+        fprintf(fp, "#include \"src/bitcode_data.h\"\n\n");
+
+        std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
+        for (const std::string& symbol : allSymbols)
+        {
+            std::string uniqueSymbolHash = GetUniqueSymbolHash(symbol);
+            std::string varname = std::string("__pochivm_internal_bc_") + uniqueSymbolHash;
+            fprintf(fp, "// Symbol: %s\n", symbol.c_str());
+            fprintf(fp, "extern const BitcodeData %s;\n\n", varname.c_str());
+        }
+
+        fclose(fp);
+    }
+
     // Give all-or-nothing guarantee by rename
     //
     int r = rename(cppFilenameTmp.c_str(), cppFilename.c_str());

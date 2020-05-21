@@ -92,6 +92,7 @@ if (op == 'cmake'):
     CreateDirIfNotExist(GetBuildDirFlavor(target))
     CreateDirIfNotExist(GetGeneratedDir())
     CreateDirIfNotExist(GetGeneratedDirFlavor(target))
+    CreateDirIfNotExist(os.path.join(GetGeneratedDirFlavor(target), 'generated'))
     
     cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && cmake ../../ -DBUILD_FLAVOR=%s -GNinja'" % (base_dir, target, target.upper())
     r = os.system(cmd)

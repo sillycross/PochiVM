@@ -307,10 +307,6 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
-    // Copied from llvm_extract.cpp
-    // Delete dead declarations
-    // TODO: switch to new pass manager?
-    //
     std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
     std::string outputFileName = std::string("extracted.") + uniqueSymbolHash + ".bc";
     {
@@ -323,6 +319,10 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
         raw_fd_ostream fdStream(fd, true /*shouldClose*/);
 
+        // Copied from llvm_extract.cpp
+        // Delete dead declarations
+        // TODO: switch to new pass manager?
+        //
         legacy::PassManager Passes;
 
         // Delete unreachable globals
