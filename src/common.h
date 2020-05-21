@@ -49,9 +49,10 @@ typedef unsigned long long ULL;
 #define TOKEN_PASTEx(x, y) x ## y
 #define TOKEN_PASTE(x, y) TOKEN_PASTEx(x, y)
 
-#define ALWAYS_INLINE __attribute__((always_inline))
-#define NO_INLINE __attribute__((noinline))
-#define WARN_UNUSED __attribute__((warn_unused_result))
+#define NO_RETURN __attribute__((__noreturn__))
+#define ALWAYS_INLINE __attribute__((__always_inline__))
+#define NO_INLINE __attribute__((__noinline__))
+#define WARN_UNUSED __attribute__((__warn_unused_result__))
 
 // #define HUGEPAGESIZE_BYTES 2097152
 #define HUGEPAGESIZE_BYTES 1073741824
@@ -112,10 +113,10 @@ private:
 
 struct ReleaseAssertFailure
 {
-    static void __attribute__((noreturn)) Fire(const char *__assertion, const char *__file,
+    static void NO_RETURN Fire(const char *__assertion, const char *__file,
 	                 unsigned int __line, const char *__function)
 	{
-		printf("%s:%u: %s: Assertion `%s' failed.\n", __file, __line, __function, __assertion);
+        fprintf(stderr, "%s:%u: %s: Assertion `%s' failed.\n", __file, __line, __function, __assertion);
 		abort();
 	}
 };

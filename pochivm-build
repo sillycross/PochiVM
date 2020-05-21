@@ -25,6 +25,13 @@ def GetBuildDir():
 def GetBuildDirFlavor(flavor):
     assert(flavor == 'debug' or flavor == 'release' or flavor == 'production')
     return os.path.join(GetBuildDir(), flavor)
+
+def GetGeneratedDir():
+    return os.path.join(base_dir, '__generated__')
+
+def GetGeneratedDirFlavor(flavor):
+    assert(flavor == 'debug' or flavor == 'release' or flavor == 'production')
+    return os.path.join(GetGeneratedDir(), flavor)
     
 def CreateDirIfNotExist(dirname):
     if not os.path.exists(dirname):
@@ -83,6 +90,8 @@ if (op == 'cmake'):
     
     CreateDirIfNotExist(GetBuildDir())
     CreateDirIfNotExist(GetBuildDirFlavor(target))
+    CreateDirIfNotExist(GetGeneratedDir())
+    CreateDirIfNotExist(GetGeneratedDirFlavor(target))
     
     cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && cmake ../../ -DBUILD_FLAVOR=%s -GNinja'" % (base_dir, target, target.upper())
     r = os.system(cmd)

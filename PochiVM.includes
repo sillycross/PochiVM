@@ -6,3 +6,7 @@ gtest/src
 src
 __llvm__/include
 .
+runtime
+runtime_ops_parser
+__generated__/debug
+runtime_lib_builder

@@ -74,8 +74,7 @@ inline void TrimTrailingWhitespaces(std::string& s, const char* t = " \t\n\r\f\v
     }
 }
 
-__attribute__((noreturn))
-inline void DumpExpectedAndActualAndFail(const std::string& actual, const std::string& expected)
+inline void NO_RETURN DumpExpectedAndActualAndFail(const std::string& actual, const std::string& expected)
 {
     printf("!!! TEST FAILED !!!\n");
     printf("=============== Expected Output ===============\n");

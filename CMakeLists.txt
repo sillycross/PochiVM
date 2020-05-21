@@ -23,10 +23,13 @@ set(BUILD_FLAVOR "" CACHE STRING "Build flavor, supports DEBUG/RELEASE/PRODUCTIO
 
 if(BUILD_FLAVOR STREQUAL "DEBUG")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_FLAVOR=DEBUG -DTESTBUILD -O0 -g ")
+  SET(GENERATED_FILES_DIR "${PROJECT_SOURCE_DIR}/__generated__/debug")
 elseif(BUILD_FLAVOR STREQUAL "RELEASE")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_FLAVOR=RELEASE -DTESTBUILD -DNDEBUG -O3 -g ")
+  SET(GENERATED_FILES_DIR "${PROJECT_SOURCE_DIR}/__generated__/release")
 elseif(BUILD_FLAVOR STREQUAL "PRODUCTION")
   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_FLAVOR=PRODUCTION -DNDEBUG -O3 ")
+  SET(GENERATED_FILES_DIR "${PROJECT_SOURCE_DIR}/__generated__/production")
 else()
   message( FATAL_ERROR "Unknown build flavor!" )
 endif()
@@ -34,6 +37,10 @@ endif()
 # add -pthread
 # 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread ")
+
+# -rdynamic so symbols are exposed to generated code
+# 
+SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
 
 # If debug symbols are emitted, redirect them to point at the right location
 # The reference to source code files always have prefix ../../ (since we are building 
@@ -53,7 +60,7 @@ add_subdirectory(gtest)
 
 # Append extra cxx warning flags
 #
-SET(EXTRA_WARNING_FLAGS "-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Werror ")
+SET(EXTRA_WARNING_FLAGS "-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-exit-time-destructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Wno-missing-prototypes -Werror ")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EXTRA_WARNING_FLAGS}")
 
 # llvm-specific flags
@@ -95,7 +102,16 @@ foreach(_loop_var ${_tmp})
   LIST(APPEND LLVM_EXTRA_LINK_LIBRARIES ${_libname})
 endforeach()
 
+include_directories(${PROJECT_SOURCE_DIR})
 include_directories("${PROJECT_SOURCE_DIR}/src")
+
+# Build tools that generates the runtime library
+#
+add_subdirectory(runtime_lib_builder)
+
+# Build runtime library
+#
+add_subdirectory(runtime)
 
 # Build PochiVM library
 #
