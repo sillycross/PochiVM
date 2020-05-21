@@ -134,6 +134,15 @@ add_executable(main
   test_sanity_typecasts.cpp
   test_find_nth_prime.cpp  
   test_sanity_irdump.cpp
+  test_sanity_bitcode.cpp
+)
+
+# Important to link runtime using '--whole-archive'
+# Symbols in runtime library, even if unused by main program, 
+# may be used at runtime and must not be dropped.
+#
+target_link_libraries(main PUBLIC 
+  "-Wl,--whole-archive" runtime "-Wl,--no-whole-archive"
 )
 
 target_link_libraries(main PUBLIC

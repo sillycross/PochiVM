@@ -38,14 +38,26 @@ foreach(_file ${SOURCES})
   LIST(APPEND ALL_SYMFILE "${PROJECT_BINARY_DIR}/${_syms}")
 endforeach()
 
-add_library(runtime_internal OBJECT
+add_library(runtime_internal1 OBJECT
   ${SOURCES}
 )
 
-add_library(runtime
+add_library(runtime_internal2 OBJECT
   pochivm_register_runtime.cpp
-  $<TARGET_OBJECTS:runtime_internal>
 )
+
+add_library(runtime_internal3 OBJECT
+  ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
+)
+
+add_library(runtime
+  $<TARGET_OBJECTS:runtime_internal1>
+  $<TARGET_OBJECTS:runtime_internal2>
+  $<TARGET_OBJECTS:runtime_internal3>
+)
+
+set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library_bitcodes.generated.h PROPERTIES GENERATED true)
+set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp PROPERTIES GENERATED true)
 
 set_source_files_properties(pochivm_register_runtime.cpp PROPERTIES OBJECT_OUTPUTS "${PROJECT_BINARY_DIR}/pochivm_register_runtime.bc")
 
@@ -61,13 +73,10 @@ add_custom_command(
 )
 
 add_custom_command(
+  OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_library_bitcodes.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
   COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/build_runtime_lib "${PROJECT_BINARY_DIR}/runtime_lib_builder/update_symbol_matches" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" "${GENERATED_FILES_DIR}" ${ALL_SYMFILE} "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms"
   DEPENDS ${ALL_SYMFILE} "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" build_runtime_lib update_symbol_matches
-)
-
-add_custom_target(fake ALL DEPENDS
-  ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
 )
 
 

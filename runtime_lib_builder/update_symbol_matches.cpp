@@ -486,7 +486,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
 
         // 'extern' declaration is required for constants to be able to export elsewhere
         //
-        fprintf(fp, "extern const bitcode_data %s;\n\n", resVarname.c_str());
+        fprintf(fp, "extern const BitcodeData %s;\n\n", resVarname.c_str());
 
         std::string bitcodeDataVarname = resVarname + "_bitcode_data";
         fprintf(fp, "const uint8_t %s[%d] = {\n    ", bitcodeDataVarname.c_str(), static_cast<int>(bitcodeSize + 1));
@@ -510,7 +510,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
         fprintf(fp, "const char* const %s = \"%s\";\n\n",
                 symbolVarname.c_str(), functionName.c_str());
 
-        fprintf(fp, "const bitcode_data %s = {\n", resVarname.c_str());
+        fprintf(fp, "const BitcodeData %s = {\n", resVarname.c_str());
         fprintf(fp, "    %s,\n", symbolVarname.c_str());
         fprintf(fp, "    %s,\n", bitcodeDataVarname.c_str());
         fprintf(fp, "    %d\n};\n", static_cast<int>(bitcodeSize));

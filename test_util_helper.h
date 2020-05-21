@@ -225,8 +225,18 @@ public:
     template<typename FnPrototype>
     FnPrototype GetFunction(const std::string& fnName)
     {
+        ReleaseAssert(m_jit != nullptr && m_astModule != nullptr);
+        ReleaseAssert(m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
+        llvm::ExitOnError exitOnErr;
+        auto sym = exitOnErr(m_jit->lookup(fnName));
+        return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
+                reinterpret_cast<void*>(sym.getAddress()));
+    }
+
+    template<typename FnPrototype>
+    FnPrototype GetFunctionNonAst(const std::string& fnName)
+    {
         ReleaseAssert(m_jit != nullptr);
-        ReleaseAssert(!m_astModule || m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
         llvm::ExitOnError exitOnErr;
         auto sym = exitOnErr(m_jit->lookup(fnName));
         return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
