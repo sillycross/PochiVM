@@ -1,3 +1,6 @@
+#include <iomanip>
+#include <sstream>
+
 #include "src/common.h"
 #include "src/pochivm_reflection_helper.h"
 #include "runtime_lib_builder/symbol_list_util.h"
@@ -224,6 +227,87 @@ struct ParsedFnTypeNamesInfo
                 m_templateParams[k] = s.substr(head, tail - head + 1);
             }
         }
+    }
+
+    // Find out the class name from m_prefix
+    //
+    std::string FindClassName()
+    {
+        ReleaseAssert(m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ||
+                      m_fnType == Ast::ReflectionHelper::FunctionType::NonStaticMemberFn);
+        ReleaseAssert(m_prefix.length() > 0);
+        size_t i = m_prefix.length() - 1;
+        while (i > 0 && isWhitespace(m_prefix[i])) { i--; }
+        ReleaseAssert(i > 0);
+        size_t rightBoundary = i;
+        if (m_prefix[i] == '>')
+        {
+            // find out the matching '<', logic similar to FindTemplateParameters
+            //
+            int bracketDepth = 1;
+            i--;
+            while (i > 0)
+            {
+                if (m_prefix[i] == ')')
+                {
+                    // We hit a right parenthesis, temporarily switch to parenthesis matching mode.
+                    // Find the left parenthesis, ignore anything (including brackets) in between.
+                    //
+                    int parenthesisDepth = 0;
+                    while (i > 0)
+                    {
+                        if (m_prefix[i] == ')')
+                        {
+                            parenthesisDepth++;
+                        }
+                        else if (m_prefix[i] == '(')
+                        {
+                            parenthesisDepth--;
+                            if (parenthesisDepth == 0)
+                            {
+                                break;
+                            }
+                        }
+                        i--;
+                    }
+                    ReleaseAssert(parenthesisDepth == 0);
+                    ReleaseAssert(m_prefix[i] == '(');
+                    ReleaseAssert(i > 0);
+                }
+                else if (m_prefix[i] == '>')
+                {
+                    bracketDepth++;
+                }
+                else if (m_prefix[i] == '<')
+                {
+                    bracketDepth--;
+                    if (bracketDepth == 0)
+                    {
+                        break;
+                    }
+                }
+                i--;
+            }
+            ReleaseAssert(bracketDepth == 0);
+            ReleaseAssert(m_prefix[i] == '<');
+            ReleaseAssert(i > 0);
+            i--;
+        }
+        // Now we are at the class name (without template part),
+        // scan left to find the '::' or a whitespace
+        //
+        while (i > 0 && m_prefix[i] != ':' && !isWhitespace(m_prefix[i])) { i--; }
+        if (m_prefix[i] == ':' || isWhitespace(m_prefix[i]))
+        {
+            if (m_prefix[i] == ':')
+            {
+                ReleaseAssert(i > 0 && m_prefix[i-1] == ':');
+            }
+            i++;
+        }
+        // The class name is [i, rightBoundary]
+        //
+        return m_prefix.substr(i, rightBoundary - i + 1);
     }
 
     static std::string ParseNameInternal(const char* data)
@@ -521,303 +605,724 @@ static void PrintFnTemplateParams(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
 }
 
-static void GenerateCppRuntimeHeaderFile(const std::string& filename)
+static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, int ordinal)
 {
-    FILE* fp = fopen(filename.c_str(), "w");
-    if (fp == nullptr)
+    fprintf(fp, "{\n");
+    fprintf(fp, "    return Value<%s>(new AstCallExpr(\n", info.m_ret.c_str());
+    fprintf(fp, "            &AstTypeHelper::x_cppFunctionMetadata[%d],\n", ordinal);
+    fprintf(fp, "            std::vector<AstNodeBase*>{");
+    for (size_t i = 0; i < info.m_params.size(); i++)
     {
-        fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                filename.c_str(), errno, strerror(errno));
-        abort();
-    }
-
-    fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
-    fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n\n");
-
-    fprintf(fp, "namespace Ast {\n\n");
-
-    // generate all free functions
-    //
-    {
-        fprintf(fp, "namespace CallFreeFn {\n\n");
-
-        std::map<std::string /*ns*/, std::vector<ParsedFnTypeNamesInfo> > freeFns;
-
-        for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+        fprintf(fp, "\n                __pochivm_%d.m_ptr", static_cast<int>(i));
+        if (i != info.m_params.size() - 1)
         {
-            ParsedFnTypeNamesInfo& info = it->second;
-            if (info.m_fnType == Ast::ReflectionHelper::FunctionType::FreeFn)
-            {
-                freeFns[info.m_prefix].push_back(info);
-            }
+            fprintf(fp, ",");
         }
-
-        for (auto it = freeFns.begin(); it != freeFns.end(); it++)
+        else
         {
-            ReleaseAssert(it->second.size() > 0);
-            std::string nsPrefix = it->first;
-            std::vector<ParsedFnTypeNamesInfo>& data = it->second;
-            std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
+            fprintf(fp, "\n            ");
+        }
+    }
+    fprintf(fp, "},\n");
+    fprintf(fp, "            TypeId::Get<%s>() /*returnType*/\n", info.m_ret.c_str());
+    fprintf(fp, "    ));\n");
+    fprintf(fp, "}\n\n");
+}
 
-            if (nsPrefix != "")
+static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
+{
+    fprintf(fp, "Value<%s>(AstNodeBase* ptr) : m_ptr(ptr) {\n", className.c_str());
+    // The 'ReleaseAssert' actually evaluates to constant expression.
+    // Ideally we want to delete the constructor in that case, but for now go simple.
+    //
+    fprintf(fp, "    ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", className.c_str());
+    fprintf(fp, "    TestAssert((m_ptr->GetTypeId() == TypeId::Get<%s>()));\n", className.c_str());
+    fprintf(fp, "}\n");
+    fprintf(fp, "AstNodeBase* m_ptr;\n\n");
+}
+
+static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
+                                         Module* module,
+                                         const std::map<std::string, int> symbolOrdinal)
+{
+    std::map<std::string /*llvmTypeName*/, std::string /*cppTypeName*/> typeNameMap;
+
+    // Check if a function is using sret (struct return) attribute
+    // If yes, then the sret is the return value, and all arguments are shifted by 1
+    // E.g. std::string f(int a) would have a LLVM prototype of void f(std::string* sret, int a)
+    //
+    std::function<bool(Function*)> isUsingSRet = [](Function* fn) -> bool
+    {
+        return (fn->getReturnType()->isVoidTy() &&
+                fn->getFunctionType()->getNumParams() >= 1 &&
+                fn->hasParamAttribute(0 /*paramOrd*/, Attribute::AttrKind::StructRet));
+    };
+
+    // Generate mapping between CPP type name and LLVM type name for composite types that we encountered
+    //
+    std::function<void(Function*, Type*, std::string&)> matchTypes =
+            [&typeNameMap](Function* func, Type* type, const std::string& stringType)
+    {
+        int numPointers = 0;
+        while (type->isPointerTy())
+        {
+            numPointers++;
+            type = type->getPointerElementType();
+        }
+        // Lockdown function pointer type arguments for now
+        //
+        if (type->isFunctionTy())
+        {
+            fprintf(stderr, "[ERROR] Calling function with function-pointer-typed parameter or return value "
+                            "is not supported yet. Offending function: %s\n",
+                    func->getName().str().c_str());
+            abort();
+        }
+        // Lockdown array type for now, ask user to change to pointer type
+        //
+        if (type->isArrayTy())
+        {
+            fprintf(stderr, "[ERROR] Calling function with array-typed parameter or return value "
+                            "is not supported yet. Change it to pointer-type to workaround. Offending function: %s\n",
+                    func->getName().str().c_str());
+            abort();
+        }
+        // Lockdown SIMD vector type
+        //
+        if (type->isVectorTy())
+        {
+            fprintf(stderr, "[ERROR] Calling function with SIMD-vector-typed parameter or return value "
+                            "is not supported. Offending function: %s\n",
+                    func->getName().str().c_str());
+            abort();
+        }
+        if (type->isStructTy())
+        {
+            StructType* st = dyn_cast<StructType>(type);
+            ReleaseAssert(st != nullptr);
+            if (!st->hasName())
             {
-                fprintf(fp, "namespace %s {\n\n", nsPrefix.c_str());
+                fprintf(stderr, "[INTERNAL ERROR] Encountered a struct type with no name. Offending function: %s\n",
+                        stringType.c_str());
+                abort();
             }
-
-            size_t start = 0;
-            while (start < data.size())
+            std::string structName = st->getName().str();
+            // Attempt to remove pointers from 'stringtype'
+            // Since the base type is a struct and we know there isn't any cv-qualifiers,
+            // removing pointer should be simply removing the rightmost '*'
+            //
+            std::string rawType = stringType;
+            for (int i = 0; i < numPointers; i++)
             {
-                size_t end = start;
-                while (end < data.size() &&
-                       data[start].m_functionName == data[end].m_functionName &&
-                       data[start].m_params == data[end].m_params &&
-                       data[start].m_ret == data[end].m_ret &&
-                       data[start].m_templateParams.size() == data[end].m_templateParams.size())
+                size_t k = rawType.length() - 1;
+                while (k > 0 && isWhitespace(rawType[k]))
                 {
-                    end++;
+                    k--;
                 }
-                if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
+                if (rawType[k] != '*')
                 {
-                    fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
-                                    "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
-                            data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
-                            static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
+                    fprintf(stderr, "[INTERNAL ERROR] Failed to get base type from type '%s' "
+                                    "(attempting to remove %d layers of pointers). "
+                                    "Offending function: %s, llvm struct name: %s\n",
+                            stringType.c_str(), numPointers, func->getName().str().c_str(), structName.c_str());
                     abort();
                 }
-                size_t tplSize = data[start].m_templateParams.size();
-                if (tplSize == 0)
-                {
-                    for (size_t k = start; k < end; k++)
-                    {
-                        ParsedFnTypeNamesInfo& info = data[k];
-                        fprintf(fp, "// Original parameter and return types:\n");
-                        for (const std::string& param : info.m_origParams)
-                        {
-                            fprintf(fp, "//          %s\n", param.c_str());
-                        }
-                        fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
-                        fprintf(fp, "//\n");
-                        fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
-                        PrintFnParams(fp, info);
-                        fprintf(fp, "\n{\n");
-                        fprintf(fp, "    static const char* __pochivm_sym = \"%s\";\n", info.m_mangledSymbolName.c_str());
-                        fprintf(fp, "}\n\n");
-                    }
-                }
-                else
-                {
-                    fprintf(fp, "// Template declaration header for templated function %s\n",
-                            data[start].m_functionName.c_str());
-                    fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
-                    fprintf(fp, "// Parameter types and return type:\n");
-                    for (const std::string& param : data[start].m_params)
-                    {
-                        fprintf(fp, "//          %s\n", param.c_str());
-                    }
-                    fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
-                    fprintf(fp, "//\n");
+                ReleaseAssert(k > 0);
+                rawType = rawType.substr(0, k);
+            }
+            {
+                // Remove leading and trailing whitespaces so they print better
+                //
+                size_t head = 0;
+                while (head < rawType.size() && isWhitespace(rawType[head])) { head++; }
+                ReleaseAssert(head < rawType.size());
+                size_t tail = rawType.size() - 1;
+                while (head < tail && isWhitespace(rawType[tail])) { tail--; }
+                rawType = rawType.substr(head, tail - head + 1);
+            }
+            // TODO: generate static_assert to assert all CppName are equivalent for the same llvmTypeName?
+            //
+            if (!typeNameMap.count(structName))
+            {
+                typeNameMap[structName] = rawType;
+            }
+        }
+    };
 
-                    for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
-                    {
-                        fprintf(fp, "template<");
-                        for (size_t i = 0; i < tplSize; i++)
-                        {
-                            if (bitmask & (static_cast<size_t>(1) << i))
-                            {
-                                fprintf(fp, "typename");
-                            }
-                            else
-                            {
-                                fprintf(fp, "auto");
-                            }
-                            if (i != tplSize - 1)
-                            {
-                                fprintf(fp, ", ");
-                            }
-                            else
-                            {
-                                fprintf(fp, ">\n");
-                            }
-                        }
-                        fprintf(fp, "Value<%s> %s", data[start].m_ret.c_str(), data[start].m_functionName.c_str());
-                        PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
-                        fprintf(fp, " = delete;\n");
-                    }
+    ReleaseAssert(symbolOrdinal.size() == g_symbolAddrToTypeData.size());
+    bool* isUsingSretArray = new bool[symbolOrdinal.size()];
+    Auto(delete [] isUsingSretArray);
+
+    bool* isUsingSretArrayAssigned = new bool[symbolOrdinal.size()];
+    Auto(delete [] isUsingSretArrayAssigned);
+    memset(isUsingSretArrayAssigned, 0, sizeof(bool) * symbolOrdinal.size());
+
+    // Extract type information
+    //
+    for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+    {
+        ParsedFnTypeNamesInfo& info = it->second;
+        Function* fn = module->getFunction(info.m_mangledSymbolName);
+        ReleaseAssert(fn != nullptr);
+        FunctionType* fnType = fn->getFunctionType();
+        // Lockdown variadic function
+        //
+        if (fn->isVarArg())
+        {
+            fprintf(stderr, "[ERROR] Calling variadic function from generated code is not supported yet. "
+                            "Offending function: %s\n",
+                    fn->getName().str().c_str());
+            abort();
+        }
+
+        bool isSretFunction = isUsingSRet(fn);
+
+        ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
+        int symbolOrd = symbolOrdinal.find(info.m_mangledSymbolName)->second;
+        ReleaseAssert(0 <= symbolOrd && static_cast<size_t>(symbolOrd) < symbolOrdinal.size());
+        ReleaseAssert(!isUsingSretArrayAssigned[symbolOrd]);
+        isUsingSretArrayAssigned[symbolOrd] = true;
+        isUsingSretArray[symbolOrd] = isSretFunction;
+
+        // Match the return type
+        // We need to special check for 'sret' struct-return parameter
+        //
+        unsigned int firstArgOrd = 0;
+        Type* returnType = fnType->getReturnType();
+        if (isSretFunction)
+        {
+            Type* sretType = fnType->getParamType(firstArgOrd);
+            ReleaseAssert(sretType->isPointerTy());
+            returnType = sretType->getPointerElementType();
+            firstArgOrd += 1;
+        }
+        matchTypes(fn, returnType, info.m_ret);
+
+        // If it is a class member function, the first parameter is 'this' pointer
+        //
+        if (info.m_fnType == Ast::ReflectionHelper::FunctionType::NonStaticMemberFn)
+        {
+            ReleaseAssert(fnType->getNumParams() > firstArgOrd);
+            Type* thisPtr = fnType->getParamType(firstArgOrd);
+            ReleaseAssert(thisPtr->isPointerTy());
+            std::string className = info.FindClassName();
+            matchTypes(fn, thisPtr->getPointerElementType(), className);
+            firstArgOrd += 1;
+        }
+
+        // Match each of the remaining parameters
+        //
+        ReleaseAssert(info.m_params.size() == fnType->getNumParams() - firstArgOrd);
+        for (size_t i = 0; i < info.m_params.size(); i++)
+        {
+            matchTypes(fn, fnType->getParamType(static_cast<unsigned int>(firstArgOrd + i)), info.m_params[i]);
+        }
+    }
+
+    std::function<std::string(const std::string&)> quoteString = [](const std::string& s)
+    {
+        std::ostringstream ss;
+        ss << std::quoted(s);
+        return ss.str();
+    };
+
+    // generate typename map
+    //
+    {
+        std::string filename = generatedFileFolder + "/pochivm_runtime_cpp_types.generated.h";
+        FILE* fp = fopen(filename.c_str(), "w");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    filename.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp, "#pragma once\n");
+        fprintf(fp, "#include \"src/common.h\"\n");
+        fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
+        fprintf(fp, "#include \"pochivm_runtime_library_bitcodes.generated.h\"\n\n");
+        fprintf(fp, "namespace Ast {\n\n");
+        fprintf(fp, "namespace AstTypeHelper {\n\n");
+
+        fprintf(fp, "template<typename T>\n");
+        fprintf(fp, "struct cpp_type_ordinal {\n");
+        fprintf(fp, "    static const uint64_t ordinal = %d;\n", static_cast<int>(typeNameMap.size()));
+        fprintf(fp, "};\n\n");
+
+        std::vector<std::string> llvmTypeNames, cppTypeNames;
+        int ordinal = 0;
+        for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
+        {
+            const std::string& llvmTypeName = it->first;
+            const std::string& cppTypeName = it->second;
+            llvmTypeNames.push_back(llvmTypeName);
+            cppTypeNames.push_back(cppTypeName);
+            fprintf(fp, "template<>\n");
+            fprintf(fp, "struct cpp_type_ordinal<%s> {\n", cppTypeName.c_str());
+            fprintf(fp, "    static const uint64_t ordinal = %d;\n", ordinal);
+            fprintf(fp, "};\n\n");
+            ordinal++;
+        }
+
+        fprintf(fp, "const char* const AstCppTypePrintName[%d] = {\n", ordinal + 1);
+        for (const std::string& cppTypeName : cppTypeNames)
+        {
+            fprintf(fp, "    %s,\n", quoteString(cppTypeName).c_str());
+        }
+        fprintf(fp, "    \"(Unknown CPP type)\"\n");
+        fprintf(fp, "};\n\n");
+
+        fprintf(fp, "const char* const AstCppTypeLLVMTypeName[%d] = {\n", ordinal + 1);
+        for (const std::string& llvmTypeName : llvmTypeNames)
+        {
+            fprintf(fp, "    %s,\n", quoteString(llvmTypeName).c_str());
+        }
+        fprintf(fp, "    nullptr\n");
+        fprintf(fp, "};\n\n");
+
+        if (cppTypeNames.size() > 0)
+        {
+            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \\\n");
+            for (size_t i = 0; i < cppTypeNames.size(); i++)
+            {
+                fprintf(fp, "    F(%s) ", cppTypeNames[i].c_str());
+                if (i == cppTypeNames.size() - 1)
+                {
                     fprintf(fp, "\n\n");
-
-                    for (size_t k = start; k < end; k++)
-                    {
-                        ParsedFnTypeNamesInfo& info = data[k];
-                        fprintf(fp, "// Original parameter and return types:\n");
-                        for (const std::string& param : info.m_origParams)
-                        {
-                            fprintf(fp, "//          %s\n", param.c_str());
-                        }
-                        fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
-                        fprintf(fp, "//\n");
-                        fprintf(fp, "template<>\n");
-                        fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
-                        PrintFnTemplateParams(fp, data[start]);
-                        PrintFnParams(fp, data[start]);
-                        fprintf(fp, "\n{\n");
-                        fprintf(fp, "    static const char* __pochivm_sym = \"%s\";\n", info.m_mangledSymbolName.c_str());
-                        fprintf(fp, "}\n\n");
-                    }
-                }
-                start = end;
-            }
-            if (nsPrefix != "")
-            {
-                fprintf(fp, "\n} // namespace %s\n\n", nsPrefix.c_str());
-            }
-        }
-    }
-    fprintf(fp, "\n} // namespace CallFreeFn\n\n");
-
-    // generate class member functions
-    //
-    {
-        fprintf(fp, "// Class member functions\n//\n\n");
-        std::map<std::string /*class*/, std::vector<ParsedFnTypeNamesInfo> > fns;
-
-        for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
-        {
-            ParsedFnTypeNamesInfo& info = it->second;
-            if (info.m_fnType != Ast::ReflectionHelper::FunctionType::FreeFn)
-            {
-                fns[info.m_prefix].push_back(info);
-            }
-        }
-
-        for (auto it = fns.begin(); it != fns.end(); it++)
-        {
-            ReleaseAssert(it->second.size() > 0);
-            std::string className = it->first;
-            std::vector<ParsedFnTypeNamesInfo>& data = it->second;
-            std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
-
-            fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", className.c_str());
-
-            size_t start = 0;
-            while (start < data.size())
-            {
-                size_t end = start;
-                while (end < data.size() &&
-                       data[start].m_fnType == data[end].m_fnType &&
-                       data[start].m_functionName == data[end].m_functionName &&
-                       data[start].m_params == data[end].m_params &&
-                       data[start].m_ret == data[end].m_ret &&
-                       data[start].m_templateParams.size() == data[end].m_templateParams.size())
-                {
-                    end++;
-                }
-                if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
-                {
-                    fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
-                                    "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
-                            data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
-                            static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
-                    abort();
-                }
-                size_t tplSize = data[start].m_templateParams.size();
-                if (tplSize == 0)
-                {
-                    for (size_t k = start; k < end; k++)
-                    {
-                        ParsedFnTypeNamesInfo& info = data[k];
-                        fprintf(fp, "// Original parameter and return types:\n");
-                        for (const std::string& param : info.m_origParams)
-                        {
-                            fprintf(fp, "//          %s\n", param.c_str());
-                        }
-                        fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
-                        fprintf(fp, "//\n");
-                        fprintf(fp, "%sValue<%s> %s",
-                                (info.m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                info.m_ret.c_str(), info.m_functionName.c_str());
-                        PrintFnParams(fp, info);
-                        fprintf(fp, ";\n");
-                    }
                 }
                 else
                 {
-                    fprintf(fp, "// Template declaration header for templated function %s\n",
-                            data[start].m_functionName.c_str());
-                    fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
-                    fprintf(fp, "// Parameter types and return type:\n");
-                    for (const std::string& param : data[start].m_params)
+                    fprintf(fp, "\\\n");
+                }
+            }
+
+            // Just for use in AstTypeLabelEnum
+            // Bothe cppTypeName and llvmTypeName are too wild to directly used as enum label
+            //
+            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \\\n");
+            for (size_t i = 0; i < cppTypeNames.size(); i++)
+            {
+                fprintf(fp, "  , CPP_TYPE_%d ", static_cast<int>(i));
+                if (i == cppTypeNames.size() - 1)
+                {
+                    fprintf(fp, "\n\n");
+                }
+                else
+                {
+                    fprintf(fp, "\\\n");
+                }
+            }
+        }
+        else
+        {
+            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \n\n");
+            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \n\n");
+        }
+
+        fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
+
+        fprintf(fp, "const CppFunctionMetadata x_cppFunctionMetadata[%d] = {\n", static_cast<int>(symbolOrdinal.size()));
+
+        std::string* ordinalToSymbol = new std::string[symbolOrdinal.size()];
+        Auto(delete [] ordinalToSymbol);
+        for (std::map<std::string, int>::const_iterator it = symbolOrdinal.begin(); it != symbolOrdinal.end(); it++)
+        {
+            int ord = it->second;
+            ReleaseAssert(ordinalToSymbol[ord] == "");
+            ordinalToSymbol[ord] = it->first;
+        }
+
+        for (size_t i = 0; i < symbolOrdinal.size(); i++)
+        {
+            fprintf(fp, "    // Symbol: %s\n", ordinalToSymbol[i].c_str());
+            fprintf(fp, "    {\n");
+            std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(ordinalToSymbol[i]);
+            fprintf(fp, "        &%s,\n", varname.c_str());
+            fprintf(fp, "        %s\n", (isUsingSretArray[i] ? "true" : "false"));
+            fprintf(fp, "    }");
+            if (i != symbolOrdinal.size())
+            {
+                fprintf(fp, ",\n");
+            }
+            else
+            {
+                fprintf(fp, "\n");
+            }
+        }
+        fprintf(fp, "};\n");
+
+        fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
+        fprintf(fp, "\n} // namespace Ast\n\n");
+        fclose(fp);
+    }
+
+    // generate Ast syntax header
+    //
+    {
+        std::string filename = generatedFileFolder + "/pochivm_runtime_headers.generated.h";
+        FILE* fp = fopen(filename.c_str(), "w");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    filename.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
+        fprintf(fp, "#include \"pochivm_runtime_cpp_types.generated.h\"\n");
+        fprintf(fp, "#include \"src/function_proto.h\"\n");
+        fprintf(fp, "#include \"src/api_base.h\"\n");
+        fprintf(fp, "#include \"src/api_function_proto.h\"\n\n");
+        fprintf(fp, "namespace Ast {\n\n");
+
+        // generate all Value<> prototypes
+        //
+        {
+            // Track which types we have not printed the instantiated class.
+            // If a class does not have any registered method, it will not be printed in the following loop.
+            // We will need to print them in the end.
+            //
+            std::set<std::string> unprinted;
+
+            // forward declaration all Value<> classes
+            //
+            for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
+            {
+                const std::string& cppTypeName = it->second;
+                fprintf(fp, "template<> class Value<%s>;\n", cppTypeName.c_str());
+                unprinted.insert(cppTypeName);
+            }
+
+            fprintf(fp, "\n");
+
+            // Print prototypes for classes with registered methods
+            //
+            fprintf(fp, "// Class member functions prototype\n//\n\n");
+            std::map<std::string /*class*/, std::vector<ParsedFnTypeNamesInfo> > fns;
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType != Ast::ReflectionHelper::FunctionType::FreeFn)
+                {
+                    fns[info.m_prefix].push_back(info);
+                }
+            }
+
+            for (auto it = fns.begin(); it != fns.end(); it++)
+            {
+                ReleaseAssert(it->second.size() > 0);
+                std::string className = it->first;
+                std::vector<ParsedFnTypeNamesInfo>& data = it->second;
+                std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
+
+                fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", className.c_str());
+                PrintBoilerplateMethods(fp, className);
+
+                if (unprinted.count(className))
+                {
+                    unprinted.erase(unprinted.find(className));
+                }
+
+                size_t start = 0;
+                while (start < data.size())
+                {
+                    size_t end = start;
+                    while (end < data.size() &&
+                           data[start].m_fnType == data[end].m_fnType &&
+                           data[start].m_functionName == data[end].m_functionName &&
+                           data[start].m_params == data[end].m_params &&
+                           data[start].m_ret == data[end].m_ret &&
+                           data[start].m_templateParams.size() == data[end].m_templateParams.size())
+                    {
+                        end++;
+                    }
+                    if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
+                    {
+                        fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
+                                        "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
+                                data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
+                                static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
+                        abort();
+                    }
+                    size_t tplSize = data[start].m_templateParams.size();
+                    if (tplSize == 0)
+                    {
+                        for (size_t k = start; k < end; k++)
+                        {
+                            ParsedFnTypeNamesInfo& info = data[k];
+                            fprintf(fp, "// Original parameter and return types:\n");
+                            for (const std::string& param : info.m_origParams)
+                            {
+                                fprintf(fp, "//          %s\n", param.c_str());
+                            }
+                            fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
+                            fprintf(fp, "//\n");
+                            fprintf(fp, "%sValue<%s> %s",
+                                    (info.m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    info.m_ret.c_str(), info.m_functionName.c_str());
+                            PrintFnParams(fp, info);
+                            fprintf(fp, ";\n");
+                        }
+                    }
+                    else
+                    {
+                        fprintf(fp, "// Template declaration header for templated function %s\n",
+                                data[start].m_functionName.c_str());
+                        fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
+                        fprintf(fp, "// Parameter types and return type:\n");
+                        for (const std::string& param : data[start].m_params)
+                        {
+                            fprintf(fp, "//          %s\n", param.c_str());
+                        }
+                        fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
+                        fprintf(fp, "//\n");
+
+                        for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
+                        {
+                            fprintf(fp, "template<");
+                            for (size_t i = 0; i < tplSize; i++)
+                            {
+                                if (bitmask & (static_cast<size_t>(1) << i))
+                                {
+                                    fprintf(fp, "typename");
+                                }
+                                else
+                                {
+                                    fprintf(fp, "auto");
+                                }
+                                if (i != tplSize - 1)
+                                {
+                                    fprintf(fp, ", ");
+                                }
+                                else
+                                {
+                                    fprintf(fp, ">\n");
+                                }
+                            }
+                            fprintf(fp, "%sValue<%s> %s",
+                                    (data[start].m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    data[start].m_ret.c_str(), data[start].m_functionName.c_str());
+                            PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
+                            fprintf(fp, " = delete;\n");
+                        }
+                        fprintf(fp, "\n");
+                    }
+                    start = end;
+                }
+
+                fprintf(fp, "}; // class Value<%s>\n\n", className.c_str());
+            }
+
+            // Print the yet unprinted classes.
+            // Those are classes with no special methods to call. Just print the common boilerplate part.
+            //
+            for (const std::string& className : unprinted)
+            {
+                fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", className.c_str());
+                PrintBoilerplateMethods(fp, className);
+                fprintf(fp, "};\n\n");
+            }
+        }
+
+        // generate all free functions
+        //
+        {
+            fprintf(fp, "namespace CallFreeFn {\n\n");
+
+            std::map<std::string /*ns*/, std::vector<ParsedFnTypeNamesInfo> > freeFns;
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType == Ast::ReflectionHelper::FunctionType::FreeFn)
+                {
+                    freeFns[info.m_prefix].push_back(info);
+                }
+            }
+
+            for (auto it = freeFns.begin(); it != freeFns.end(); it++)
+            {
+                ReleaseAssert(it->second.size() > 0);
+                std::string nsPrefix = it->first;
+                std::vector<ParsedFnTypeNamesInfo>& data = it->second;
+                std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
+
+                if (nsPrefix != "")
+                {
+                    fprintf(fp, "namespace %s {\n\n", nsPrefix.c_str());
+                }
+
+                size_t start = 0;
+                while (start < data.size())
+                {
+                    size_t end = start;
+                    while (end < data.size() &&
+                           data[start].m_functionName == data[end].m_functionName &&
+                           data[start].m_params == data[end].m_params &&
+                           data[start].m_ret == data[end].m_ret &&
+                           data[start].m_templateParams.size() == data[end].m_templateParams.size())
+                    {
+                        end++;
+                    }
+                    if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
+                    {
+                        fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
+                                        "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
+                                data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
+                                static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
+                        abort();
+                    }
+                    size_t tplSize = data[start].m_templateParams.size();
+                    if (tplSize == 0)
+                    {
+                        for (size_t k = start; k < end; k++)
+                        {
+                            ParsedFnTypeNamesInfo& info = data[k];
+                            ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
+                            int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
+                            fprintf(fp, "// Original parameter and return types:\n");
+                            for (const std::string& param : info.m_origParams)
+                            {
+                                fprintf(fp, "//          %s\n", param.c_str());
+                            }
+                            fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
+                            fprintf(fp, "//\n");
+                            fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
+                            PrintFnParams(fp, info);
+                            fprintf(fp, "\n");
+                            PrintFnCallBody(fp, info, ordinal);
+                        }
+                    }
+                    else
+                    {
+                        fprintf(fp, "// Template declaration header for templated function %s\n",
+                                data[start].m_functionName.c_str());
+                        fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
+                        fprintf(fp, "// Parameter types and return type:\n");
+                        for (const std::string& param : data[start].m_params)
+                        {
+                            fprintf(fp, "//          %s\n", param.c_str());
+                        }
+                        fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
+                        fprintf(fp, "//\n");
+
+                        for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
+                        {
+                            fprintf(fp, "template<");
+                            for (size_t i = 0; i < tplSize; i++)
+                            {
+                                if (bitmask & (static_cast<size_t>(1) << i))
+                                {
+                                    fprintf(fp, "typename");
+                                }
+                                else
+                                {
+                                    fprintf(fp, "auto");
+                                }
+                                if (i != tplSize - 1)
+                                {
+                                    fprintf(fp, ", ");
+                                }
+                                else
+                                {
+                                    fprintf(fp, ">\n");
+                                }
+                            }
+                            fprintf(fp, "Value<%s> %s", data[start].m_ret.c_str(), data[start].m_functionName.c_str());
+                            PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
+                            fprintf(fp, " = delete;\n");
+                        }
+                        fprintf(fp, "\n\n");
+
+                        for (size_t k = start; k < end; k++)
+                        {
+                            ParsedFnTypeNamesInfo& info = data[k];
+                            ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
+                            int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
+                            fprintf(fp, "// Original parameter and return types:\n");
+                            for (const std::string& param : info.m_origParams)
+                            {
+                                fprintf(fp, "//          %s\n", param.c_str());
+                            }
+                            fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
+                            fprintf(fp, "//\n");
+                            fprintf(fp, "template<>\n");
+                            fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
+                            PrintFnTemplateParams(fp, info);
+                            PrintFnParams(fp, info);
+                            fprintf(fp, "\n");
+                            PrintFnCallBody(fp, info, ordinal);
+                        }
+                    }
+                    start = end;
+                }
+                if (nsPrefix != "")
+                {
+                    fprintf(fp, "\n} // namespace %s\n\n", nsPrefix.c_str());
+                }
+            }
+        }
+        fprintf(fp, "\n} // namespace CallFreeFn\n\n");
+
+        // generate class member functions (implementation)
+        //
+        {
+            fprintf(fp, "// Class member functions implementation\n//\n\n");
+            std::map<std::string /*class*/, std::vector<ParsedFnTypeNamesInfo> > fns;
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType != Ast::ReflectionHelper::FunctionType::FreeFn)
+                {
+                    fns[info.m_prefix].push_back(info);
+                }
+            }
+
+            for (auto it = fns.begin(); it != fns.end(); it++)
+            {
+                ReleaseAssert(it->second.size() > 0);
+                std::string className = it->first;
+                std::vector<ParsedFnTypeNamesInfo>& data = it->second;
+                std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
+
+                for (size_t k = 0; k < data.size(); k++)
+                {
+                    ParsedFnTypeNamesInfo& info = data[k];
+                    ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
+                    int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
+                    fprintf(fp, "// Original parameter and return types:\n");
+                    for (const std::string& param : info.m_origParams)
                     {
                         fprintf(fp, "//          %s\n", param.c_str());
                     }
-                    fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
+                    fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                     fprintf(fp, "//\n");
-
-                    for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
+                    size_t tplSize = info.m_templateParams.size();
+                    if (tplSize > 0)
                     {
-                        fprintf(fp, "template<");
-                        for (size_t i = 0; i < tplSize; i++)
-                        {
-                            if (bitmask & (static_cast<size_t>(1) << i))
-                            {
-                                fprintf(fp, "typename");
-                            }
-                            else
-                            {
-                                fprintf(fp, "auto");
-                            }
-                            if (i != tplSize - 1)
-                            {
-                                fprintf(fp, ", ");
-                            }
-                            else
-                            {
-                                fprintf(fp, ">\n");
-                            }
-                        }
-                        fprintf(fp, "%sValue<%s> %s",
-                                (data[start].m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                data[start].m_ret.c_str(), data[start].m_functionName.c_str());
-                        PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
-                        fprintf(fp, " = delete;\n");
+                        fprintf(fp, "template<>\n");
                     }
+                    fprintf(fp, "inline Value<%s> Value<%s>::%s",
+                            info.m_ret.c_str(), info.m_prefix.c_str(), info.m_functionName.c_str());
+                    if (tplSize > 0)
+                    {
+                        PrintFnTemplateParams(fp, info);
+                    }
+                    PrintFnParams(fp, info);
                     fprintf(fp, "\n");
+                    PrintFnCallBody(fp, info, ordinal);
                 }
-                start = end;
-            }
-
-            fprintf(fp, "}; // class Value<%s>\n\n", className.c_str());
-
-            for (size_t k = 0; k < data.size(); k++)
-            {
-                ParsedFnTypeNamesInfo& info = data[k];
-                fprintf(fp, "// Original parameter and return types:\n");
-                for (const std::string& param : info.m_origParams)
-                {
-                    fprintf(fp, "//          %s\n", param.c_str());
-                }
-                fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
-                fprintf(fp, "//\n");
-                size_t tplSize = info.m_templateParams.size();
-                if (tplSize > 0)
-                {
-                    fprintf(fp, "template<>\n");
-                }
-                fprintf(fp, "inline Value<%s> Value<%s>::%s",
-                        info.m_ret.c_str(), info.m_prefix.c_str(), info.m_functionName.c_str());
-                if (tplSize > 0)
-                {
-                    PrintFnTemplateParams(fp, info);
-                }
-                PrintFnParams(fp, info);
-                fprintf(fp, "\n{\n");
-                fprintf(fp, "    static const char* __pochivm_sym = \"%s\";\n", info.m_mangledSymbolName.c_str());
-                fprintf(fp, "}\n\n");
             }
         }
-    }
 
-    fprintf(fp, "\n} // namespace Ast\n\n");
-    fclose(fp);
+        fprintf(fp, "\n} // namespace Ast\n\n");
+        fclose(fp);
+    }
 }
 
 }   // anonymous namespace
@@ -833,10 +1338,11 @@ int main(int argc, char** argv)
     //    Used on a bc file. Dumps all the global symbols it defined to symbol_list_output
     //
 
-    // --dump-list [bc_file] [symbol_list_output] [needed_symbols_info_output] [generated .h output]
+    // --dump-list [bc_file] [symbol_list_output] [needed_symbols_info_output] [generated_file_folder]
     //    Used on '__pochivm_runtime__.bc'. In addition to '--dump', it attempts to
-    //    match the symbols described in runtime_ops.txt and the function stubs generated from generate_stub.cpp,
-    //    and output the IR information of those symbols to 'needed_symbols_info_output'.
+    //    dump the type information of the symbols described in pochivm_register_runtime.cpp
+    //    output the IR information of those symbols to 'needed_symbols_info_output',
+    //    and generate the C++ header files into 'generated_file_folder'.
     //
 
     ReleaseAssert(argc >= 2);
@@ -1087,6 +1593,7 @@ int main(int argc, char** argv)
 
         // Write 'needed_symbols_info_output'
         //
+        std::map<std::string, int> symbolOrdinal;
         {
             std::set<std::string> symbolsOut;
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
@@ -1098,10 +1605,38 @@ int main(int argc, char** argv)
 
             std::string neededSymbolOutputFile = std::string(argv[4]);
             WriteSymbolListFileOrDie(neededSymbolOutputFile, symbolsOut);
+
+            int ordinal = 0;
+            for (const std::string& symbol : symbolsOut)
+            {
+                symbolOrdinal[symbol] = ordinal;
+                ordinal++;
+            }
         }
 
-        std::string generatedHeaderOutput = std::string(argv[5]);
-        GenerateCppRuntimeHeaderFile(generatedHeaderOutput);
+        {
+            // Load the optimized module, to generate C++ header file
+            //
+            std::unique_ptr<LLVMContext> newContext(new LLVMContext);
+            std::unique_ptr<Module> newModule = parseIRFile(optimizedBcFileName, llvmErr, *newContext.get());
+
+            if (newModule == nullptr)
+            {
+                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", optimizedBcFileName.c_str());
+                llvmErr.print(argv[0], errs());
+                abort();
+            }
+            module = std::move(newModule);
+            context = std::move(newContext);
+        }
+
+        // Generate the C++ header file
+        //
+        if (isDumpList)
+        {
+            std::string generatedFileFolder = std::string(argv[5]);
+            GenerateCppRuntimeHeaderFile(generatedFileFolder, module.get(), symbolOrdinal);
+        }
     }
 
     // We wrote to a tmp file and rename it here in the end, to give all or nothing guarantee:

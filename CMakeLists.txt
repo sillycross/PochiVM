@@ -63,7 +63,7 @@ add_subdirectory(gtest)
 
 # Append extra cxx warning flags
 #
-SET(EXTRA_WARNING_FLAGS "-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-exit-time-destructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Wno-missing-prototypes -Werror ")
+SET(EXTRA_WARNING_FLAGS "-Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-unused-macros -Wno-global-constructors -Wno-exit-time-destructors -Wno-weak-vtables -Wno-padded -Wno-alloca -Wno-missing-prototypes -Wno-zero-length-array -Werror ")
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${EXTRA_WARNING_FLAGS}")
 
 # llvm-specific flags
@@ -119,6 +119,8 @@ add_subdirectory(runtime)
 # Build PochiVM library
 #
 add_subdirectory(src)
+
+add_dependencies(PochiVM runtime)
 
 # add the executable
 #

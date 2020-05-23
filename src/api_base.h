@@ -25,7 +25,7 @@ public:
     // CPP types values are not supported
     //
     static_assert(std::is_same<T, void>::value || AstTypeHelper::is_primitive_type<T>::value ||
-                  std::is_pointer<T>::value, "Bad type T. Add to for_each_xop_type.h?");
+                  std::is_pointer<T>::value, "Bad type T. Add to runtime/pochivm_register_runtime.cpp?");
 
     // Constructor: trivially take a pointer and wraps it.
     //
@@ -247,7 +247,7 @@ public:
     // CPP types are specialized, should not hit here
     //
     static_assert(std::is_same<T, void>::value || AstTypeHelper::is_primitive_type<T>::value ||
-                  std::is_pointer<T>::value, "Bad type T. Add to for_each_xop_type.h?");
+                  std::is_pointer<T>::value, "Bad type T. Add to runtime/pochivm_register_runtime.cpp?");
 
     Variable(AstVariable* ptr)
         : Value<T>(new AstDereferenceVariableExpr(ptr))

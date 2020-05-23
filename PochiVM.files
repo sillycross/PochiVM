@@ -37,7 +37,6 @@ src/pochivm.h
 src/lang_constructs.h
 src/global_vars.cpp
 src/function_proto.h
-src/for_each_xop_type.h
 src/for_each_primitive_type.h
 src/error_context.h
 src/constexpr_array_concat_helper.h

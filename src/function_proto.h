@@ -3,6 +3,7 @@
 #include "ast_expr_base.h"
 #include "lang_constructs.h"
 #include "error_context.h"
+#include "bitcode_data.h"
 
 namespace llvm
 {
@@ -524,8 +525,24 @@ public:
     AstCallExpr(const std::string& name,
                 const std::vector<AstNodeBase*>& params,
                 TypeId returnType)
-        : AstNodeBase(returnType), m_fnName(name), m_params(params)
+        : AstNodeBase(returnType)
+        , m_fnName(name)
+        , m_params(params)
+        , m_isCppFunction(false)
+        , m_cppFunctionMd(nullptr)
     { }
+
+    AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
+                const std::vector<AstNodeBase*>& params,
+                TypeId returnType)
+        : AstNodeBase(returnType)
+        , m_fnName()
+        , m_params(params)
+        , m_isCppFunction(true)
+        , m_cppFunctionMd(cppFunctionMd)
+    {
+        assert(m_cppFunctionMd != nullptr);
+    }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
@@ -538,6 +555,7 @@ public:
     //
     bool WARN_UNUSED ValidateSignature()
     {
+        ReleaseAssert(!m_isCppFunction && "unsupported yet");
         AstFunction* fn = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
         CHECK_REPORT_ERR(fn != nullptr, "Call to undefined function %s", m_fnName.c_str());
         CHECK_ERR(fn->CheckParamTypes(m_params));
@@ -549,6 +567,7 @@ public:
 
     virtual void SetupInterpImpl() override
     {
+        ReleaseAssert(!m_isCppFunction && "unsupported yet");
         m_interpFunction = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
         TestAssert(m_interpFunction != nullptr);
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImpl);
@@ -567,6 +586,8 @@ public:
 private:
     std::string m_fnName;
     std::vector<AstNodeBase*> m_params;
+    bool m_isCppFunction;
+    const CppFunctionMetadata* m_cppFunctionMd;
     // Function to call, only populated in interp mode
     //
     AstFunction* m_interpFunction;

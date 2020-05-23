@@ -65,6 +65,16 @@ public:
         return &m_a;
     }
 
+    bool TestBool(bool b)
+    {
+        return m_ap == nullptr || b;
+    }
+
+    bool TestBoolStar(bool* b)
+    {
+        return m_ap == nullptr || *b;
+    }
+
     TestClassA m_a;
     TestClassA* m_ap;
 };
@@ -109,4 +119,9 @@ int FreeFunctionTemplated(int x)
 inline void FreeFunctionPrintFile(FILE* fp, const std::string& content)
 {
     fprintf(fp, "FreeFunctionPrintFile: %s\n", content.c_str());
+}
+
+inline std::string FreeFunctionConcatStr(TestClassA* a, const std::string& b)
+{
+    return a->GetStringY() + "_freefnConcatStr_" + b;
 }

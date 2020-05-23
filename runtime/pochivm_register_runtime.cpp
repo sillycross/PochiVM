@@ -16,6 +16,12 @@ static void RegisterRuntimeLibrary()
     //    void RegisterMemberFn<member function pointer>()
     //    void RegisterStaticMemberFn<member function pointer>()
     //
+    // While you may write any logic you like, keep in mind that you will get a segfault if you try to
+    // call functions or access global values which implementations reside in other CPP files.
+    // E.g. suppose implementation of function 'f' is not in this file.
+    //      'auto fnPtr = &f' or 'RegisterFreeFn<&f>()' is OK since it only takes address of the symbol
+    //      (which does not require knowledge of its implementation). But 'f()' will give you a segfault.
+    //
     // ****************************************
 
     RegisterMemberFn<&TestClassA::GetY>();
@@ -31,10 +37,13 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&TestClassB::GetA>();
     RegisterMemberFn<&TestClassB::SetAp>();
     RegisterMemberFn<&TestClassB::GetAp>();
+    RegisterMemberFn<&TestClassB::TestBool>();
+    RegisterMemberFn<&TestClassB::TestBoolStar>();
 
     RegisterFreeFn<&FreeFunctionAPlusB>();
     RegisterFreeFn<&FreeFunctionStoreValue>();
     RegisterFreeFn<&FreeFunctionPrintFile>();
+    RegisterFreeFn<&FreeFunctionConcatStr>();
 
     RegisterFreeFn<&FreeFunctionTemplated<int, 1>>();
     RegisterFreeFn<&FreeFunctionTemplated<int, 2>>();

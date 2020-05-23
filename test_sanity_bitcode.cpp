@@ -134,6 +134,9 @@ TEST(SanityBitcode, SanityExecution_2)
     jit.SetAllowResolveSymbolInHostProcess(true);
     jit.SetNonAstModule(std::move(tsm1));
     _PushFnPrototype pushFn = jit.GetFunctionNonAst<_PushFnPrototype>(std::string(pushVec.m_symbolName));
+    // make sure we are getting the pointer to generated code, not host process
+    //
+    ReleaseAssert(reinterpret_cast<void*>(pushFn) != AstTypeHelper::GetClassMethodPtr(&TestClassA::PushVec));
 
     for (size_t i = 0; i < 97; i++)
     {
@@ -298,6 +301,9 @@ TEST(SanityBitcode, SanityLink)
 
     using _SetFnPrototype = void(*)(TestClassA*, int);
     _SetFnPrototype setFn = jit.GetFunctionNonAst<_SetFnPrototype>(std::string(setY.m_symbolName));
+    // make sure we are getting the pointer to generated code, not host process
+    //
+    ReleaseAssert(reinterpret_cast<void*>(setFn) != AstTypeHelper::GetClassMethodPtr(&TestClassA::SetY));
 
     using _GetFnPrototype = int(*)(TestClassA*);
     _GetFnPrototype getFn = jit.GetFunctionNonAst<_GetFnPrototype>(std::string(getY.m_symbolName));

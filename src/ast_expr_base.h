@@ -92,7 +92,9 @@ class AstNodeBase : NonCopyable, NonMovable
 public:
     AstNodeBase(TypeId typeId)
         : m_interpFn(nullptr), m_mark(), m_typeId(typeId)
-    { }
+    {
+        TestAssert(!typeId.IsInvalid());
+    }
     virtual ~AstNodeBase() {}
 
     // TODO: outdated
@@ -198,83 +200,5 @@ inline void TraverseAstTree(AstNodeBase* root, const TraverseAstTreeFn& fn)
     };
     fn(root, nullptr, std::bind(RecurseFactory, root));
 }
-
-#if 0
-// Base class of all C++-type expressions with known type of T
-// All operations with return type of T will inherit this class
-//
-// For primitive types and pointer types, isLValue may be true or false
-// For C++ classes, isLValue is always true: since we only allow function prototype
-// with primitive parameters and return values, RValue classes will never show up.
-//
-// LValue can always implicitly cast to RValue, except C++ classes which we should
-// never use its RValue.
-//
-template<typename T, AstValueType valueType>
-class AstExpr : AstExprBase<valueType>
-{
-    // Only whitelisted types (defined by specializations blow) are allowed
-    //
-    static_assert(sizeof(T) == 0, "Bad type T. Add to for_each_xop_type.h?");
-};
-
-// Whitelist 'void' type, RValue only
-//
-template<> class AstExpr<void, RValue> : public AstExprBase<RValue>
-{
-public:
-    virtual TypeId GetTypeId() const override
-    {
-        return AstTypeHelper::GetTypeId<void>::value;
-    }
-    // Specialized version of EmitIR(), for void type only
-    //
-    virtual llvm::Value* WARN_UNUSED EmitIR() override;
-};
-
-// Whitelist all primitive types
-//
-#define F(type) \
-template<AstValueType valueType>                                                     \
-class AstExpr<type, valueType> : public AstExprBase<valueType> {                     \
-public:                                                                              \
-    virtual TypeId GetTypeId() const override {                                      \
-        return AstTypeHelper::GetTypeId<type>::value;                                \
-    }                                                                                \
-};
-FOR_EACH_PRIMITIVE_TYPE
-#undef F
-
-// Whitelist all C++ class types, but LValues only
-//
-#define CLASS(type) \
-template<> class AstExpr<type, LValue> : public AstExprBase<LValue> {                \
-public:                                                                              \
-    virtual TypeId GetTypeId() const override {                                      \
-        return AstTypeHelper::GetTypeId<type>::value;                                \
-    }                                                                                \
-};
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
-
-// Whitelist all pointer types
-//
-template<typename T, AstValueType valueType>
-class AstExpr<T*, valueType> : public AstExprBase<valueType>
-{
-public:
-    virtual TypeId GetTypeId() const override
-    {
-        return AstTypeHelper::GetTypeId<T*>::value;
-    }
-};
-
-#endif
 
 }   // namespace Ast

@@ -59,13 +59,17 @@ add_library(runtime
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library_bitcodes.generated.h PROPERTIES GENERATED true)
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp PROPERTIES GENERATED true)
 
+set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h PROPERTIES GENERATED true)
+set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_cpp_types.generated.h PROPERTIES GENERATED true)
+
 set_source_files_properties(pochivm_register_runtime.cpp PROPERTIES OBJECT_OUTPUTS "${PROJECT_BINARY_DIR}/pochivm_register_runtime.bc")
 
 add_custom_command(
   OUTPUT ${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms
   OUTPUT ${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h
-  COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/dump_symbols --dump-list "${PROJECT_BINARY_DIR}/pochivm_register_runtime.bc" "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" "${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h"
+  OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_cpp_types.generated.h
+  COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/dump_symbols --dump-list "${PROJECT_BINARY_DIR}/pochivm_register_runtime.bc" "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" ${GENERATED_FILES_DIR}
   # update_symbol_matches is a dependency because if it changed, we need to empty all .syms.matches file
   # For simplicity we just call dump_symbol to do this (it empties the .syms.matches file corresponding to the input)
   #

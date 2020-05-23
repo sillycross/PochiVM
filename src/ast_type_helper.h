@@ -1,21 +1,12 @@
 #pragma once
 
 #include "common.h"
+#include "runtime/pochivm_runtime_headers.h"
+
+#include "generated/pochivm_runtime_cpp_types.generated.h"
+
 #include "for_each_primitive_type.h"
-
 #include "constexpr_array_concat_helper.h"
-
-// Generate forward declarations for all classes
-//
-#define CLASS(c) class c;
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
 
 namespace Ast
 {
@@ -36,15 +27,7 @@ enum AstTypeLabelEnum
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-#define CLASS(type) , AstTypeLabelEnum_ ## type
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
+CPP_CLASS_ENUM_TYPE_LIST
 
     // must be last element
     //
@@ -53,22 +36,11 @@ FOR_EACH_PRIMITIVE_TYPE
 
 // human-friendly names of the types, used in pretty-print
 //
-const char* const AstBasicTypePrintName[TOTAL_VALUES_IN_TYPE_LABEL_ENUM] = {
+const char* const AstPrimitiveTypePrintName[1 + x_num_primitive_types] = {
     "void"
 #define F(type) , #type
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
-
-#define CLASS(type) , #type
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
-
 };
 
 const size_t AstPrimitiveTypeSizeInBytes[1 + x_num_primitive_types] = {
@@ -124,7 +96,12 @@ struct TypeId
     bool operator==(const TypeId& other) const { return other.value == value; }
     bool operator!=(const TypeId& other) const { return !(*this == other); }
 
-    constexpr bool IsInvalid() const { return value == x_invalid_typeid; }
+    constexpr bool IsInvalid() const
+    {
+        return (value == x_invalid_typeid) ? true : (
+                    (value >= x_generated_composite_type) ? false : (
+                        !(value % x_pointer_typeid_inc < AstTypeHelper::TOTAL_VALUES_IN_TYPE_LABEL_ENUM)));
+    }
     bool IsVoid() const { return IsType<void>(); }
     bool IsPrimitiveType() const { return 1 <= value && value <= x_num_primitive_types; }
     bool IsBool() const { return IsType<bool>(); }
@@ -251,14 +228,21 @@ struct TypeId
         else
         {
             assert(value < AstTypeHelper::TOTAL_VALUES_IN_TYPE_LABEL_ENUM);
-            return std::string(AstTypeHelper::AstBasicTypePrintName[value]);
+            if (value <= x_num_primitive_types)
+            {
+                return std::string(AstTypeHelper::AstPrimitiveTypePrintName[value]);
+            }
+            else
+            {
+                return std::string(AstTypeHelper::AstCppTypePrintName[value - x_num_primitive_types - 1]);
+            }
         }
     }
 
     // TypeId::Get<T>() return TypeId for T
     //
     template<typename T>
-    static TypeId Get()
+    static constexpr TypeId Get()
     {
         return AstTypeHelper::GetTypeId<T>::value;
     }
@@ -297,18 +281,13 @@ F(void)
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-#define CLASS(type) \
-template<> struct GetTypeId<type> {	\
-    const static TypeId value = TypeId { AstTypeLabelEnum_ ## type }; \
+#define F(...) \
+template<> struct GetTypeId<__VA_ARGS__> {	\
+    static_assert(cpp_type_ordinal<__VA_ARGS__>::ordinal != x_num_cpp_class_types, "unknown cpp type"); \
+    constexpr static TypeId value = TypeId { x_num_primitive_types + 1 + cpp_type_ordinal<__VA_ARGS__>::ordinal }; \
 };
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
+FOR_EACH_CPP_CLASS_TYPE
+#undef F
 
 template<typename T> struct GetTypeId<T*> {
     constexpr static TypeId value = TypeId { GetTypeId<T>::value.value + TypeId::x_pointer_typeid_inc };
@@ -320,20 +299,10 @@ struct is_any_possible_type : std::integral_constant<bool,
 > {};
 
 // is_cpp_class_type<T>::value
-// true if T is a CPP class type listed in 'for_each_xop_type.h'
 //
-template<typename T> struct is_cpp_class_type : std::false_type {};
-
-#define CLASS(type) \
-template<> struct is_cpp_class_type<type> : std::true_type {};
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
+template<typename T> struct is_cpp_class_type : std::integral_constant<bool,
+    (cpp_type_ordinal<T>::ordinal != x_num_cpp_class_types)
+> {};
 
 // is_primitive_int_type<T>::value
 // true for primitive int types, false otherwise
@@ -577,9 +546,9 @@ void* SelectTemplatedFnImplGeneric(TypeId typeId, Targs2... args2)
 {
     using FnType = void*(*)(Targs2...);
 
-#define INTERNAL_GET_RECURSE_FN_BY_TYPE(T) \
-    select_template_fn_impl_helper<Cond<T>::value, Cond, Targs2...>:: \
-    template helper<F, Targs...>::template internal<T>::value
+#define INTERNAL_GET_RECURSE_FN_BY_TYPE(...) \
+    select_template_fn_impl_helper<Cond<__VA_ARGS__>::value, Cond, Targs2...>:: \
+    template helper<F, Targs...>::template internal<__VA_ARGS__>::value
 
     static constexpr FnType jump_table_prim[TOTAL_VALUES_IN_TYPE_LABEL_ENUM] = {
         INTERNAL_GET_RECURSE_FN_BY_TYPE(void)
@@ -587,15 +556,9 @@ void* SelectTemplatedFnImplGeneric(TypeId typeId, Targs2... args2)
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-#define CLASS(t) , INTERNAL_GET_RECURSE_FN_BY_TYPE(t)
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
+#define F(...) , INTERNAL_GET_RECURSE_FN_BY_TYPE(__VA_ARGS__)
+FOR_EACH_CPP_CLASS_TYPE
+#undef F
     };
     static constexpr FnType jump_table_ptr[TOTAL_VALUES_IN_TYPE_LABEL_ENUM] = {
         INTERNAL_GET_RECURSE_FN_BY_TYPE(void*)
@@ -603,15 +566,9 @@ FOR_EACH_PRIMITIVE_TYPE
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-#define CLASS(t) , INTERNAL_GET_RECURSE_FN_BY_TYPE(t*)
-#define MEMBER(v, type)
-#define METHOD(v, ret, param, attr)
-#define ENDCLASS
-#include "for_each_xop_type.h"
-#undef CLASS
-#undef MEMBER
-#undef METHOD
-#undef ENDCLASS
+#define F(...) , INTERNAL_GET_RECURSE_FN_BY_TYPE(__VA_ARGS__ *)
+FOR_EACH_CPP_CLASS_TYPE
+#undef F
     };
     TestAssert(!typeId.IsInvalid() && !typeId.IsGeneratedCompositeType());
     if (!typeId.IsPointerType())
