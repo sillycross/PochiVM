@@ -4,7 +4,7 @@
 #include "codegen_context.hpp"
 #include "test_util_helper.h"
 
-using namespace Ast;
+using namespace PochiVM;
 
 TEST(Sanity, FibonacciSeq)
 {

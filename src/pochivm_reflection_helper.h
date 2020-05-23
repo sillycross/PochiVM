@@ -28,7 +28,7 @@ constexpr const char* __pochivm_stringify_value__()
     return p;
 }
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace ReflectionHelper
@@ -105,7 +105,7 @@ struct function_typenames_helper_internal
     {
         static constexpr std::array<const char*, n+1> get()
         {
-            return Ast::AstTypeHelper::constexpr_std_array_concat(
+            return PochiVM::AstTypeHelper::constexpr_std_array_concat(
                     build_original_typenames_array_internal<n-1>::get(),
                     std::array<const char*, 1>{
                             __pochivm_stringify_type__<ArgType<n-1>>() });
@@ -133,7 +133,7 @@ struct function_typenames_helper_internal
     {
         static constexpr std::array<const char*, n+1> get()
         {
-            return Ast::AstTypeHelper::constexpr_std_array_concat(
+            return PochiVM::AstTypeHelper::constexpr_std_array_concat(
                     build_transformed_typenames_array_internal<n-1>::get(),
                     std::array<const char*, 1>{
                             __pochivm_stringify_type__<TransformedArgType<n-1>>() });
@@ -362,7 +362,7 @@ struct get_raw_fn_typenames_info : function_typenames_helper<decltype(t)>
     }
 };
 
-}   // namespace AstTypeHelper
+}   // namespace ReflectionHelper
 
 void __pochivm_report_info__(ReflectionHelper::RawFnTypeNamesInfo*);
 
@@ -390,4 +390,4 @@ void RegisterStaticMemberFn()
     __pochivm_report_info__(&info);
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

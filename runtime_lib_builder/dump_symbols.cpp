@@ -55,7 +55,7 @@ struct ParsedFnTypeNamesInfo
 {
     ParsedFnTypeNamesInfo() {}
 
-    ParsedFnTypeNamesInfo(Ast::ReflectionHelper::RawFnTypeNamesInfo* src)
+    ParsedFnTypeNamesInfo(PochiVM::ReflectionHelper::RawFnTypeNamesInfo* src)
     {
         m_numArgs = src->m_numArgs;
         m_origRet = ParseTypeName(src->m_originalRetAndArgTypenames[0]);
@@ -67,7 +67,7 @@ struct ParsedFnTypeNamesInfo
         }
         m_fnType = src->m_fnType;
         std::string fnName = ParseValueName(src->m_fnName);
-        if (m_fnType == Ast::ReflectionHelper::FunctionType::NonStaticMemberFn)
+        if (m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
         {
             std::string className = ParseTypeName(src->m_classTypename);
             ReleaseAssert(fnName.length() > className.length() + 2);
@@ -88,7 +88,7 @@ struct ParsedFnTypeNamesInfo
             ReleaseAssert(k == -1 || k >= 1);
             if (k == -1)
             {
-                ReleaseAssert(m_fnType == Ast::ReflectionHelper::FunctionType::FreeFn);
+                ReleaseAssert(m_fnType == PochiVM::ReflectionHelper::FunctionType::FreeFn);
                 m_prefix = "";
             }
             else
@@ -233,8 +233,8 @@ struct ParsedFnTypeNamesInfo
     //
     std::string FindClassName()
     {
-        ReleaseAssert(m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ||
-                      m_fnType == Ast::ReflectionHelper::FunctionType::NonStaticMemberFn);
+        ReleaseAssert(m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ||
+                      m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn);
         ReleaseAssert(m_prefix.length() > 0);
         size_t i = m_prefix.length() - 1;
         while (i > 0 && isWhitespace(m_prefix[i])) { i--; }
@@ -355,7 +355,7 @@ struct ParsedFnTypeNamesInfo
         return ParseNameInternal(data + prefixLen);
     }
 
-    Ast::ReflectionHelper::FunctionType m_fnType;
+    PochiVM::ReflectionHelper::FunctionType m_fnType;
     size_t m_numArgs;
     // typenames of parameters, before and after transform
     //
@@ -384,7 +384,7 @@ static std::map<void*, ParsedFnTypeNamesInfo> g_symbolAddrToTypeData;
 
 }   // anonymous namespace
 
-void Ast::__pochivm_report_info__(Ast::ReflectionHelper::RawFnTypeNamesInfo* info)
+void PochiVM::__pochivm_report_info__(PochiVM::ReflectionHelper::RawFnTypeNamesInfo* info)
 {
     if (!g_symbolAddrToTypeData.count(info->m_fnAddress))
     {
@@ -800,7 +800,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
         // If it is a class member function, the first parameter is 'this' pointer
         //
-        if (info.m_fnType == Ast::ReflectionHelper::FunctionType::NonStaticMemberFn)
+        if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
         {
             ReleaseAssert(fnType->getNumParams() > firstArgOrd);
             Type* thisPtr = fnType->getParamType(firstArgOrd);
@@ -843,7 +843,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "#include \"src/common.h\"\n");
         fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
         fprintf(fp, "#include \"pochivm_runtime_library_bitcodes.generated.h\"\n\n");
-        fprintf(fp, "namespace Ast {\n\n");
+        fprintf(fp, "namespace PochiVM {\n\n");
         fprintf(fp, "namespace AstTypeHelper {\n\n");
 
         fprintf(fp, "template<typename T>\n");
@@ -954,7 +954,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "};\n");
 
         fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
-        fprintf(fp, "\n} // namespace Ast\n\n");
+        fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }
 
@@ -976,7 +976,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "#include \"src/function_proto.h\"\n");
         fprintf(fp, "#include \"src/api_base.h\"\n");
         fprintf(fp, "#include \"src/api_function_proto.h\"\n\n");
-        fprintf(fp, "namespace Ast {\n\n");
+        fprintf(fp, "namespace PochiVM {\n\n");
 
         // generate all Value<> prototypes
         //
@@ -1006,7 +1006,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
                 ParsedFnTypeNamesInfo& info = it->second;
-                if (info.m_fnType != Ast::ReflectionHelper::FunctionType::FreeFn)
+                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1062,7 +1062,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
                             fprintf(fp, "%sValue<%s> %s",
-                                    (info.m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, ";\n");
@@ -1104,7 +1104,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                                 }
                             }
                             fprintf(fp, "%sValue<%s> %s",
-                                    (data[start].m_fnType == Ast::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
                                     data[start].m_ret.c_str(), data[start].m_functionName.c_str());
                             PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
                             fprintf(fp, " = delete;\n");
@@ -1138,7 +1138,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
                 ParsedFnTypeNamesInfo& info = it->second;
-                if (info.m_fnType == Ast::ReflectionHelper::FunctionType::FreeFn)
+                if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::FreeFn)
                 {
                     freeFns[info.m_prefix].push_back(info);
                 }
@@ -1277,7 +1277,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
                 ParsedFnTypeNamesInfo& info = it->second;
-                if (info.m_fnType != Ast::ReflectionHelper::FunctionType::FreeFn)
+                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1320,7 +1320,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             }
         }
 
-        fprintf(fp, "\n} // namespace Ast\n\n");
+        fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }
 }

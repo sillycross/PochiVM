@@ -2,7 +2,7 @@
 
 #include "common.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace AstTypeHelper
@@ -65,4 +65,4 @@ constexpr std::array<T, LL+RL> constexpr_std_array_concat(std::array<T, LL> lhs,
 
 }   // namespace AstTypeHelper
 
-}   // namespace Ast
+}   // namespace PochiVM

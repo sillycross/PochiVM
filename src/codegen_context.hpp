@@ -20,12 +20,12 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Passes/PassBuilder.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 class AstFunction;
 
-}   // namespace Ast;
+}   // namespace PochiVM;
 
 struct LLVMCodegenContext
 {
@@ -53,7 +53,7 @@ struct LLVMCodegenContext
         m_MPM = m_passBuilder.buildPerModuleDefaultPipeline(x_optimizationLevel);
     }
 
-    Ast::AstFunction* GetCurFunction() const
+    PochiVM::AstFunction* GetCurFunction() const
     {
         assert(m_curFunction != nullptr);
         return m_curFunction;
@@ -115,7 +115,7 @@ struct LLVMCodegenContext
 
     // The current function being codegen'ed
     //
-    Ast::AstFunction* m_curFunction;
+    PochiVM::AstFunction* m_curFunction;
 
     // Current break/continue target
     //

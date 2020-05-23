@@ -2,7 +2,7 @@
 #include "error_context.h"
 #include "pochivm.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -203,4 +203,4 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
     return inst;
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

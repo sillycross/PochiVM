@@ -179,7 +179,7 @@ public:
     // JIT the given module. Transfers ownership of the llvm module.
     // The previous JIT'd module, if exists, is thrown away
     //
-    void SetModule(Ast::AstModule* module)
+    void SetModule(PochiVM::AstModule* module)
     {
         llvm::ExitOnError exitOnErr;
         std::unique_ptr<llvm::orc::LLJIT>&& jit = GetJIT();
@@ -229,7 +229,7 @@ public:
         ReleaseAssert(m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
         llvm::ExitOnError exitOnErr;
         auto sym = exitOnErr(m_jit->lookup(fnName));
-        return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
+        return PochiVM::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
                 reinterpret_cast<void*>(sym.getAddress()));
     }
 
@@ -239,11 +239,11 @@ public:
         ReleaseAssert(m_jit != nullptr);
         llvm::ExitOnError exitOnErr;
         auto sym = exitOnErr(m_jit->lookup(fnName));
-        return Ast::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
+        return PochiVM::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
                 reinterpret_cast<void*>(sym.getAddress()));
     }
 
     std::unique_ptr<llvm::orc::LLJIT> m_jit;
-    Ast::AstModule* m_astModule;
+    PochiVM::AstModule* m_astModule;
     bool m_allowResolveSymbolInHostProcess;
 };

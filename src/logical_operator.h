@@ -2,7 +2,7 @@
 
 #include "ast_expr_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // Logical && and || operation, with short circuiting behavior as in C
@@ -102,4 +102,4 @@ private:
     AstNodeBase* m_op;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

@@ -3,7 +3,7 @@
 #include "ast_type_helper.h"
 #include "codegen_context.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace AstTypeHelper
@@ -99,4 +99,4 @@ inline bool WARN_UNUSED llvm_value_has_type(TypeId typeId, Value* value)
 
 }   // namespace AstTypeHelper
 
-}   // namespace Ast
+}   // namespace PochiVM

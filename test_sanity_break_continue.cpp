@@ -4,7 +4,7 @@
 #include "test_util_helper.h"
 #include "codegen_context.hpp"
 
-using namespace Ast;
+using namespace PochiVM;
 
 TEST(Sanity, BreakAndContinue)
 {

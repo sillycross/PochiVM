@@ -2,7 +2,7 @@
 #include "cast_expr.h"
 #include "pochivm.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -120,4 +120,4 @@ Value* WARN_UNUSED AstReinterpretCastExpr::EmitIRImpl()
     return thread_llvmContext->m_builder->CreateBitOrPointerCast(op, AstTypeHelper::llvm_type_of(dst));
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

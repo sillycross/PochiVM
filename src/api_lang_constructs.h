@@ -3,7 +3,7 @@
 #include "lang_constructs.h"
 #include "api_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // Usage: Scope(stmt1, stmt2, ...)
@@ -316,4 +316,4 @@ inline Value<void> Continue()
     return Value<void>(new AstBreakOrContinueStmt(false /*isBreak*/));
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

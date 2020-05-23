@@ -2,7 +2,7 @@
 
 #include "ast_expr_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // The operator that dereference a pointer
@@ -238,4 +238,4 @@ public:
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstTrashPtrExpr; }
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

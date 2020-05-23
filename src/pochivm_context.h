@@ -2,7 +2,7 @@
 
 #include "common.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 class AstScope;
@@ -48,11 +48,11 @@ struct PochiVMContext
     AstModule* m_curModule;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM
 
-extern thread_local Ast::PochiVMContext* thread_pochiVMContext;
+extern thread_local PochiVM::PochiVMContext* thread_pochiVMContext;
 
-namespace Ast
+namespace PochiVM
 {
 
 class AutoThreadPochiVMContext
@@ -78,5 +78,5 @@ private:
 };
 #define AutoThreadPochiVMContext(...) static_assert(false, "Wrong use of 'auto'-pattern!");
 
-}   // namespace Ast
+}   // namespace PochiVM
 

@@ -153,6 +153,8 @@ int main(int argc, char** argv)
 
         fprintf(fp, "#include \"src/bitcode_data.h\"\n\n");
 
+        fprintf(fp, "namespace PochiVM {\n\n");
+
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
         for (const std::string& symbol : allSymbols)
         {
@@ -161,6 +163,8 @@ int main(int argc, char** argv)
             fprintf(fp, "// Symbol: %s\n", symbol.c_str());
             fprintf(fp, "extern const BitcodeData %s;\n\n", varname.c_str());
         }
+
+        fprintf(fp, "} // namespace PochiVM\n\n");
 
         fclose(fp);
     }

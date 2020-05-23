@@ -7,7 +7,7 @@
 __attribute__((__optnone__))    // make sure link-time optimization won't optimize these out as dead code
 static void RegisterRuntimeLibrary()
 {
-    using namespace Ast;
+    using namespace PochiVM;
 
     // ****************************************
     // Register the list of functions callable from generated code, using the APIs below.

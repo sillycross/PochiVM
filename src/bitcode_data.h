@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <cstdint>
 
+namespace PochiVM
+{
+
 struct BitcodeData
 {
     const char* m_symbolName;
@@ -15,3 +18,5 @@ struct CppFunctionMetadata
     const BitcodeData* m_bitcodeData;
     bool m_isUsingSret;
 };
+
+}   // namespace PochiVM

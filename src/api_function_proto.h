@@ -4,7 +4,7 @@
 #include "function_proto.h"
 #include "api_lang_constructs.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 class Function;
@@ -344,4 +344,4 @@ Value<void> Return(const Value<T>& val)
     return Value<void>(new AstReturnStmt(val.m_ptr));
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

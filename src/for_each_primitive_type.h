@@ -46,7 +46,7 @@ F(int16_t, int32_t)    \
 F(int16_t, int64_t)    \
 F(int32_t, int64_t)
 
-namespace Ast
+namespace PochiVM
 {
 
 #define F(type) +1
@@ -55,5 +55,5 @@ const static int x_num_primitive_int_types = FOR_EACH_PRIMITIVE_INT_TYPE;
 const static int x_num_primitive_float_types = FOR_EACH_PRIMITIVE_FLOAT_TYPE;
 #undef F
 
-}   // namespace Ast
+}   // namespace PochiVM
 

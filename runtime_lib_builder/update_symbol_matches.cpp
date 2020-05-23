@@ -496,6 +496,8 @@ static void ExtractFunction(const std::string& generatedFileDir,
 
         fprintf(fp, "#include \"src/bitcode_data.h\"\n\n");
 
+        fprintf(fp, "namespace PochiVM {\n\n");
+
         std::string resVarname = std::string("__pochivm_internal_bc_") + uniqueSymbolHash;
 
         // 'extern' declaration is required for constants to be able to export elsewhere
@@ -528,6 +530,8 @@ static void ExtractFunction(const std::string& generatedFileDir,
         fprintf(fp, "    %s,\n", symbolVarname.c_str());
         fprintf(fp, "    %s,\n", bitcodeDataVarname.c_str());
         fprintf(fp, "    %d\n};\n", static_cast<int>(bitcodeSize));
+
+        fprintf(fp, "\n}  // namespace PochiVM\n\n");
 
         fclose(fp);
     }

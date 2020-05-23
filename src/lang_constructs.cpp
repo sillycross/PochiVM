@@ -3,7 +3,7 @@
 #include "function_proto.h"
 #include "pochivm.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -315,4 +315,4 @@ Value* WARN_UNUSED AstBreakOrContinueStmt::EmitIRImpl()
     return nullptr;
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

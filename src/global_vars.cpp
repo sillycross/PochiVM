@@ -6,9 +6,9 @@ thread_local LLVMCodegenContext* thread_llvmContext = nullptr;
 
 thread_local ErrorContext* thread_errorContext = nullptr;
 
-thread_local Ast::PochiVMContext* thread_pochiVMContext = nullptr;
+thread_local PochiVM::PochiVMContext* thread_pochiVMContext = nullptr;
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace ReflectionHelper

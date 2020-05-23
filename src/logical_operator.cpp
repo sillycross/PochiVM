@@ -3,7 +3,7 @@
 #include "pochivm.hpp"
 #include "function_proto.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -74,4 +74,4 @@ Value* WARN_UNUSED AstLogicalNotExpr::EmitIRImpl()
     return thread_llvmContext->m_builder->CreateNot(op);
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

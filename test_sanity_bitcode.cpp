@@ -9,7 +9,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Linker/Linker.h"
 
-using namespace Ast;
+using namespace PochiVM;
 
 using namespace llvm;
 using namespace llvm::orc;

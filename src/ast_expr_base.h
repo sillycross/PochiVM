@@ -10,7 +10,7 @@ namespace llvm
     class Function;
 }   // namespace llvm
 
-namespace Ast
+namespace PochiVM
 {
 
 class AstNodeType
@@ -201,4 +201,4 @@ inline void TraverseAstTree(AstNodeBase* root, const TraverseAstTreeFn& fn)
     fn(root, nullptr, std::bind(RecurseFactory, root));
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

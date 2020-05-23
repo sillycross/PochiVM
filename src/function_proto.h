@@ -19,7 +19,7 @@ class ThreadSafeModule;
 
 }   // namespace llvm
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace internal
@@ -1180,4 +1180,4 @@ inline bool WARN_UNUSED AstFunction::Validate()
     return success;
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

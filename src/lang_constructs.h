@@ -12,7 +12,7 @@ class AllocaInst;
 
 }   // namespace llvm
 
-namespace Ast
+namespace PochiVM
 {
 
 class AstFunction;
@@ -604,4 +604,4 @@ private:
     bool m_isBreak;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

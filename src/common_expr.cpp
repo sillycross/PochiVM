@@ -2,7 +2,7 @@
 #include "error_context.h"
 #include "pochivm.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -84,4 +84,4 @@ Value* WARN_UNUSED AstTrashPtrExpr::EmitIRImpl()
     CHECK_REPORT_BUG(false, "unimplemented");
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

@@ -8,7 +8,7 @@
 #include "for_each_primitive_type.h"
 #include "constexpr_array_concat_helper.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 namespace AstTypeHelper
@@ -997,4 +997,4 @@ inline bool TypeId::MayReinterpretCastTo(TypeId other) const
     return fn();
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

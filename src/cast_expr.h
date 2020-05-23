@@ -2,7 +2,7 @@
 
 #include "ast_expr_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // The operator that static_cast a type to another
@@ -124,4 +124,4 @@ private:
     AstNodeBase* m_operand;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

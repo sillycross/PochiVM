@@ -2,7 +2,7 @@
 
 #include "api_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // A wrapper class similar to Value, except that it holds a AST node of type unknown at C++ build time.
@@ -36,4 +36,4 @@ public:
     AstNodeBase* m_ptr;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

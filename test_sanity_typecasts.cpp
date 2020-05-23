@@ -3,7 +3,7 @@
 #include "pochivm.h"
 #include "test_util_helper.h"
 
-using namespace Ast;
+using namespace PochiVM;
 
 namespace {
 

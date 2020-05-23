@@ -2,7 +2,7 @@
 
 #include "ast_expr_base.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // A basic arithmetic expression.
@@ -270,4 +270,4 @@ private:
 // TODO: logical operations
 //
 
-}   // namespace Ast
+}   // namespace PochiVM

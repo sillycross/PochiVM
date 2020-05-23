@@ -3,7 +3,7 @@
 #include "ast_expr_base.h"
 #include "ast_type_helper.hpp"
 
-namespace Ast
+namespace PochiVM
 {
 
 using namespace llvm;
@@ -16,4 +16,4 @@ inline Value* WARN_UNUSED AstNodeBase::EmitIR()
     return value;
 }
 
-}   // namespace Ast
+}   // namespace PochiVM

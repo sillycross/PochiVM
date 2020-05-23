@@ -3,7 +3,7 @@
 #include "common.h"
 #include "pochivm_context.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 // Interp mode control signal
@@ -55,4 +55,4 @@ private:
     uint64_t m_value;
 };
 
-}   // namespace Ast
+}   // namespace PochiVM

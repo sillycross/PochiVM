@@ -8,7 +8,7 @@
 #include "lang_constructs.h"
 #include "logical_operator.h"
 
-namespace Ast
+namespace PochiVM
 {
 
 template<typename T>
@@ -309,4 +309,4 @@ Value<void> Increment(const Variable<T>& var)
     return Assign(var, var + Literal<T>(1));
 }
 
-}   // namespace Ast
+}   // namespace PochiVM
