@@ -1,4 +1,4 @@
-add_library(PochiVM 
+add_library(pochivm 
   arith_expr.cpp  
   common_expr.cpp     
   global_vars.cpp      

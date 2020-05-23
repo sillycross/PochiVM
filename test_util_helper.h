@@ -21,10 +21,10 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DebugInfo.h"
 
-#include "src/common.h"
+#include "pochivm/common.h"
 #include "gtest/gtest.h"
-#include "codegen_context.hpp"
-#include "src/pochivm.h"
+#include "pochivm/codegen_context.hpp"
+#include "pochivm/pochivm.h"
 
 // Whether we are in update-expected-output mode
 //

@@ -106,7 +106,7 @@ foreach(_loop_var ${_tmp})
 endforeach()
 
 include_directories(${PROJECT_SOURCE_DIR})
-include_directories("${PROJECT_SOURCE_DIR}/src")
+include_directories("${PROJECT_SOURCE_DIR}/pochivm")
 
 # Build tools that generates the runtime library
 #
@@ -118,9 +118,9 @@ add_subdirectory(runtime)
 
 # Build PochiVM library
 #
-add_subdirectory(src)
+add_subdirectory(pochivm)
 
-add_dependencies(PochiVM runtime)
+add_dependencies(pochivm runtime)
 
 # add the executable
 #
@@ -149,7 +149,7 @@ target_link_libraries(main PUBLIC
 
 target_link_libraries(main PUBLIC
   gtest
-  PochiVM
+  pochivm
   ${LLVM_EXTRA_LINK_LIBRARIES}
 )
 

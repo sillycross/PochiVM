@@ -2,7 +2,7 @@
 // Put the includes in 'pochivm_runtime_headers.h', not here.
 //
 #include "pochivm_runtime_headers.h"
-#include "src/pochivm_reflection_helper.h"
+#include "pochivm/pochivm_reflection_helper.h"
 
 __attribute__((__optnone__))    // make sure link-time optimization won't optimize these out as dead code
 static void RegisterRuntimeLibrary()

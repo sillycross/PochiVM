@@ -1,4 +1,4 @@
-#include "src/common.h"
+#include "pochivm/common.h"
 #include "runtime_lib_builder/symbol_list_util.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -494,7 +494,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
         fprintf(fp, "// INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\n");
         fprintf(fp, "//\n\n");
 
-        fprintf(fp, "#include \"src/bitcode_data.h\"\n\n");
+        fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
 
         fprintf(fp, "namespace PochiVM {\n\n");
 

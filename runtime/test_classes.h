@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/common.h"
+#include "pochivm/common.h"
 
 class TestClassA
 {

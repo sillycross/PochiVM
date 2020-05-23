@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/common.h"
+#include "pochivm/common.h"
 
 // LLVM debug metadata info could be really huge.
 // This option denotes whether we should keep debug info. For now we just strip them all.

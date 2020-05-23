@@ -1,8 +1,8 @@
 #include <iomanip>
 #include <sstream>
 
-#include "src/common.h"
-#include "src/pochivm_reflection_helper.h"
+#include "pochivm/common.h"
+#include "pochivm/pochivm_reflection_helper.h"
 #include "runtime_lib_builder/symbol_list_util.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -840,7 +840,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
         fprintf(fp, "#pragma once\n");
-        fprintf(fp, "#include \"src/common.h\"\n");
+        fprintf(fp, "#include \"pochivm/common.h\"\n");
         fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
         fprintf(fp, "#include \"pochivm_runtime_library_bitcodes.generated.h\"\n\n");
         fprintf(fp, "namespace PochiVM {\n\n");
@@ -973,9 +973,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
         fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
         fprintf(fp, "#include \"pochivm_runtime_cpp_types.generated.h\"\n");
-        fprintf(fp, "#include \"src/function_proto.h\"\n");
-        fprintf(fp, "#include \"src/api_base.h\"\n");
-        fprintf(fp, "#include \"src/api_function_proto.h\"\n\n");
+        fprintf(fp, "#include \"pochivm/function_proto.h\"\n");
+        fprintf(fp, "#include \"pochivm/api_base.h\"\n");
+        fprintf(fp, "#include \"pochivm/api_function_proto.h\"\n\n");
         fprintf(fp, "namespace PochiVM {\n\n");
 
         // generate all Value<> prototypes

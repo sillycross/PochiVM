@@ -151,7 +151,7 @@ int main(int argc, char** argv)
 
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
 
-        fprintf(fp, "#include \"src/bitcode_data.h\"\n\n");
+        fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
 
         fprintf(fp, "namespace PochiVM {\n\n");
 
