@@ -533,15 +533,21 @@ public:
     { }
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
-                const std::vector<AstNodeBase*>& params,
-                TypeId returnType)
-        : AstNodeBase(returnType)
+                const std::vector<AstNodeBase*>& params)
+        : AstNodeBase(cppFunctionMd->m_returnType)
         , m_fnName()
         , m_params(params)
         , m_isCppFunction(true)
         , m_cppFunctionMd(cppFunctionMd)
     {
         assert(m_cppFunctionMd != nullptr);
+        TestAssert(params.size() == static_cast<size_t>(m_cppFunctionMd->m_numParams));
+#ifdef TESTBUILD
+        for (size_t i = 0; i < params.size(); i++)
+        {
+            TestAssert(m_cppFunctionMd->m_paramTypes[i] == m_params[i]->GetTypeId());
+        }
+#endif
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;

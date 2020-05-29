@@ -97,6 +97,8 @@ struct ParsedFnTypeNamesInfo
                 m_prefix = fnName.substr(0, static_cast<size_t>(k - 1));
             }
         }
+        m_isConst = src->m_isConst;
+        m_isNoExcept = src->m_isNoExcept;
     }
 
     void RecordMangledSymbolName(const std::string& mangledSymbolName)
@@ -378,6 +380,8 @@ struct ParsedFnTypeNamesInfo
     //
     std::vector<std::string> m_templateParams;
     std::string m_mangledSymbolName;
+    bool m_isConst;
+    bool m_isNoExcept;
 };
 
 static std::map<void*, ParsedFnTypeNamesInfo> g_symbolAddrToTypeData;
@@ -571,7 +575,9 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     if (a.m_numArgs != b.m_numArgs) { return a.m_numArgs < b.m_numArgs; }
     if (a.m_origRet != b.m_origRet) { return a.m_origRet < b.m_origRet; }
     if (a.m_origParams != b.m_origParams) { return a.m_origParams < b.m_origParams; }
-    return a.m_mangledSymbolName < b.m_mangledSymbolName;
+    if (a.m_mangledSymbolName != b.m_mangledSymbolName) { return a.m_mangledSymbolName < b.m_mangledSymbolName; }
+    if (a.m_isConst != b.m_isConst) { return a.m_isConst < b.m_isConst; }
+    return a.m_isNoExcept < b.m_isNoExcept;
 }
 
 static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNotPrintVarName = false)
@@ -605,12 +611,114 @@ static void PrintFnTemplateParams(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
 }
 
-static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, int ordinal)
+static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, bool isUsingSret)
 {
     fprintf(fp, "{\n");
+    int numParams = static_cast<int>(info.m_params.size());
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+    {
+        numParams++;
+    }
+    fprintf(fp, "    static const TypeId __pochivm_cpp_fn_params[%d] = {", numParams);
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+    {
+        fprintf(fp, "\n        TypeId::Get<typename std::add_pointer<%s>::type>()", info.m_prefix.c_str());
+        if (info.m_params.size() > 0)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    for (size_t i = 0; i < info.m_params.size(); i++)
+    {
+        fprintf(fp, "\n        TypeId::Get<%s>()", info.m_params[i].c_str());
+        if (i != info.m_params.size() - 1)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    fprintf(fp, "};\n");
+
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+    {
+        fprintf(fp, "    using __pochivm_func_t = %s(%s::*)(", info.m_origRet.c_str(), info.m_prefix.c_str());
+    }
+    else
+    {
+        fprintf(fp, "    using __pochivm_func_t = %s(*)(", info.m_origRet.c_str());
+    }
+    for (size_t i = 0; i < info.m_params.size(); i++)
+    {
+        fprintf(fp, "\n        %s", info.m_origParams[i].c_str());
+        if (i != info.m_params.size() - 1)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    fprintf(fp, ")%s%s;\n", (info.m_isConst ? " const" : ""), (info.m_isNoExcept ? " noexcept" : ""));
+
+    fprintf(fp, "    static const CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
+    std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
+    fprintf(fp, "        &%s,\n", varname.c_str());
+    fprintf(fp, "        __pochivm_cpp_fn_params,\n");
+    fprintf(fp, "        %d /*numParams*/,\n", numParams);
+    fprintf(fp, "        TypeId::Get<%s>() /*returnType*/,\n", info.m_ret.c_str());
+    fprintf(fp, "        %s /*isUsingSret*/,\n", (isUsingSret ? "true" : "false"));
+    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<\n");
+    fprintf(fp, "                __pochivm_func_t\n");
+    fprintf(fp, "              , %s\n", info.m_origRet.c_str());
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+    {
+        fprintf(fp, "              , typename std::add_pointer<%s>::type\n", info.m_prefix.c_str());
+    }
+    for (size_t i = 0; i < info.m_params.size(); i++)
+    {
+        fprintf(fp, "              , %s\n", info.m_origParams[i].c_str());
+    }
+    fprintf(fp, "        >::get(static_cast<__pochivm_func_t>(\n");
+    fprintf(fp, "                ");
+    if (info.m_prefix == "")
+    {
+        fprintf(fp, "&::%s", info.m_functionName.c_str());
+    }
+    else
+    {
+        fprintf(fp, "&%s::%s", info.m_prefix.c_str(), info.m_functionName.c_str());
+    }
+    if (info.m_templateParams.size() > 0)
+    {
+        PrintFnTemplateParams(fp, info);
+    }
+    fprintf(fp, "\n");
+    fprintf(fp, "        )) /*interpFn*/\n");
+    fprintf(fp, "    };\n");
+
     fprintf(fp, "    return Value<%s>(new AstCallExpr(\n", info.m_ret.c_str());
-    fprintf(fp, "            &AstTypeHelper::x_cppFunctionMetadata[%d],\n", ordinal);
+    fprintf(fp, "            &__pochivm_cpp_fn_metadata,\n");
     fprintf(fp, "            std::vector<AstNodeBase*>{");
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+    {
+        fprintf(fp, "\n                m_varPtr");
+        if (info.m_params.size() > 0)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n            ");
+        }
+    }
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
         fprintf(fp, "\n                __pochivm_%d.m_ptr", static_cast<int>(i));
@@ -623,22 +731,24 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, int ord
             fprintf(fp, "\n            ");
         }
     }
-    fprintf(fp, "},\n");
-    fprintf(fp, "            TypeId::Get<%s>() /*returnType*/\n", info.m_ret.c_str());
+    fprintf(fp, "}\n");
     fprintf(fp, "    ));\n");
     fprintf(fp, "}\n\n");
 }
 
 static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
 {
-    fprintf(fp, "Value<%s>(AstNodeBase* ptr) : m_ptr(ptr) {\n", className.c_str());
+    fprintf(fp, "Variable<%s>(AstNodeBase* varPtr) : m_varPtr(varPtr) {\n", className.c_str());
     // The 'ReleaseAssert' actually evaluates to constant expression.
     // Ideally we want to delete the constructor in that case, but for now go simple.
     //
     fprintf(fp, "    ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", className.c_str());
-    fprintf(fp, "    TestAssert((m_ptr->GetTypeId() == TypeId::Get<%s>()));\n", className.c_str());
+    fprintf(fp, "    TestAssert((m_varPtr->GetTypeId() == TypeId::Get<%s>().AddPointer()));\n", className.c_str());
     fprintf(fp, "}\n");
-    fprintf(fp, "AstNodeBase* m_ptr;\n\n");
+    fprintf(fp, "AstNodeBase* m_varPtr;\n\n");
+    fprintf(fp, "Value<%s*> Addr() const {\n", className.c_str());
+    fprintf(fp, "    return Value<%s*>(m_varPtr);\n", className.c_str());
+    fprintf(fp, "}\n\n");
 }
 
 static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
@@ -923,36 +1033,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
         fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
 
-        fprintf(fp, "const CppFunctionMetadata x_cppFunctionMetadata[%d] = {\n", static_cast<int>(symbolOrdinal.size()));
-
-        std::string* ordinalToSymbol = new std::string[symbolOrdinal.size()];
-        Auto(delete [] ordinalToSymbol);
-        for (std::map<std::string, int>::const_iterator it = symbolOrdinal.begin(); it != symbolOrdinal.end(); it++)
-        {
-            int ord = it->second;
-            ReleaseAssert(ordinalToSymbol[ord] == "");
-            ordinalToSymbol[ord] = it->first;
-        }
-
-        for (size_t i = 0; i < symbolOrdinal.size(); i++)
-        {
-            fprintf(fp, "    // Symbol: %s\n", ordinalToSymbol[i].c_str());
-            fprintf(fp, "    {\n");
-            std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(ordinalToSymbol[i]);
-            fprintf(fp, "        &%s,\n", varname.c_str());
-            fprintf(fp, "        %s\n", (isUsingSretArray[i] ? "true" : "false"));
-            fprintf(fp, "    }");
-            if (i != symbolOrdinal.size())
-            {
-                fprintf(fp, ",\n");
-            }
-            else
-            {
-                fprintf(fp, "\n");
-            }
-        }
-        fprintf(fp, "};\n");
-
         fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
         fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
@@ -987,15 +1067,19 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             //
             std::set<std::string> unprinted;
 
-            // forward declaration all Value<> classes
+            // print all Value<> classes
             //
             for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
             {
                 const std::string& cppTypeName = it->second;
-                fprintf(fp, "template<> class Value<%s>;\n", cppTypeName.c_str());
+                fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", cppTypeName.c_str());
+                fprintf(fp, "    Value<%s>(AstNodeBase* ptr) : m_ptr(ptr) {\n", cppTypeName.c_str());
+                fprintf(fp, "        ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", cppTypeName.c_str());
+                fprintf(fp, "        TestAssert((m_ptr->GetTypeId() == TypeId::Get<%s>()));\n", cppTypeName.c_str());
+                fprintf(fp, "    }\n");
+                fprintf(fp, "    AstNodeBase* m_ptr;\n};\n\n");
                 unprinted.insert(cppTypeName);
             }
-
             fprintf(fp, "\n");
 
             // Print prototypes for classes with registered methods
@@ -1019,7 +1103,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 std::vector<ParsedFnTypeNamesInfo>& data = it->second;
                 std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
 
-                fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", className.c_str());
+                fprintf(fp, "template<> class Variable<%s>\n{\npublic:\n", className.c_str());
                 PrintBoilerplateMethods(fp, className);
 
                 if (unprinted.count(className))
@@ -1114,7 +1198,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     start = end;
                 }
 
-                fprintf(fp, "}; // class Value<%s>\n\n", className.c_str());
+                fprintf(fp, "}; // class Variable<%s>\n\n", className.c_str());
             }
 
             // Print the yet unprinted classes.
@@ -1122,7 +1206,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             //
             for (const std::string& className : unprinted)
             {
-                fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", className.c_str());
+                fprintf(fp, "template<> class Variable<%s>\n{\npublic:\n", className.c_str());
                 PrintBoilerplateMethods(fp, className);
                 fprintf(fp, "};\n\n");
             }
@@ -1194,7 +1278,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info, ordinal);
+                            PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
                         }
                     }
                     else
@@ -1255,7 +1339,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             PrintFnTemplateParams(fp, info);
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info, ordinal);
+                            PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
                         }
                     }
                     start = end;
@@ -1307,7 +1391,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     {
                         fprintf(fp, "template<>\n");
                     }
-                    fprintf(fp, "inline Value<%s> Value<%s>::%s",
+                    fprintf(fp, "inline Value<%s> Variable<%s>::%s",
                             info.m_ret.c_str(), info.m_prefix.c_str(), info.m_functionName.c_str());
                     if (tplSize > 0)
                     {
@@ -1315,7 +1399,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     }
                     PrintFnParams(fp, info);
                     fprintf(fp, "\n");
-                    PrintFnCallBody(fp, info, ordinal);
+                    PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
                 }
             }
         }

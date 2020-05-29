@@ -180,6 +180,8 @@ struct function_typenames_helper<R(*)(Args...)>
     : function_typenames_helper_internal<R, Args...>
     , return_nullptr_class_typename
 {
+    static bool is_noexcept() { return false; }
+    static bool is_const() { return false; }
 };
 
 template<typename R, typename... Args>
@@ -187,6 +189,8 @@ struct function_typenames_helper<R(*)(Args...) noexcept>
     : function_typenames_helper_internal<R, Args...>
     , return_nullptr_class_typename
 {
+    static bool is_noexcept() { return true; }
+    static bool is_const() { return false; }
 };
 
 template<typename T>
@@ -208,25 +212,37 @@ template<typename R, typename C, typename... Args>
 struct function_typenames_helper<R(C::*)(Args...)>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
-{ };
+{
+    static bool is_noexcept() { return false; }
+    static bool is_const() { return false; }
+};
 
 template<typename R, typename C, typename... Args>
 struct function_typenames_helper<R(C::*)(Args...) noexcept>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
-{ };
+{
+    static bool is_noexcept() { return true; }
+    static bool is_const() { return false; }
+};
 
 template<typename R, typename C, typename... Args>
 struct function_typenames_helper<R(C::*)(Args...) const>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
-{ };
+{
+    static bool is_noexcept() { return false; }
+    static bool is_const() { return true; }
+};
 
 template<typename R, typename C, typename... Args>
 struct function_typenames_helper<R(C::*)(Args...) const noexcept>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
-{ };
+{
+    static bool is_noexcept() { return true; }
+    static bool is_const() { return true; }
+};
 
 // get_function_pointer_address(t)
 // Returns the void* address of t, where t must be a pointer to a free function or a static or non-static class method
@@ -285,7 +301,9 @@ struct RawFnTypeNamesInfo
                        const char* const* originalRetAndArgTypenames,
                        const char* classTypename,
                        const char* fnName,
-                       void* fnAddress)
+                       void* fnAddress,
+                       bool isConst,
+                       bool isNoExcept)
           : m_fnType(fnType)
           , m_numArgs(numArgs)
           , m_transformedRetAndArgTypenames(transformedRetAndArgTypenames)
@@ -293,6 +311,8 @@ struct RawFnTypeNamesInfo
           , m_classTypename(classTypename)
           , m_fnName(fnName)
           , m_fnAddress(fnAddress)
+          , m_isConst(isConst)
+          , m_isNoExcept(isNoExcept)
     { }
 
     FunctionType m_fnType;
@@ -317,6 +337,12 @@ struct RawFnTypeNamesInfo
     // the address of the function
     //
     void* m_fnAddress;
+    // Whether the function has 'const' attribute (must be member function)
+    //
+    bool m_isConst;
+    // Whether the function has 'noexcept' attribute
+    //
+    bool m_isNoExcept;
 };
 
 // get_raw_fn_typenames_info<t>::get()
@@ -358,7 +384,9 @@ struct get_raw_fn_typenames_info : function_typenames_helper<decltype(t)>
                                   base::get_original_ret_and_param_typenames(),
                                   base::get_class_typename(),
                                   get_function_name(),
-                                  get_function_pointer_address(t));
+                                  get_function_pointer_address(t),
+                                  base::is_const(),
+                                  base::is_noexcept());
     }
 };
 

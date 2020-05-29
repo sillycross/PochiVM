@@ -247,6 +247,11 @@ struct TypeId
         return AstTypeHelper::GetTypeId<T>::value;
     }
 
+    static constexpr TypeId GetCppTypeFromOrdinal(uint64_t ord)
+    {
+        return TypeId { x_num_primitive_types + 1 + ord };
+    }
+
     // TypeId::Get<T, valueType>() return TypeId for <T, valueType>
     //
     template<typename T, AstValueType valueType>
@@ -258,6 +263,24 @@ struct TypeId
     const static uint64_t x_generated_composite_type = 1000000000ULL * 1000000000ULL;
     const static uint64_t x_pointer_typeid_inc = 1000000000;
     const static uint64_t x_invalid_typeid = static_cast<uint64_t>(-1);
+};
+
+struct CppFunctionMetadata
+{
+    // The symbol name, and the bitcode stub
+    //
+    const BitcodeData* m_bitcodeData;
+    // Types of all params and return value
+    //
+    const TypeId* m_paramTypes;
+    int m_numParams;
+    TypeId m_returnType;
+    // Whether this function is using StructRet attribute
+    //
+    bool m_isUsingSret;
+    // The interp function interface
+    //
+    std::function<void(void* /*ret*/, void** /*params*/)> m_interpFn;
 };
 
 namespace AstTypeHelper
@@ -284,7 +307,7 @@ FOR_EACH_PRIMITIVE_TYPE
 #define F(...) \
 template<> struct GetTypeId<__VA_ARGS__> {	\
     static_assert(cpp_type_ordinal<__VA_ARGS__>::ordinal != x_num_cpp_class_types, "unknown cpp type"); \
-    constexpr static TypeId value = TypeId { x_num_primitive_types + 1 + cpp_type_ordinal<__VA_ARGS__>::ordinal }; \
+    constexpr static TypeId value = TypeId::GetCppTypeFromOrdinal(cpp_type_ordinal<__VA_ARGS__>::ordinal); \
 };
 FOR_EACH_CPP_CLASS_TYPE
 #undef F
@@ -976,6 +999,118 @@ struct callable_to_std_function_type<std::function<R(Args...)>>
 //
 template<typename... T>
 using tuple_concat_type = decltype(std::tuple_cat(std::declval<T>()...));
+
+template<typename F, typename R, typename... Args>
+struct interp_call_cpp_fn_helper
+{
+    const static size_t numArgs = sizeof...(Args);
+
+    template<size_t i>
+    using ArgType = typename std::tuple_element<i, std::tuple<Args...>>::type;
+
+    template<size_t i>
+    using ArgTypePtr = typename std::add_pointer<ArgType<i>>::type;
+
+    template<size_t n, typename Enable = void>
+    struct build_param_helper
+    {
+        template<typename... TArgs>
+        static void call(F fn, void* retVoid, void** params, TArgs... unpackedParams)
+        {
+            void* param = *params;
+            // We have changed reference to pointer for generated code,
+            // so here we need one extra dereference for reference params
+            //
+            if (std::is_reference<ArgType<numArgs-n>>::value)
+            {
+                ReleaseAssert(std::is_lvalue_reference<ArgType<numArgs-n>>::value);
+                param = *reinterpret_cast<void**>(param);
+            }
+            build_param_helper<n-1>::call(fn, retVoid, params + 1,
+                                          unpackedParams...,
+                                          reinterpret_cast<ArgTypePtr<numArgs-n>>(reinterpret_cast<uintptr_t>(param)));
+        }
+    };
+
+    template<typename F2, typename Enable = void>
+    struct call_fn_helper
+    {
+        template<typename R2, typename... TArgs>
+        static R2 call(F2 fn, TArgs... unpackedParams)
+        {
+            return fn(*unpackedParams...);
+        }
+    };
+
+    template<typename F2>
+    struct call_fn_helper<F2, typename std::enable_if<(std::is_member_function_pointer<F2>::value)>::type>
+    {
+        template<typename R2, typename C, typename... TArgs>
+        static R2 call(F2 fn, C c, TArgs... unpackedParams)
+        {
+            return (((*c)->*fn)(*unpackedParams...));
+        }
+    };
+
+    template<typename R2, typename Enable = void>
+    struct return_value_helper
+    {
+        template<typename... TArgs>
+        static void call(F fn, void* retVoid, TArgs... unpackedParams)
+        {
+            using R2Star = typename std::add_pointer<R2>::type;
+            R2Star ret = reinterpret_cast<R2Star>(reinterpret_cast<uintptr_t>(retVoid));
+            new (ret) R2(call_fn_helper<F>::template call<R2>(fn, unpackedParams...));
+        }
+    };
+
+    // if the function returns lvalue reference, we need to change it to a pointer
+    //
+    template<typename R2>
+    struct return_value_helper<R2, typename std::enable_if<(std::is_reference<R2>::value)>::type>
+    {
+        static_assert(std::is_lvalue_reference<R2>::value, "function returning rvalue reference is not supported");
+
+        template<typename... TArgs>
+        static void call(F fn, void* retVoid, TArgs... unpackedParams)
+        {
+            using R2StarStar = typename std::add_pointer<typename std::add_pointer<R2>::type>::type;
+            R2StarStar ret = reinterpret_cast<R2StarStar>(reinterpret_cast<uintptr_t>(retVoid));
+            *ret = &(call_fn_helper<F>::template call<R2>(fn, unpackedParams...));
+        }
+    };
+
+    template<typename R2>
+    struct return_value_helper<R2, typename std::enable_if<(std::is_same<R2, void>::value)>::type>
+    {
+        template<typename... TArgs>
+        static void call(F fn, void* /*retVoid*/, TArgs... unpackedParams)
+        {
+            call_fn_helper<F>::template call<R2>(fn, unpackedParams...);
+        }
+    };
+
+    template<size_t n>
+    struct build_param_helper<n, typename std::enable_if<(n == 0)>::type>
+    {
+        template<typename... TArgs>
+        static void call(F fn, void* retVoid, void** /*params*/, TArgs... unpackedParams)
+        {
+            static_assert(sizeof...(unpackedParams) == numArgs, "wrong number of arguments");
+            return_value_helper<R>::call(fn, retVoid, unpackedParams...);
+        }
+    };
+
+    static void call(F fn, void* retVoid, void** params)
+    {
+        build_param_helper<numArgs>::call(fn, retVoid, params);
+    }
+
+    static std::function<void(void*, void**)> get(F fn)
+    {
+        return std::bind(call, fn, std::placeholders::_1, std::placeholders::_2);
+    }
+};
 
 }   // namespace AstTypeHelper
 

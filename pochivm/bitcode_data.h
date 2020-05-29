@@ -13,10 +13,4 @@ struct BitcodeData
     size_t m_length;
 };
 
-struct CppFunctionMetadata
-{
-    const BitcodeData* m_bitcodeData;
-    bool m_isUsingSret;
-};
-
 }   // namespace PochiVM
