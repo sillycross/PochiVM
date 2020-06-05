@@ -47,8 +47,11 @@ int main(int argc, char** argv)
 
     // Now, go through each file and find new matches
     //
-    for (const std::string& filenameBase : files)
+    for (size_t idx = 0; idx < files.size(); idx++)
     {
+        const std::string& filenameBase = files[idx];
+        bool isSpecial = (idx == files.size() - 1);
+
         if (remainingSymbols.size() == 0)
         {
             break;
@@ -57,6 +60,11 @@ int main(int argc, char** argv)
         WriteSymbolListFileOrDie(remainingSymbolFile, remainingSymbols);
 
         std::string cmd = matcherBinPath + " " + remainingSymbolFile + " " + filenameBase + " " + generatedFileFolder;
+        if (isSpecial)
+        {
+            cmd += std::string(" --extract-wrappers");
+        }
+
         int r = system(cmd.c_str());
         if (r != 0)
         {
@@ -116,8 +124,25 @@ int main(int argc, char** argv)
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
 
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
-        for (const std::string& symbol : allSymbols)
+        for (const std::string& symbolOrSymbolPair : allSymbols)
         {
+            std::string symbol;
+            size_t commaPos = symbolOrSymbolPair.find(",");
+            if (commaPos != std::string::npos)
+            {
+                symbol = symbolOrSymbolPair.substr(commaPos + 1);
+            }
+            else
+            {
+                if (symbolOrSymbolPair[0] == '*')
+                {
+                    continue;
+                }
+                else
+                {
+                    symbol = symbolOrSymbolPair;
+                }
+            }
             std::string uniqueSymbolHash = GetUniqueSymbolHash(symbol);
             std::string headerFileName = std::string("bc.") + uniqueSymbolHash + ".data.h";
             {
@@ -127,8 +152,8 @@ int main(int argc, char** argv)
                 struct stat st;
                 if (stat(realPath.c_str(), &st) != 0)
                 {
-                    fprintf(stderr, "[INTERNAL ERROR] Failed to access file '%s', errno = %d (%s)\n",
-                            realPath.c_str(), errno, strerror(errno));
+                    fprintf(stderr, "[INTERNAL ERROR] Failed to access file '%s' (from symbol %s), errno = %d (%s)\n",
+                            realPath.c_str(), symbol.c_str(), errno, strerror(errno));
                     abort();
                 }
             }
@@ -156,11 +181,32 @@ int main(int argc, char** argv)
         fprintf(fp, "namespace PochiVM {\n\n");
 
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
-        for (const std::string& symbol : allSymbols)
+        for (const std::string& symbolOrSymbolPair : allSymbols)
         {
+            std::string symbol;
+            size_t commaPos = symbolOrSymbolPair.find(",");
+            if (commaPos != std::string::npos)
+            {
+                symbol = symbolOrSymbolPair.substr(commaPos + 1);
+            }
+            else
+            {
+                if (symbolOrSymbolPair[0] == '*')
+                {
+                    continue;
+                }
+                else
+                {
+                    symbol = symbolOrSymbolPair;
+                }
+            }
             std::string uniqueSymbolHash = GetUniqueSymbolHash(symbol);
             std::string varname = std::string("__pochivm_internal_bc_") + uniqueSymbolHash;
             fprintf(fp, "// Symbol: %s\n", symbol.c_str());
+            if (commaPos != std::string::npos)
+            {
+                fprintf(fp, "// Wrapper: %s\n", symbolOrSymbolPair.substr(0, commaPos).c_str());
+            }
             fprintf(fp, "extern const BitcodeData %s;\n\n", varname.c_str());
         }
 

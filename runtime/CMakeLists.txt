@@ -79,6 +79,8 @@ add_custom_command(
 add_custom_command(
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_library_bitcodes.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
+  # important to pass ${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms as last argument, the program expects that
+  # 
   COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/build_runtime_lib "${PROJECT_BINARY_DIR}/runtime_lib_builder/update_symbol_matches" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" "${GENERATED_FILES_DIR}" ${ALL_SYMFILE} "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms"
   DEPENDS ${ALL_SYMFILE} "${PROJECT_BINARY_DIR}/pochivm_register_runtime.syms" "${PROJECT_BINARY_DIR}/__pochivm_all_needed_symbols__.txt" build_runtime_lib update_symbol_matches
 )

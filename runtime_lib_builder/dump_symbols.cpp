@@ -59,11 +59,13 @@ struct ParsedFnTypeNamesInfo
     {
         m_numArgs = src->m_numArgs;
         m_origRet = ParseTypeName(src->m_originalRetAndArgTypenames[0]);
-        m_ret = ParseTypeName(src->m_transformedRetAndArgTypenames[0]);
+        m_ret = ParseTypeName(src->m_apiRetAndArgTypenames[0].first);
+        m_isRetApiVar = src->m_apiRetAndArgTypenames[0].second;
         for (size_t i = 1; i <= src->m_numArgs; i++)
         {
             m_origParams.push_back(ParseTypeName(src->m_originalRetAndArgTypenames[i]));
-            m_params.push_back(ParseTypeName(src->m_transformedRetAndArgTypenames[i]));
+            m_params.push_back(ParseTypeName(src->m_apiRetAndArgTypenames[i].first));
+            m_isParamsApiVar.push_back(src->m_apiRetAndArgTypenames[i].second);
         }
         m_fnType = src->m_fnType;
         std::string fnName = ParseValueName(src->m_fnName);
@@ -99,11 +101,20 @@ struct ParsedFnTypeNamesInfo
         }
         m_isConst = src->m_isConst;
         m_isNoExcept = src->m_isNoExcept;
+
+        m_isUsingWrapper = src->m_isUsingWrapper;
+        m_isWrapperUsingSret = src->m_isWrapperUsingSret;
+        m_wrapperFnAddress = src->m_wrapperFnAddress;
     }
 
     void RecordMangledSymbolName(const std::string& mangledSymbolName)
     {
         m_mangledSymbolName = mangledSymbolName;
+    }
+
+    void RecordWrapperFnMangledSymbolName(const std::string& mangledSymbolName)
+    {
+        m_wrapperFnMangledSymbolName = mangledSymbolName;
     }
 
     // For some reason, __PRETTY_FUNCTION__ (which is how we get all the type data here)
@@ -363,10 +374,12 @@ struct ParsedFnTypeNamesInfo
     //
     std::vector<std::string> m_origParams;
     std::vector<std::string> m_params;
+    std::vector<bool> m_isParamsApiVar;
     // typename of return value, before and after transform
     //
     std::string m_origRet;
     std::string m_ret;
+    bool m_isRetApiVar;
 
     // The prefix before the function
     // For member function this is namespace + class name,
@@ -382,6 +395,11 @@ struct ParsedFnTypeNamesInfo
     std::string m_mangledSymbolName;
     bool m_isConst;
     bool m_isNoExcept;
+
+    bool m_isUsingWrapper;
+    bool m_isWrapperUsingSret;
+    void* m_wrapperFnAddress;
+    std::string m_wrapperFnMangledSymbolName;
 };
 
 static std::map<void*, ParsedFnTypeNamesInfo> g_symbolAddrToTypeData;
@@ -567,7 +585,9 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     if (a.m_fnType != b.m_fnType) { return a.m_fnType < b.m_fnType; }
     if (a.m_functionName != b.m_functionName) { return a.m_functionName < b.m_functionName; }
     if (a.m_params != b.m_params) { return a.m_params < b.m_params; }
+    if (a.m_isParamsApiVar != b.m_isParamsApiVar) { return a.m_isParamsApiVar < b.m_isParamsApiVar; }
     if (a.m_ret != b.m_ret) { return a.m_ret < b.m_ret; }
+    if (a.m_isRetApiVar != b.m_isRetApiVar) { return a.m_isRetApiVar < b.m_isRetApiVar; }
     if (a.m_templateParams.size() != b.m_templateParams.size()) { return a.m_templateParams.size() < b.m_templateParams.size(); }
     if (a.m_templateParams != b.m_templateParams) { return a.m_templateParams < b.m_templateParams; }
     // order below doesn't matter
@@ -577,7 +597,11 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     if (a.m_origParams != b.m_origParams) { return a.m_origParams < b.m_origParams; }
     if (a.m_mangledSymbolName != b.m_mangledSymbolName) { return a.m_mangledSymbolName < b.m_mangledSymbolName; }
     if (a.m_isConst != b.m_isConst) { return a.m_isConst < b.m_isConst; }
-    return a.m_isNoExcept < b.m_isNoExcept;
+    if (a.m_isNoExcept != b.m_isNoExcept) { return a.m_isNoExcept < b.m_isNoExcept; }
+    if (a.m_isUsingWrapper != b.m_isUsingWrapper) { return a.m_isUsingWrapper < b.m_isUsingWrapper; }
+    if (a.m_isWrapperUsingSret != b.m_isWrapperUsingSret) { return a.m_isWrapperUsingSret < b.m_isWrapperUsingSret; }
+    if (a.m_wrapperFnAddress != b.m_wrapperFnAddress) { return a.m_wrapperFnAddress < b.m_wrapperFnAddress; }
+    return a.m_wrapperFnMangledSymbolName < b.m_wrapperFnMangledSymbolName;
 }
 
 static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNotPrintVarName = false)
@@ -585,7 +609,7 @@ static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNo
     fprintf(fp, "(%s", (info.m_params.size() == 0 ? ")" : "\n"));
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "        Value<%s>", info.m_params[i].c_str());
+        fprintf(fp, "        %s<%s>", (info.m_isParamsApiVar[i] ? "Variable" : "Value"), info.m_params[i].c_str());
         if (!doNotPrintVarName)
         {
             fprintf(fp, " __pochivm_%d", static_cast<int>(i));
@@ -611,7 +635,7 @@ static void PrintFnTemplateParams(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
 }
 
-static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, bool isUsingSret)
+static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 {
     fprintf(fp, "{\n");
     int numParams = static_cast<int>(info.m_params.size());
@@ -673,8 +697,11 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, bool is
     fprintf(fp, "        &%s,\n", varname.c_str());
     fprintf(fp, "        __pochivm_cpp_fn_params,\n");
     fprintf(fp, "        %d /*numParams*/,\n", numParams);
-    fprintf(fp, "        TypeId::Get<%s>() /*returnType*/,\n", info.m_ret.c_str());
-    fprintf(fp, "        %s /*isUsingSret*/,\n", (isUsingSret ? "true" : "false"));
+    fprintf(fp, "        TypeId::Get<%s%s%s>() /*returnType*/,\n",
+            (info.m_isRetApiVar ? "typename std::add_pointer<" : ""),
+            info.m_ret.c_str(),
+            (info.m_isRetApiVar ? ">::type" : ""));
+    fprintf(fp, "        %s /*isUsingSret*/,\n", (info.m_isUsingWrapper && info.m_isWrapperUsingSret ? "true" : "false"));
     fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<\n");
     fprintf(fp, "                __pochivm_func_t\n");
     fprintf(fp, "              , %s\n", info.m_origRet.c_str());
@@ -704,7 +731,8 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, bool is
     fprintf(fp, "        )) /*interpFn*/\n");
     fprintf(fp, "    };\n");
 
-    fprintf(fp, "    return Value<%s>(new AstCallExpr(\n", info.m_ret.c_str());
+    fprintf(fp, "    return %s<%s>(new AstCallExpr(\n",
+            (info.m_isRetApiVar ? "Variable" : "Value"), info.m_ret.c_str());
     fprintf(fp, "            &__pochivm_cpp_fn_metadata,\n");
     fprintf(fp, "            std::vector<AstNodeBase*>{");
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
@@ -721,7 +749,8 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info, bool is
     }
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "\n                __pochivm_%d.m_ptr", static_cast<int>(i));
+        fprintf(fp, "\n                __pochivm_%d.%s",
+                static_cast<int>(i), (info.m_isParamsApiVar[i] ? "m_varPtr" : "m_ptr"));
         if (i != info.m_params.size() - 1)
         {
             fprintf(fp, ",");
@@ -752,14 +781,11 @@ static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
 }
 
 static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
-                                         Module* module,
-                                         const std::map<std::string, int> symbolOrdinal)
+                                         Module* module)
 {
     std::map<std::string /*llvmTypeName*/, std::string /*cppTypeName*/> typeNameMap;
 
     // Check if a function is using sret (struct return) attribute
-    // If yes, then the sret is the return value, and all arguments are shifted by 1
-    // E.g. std::string f(int a) would have a LLVM prototype of void f(std::string* sret, int a)
     //
     std::function<bool(Function*)> isUsingSRet = [](Function* fn) -> bool
     {
@@ -770,14 +796,19 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
     // Generate mapping between CPP type name and LLVM type name for composite types that we encountered
     //
-    std::function<void(Function*, Type*, std::string&)> matchTypes =
-            [&typeNameMap](Function* func, Type* type, const std::string& stringType)
+    std::function<void(Function*, Type*, std::string&, bool)> matchTypes =
+            [&typeNameMap](Function* func, Type* type, const std::string& stringType, bool isVar)
     {
         int numPointers = 0;
         while (type->isPointerTy())
         {
             numPointers++;
             type = type->getPointerElementType();
+        }
+        if (isVar)
+        {
+            ReleaseAssert(numPointers > 0);
+            numPointers--;
         }
         // Lockdown function pointer type arguments for now
         //
@@ -859,20 +890,21 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         }
     };
 
-    ReleaseAssert(symbolOrdinal.size() == g_symbolAddrToTypeData.size());
-    bool* isUsingSretArray = new bool[symbolOrdinal.size()];
-    Auto(delete [] isUsingSretArray);
-
-    bool* isUsingSretArrayAssigned = new bool[symbolOrdinal.size()];
-    Auto(delete [] isUsingSretArrayAssigned);
-    memset(isUsingSretArrayAssigned, 0, sizeof(bool) * symbolOrdinal.size());
-
     // Extract type information
     //
     for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
     {
         ParsedFnTypeNamesInfo& info = it->second;
-        Function* fn = module->getFunction(info.m_mangledSymbolName);
+        std::string targetFnSymbolName;
+        if (info.m_isUsingWrapper)
+        {
+            targetFnSymbolName = info.m_wrapperFnMangledSymbolName;
+        }
+        else
+        {
+            targetFnSymbolName = info.m_mangledSymbolName;
+        }
+        Function* fn = module->getFunction(targetFnSymbolName);
         ReleaseAssert(fn != nullptr);
         FunctionType* fnType = fn->getFunctionType();
         // Lockdown variadic function
@@ -885,28 +917,25 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             abort();
         }
 
-        bool isSretFunction = isUsingSRet(fn);
+        ReleaseAssert(!isUsingSRet(fn));
 
-        ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
-        int symbolOrd = symbolOrdinal.find(info.m_mangledSymbolName)->second;
-        ReleaseAssert(0 <= symbolOrd && static_cast<size_t>(symbolOrd) < symbolOrdinal.size());
-        ReleaseAssert(!isUsingSretArrayAssigned[symbolOrd]);
-        isUsingSretArrayAssigned[symbolOrd] = true;
-        isUsingSretArray[symbolOrd] = isSretFunction;
+        bool isSretFunction = info.m_isUsingWrapper && info.m_isWrapperUsingSret;
 
         // Match the return type
         // We need to special check for 'sret' struct-return parameter
         //
         unsigned int firstArgOrd = 0;
         Type* returnType = fnType->getReturnType();
+        bool isRetApiVar = info.m_isRetApiVar;
         if (isSretFunction)
         {
-            Type* sretType = fnType->getParamType(firstArgOrd);
-            ReleaseAssert(sretType->isPointerTy());
-            returnType = sretType->getPointerElementType();
+            ReleaseAssert(!info.m_isRetApiVar);
+            isRetApiVar = true;
+            returnType = fnType->getParamType(firstArgOrd);
+            ReleaseAssert(returnType->isPointerTy());
             firstArgOrd += 1;
         }
-        matchTypes(fn, returnType, info.m_ret);
+        matchTypes(fn, returnType, info.m_ret, isRetApiVar);
 
         // If it is a class member function, the first parameter is 'this' pointer
         //
@@ -916,7 +945,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             Type* thisPtr = fnType->getParamType(firstArgOrd);
             ReleaseAssert(thisPtr->isPointerTy());
             std::string className = info.FindClassName();
-            matchTypes(fn, thisPtr->getPointerElementType(), className);
+            matchTypes(fn, thisPtr, className, true /*isVar*/);
             firstArgOrd += 1;
         }
 
@@ -925,7 +954,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         ReleaseAssert(info.m_params.size() == fnType->getNumParams() - firstArgOrd);
         for (size_t i = 0; i < info.m_params.size(); i++)
         {
-            matchTypes(fn, fnType->getParamType(static_cast<unsigned int>(firstArgOrd + i)), info.m_params[i]);
+            matchTypes(fn, fnType->getParamType(static_cast<unsigned int>(firstArgOrd + i)),
+                       info.m_params[i], info.m_isParamsApiVar[i]);
         }
     }
 
@@ -1067,6 +1097,15 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             //
             std::set<std::string> unprinted;
 
+            // forward declare all Variable<> classes
+            //
+            for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
+            {
+                const std::string& cppTypeName = it->second;
+                fprintf(fp, "template<> class Variable<%s>;\n", cppTypeName.c_str());
+            }
+            fprintf(fp, "\n");
+
             // print all Value<> classes
             //
             for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
@@ -1119,7 +1158,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                            data[start].m_fnType == data[end].m_fnType &&
                            data[start].m_functionName == data[end].m_functionName &&
                            data[start].m_params == data[end].m_params &&
+                           data[start].m_isParamsApiVar == data[end].m_isParamsApiVar &&
                            data[start].m_ret == data[end].m_ret &&
+                           data[start].m_isRetApiVar == data[end].m_isRetApiVar &&
                            data[start].m_templateParams.size() == data[end].m_templateParams.size())
                     {
                         end++;
@@ -1145,8 +1186,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             }
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
-                            fprintf(fp, "%sValue<%s> %s",
+                            fprintf(fp, "%s%s<%s> %s",
                                     (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    (info.m_isRetApiVar ? "Variable" : "Value"),
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, ";\n");
@@ -1187,8 +1229,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                                     fprintf(fp, ">\n");
                                 }
                             }
-                            fprintf(fp, "%sValue<%s> %s",
+                            fprintf(fp, "%s%s<%s> %s",
                                     (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                    (data[start].m_isRetApiVar ? "Variable" : "Value"),
                                     data[start].m_ret.c_str(), data[start].m_functionName.c_str());
                             PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
                             fprintf(fp, " = delete;\n");
@@ -1247,7 +1290,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     while (end < data.size() &&
                            data[start].m_functionName == data[end].m_functionName &&
                            data[start].m_params == data[end].m_params &&
+                           data[start].m_isParamsApiVar == data[end].m_isParamsApiVar &&
                            data[start].m_ret == data[end].m_ret &&
+                           data[start].m_isRetApiVar == data[end].m_isRetApiVar &&
                            data[start].m_templateParams.size() == data[end].m_templateParams.size())
                     {
                         end++;
@@ -1266,8 +1311,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         for (size_t k = start; k < end; k++)
                         {
                             ParsedFnTypeNamesInfo& info = data[k];
-                            ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
-                            int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
                             fprintf(fp, "// Original parameter and return types:\n");
                             for (const std::string& param : info.m_origParams)
                             {
@@ -1275,10 +1318,11 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             }
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
-                            fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
+                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Variable" : "Value"),
+                                    info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
+                            PrintFnCallBody(fp, info);
                         }
                     }
                     else
@@ -1316,7 +1360,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                                     fprintf(fp, ">\n");
                                 }
                             }
-                            fprintf(fp, "Value<%s> %s", data[start].m_ret.c_str(), data[start].m_functionName.c_str());
+                            fprintf(fp, "%s<%s> %s", (data[start].m_isRetApiVar ? "Variable" : "Value"),
+                                    data[start].m_ret.c_str(), data[start].m_functionName.c_str());
                             PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
                             fprintf(fp, " = delete;\n");
                         }
@@ -1325,8 +1370,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         for (size_t k = start; k < end; k++)
                         {
                             ParsedFnTypeNamesInfo& info = data[k];
-                            ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
-                            int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
                             fprintf(fp, "// Original parameter and return types:\n");
                             for (const std::string& param : info.m_origParams)
                             {
@@ -1335,11 +1378,12 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
                             fprintf(fp, "template<>\n");
-                            fprintf(fp, "inline Value<%s> %s", info.m_ret.c_str(), info.m_functionName.c_str());
+                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Variable" : "Value"),
+                                    info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnTemplateParams(fp, info);
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
+                            PrintFnCallBody(fp, info);
                         }
                     }
                     start = end;
@@ -1377,8 +1421,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 for (size_t k = 0; k < data.size(); k++)
                 {
                     ParsedFnTypeNamesInfo& info = data[k];
-                    ReleaseAssert(symbolOrdinal.count(info.m_mangledSymbolName));
-                    int ordinal = symbolOrdinal.find(info.m_mangledSymbolName)->second;
                     fprintf(fp, "// Original parameter and return types:\n");
                     for (const std::string& param : info.m_origParams)
                     {
@@ -1391,7 +1433,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     {
                         fprintf(fp, "template<>\n");
                     }
-                    fprintf(fp, "inline Value<%s> Variable<%s>::%s",
+                    fprintf(fp, "inline %s<%s> Variable<%s>::%s",
+                            (info.m_isRetApiVar ? "Variable" : "Value"),
                             info.m_ret.c_str(), info.m_prefix.c_str(), info.m_functionName.c_str());
                     if (tplSize > 0)
                     {
@@ -1399,7 +1442,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     }
                     PrintFnParams(fp, info);
                     fprintf(fp, "\n");
-                    PrintFnCallBody(fp, info, isUsingSretArray[ordinal]);
+                    PrintFnCallBody(fp, info);
                 }
             }
         }
@@ -1673,29 +1716,36 @@ int main(int argc, char** argv)
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
             it->second.FindTemplateParameters(symbolPair.second /*demangled*/);
             it->second.RecordMangledSymbolName(symbolPair.first /*mangled*/);
+            uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
+            ReleaseAssert(addrToSymbol.count(wrapperAddr));
+            symbolPair = addrToSymbol[wrapperAddr];
+            it->second.RecordWrapperFnMangledSymbolName(symbolPair.first /*mangled*/);
         }
 
         // Write 'needed_symbols_info_output'
         //
-        std::map<std::string, int> symbolOrdinal;
         {
             std::set<std::string> symbolsOut;
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
-                std::string name = it->second.m_mangledSymbolName;
+                ParsedFnTypeNamesInfo& info = it->second;
+                std::string name = info.m_mangledSymbolName;
+                // If the function requires calling the wrapper, we need to extract the wrapper IR as well
+                //
+                if (info.m_isUsingWrapper)
+                {
+                    ReleaseAssert(!symbolsOut.count(name));
+                    std::string tmp = std::string("*") + name;
+                    ReleaseAssert(!symbolsOut.count(tmp));
+                    symbolsOut.insert(tmp);
+                    name = info.m_wrapperFnMangledSymbolName + std::string(",") + name;
+                }
                 ReleaseAssert(!symbolsOut.count(name));
                 symbolsOut.insert(name);
             }
 
             std::string neededSymbolOutputFile = std::string(argv[4]);
             WriteSymbolListFileOrDie(neededSymbolOutputFile, symbolsOut);
-
-            int ordinal = 0;
-            for (const std::string& symbol : symbolsOut)
-            {
-                symbolOrdinal[symbol] = ordinal;
-                ordinal++;
-            }
         }
 
         {
@@ -1719,7 +1769,7 @@ int main(int argc, char** argv)
         if (isDumpList)
         {
             std::string generatedFileFolder = std::string(argv[5]);
-            GenerateCppRuntimeHeaderFile(generatedFileFolder, module.get(), symbolOrdinal);
+            GenerateCppRuntimeHeaderFile(generatedFileFolder, module.get());
         }
     }
 

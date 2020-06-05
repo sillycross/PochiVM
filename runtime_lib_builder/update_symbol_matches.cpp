@@ -25,17 +25,35 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Linker/Linker.h"
 
 using namespace llvm;
 using namespace llvm::orc;
 
 static void ExtractFunction(const std::string& generatedFileDir,
                             const std::string& filenameBase,
-                            const std::string& functionName)
+                            bool isSymbolPair,
+                            std::string functionName,
+                            const std::string& implFunctionName)
 {
+    ReleaseAssert(isSymbolPair == (implFunctionName != ""));
+
     // important to extract symbol from optimized bc file!
     //
     std::string bcFileName = filenameBase + ".optimized.bc";
+    std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
+
+    // If the symbol starts with '*', it is a symbol that is called by a wrapper
+    // We should generate the .bc file, but not the .h header file
+    //
+    bool shouldGenerateCppHeaderFile = true;
+    if (functionName[0] == '*')
+    {
+        ReleaseAssert(!isSymbolPair);
+        shouldGenerateCppHeaderFile = false;
+        functionName = functionName.substr(1);
+    }
 
     SMDiagnostic llvmErr;
     std::unique_ptr<LLVMContext> context(new LLVMContext);
@@ -347,7 +365,6 @@ static void ExtractFunction(const std::string& generatedFileDir,
 
     // Output extracted bitcode file
     //
-    std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
     std::string outputFileName = std::string("extracted.") + uniqueSymbolHash + ".bc";
     {
         int fd = creat(outputFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -435,105 +452,189 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
+    if (isSymbolPair)
+    {
+        // If it is a symbol pair, we should link in the implementation IR file,
+        // if the implementation function is not already inlined by the wrapper function
+        //
+        Function* implFn = module->getFunction(implFunctionName);
+        if (implFn != nullptr)
+        {
+            ReleaseAssert(implFn->empty());
+            ReleaseAssert(implFn->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+
+            std::string implFnBcFilename = std::string("extracted.") +
+                                           GetUniqueSymbolHash(std::string("*") + implFunctionName) + ".bc";
+
+            std::unique_ptr<Module> implModule = parseIRFile(implFnBcFilename, llvmErr, *context.get());
+
+            if (implModule == nullptr)
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Generated IR file '%s' not found or contains error. "
+                                "Please report a bug. Detail:\n", implFnBcFilename.c_str());
+                llvmErr.print("update_symbol_matches", errs());
+                abort();
+            }
+
+            implFn = implModule->getFunction(implFunctionName);
+            ReleaseAssert(implFn != nullptr);
+            ReleaseAssert(!implFn->empty());
+
+            Linker linker(*module.get());
+            // linkInModule returns true on error
+            //
+            ReleaseAssert(linker.linkInModule(std::move(implModule)) == false);
+
+            implFn = module->getFunction(implFunctionName);
+            ReleaseAssert(implFn != nullptr);
+            ReleaseAssert(!implFn->empty());
+        }
+
+        // The output should be the implFunctionName.bc, without leading '*'
+        //
+        // Write output file, and parse it again for sanity (errors in IR would
+        // not show up when the IR is saved, but only when the IR is parsed)
+        //
+        uniqueSymbolHash = GetUniqueSymbolHash(implFunctionName);
+        outputFileName = std::string("extracted.") + uniqueSymbolHash + ".bc";
+        {
+            int fd = creat(outputFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+            if (fd == -1)
+            {
+                fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                        outputFileName.c_str(), errno, strerror(errno));
+                abort();
+            }
+            raw_fd_ostream fdStream(fd, true /*shouldClose*/);
+            WriteBitcodeToFile(*module.get(), fdStream);
+            if (fdStream.has_error())
+            {
+                std::error_code ec = fdStream.error();
+                fprintf(stderr, "Writing to file '%s' failed with errno = %d (%s)\n",
+                        outputFileName.c_str(), ec.value(), ec.message().c_str());
+                abort();
+            }
+            /* fd closed when fdStream is destructed here */
+        }
+
+        {
+            std::unique_ptr<LLVMContext> newContext(new LLVMContext);
+            std::unique_ptr<Module> newModule = parseIRFile(outputFileName, llvmErr, *newContext.get());
+
+            if (newModule == nullptr)
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Generated IR file '%s' contains error. "
+                                "Please report a bug. Detail:\n", outputFileName.c_str());
+                llvmErr.print("update_symbol_matches", errs());
+                abort();
+            }
+            module = std::move(newModule);
+            context = std::move(newContext);
+        }
+    }
+
     // Generate data file in header file format
     // build_runtime_lib will generate the CPP file that include these headers
     //
-    size_t bitcodeSize;
-    uint8_t* bitcodeRawData = nullptr;
+    if (shouldGenerateCppHeaderFile)
     {
-        struct stat st;
-        if (stat(outputFileName.c_str(), &st) != 0)
+        size_t bitcodeSize;
+        uint8_t* bitcodeRawData = nullptr;
         {
-            fprintf(stderr, "Failed to access file '%s' for file size, errno = %d (%s)\n",
-                    outputFileName.c_str(), errno, strerror(errno));
-            abort();
-        }
-        bitcodeSize = static_cast<size_t>(st.st_size);
-
-        // one more char for the trailing '\0'
-        //
-        bitcodeRawData = new uint8_t[bitcodeSize + 1];
-
-        FILE* fp = fopen(outputFileName.c_str(), "r");
-        if (fp == nullptr)
-        {
-            fprintf(stderr, "Failed to open file '%s' for read, errno = %d (%s)\n",
-                    outputFileName.c_str(), errno, strerror(errno));
-            abort();
-        }
-
-        size_t bytesRead = fread(bitcodeRawData, sizeof(uint8_t), bitcodeSize, fp);
-        ReleaseAssert(bytesRead == bitcodeSize);
-        bitcodeRawData[bitcodeSize] = 0;
-
-        {
-            // just to sanity check we have reached eof
-            //
-            uint8_t _c;
-            ReleaseAssert(fread(&_c, sizeof(uint8_t), 1 /*numElements*/, fp) == 0);
-            ReleaseAssert(feof(fp));
-        }
-
-        fclose(fp);
-    }
-
-    ReleaseAssert(bitcodeRawData != nullptr);
-    Auto(delete [] bitcodeRawData);
-
-    {
-        std::string headerFileOutput = generatedFileDir + "/bc." + uniqueSymbolHash + ".data.h";
-        FILE* fp = fopen(headerFileOutput.c_str(), "w");
-        if (fp == nullptr)
-        {
-            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                    headerFileOutput.c_str(), errno, strerror(errno));
-            abort();
-        }
-
-        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n");
-        fprintf(fp, "// INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\n");
-        fprintf(fp, "//\n\n");
-
-        fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
-
-        fprintf(fp, "namespace PochiVM {\n\n");
-
-        std::string resVarname = std::string("__pochivm_internal_bc_") + uniqueSymbolHash;
-
-        // 'extern' declaration is required for constants to be able to export elsewhere
-        //
-        fprintf(fp, "extern const BitcodeData %s;\n\n", resVarname.c_str());
-
-        std::string bitcodeDataVarname = resVarname + "_bitcode_data";
-        fprintf(fp, "const uint8_t %s[%d] = {\n    ", bitcodeDataVarname.c_str(), static_cast<int>(bitcodeSize + 1));
-
-        for (size_t i = 0; i <= bitcodeSize; i++)
-        {
-            uint8_t value = bitcodeRawData[i];
-            fprintf(fp, "%d", value);
-            if (i != bitcodeSize)
+            struct stat st;
+            if (stat(outputFileName.c_str(), &st) != 0)
             {
-                fprintf(fp, ", ");
-                if (i % 16 == 15)
+                fprintf(stderr, "Failed to access file '%s' for file size, errno = %d (%s)\n",
+                        outputFileName.c_str(), errno, strerror(errno));
+                abort();
+            }
+            bitcodeSize = static_cast<size_t>(st.st_size);
+
+            // one more char for the trailing '\0'
+            //
+            bitcodeRawData = new uint8_t[bitcodeSize + 1];
+
+            FILE* fp = fopen(outputFileName.c_str(), "r");
+            if (fp == nullptr)
+            {
+                fprintf(stderr, "Failed to open file '%s' for read, errno = %d (%s)\n",
+                        outputFileName.c_str(), errno, strerror(errno));
+                abort();
+            }
+
+            size_t bytesRead = fread(bitcodeRawData, sizeof(uint8_t), bitcodeSize, fp);
+            ReleaseAssert(bytesRead == bitcodeSize);
+            bitcodeRawData[bitcodeSize] = 0;
+
+            {
+                // just to sanity check we have reached eof
+                //
+                uint8_t _c;
+                ReleaseAssert(fread(&_c, sizeof(uint8_t), 1 /*numElements*/, fp) == 0);
+                ReleaseAssert(feof(fp));
+            }
+
+            fclose(fp);
+        }
+
+        ReleaseAssert(bitcodeRawData != nullptr);
+        Auto(delete [] bitcodeRawData);
+
+        {
+            std::string headerFileOutput = generatedFileDir + "/bc." + uniqueSymbolHash + ".data.h";
+            FILE* fp = fopen(headerFileOutput.c_str(), "w");
+            if (fp == nullptr)
+            {
+                fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                        headerFileOutput.c_str(), errno, strerror(errno));
+                abort();
+            }
+
+            fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n");
+            fprintf(fp, "// INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\n");
+            fprintf(fp, "//\n\n");
+
+            fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
+
+            fprintf(fp, "namespace PochiVM {\n\n");
+
+            std::string resVarname = std::string("__pochivm_internal_bc_") + uniqueSymbolHash;
+
+            // 'extern' declaration is required for constants to be able to export elsewhere
+            //
+            fprintf(fp, "extern const BitcodeData %s;\n\n", resVarname.c_str());
+
+            std::string bitcodeDataVarname = resVarname + "_bitcode_data";
+            fprintf(fp, "const uint8_t %s[%d] = {\n    ", bitcodeDataVarname.c_str(), static_cast<int>(bitcodeSize + 1));
+
+            for (size_t i = 0; i <= bitcodeSize; i++)
+            {
+                uint8_t value = bitcodeRawData[i];
+                fprintf(fp, "%d", value);
+                if (i != bitcodeSize)
                 {
-                    fprintf(fp, "\n    ");
+                    fprintf(fp, ", ");
+                    if (i % 16 == 15)
+                    {
+                        fprintf(fp, "\n    ");
+                    }
                 }
             }
+            fprintf(fp, "\n};\n\n");
+
+            std::string symbolVarname = resVarname + "_symbol";
+            fprintf(fp, "const char* const %s = \"%s\";\n\n",
+                    symbolVarname.c_str(), functionName.c_str());
+
+            fprintf(fp, "const BitcodeData %s = {\n", resVarname.c_str());
+            fprintf(fp, "    %s,\n", symbolVarname.c_str());
+            fprintf(fp, "    %s,\n", bitcodeDataVarname.c_str());
+            fprintf(fp, "    %d\n};\n", static_cast<int>(bitcodeSize));
+
+            fprintf(fp, "\n}  // namespace PochiVM\n\n");
+
+            fclose(fp);
         }
-        fprintf(fp, "\n};\n\n");
-
-        std::string symbolVarname = resVarname + "_symbol";
-        fprintf(fp, "const char* const %s = \"%s\";\n\n",
-                symbolVarname.c_str(), functionName.c_str());
-
-        fprintf(fp, "const BitcodeData %s = {\n", resVarname.c_str());
-        fprintf(fp, "    %s,\n", symbolVarname.c_str());
-        fprintf(fp, "    %s,\n", bitcodeDataVarname.c_str());
-        fprintf(fp, "    %d\n};\n", static_cast<int>(bitcodeSize));
-
-        fprintf(fp, "\n}  // namespace PochiVM\n\n");
-
-        fclose(fp);
     }
 }
 
@@ -549,26 +650,64 @@ int main(int argc, char** argv)
     //    and generate the extracted bc file (extracted.[symbol hash].bc) for each symbol
     //
 
-    ReleaseAssert(argc == 4);
+    ReleaseAssert(argc == 4 || argc == 5);
     std::string allNeededSymbolsFile = argv[1];
     std::string filenameBase = argv[2];
     std::string generatedFileDir = argv[3];
     std::string symList = filenameBase + ".syms";
     std::string symListMatches = filenameBase + ".syms.matches";
 
+    bool shouldExtractWrapper = false;
+    if (argc == 5)
+    {
+        ReleaseAssert(std::string(argv[4]) == "--extract-wrappers");
+        shouldExtractWrapper = true;
+    }
     std::set<std::string> allNeededSymbols = ReadSymbolListFileOrDie(allNeededSymbolsFile);
     std::set<std::string> allSymbols = ReadSymbolListFileOrDie(symList);
     std::set<std::string> allSymbolMatches = ReadSymbolListFileOrDie(symListMatches);
 
-    for (const std::string& symbol : allNeededSymbols)
+    // First pass: extract all symbols which does not require a wrapper
+    //
+    for (const std::string& symbolOrSymbolPair : allNeededSymbols)
     {
-        if (allSymbols.count(symbol))
+        size_t commaPos = symbolOrSymbolPair.find(",");
+        if (commaPos == std::string::npos)
         {
-            // The caller should always have purged .syms.matches from the needed symbols
-            //
-            ReleaseAssert(!allSymbolMatches.count(symbol));
-            allSymbolMatches.insert(symbol);
-            ExtractFunction(generatedFileDir, filenameBase, symbol);
+            std::string symbol = symbolOrSymbolPair;
+            std::string rawSymbol = symbol;
+            if (rawSymbol[0] == '*') { rawSymbol = rawSymbol.substr(1); }
+            if (allSymbols.count(rawSymbol))
+            {
+                // The caller should always have purged .syms.matches from the needed symbols
+                //
+                ReleaseAssert(!allSymbolMatches.count(symbol));
+                allSymbolMatches.insert(symbol);
+                ExtractFunction(generatedFileDir, filenameBase, false /*isSymbolPair*/, symbol, "");
+            }
+        }
+    }
+
+    // Second pass: extract wrappers
+    // build_runtime_lib always call --extract-wrappers last, so at this time all wrapperImpl IR should be available
+    //
+    if (shouldExtractWrapper)
+    {
+        for (const std::string& symbolOrSymbolPair : allNeededSymbols)
+        {
+            size_t commaPos = symbolOrSymbolPair.find(",");
+            if (commaPos != std::string::npos)
+            {
+                std::string symbolImpl = symbolOrSymbolPair.substr(commaPos + 1);
+                std::string symbolWrapper = symbolOrSymbolPair.substr(0, commaPos);
+
+                ReleaseAssert(allSymbols.count(symbolWrapper));
+                std::string tmp = std::string("*") + symbolImpl;
+                if (allNeededSymbols.count(tmp)) { ReleaseAssert(allSymbolMatches.count(tmp)); }
+                ReleaseAssert(!allSymbolMatches.count(symbolOrSymbolPair));
+                allSymbolMatches.insert(symbolOrSymbolPair);
+                ExtractFunction(generatedFileDir, filenameBase, true /*isSymbolPair*/, symbolWrapper, symbolImpl);
+            }
         }
     }
 
