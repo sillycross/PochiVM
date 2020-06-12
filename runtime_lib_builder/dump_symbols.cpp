@@ -542,43 +542,6 @@ static void ReadCppFiltOutput(const std::string& file, std::vector<std::string>&
     fclose(fp);
 }
 
-// DEVNOTE:
-//    It is stupid that clang++ --save-temps outputs unoptimized IR file
-//    For now, we will optimize it and save to xx.optimized.bc
-//
-__attribute__((used))
-static void RunLLVMOptimizePass(Module* module)
-{
-    static const llvm::PassBuilder::OptimizationLevel
-            optLevel = llvm::PassBuilder::OptimizationLevel::O3;
-
-    llvm::PassBuilder m_passBuilder;
-    llvm::LoopAnalysisManager m_LAM;
-    llvm::FunctionAnalysisManager m_FAM;
-    llvm::CGSCCAnalysisManager m_CGAM;
-    llvm::ModuleAnalysisManager m_MAM;
-    llvm::ModulePassManager m_MPM;
-
-    m_passBuilder.registerModuleAnalyses(m_MAM);
-    m_passBuilder.registerCGSCCAnalyses(m_CGAM);
-    m_passBuilder.registerFunctionAnalyses(m_FAM);
-    m_passBuilder.registerLoopAnalyses(m_LAM);
-    m_passBuilder.crossRegisterProxies(m_LAM, m_FAM, m_CGAM, m_MAM);
-
-    m_MPM = m_passBuilder.buildPerModuleDefaultPipeline(optLevel);
-
-    ReleaseAssert(module != nullptr);
-    m_MPM.run(*module, m_MAM);
-}
-
-static void RunLLVMOptimizePassIfNotDebug(Module* module)
-{
-#ifdef NDEBUG
-    RunLLVMOptimizePass(module);
-#endif
-    std::ignore = module;
-}
-
 static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const ParsedFnTypeNamesInfo& b)
 {
     if (a.m_prefix != b.m_prefix) { return a.m_prefix < b.m_prefix; }
@@ -1481,8 +1444,7 @@ int main(int argc, char** argv)
     bool isDumpList = (param1 == "--dump-list");
 
     std::string bcFileName = argv[2];
-    ReleaseAssert(bcFileName.substr(bcFileName.length() - 3, 3) == ".bc");
-    std::string optimizedBcFileName = bcFileName.substr(0, bcFileName.length() - 3) + ".optimized.bc";
+    std::string strippedBcFileName = bcFileName + ".stripped.bc";
 
     SMDiagnostic llvmErr;
     std::unique_ptr<LLVMContext> context(new LLVMContext);
@@ -1504,17 +1466,12 @@ int main(int argc, char** argv)
         StripDebugInfo(*module.get());
     }
 
-    // DEVNOTE: clang++ --save-temps outputs unoptimized IR file (even if -O3 is specified)...
-    // For now, we will just run optimize and save it to xxx.optimized.bc.
-    //
-    RunLLVMOptimizePassIfNotDebug(module.get());
-
     {
-        int fd = creat(optimizedBcFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        int fd = creat(strippedBcFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
         if (fd == -1)
         {
             fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                    optimizedBcFileName.c_str(), errno, strerror(errno));
+                    strippedBcFileName.c_str(), errno, strerror(errno));
             abort();
         }
         raw_fd_ostream fdStream(fd, true /*shouldClose*/);
@@ -1523,21 +1480,21 @@ int main(int argc, char** argv)
         {
             std::error_code ec = fdStream.error();
             fprintf(stderr, "Writing to file '%s' failed with errno = %d (%s)\n",
-                    optimizedBcFileName.c_str(), ec.value(), ec.message().c_str());
+                    strippedBcFileName.c_str(), ec.value(), ec.message().c_str());
             abort();
         }
         /* fd closed when fdStream is destructed here */
     }
 
     {
-        // Load the optimized module from file, just for sanity
+        // Load the stripped module from file, just for sanity
         //
         std::unique_ptr<LLVMContext> newContext(new LLVMContext);
-        std::unique_ptr<Module> newModule = parseIRFile(optimizedBcFileName, llvmErr, *newContext.get());
+        std::unique_ptr<Module> newModule = parseIRFile(strippedBcFileName, llvmErr, *newContext.get());
 
         if (newModule == nullptr)
         {
-            fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", optimizedBcFileName.c_str());
+            fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", strippedBcFileName.c_str());
             llvmErr.print(argv[0], errs());
             abort();
         }
@@ -1752,11 +1709,11 @@ int main(int argc, char** argv)
             // Load the optimized module, to generate C++ header file
             //
             std::unique_ptr<LLVMContext> newContext(new LLVMContext);
-            std::unique_ptr<Module> newModule = parseIRFile(optimizedBcFileName, llvmErr, *newContext.get());
+            std::unique_ptr<Module> newModule = parseIRFile(strippedBcFileName, llvmErr, *newContext.get());
 
             if (newModule == nullptr)
             {
-                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", optimizedBcFileName.c_str());
+                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", strippedBcFileName.c_str());
                 llvmErr.print(argv[0], errs());
                 abort();
             }

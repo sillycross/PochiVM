@@ -424,3 +424,51 @@ TEST(SanityBitcode, SanityLink)
     }
 }
 
+namespace {
+
+void CheckBitCodeData(const BitcodeData& data)
+{
+    std::unique_ptr<LLVMContext> context(new LLVMContext);
+    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(data, context.get(), false);
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    module->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+}
+
+}
+
+TEST(SanityBitCode, Inlining1_Debug)
+{
+#ifndef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+    CheckBitCodeData(fn);
+#endif
+}
+
+TEST(SanityBitCode, Inlining1_Release)
+{
+#ifdef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+    CheckBitCodeData(fn);
+#endif
+}
+
+TEST(SanityBitCode, Inlining2_Debug)
+{
+#ifndef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
+    CheckBitCodeData(fn);
+#endif
+}
+
+TEST(SanityBitCode, Inlining2_Release)
+{
+#ifdef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
+    CheckBitCodeData(fn);
+#endif
+}

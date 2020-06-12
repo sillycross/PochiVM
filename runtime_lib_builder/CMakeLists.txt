@@ -32,3 +32,7 @@ target_link_libraries(build_runtime_lib PUBLIC
   ${LLVM_EXTRA_LINK_LIBRARIES}
 )
 
+add_executable(build_lib_wrapper
+  build_lib_wrapper.cpp   
+)
+

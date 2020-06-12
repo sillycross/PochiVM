@@ -43,7 +43,7 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -pthread ")
 
 # -rdynamic so symbols are exposed to generated code
 # 
-SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -rdynamic ")
 
 # If debug symbols are emitted, redirect them to point at the right location
 # The reference to source code files always have prefix ../../ (since we are building 
@@ -144,7 +144,7 @@ add_executable(main
 # may be used at runtime and must not be dropped.
 #
 target_link_libraries(main PUBLIC 
-  "-Wl,--whole-archive" runtime "-Wl,--no-whole-archive"
+  "-Wl,--whole-archive" runtime runtime_bc "-Wl,--no-whole-archive"
 )
 
 target_link_libraries(main PUBLIC

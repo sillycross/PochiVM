@@ -62,6 +62,45 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<static_cast<int(*)(int, int)>(&FreeFunctionOverloaded<double, double, double>)>();
 
     RegisterFreeFn<static_cast<double(*)(double)>(&FreeFunctionOverloaded)>();
+
+    RegisterMemberFn<&TestLargeClass::F1>();
+    RegisterMemberFn<&TestLargeClass::F2>();
+    RegisterMemberFn<&TestLargeClass::F3>();
+    RegisterMemberFn<&TestLargeClass::F4>();
+    RegisterMemberFn<&TestLargeClass::F5>();
+
+    RegisterMemberFn<&TestSmallClass::F1>();
+    RegisterMemberFn<&TestSmallClass::F2>();
+    RegisterMemberFn<&TestSmallClass::F3>();
+    RegisterMemberFn<&TestSmallClass::F4>();
+    RegisterMemberFn<&TestSmallClass::F5>();
+    RegisterMemberFn<&TestSmallClass::F6>();
+    RegisterMemberFn<&TestSmallClass::F7>();
+
+    RegisterMemberFn<&TestSmallClass::G1>();
+    RegisterMemberFn<&TestSmallClass::G2>();
+    RegisterMemberFn<&TestSmallClass::G3>();
+    RegisterMemberFn<&TestSmallClass::G4>();
+    RegisterMemberFn<&TestSmallClass::G5>();
+    RegisterMemberFn<&TestSmallClass::G6>();
+    RegisterMemberFn<&TestSmallClass::G7>();
+
+    RegisterStaticMemberFn<&TestSmallClass::S1>();
+    RegisterStaticMemberFn<&TestSmallClass::S2>();
+
+    RegisterMemberFn<static_cast<void(TestSmallClass::*)(int)>(&TestSmallClass::Overloaded)>();
+    RegisterMemberFn<static_cast<void(TestSmallClass::*)(double)>(&TestSmallClass::Overloaded)>();
+    RegisterMemberFn<static_cast<void(TestSmallClass::*)(TestSmallClass) const>(&TestSmallClass::Overloaded)>();
+
+    RegisterFreeFn<&FreeFnTestSmallClass1>();
+    RegisterFreeFn<&FreeFnTestSmallClass2>();
+    RegisterFreeFn<&FreeFnTestSmallClass3>();
+    RegisterFreeFn<&FreeFnTestSmallClass4>();
+
+    RegisterFreeFn<&FreeFnTestLargeClass1>();
+    RegisterFreeFn<&FreeFnTestLargeClass2>();
+    RegisterFreeFn<&FreeFnTestLargeClass3>();
+    RegisterFreeFn<&FreeFnTestLargeClass4>();
 }
 
 // DO NOT MODIFY

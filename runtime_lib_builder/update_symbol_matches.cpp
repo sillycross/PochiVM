@@ -39,9 +39,9 @@ static void ExtractFunction(const std::string& generatedFileDir,
 {
     ReleaseAssert(isSymbolPair == (implFunctionName != ""));
 
-    // important to extract symbol from optimized bc file!
+    // important to extract symbol from bc file with debug info stripped!
     //
-    std::string bcFileName = filenameBase + ".optimized.bc";
+    std::string bcFileName = filenameBase + ".stripped.bc";
     std::string uniqueSymbolHash = GetUniqueSymbolHash(functionName);
 
     // If the symbol starts with '*', it is a symbol that is called by a wrapper
@@ -455,7 +455,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
     if (isSymbolPair)
     {
         // If it is a symbol pair, we should link in the implementation IR file,
-        // if the implementation function is not already inlined by the wrapper function
+        // if the implementation function is directly called, but not inlined by the wrapper function
         //
         Function* implFn = module->getFunction(implFunctionName);
         if (implFn != nullptr)
@@ -703,7 +703,20 @@ int main(int argc, char** argv)
 
                 ReleaseAssert(allSymbols.count(symbolWrapper));
                 std::string tmp = std::string("*") + symbolImpl;
-                if (allNeededSymbols.count(tmp)) { ReleaseAssert(allSymbolMatches.count(tmp)); }
+                if (allNeededSymbols.count(tmp))
+                {
+                    if (!allSymbolMatches.count(tmp))
+                    {
+                        fprintf(stderr, "[ERROR] Symbol '%s' cannot be found in object files. (use 'c++filt -n [symbol]' to demangle)\n",
+                                symbolImpl.c_str());
+                        fprintf(stderr, "A few possible reasons:\n");
+                        fprintf(stderr, "  (1) Its implementation is missing.\n");
+                        fprintf(stderr, "  (2) The CPP file containing its implementation is not listed in runtime/CMakeLists.txt. "
+                                        "Add the CPP file to CMakeLists.txt to fix the issue.\n");
+                        fprintf(stderr, "  (3) The implementation has internal linkage type. Remove the 'static' keyword to fix the issue.\n");
+                        abort();
+                    }
+                }
                 ReleaseAssert(!allSymbolMatches.count(symbolOrSymbolPair));
                 allSymbolMatches.insert(symbolOrSymbolPair);
                 ExtractFunction(generatedFileDir, filenameBase, true /*isSymbolPair*/, symbolWrapper, symbolImpl);

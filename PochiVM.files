@@ -38,7 +38,10 @@ runtime/runtime_ops.txt
 runtime/test_classes.cpp
 runtime/test_classes.h
 runtime/test_classes_2.cpp
+runtime/test_fn_stress.cpp
+runtime/test_fn_stress.h
 runtime_lib_builder/CMakeLists.txt
+runtime_lib_builder/build_lib_wrapper.cpp
 runtime_lib_builder/build_runtime_lib.cpp
 runtime_lib_builder/dump_symbols.cpp
 runtime_lib_builder/sha1.cpp

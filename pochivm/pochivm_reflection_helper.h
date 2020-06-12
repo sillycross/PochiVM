@@ -458,10 +458,12 @@ private:
     template<typename R2, typename Enable = void>
     struct call_fn_wrapper
     {
+        using R2NoConst = typename std::remove_const<R2>::type;
+
         template<typename... Args>
-        static void call(R2* ret, Args... args)
+        static void call(R2NoConst* ret, Args... args)
         {
-            new (ret) R2(call_fn_impl<R2>(args...));
+            new (ret) R2NoConst(call_fn_impl<R2NoConst>(args...));
         }
 
         template<typename F2, typename Enable2 = void>
@@ -473,7 +475,7 @@ private:
             template<int... S>
             struct impl<0, S...>
             {
-                using type = void(*)(R2*, InType<S>...);
+                using type = void(*)(R2NoConst*, InType<S>...);
                 static constexpr type value = call<InType<S>...>;
             };
         };
@@ -488,7 +490,7 @@ private:
             struct impl<0, S...>
             {
                 using ClassTypeStar = typename std::add_pointer<typename FnTypeInfo::ClassType>::type;
-                using type = void(*)(R2*, ClassTypeStar, InType<S>...);
+                using type = void(*)(R2NoConst*, ClassTypeStar, InType<S>...);
                 static constexpr type value = call<ClassTypeStar, InType<S>...>;
             };
         };

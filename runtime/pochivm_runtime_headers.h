@@ -13,3 +13,4 @@
 // Some test classes used in unit test
 //
 #include "test_classes.h"
+#include "test_fn_stress.h"

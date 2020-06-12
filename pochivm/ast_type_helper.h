@@ -1055,12 +1055,14 @@ struct interp_call_cpp_fn_helper
     template<typename R2, typename Enable = void>
     struct return_value_helper
     {
+        using R2NoConst = typename std::remove_const<R2>::type;
+
         template<typename... TArgs>
         static void call(F fn, void* retVoid, TArgs... unpackedParams)
         {
-            using R2Star = typename std::add_pointer<R2>::type;
+            using R2Star = typename std::add_pointer<R2NoConst>::type;
             R2Star ret = reinterpret_cast<R2Star>(reinterpret_cast<uintptr_t>(retVoid));
-            new (ret) R2(call_fn_helper<F>::template call<R2>(fn, unpackedParams...));
+            new (ret) R2NoConst(call_fn_helper<F>::template call<R2NoConst>(fn, unpackedParams...));
         }
     };
 
