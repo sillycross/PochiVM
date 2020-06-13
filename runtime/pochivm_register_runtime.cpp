@@ -96,6 +96,7 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&FreeFnTestSmallClass2>();
     RegisterFreeFn<&FreeFnTestSmallClass3>();
     RegisterFreeFn<&FreeFnTestSmallClass4>();
+    RegisterFreeFn<&FreeFnTestSmallClass5>();
 
     RegisterFreeFn<&FreeFnTestLargeClass1>();
     RegisterFreeFn<&FreeFnTestLargeClass2>();

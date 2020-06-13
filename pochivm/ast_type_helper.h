@@ -154,6 +154,16 @@ struct TypeId
         return static_cast<AstTypeHelper::AstTypeLabelEnum>(value);
     }
 
+    const char* GetCppTypeLLVMTypeName() const
+    {
+        assert(IsCppClassType());
+        uint64_t ord = value - x_num_primitive_types - 1;
+        assert(ord < AstTypeHelper::x_num_cpp_class_types);
+        const char* ret = AstTypeHelper::AstCppTypeLLVMTypeName[ord];
+        assert(ret != nullptr);
+        return ret;
+    }
+
     template<typename T>
     bool IsType() const
     {

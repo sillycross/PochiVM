@@ -54,7 +54,7 @@ add_custom_command(
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_cpp_types.generated.h
   COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/build_lib_wrapper "${PROJECT_BINARY_DIR}/runtime_lib_builder/dump_symbols" "${PROJECT_BINARY_DIR}/runtime_lib_builder/update_symbol_matches" "${PROJECT_BINARY_DIR}/runtime_lib_builder/build_runtime_lib" "${GENERATED_FILES_DIR}" "${PROJECT_BINARY_DIR}" "${LLC_OPT_LEVEL}" "${RUNTIME_LIB_FILE}" '$<TARGET_OBJECTS:runtime_internal1>' '$<TARGET_OBJECTS:runtime_internal2>'
-  DEPENDS runtime_internal1 runtime_internal2 dump_symbols build_runtime_lib update_symbol_matches build_lib_wrapper
+  DEPENDS $<TARGET_OBJECTS:runtime_internal1> $<TARGET_OBJECTS:runtime_internal2> dump_symbols build_runtime_lib update_symbol_matches build_lib_wrapper
 )
 
 

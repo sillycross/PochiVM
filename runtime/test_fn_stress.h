@@ -212,6 +212,8 @@ inline TestSmallClass& FreeFnTestSmallClass3(TestSmallClass& a, TestSmallClass b
 
 TestSmallClass& FreeFnTestSmallClass4(TestSmallClass a, TestSmallClass& b, TestSmallClass c);
 
+int FreeFnTestSmallClass5(TestSmallClass a, int c);
+
 inline TestLargeClass FreeFnTestLargeClass1(TestLargeClass a, TestLargeClass b)
 {
     a.m_val3 += b.m_val3;
@@ -227,3 +229,4 @@ inline TestLargeClass& FreeFnTestLargeClass3(TestLargeClass& a, TestLargeClass b
 }
 
 TestLargeClass& FreeFnTestLargeClass4(TestLargeClass a, TestLargeClass& b, TestLargeClass c);
+

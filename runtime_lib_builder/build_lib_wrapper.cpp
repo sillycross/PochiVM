@@ -184,9 +184,14 @@ int main(int argc, char** argv)
         // since it computes the md5 checksum file
         //
         bool isUnchanged = CheckMd5Match(bcfile);
-        if (!isUnchanged || isUpdateSymbolMatchesChanged || isDumpSymbolChanged)
+        // Always clear the .syms.matches file for pochivm_register_runtime.cpp
+        // The file contains the wrappers for the impl, and if the impl changed,
+        // the header files need to be regenerated. Of course there are better
+        // ways so we only re-generate headers for the modified wrappers, but for now go simple
+        //
+        bool isPochiVMObj = (i == allBitcodefiles.size() - 1);
+        if (!isUnchanged || isPochiVMObj || isUpdateSymbolMatchesChanged || isDumpSymbolChanged)
         {
-            bool isPochiVMObj = (i == allBitcodefiles.size() - 1);
             std::string cmd;
             if (!isPochiVMObj)
             {

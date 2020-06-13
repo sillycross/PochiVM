@@ -29,6 +29,18 @@ TestSmallClass& FreeFnTestSmallClass4(TestSmallClass a, TestSmallClass& b, TestS
     return b;
 }
 
+int FreeFnTestSmallClass5(TestSmallClass a, int c)
+{
+    if (a.m_val1 == nullptr)
+    {
+        return c + 1;
+    }
+    else
+    {
+        return c * 2;
+    }
+}
+
 TestLargeClass FreeFnTestLargeClass2(TestLargeClass a, TestLargeClass b, TestLargeClass c)
 {
     a.m_val3 += b.m_val3;

@@ -360,7 +360,7 @@ public:
 
     llvm::Module* GetBuiltLLVMModule() const
     {
-        assert(m_llvmModule);
+        assert(m_llvmModule != nullptr);
         return m_llvmModule;
     }
 

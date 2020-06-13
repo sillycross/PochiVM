@@ -472,3 +472,108 @@ TEST(SanityBitCode, Inlining2_Release)
     CheckBitCodeData(fn);
 #endif
 }
+
+TEST(SanityBitCode, Inlining3_Debug)
+{
+#ifndef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+    CheckBitCodeData(fn);
+#endif
+}
+
+TEST(SanityBitCode, Inlining3_Release)
+{
+#ifdef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+    CheckBitCodeData(fn);
+#endif
+}
+
+TEST(SanityBitCode, SanityInliningWorks)
+{
+#ifdef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+    std::unique_ptr<LLVMContext> context(new LLVMContext);
+    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get(), true /*changeToExternal*/);
+
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_llvmContext->m_llvmContext = context.get();
+    thread_llvmContext->RunOptimizationPass(module.get());
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    module->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+
+#endif
+}
+
+TEST(SanityBitCode, SanityInliningWorks_2)
+{
+#ifdef NDEBUG
+    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+    std::unique_ptr<LLVMContext> context(new LLVMContext);
+    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get(), false /*changeToExternal*/);
+    llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
+
+    const char* llvmType = TypeId::Get<TestSmallClass>().GetCppTypeLLVMTypeName();
+    StructType* stype = module->getTypeByName(llvmType);
+    ReleaseAssert(stype != nullptr);
+
+    Type* paramType = stype->getPointerTo();
+    Type* paramTypeArray[1] = { paramType };
+    FunctionType* funcType = FunctionType::get(Type::getInt32Ty(*context.get()),
+                                               ArrayRef<Type*>(paramTypeArray, paramTypeArray + 1),
+                                               false /*isVariadic*/);
+
+    llvm::Function* func = llvm::Function::Create(
+            funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
+
+    BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
+    irBuilder->SetInsertPoint(body);
+
+    llvm::Function* callee = module->getFunction(fn.m_symbolName);
+    ReleaseAssert(callee != nullptr);
+    ReleaseAssert(callee->arg_size() == 2);
+    // callee->addFnAttr(Attribute::AttrKind::AlwaysInline);
+
+    llvm::Value* params[2];
+    for (size_t index = 0; index < 1; index++)
+    {
+        params[index] = func->getArg(0);
+    }
+    params[1] = ConstantInt::get(*context.get(), APInt(32 /*numBits*/, 1 /*value*/, true /*isSigned*/));
+    llvm::Value* r = nullptr;
+    for (int i = 0; i < 10; i++)
+    {
+        r = irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 2));
+        params[1] = r;
+    }
+    irBuilder->CreateRet(r);
+
+    ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
+
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_llvmContext->m_MPM = thread_llvmContext->m_passBuilder.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O3);
+    thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
+    thread_llvmContext->RunOptimizationPass(module.get());
+    // thread_llvmContext->RunOptimizationPass(module.get());
+
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    module->print(rso, nullptr);
+    std::string& dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+
+#endif
+}
+

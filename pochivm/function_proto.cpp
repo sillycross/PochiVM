@@ -253,16 +253,16 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
     Function* callee = calleeAst->GetGeneratedPrototype();
     TestAssert(callee != nullptr && callee == thread_llvmContext->m_module->getFunction(m_fnName));
     TestAssert(callee->arg_size() == m_params.size());
-    Value **params = reinterpret_cast<Value **>(alloca(sizeof(Value *) * m_params.size()));
+    Value** params = reinterpret_cast<Value**>(alloca(sizeof(Value*) * m_params.size()));
     for (size_t index = 0; index < m_params.size(); index++)
     {
-        Value *param = m_params[index]->EmitIR();
+        Value* param = m_params[index]->EmitIR();
         TestAssert(param->getType() == callee->getArg(static_cast<unsigned>(index))->getType());
         TestAssert(AstTypeHelper::llvm_value_has_type(calleeAst->GetParamType(index), param));
         params[index] = param;
     }
-    Value *ret = thread_llvmContext->m_builder
-                         ->CreateCall(callee, ArrayRef<Value *>(params, params + m_params.size()));
+    Value* ret = thread_llvmContext->m_builder
+                         ->CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
     TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), ret));
     if (GetTypeId().IsVoid()) { ret = nullptr; }
     return ret;
