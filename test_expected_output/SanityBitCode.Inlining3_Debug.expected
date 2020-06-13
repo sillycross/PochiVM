@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.TestLargeClass = type { i64, i64, i16, i32, %class.TestSmallClass* }
 
 ; Function Attrs: noinline optnone uwtable
-define available_externally dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass514TestSmallClassiEEE15call_fn_wrapperIivE4callIJPS2_iEEEiDpT_(%class.TestSmallClass* %0, i32 %1) #0 align 2 {
+define dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass514TestSmallClassiEEE15call_fn_wrapperIivE4callIJPS2_iEEEiDpT_(%class.TestSmallClass* %0, i32 %1) #0 align 2 {
   %3 = alloca %class.TestSmallClass*, align 8
   %4 = alloca i32, align 4
   store %class.TestSmallClass* %0, %class.TestSmallClass** %3, align 8

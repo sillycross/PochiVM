@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass114TestSmallClassS2_EEE15call_fn_wrapperIS2_vE4callIJPS2_S7_EEEvS7_DpT_(%class.TestSmallClass* %0, %class.TestSmallClass* %1, %class.TestSmallClass* %2) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+define dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass114TestSmallClassS2_EEE15call_fn_wrapperIS2_vE4callIJPS2_S7_EEEvS7_DpT_(%class.TestSmallClass* %0, %class.TestSmallClass* %1, %class.TestSmallClass* %2) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %4 = bitcast %class.TestSmallClass* %1 to i64*
   %5 = load i64, i64* %4, align 8, !tbaa.struct !4
   %6 = getelementptr inbounds %class.TestSmallClass, %class.TestSmallClass* %1, i64 0, i32 1

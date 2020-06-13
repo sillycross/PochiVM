@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: norecurse nounwind readonly uwtable
-define available_externally dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass514TestSmallClassiEEE15call_fn_wrapperIivE4callIJPS2_iEEEiDpT_(%class.TestSmallClass* nocapture readonly %0, i32 %1) local_unnamed_addr #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+define dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass514TestSmallClassiEEE15call_fn_wrapperIivE4callIJPS2_iEEEiDpT_(%class.TestSmallClass* nocapture readonly %0, i32 %1) local_unnamed_addr #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %3 = getelementptr inbounds %class.TestSmallClass, %class.TestSmallClass* %0, i64 0, i32 0
   %4 = load %class.TestLargeClass*, %class.TestLargeClass** %3, align 8, !tbaa.struct !4
   %5 = icmp eq %class.TestLargeClass* %4, null

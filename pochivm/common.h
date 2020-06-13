@@ -144,14 +144,18 @@ static_assert(false, "NDEBUG should always be defined in non-testbuild");
 #define TestAssertImp(a, b) TestAssert((!(a)) || (b))
 
 #ifdef TESTBUILD
+const static bool x_isTestBuild = true;
 #define TESTBUILD_ONLY(...) __VA_ARGS__
 #else
+const static bool x_isTestBuild = false;
 #define TESTBUILD_ONLY(...)
 #endif
 
 #ifndef NDEBUG
+const static bool x_isDebugBuild = true;
 #define DEBUG_ONLY(...) __VA_ARGS__
 #else
+const static bool x_isDebugBuild = false;
 #define DEBUG_ONLY(...)
 #endif
 

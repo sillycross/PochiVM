@@ -17,36 +17,27 @@ using namespace llvm::orc;
 namespace {
 
 std::unique_ptr<Module> GetModuleFromBitcodeStub(const BitcodeData& bc,
-                                                 LLVMContext* context,
-                                                 bool changeLinkageToExternal)
+                                                 LLVMContext* context)
 {
     SMDiagnostic llvmErr;
     MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bc.m_bitcode), bc.m_length),
                        StringRef(bc.m_symbolName));
     std::unique_ptr<Module> module = parseIR(mb, llvmErr, *context);
     ReleaseAssert(module != nullptr);
-    if (changeLinkageToExternal)
-    {
-        llvm::Function* func = module->getFunction(bc.m_symbolName);
-        ReleaseAssert(func != nullptr);
-        ReleaseAssert(func->getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage);
-        func->setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-    }
     return module;
 }
 
 std::unique_ptr<ThreadSafeModule> GetThreadSafeModuleFromBitcodeStub(const BitcodeData& bc)
 {
     std::unique_ptr<LLVMContext> context(new LLVMContext);
-    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(bc, context.get(), true /*changeLinkageToExternal*/);
+    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(bc, context.get());
     return std::unique_ptr<ThreadSafeModule>(new ThreadSafeModule(std::move(module), std::move(context)));
 }
 
 void LinkinBitcodeStub(Module& module /*inout*/,
-                       const BitcodeData& bc,
-                       bool changeLinkageToExternal)
+                       const BitcodeData& bc)
 {
-    std::unique_ptr<Module> m = GetModuleFromBitcodeStub(bc, &module.getContext(), changeLinkageToExternal);
+    std::unique_ptr<Module> m = GetModuleFromBitcodeStub(bc, &module.getContext());
     Linker linker(module);
     // linkInModule returns true on error
     //
@@ -278,19 +269,19 @@ TEST(SanityBitcode, SanityLink)
     std::unique_ptr<LLVMContext> context(new LLVMContext);
     std::unique_ptr<Module> module(new Module("test", *context.get()));
 
-    LinkinBitcodeStub(*module.get(), getY, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), setY, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), getXPlusY, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), getStringY, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), pushVec, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sortVector, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), getVectorSize, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), getVectorSum, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sig1, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sig2, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sig3, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sig4, true /*changeLinkageToExternal*/);
-    LinkinBitcodeStub(*module.get(), sig5, true /*changeLinkageToExternal*/);
+    LinkinBitcodeStub(*module.get(), getY);
+    LinkinBitcodeStub(*module.get(), setY);
+    LinkinBitcodeStub(*module.get(), getXPlusY);
+    LinkinBitcodeStub(*module.get(), getStringY);
+    LinkinBitcodeStub(*module.get(), pushVec);
+    LinkinBitcodeStub(*module.get(), sortVector);
+    LinkinBitcodeStub(*module.get(), getVectorSize);
+    LinkinBitcodeStub(*module.get(), getVectorSum);
+    LinkinBitcodeStub(*module.get(), sig1);
+    LinkinBitcodeStub(*module.get(), sig2);
+    LinkinBitcodeStub(*module.get(), sig3);
+    LinkinBitcodeStub(*module.get(), sig4);
+    LinkinBitcodeStub(*module.get(), sig5);
 
     TestClassA a;
     a.m_y = 0;
@@ -429,7 +420,7 @@ namespace {
 void CheckBitCodeData(const BitcodeData& data)
 {
     std::unique_ptr<LLVMContext> context(new LLVMContext);
-    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(data, context.get(), false);
+    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(data, context.get());
 
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);
@@ -459,121 +450,131 @@ TEST(SanityBitCode, Inlining1_Release)
 
 TEST(SanityBitCode, Inlining2_Debug)
 {
-#ifndef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
-    CheckBitCodeData(fn);
-#endif
+    if (x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, Inlining2_Release)
 {
-#ifdef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
-    CheckBitCodeData(fn);
-#endif
+    if (!x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_31a6bfa0434503770ac61589;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, Inlining3_Debug)
 {
-#ifndef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
-    CheckBitCodeData(fn);
-#endif
+    if (x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, Inlining3_Release)
 {
-#ifdef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
-    CheckBitCodeData(fn);
-#endif
+    if (!x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, SanityInliningWorks)
 {
-#ifdef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
-    std::unique_ptr<LLVMContext> context(new LLVMContext);
-    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get(), true /*changeToExternal*/);
+    if (!x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get());
 
-    AutoThreadPochiVMContext apv;
-    AutoThreadErrorContext arc;
-    AutoThreadLLVMCodegenContext alc;
+        AutoThreadPochiVMContext apv;
+        AutoThreadErrorContext arc;
+        AutoThreadLLVMCodegenContext alc;
 
-    thread_llvmContext->m_llvmContext = context.get();
-    thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->m_llvmContext = context.get();
+        thread_llvmContext->RunOptimizationPass(module.get());
 
-    std::string _dst;
-    llvm::raw_string_ostream rso(_dst /*target*/);
-    module->print(rso, nullptr);
-    std::string& dump = rso.str();
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        module->print(rso, nullptr);
+        std::string& dump = rso.str();
 
-    AssertIsExpectedOutput(dump);
-
-#endif
+        AssertIsExpectedOutput(dump);
+    }
 }
 
 TEST(SanityBitCode, SanityInliningWorks_2)
 {
-#ifdef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
-    std::unique_ptr<LLVMContext> context(new LLVMContext);
-    std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get(), false /*changeToExternal*/);
-    llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
-
-    const char* llvmType = TypeId::Get<TestSmallClass>().GetCppTypeLLVMTypeName();
-    StructType* stype = module->getTypeByName(llvmType);
-    ReleaseAssert(stype != nullptr);
-
-    Type* paramType = stype->getPointerTo();
-    Type* paramTypeArray[1] = { paramType };
-    FunctionType* funcType = FunctionType::get(Type::getInt32Ty(*context.get()),
-                                               ArrayRef<Type*>(paramTypeArray, paramTypeArray + 1),
-                                               false /*isVariadic*/);
-
-    llvm::Function* func = llvm::Function::Create(
-            funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
-
-    BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
-    irBuilder->SetInsertPoint(body);
-
-    llvm::Function* callee = module->getFunction(fn.m_symbolName);
-    ReleaseAssert(callee != nullptr);
-    ReleaseAssert(callee->arg_size() == 2);
-    // callee->addFnAttr(Attribute::AttrKind::AlwaysInline);
-
-    llvm::Value* params[2];
-    for (size_t index = 0; index < 1; index++)
+    if (!x_isDebugBuild)
     {
-        params[index] = func->getArg(0);
+        const BitcodeData& fn = __pochivm_internal_bc_541d1d383e9f03720e359206;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get());
+        {
+            // change linkage to available_externally
+            //
+            llvm::Function* func = module->getFunction(fn.m_symbolName);
+            ReleaseAssert(func != nullptr);
+            ReleaseAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+        }
+
+        llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
+
+        const char* llvmType = TypeId::Get<TestSmallClass>().GetCppTypeLLVMTypeName();
+        StructType* stype = module->getTypeByName(llvmType);
+        ReleaseAssert(stype != nullptr);
+
+        Type* paramType = stype->getPointerTo();
+        Type* paramTypeArray[1] = { paramType };
+        FunctionType* funcType = FunctionType::get(Type::getInt32Ty(*context.get()),
+                                                   ArrayRef<Type*>(paramTypeArray, paramTypeArray + 1),
+                                                   false /*isVariadic*/);
+
+        llvm::Function* func = llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
+
+        BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
+        irBuilder->SetInsertPoint(body);
+
+        llvm::Function* callee = module->getFunction(fn.m_symbolName);
+        ReleaseAssert(callee != nullptr);
+        ReleaseAssert(callee->arg_size() == 2);
+
+        llvm::Value* params[2];
+        for (size_t index = 0; index < 1; index++)
+        {
+            params[index] = func->getArg(0);
+        }
+        params[1] = ConstantInt::get(*context.get(), APInt(32 /*numBits*/, 1 /*value*/, true /*isSigned*/));
+        llvm::Value* r = nullptr;
+        for (int i = 0; i < 10; i++)
+        {
+            r = irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 2));
+            params[1] = r;
+        }
+        irBuilder->CreateRet(r);
+
+        ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
+
+        AutoThreadPochiVMContext apv;
+        AutoThreadErrorContext arc;
+        AutoThreadLLVMCodegenContext alc;
+
+        thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
+        thread_llvmContext->RunOptimizationPass(module.get());
+
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        module->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump);
     }
-    params[1] = ConstantInt::get(*context.get(), APInt(32 /*numBits*/, 1 /*value*/, true /*isSigned*/));
-    llvm::Value* r = nullptr;
-    for (int i = 0; i < 10; i++)
-    {
-        r = irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 2));
-        params[1] = r;
-    }
-    irBuilder->CreateRet(r);
-
-    ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
-
-    AutoThreadPochiVMContext apv;
-    AutoThreadErrorContext arc;
-    AutoThreadLLVMCodegenContext alc;
-
-    thread_llvmContext->m_MPM = thread_llvmContext->m_passBuilder.buildPerModuleDefaultPipeline(llvm::PassBuilder::OptimizationLevel::O3);
-    thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
-    thread_llvmContext->RunOptimizationPass(module.get());
-    // thread_llvmContext->RunOptimizationPass(module.get());
-
-    std::string _dst;
-    llvm::raw_string_ostream rso(_dst /*target*/);
-    module->print(rso, nullptr);
-    std::string& dump = rso.str();
-
-    AssertIsExpectedOutput(dump);
-
-#endif
 }
 

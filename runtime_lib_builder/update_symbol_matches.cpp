@@ -61,7 +61,6 @@ static void RemoveTargetAttribute(Function* func)
     }
 }
 
-__attribute__((used))
 static void RunLLVMOptimizePass(Module* module)
 {
     static const llvm::PassBuilder::OptimizationLevel
@@ -84,14 +83,6 @@ static void RunLLVMOptimizePass(Module* module)
 
     ReleaseAssert(module != nullptr);
     m_MPM.run(*module, m_MAM);
-}
-
-static void RunLLVMOptimizePassIfNotDebug(Module* module)
-{
-#ifdef NDEBUG
-    RunLLVMOptimizePass(module);
-#endif
-    std::ignore = module;
 }
 
 static void ExtractFunction(const std::string& generatedFileDir,
@@ -422,13 +413,15 @@ static void ExtractFunction(const std::string& generatedFileDir,
         RemoveTargetAttribute(&fn);
     }
 
-    // Finally, change the linkage type of our target function to 'available externally'
+    // Change the linkage type to External
     //
     functionTarget = module->getFunction(functionName);
     ReleaseAssert(functionTarget != nullptr);
     ReleaseAssert(!functionTarget->empty());
-    functionTarget->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
-    // AvailableExternallyLinkage is not allowed to have comdat.
+    functionTarget->setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+    // We will change the linkage type of our target function to 'available externally'
+    // after the bitfile is linked into the module.
+    // AvailableExternallyLinkage is not allowed to have comdat, so drop the combat now.
     // It should be fine that we simply drop the comdat, since C++ always follows ODR rule.
     //
     functionTarget->setComdat(nullptr);
@@ -549,6 +542,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
             implFn = implModule->getFunction(implFunctionName);
             ReleaseAssert(implFn != nullptr);
             ReleaseAssert(!implFn->empty());
+            ReleaseAssert(implFn->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
 
             Linker linker(*module.get());
             // linkInModule returns true on error
@@ -558,24 +552,32 @@ static void ExtractFunction(const std::string& generatedFileDir,
             implFn = module->getFunction(implFunctionName);
             ReleaseAssert(implFn != nullptr);
             ReleaseAssert(!implFn->empty());
-
-            // Temporarily change wrapper function linkage back to external,
-            // run LLVM optimization pass to inline implementation (if LLVM decides to),
-            // then change wrapper function linkage back.
+            // change implFn to available_externally linkage before optimization pass,
+            // so that it is either inlined by optimization pass, or dropped
             //
+            ReleaseAssert(implFn->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            implFn->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+
             Function* wrapperFn = module->getFunction(functionName);
-            ReleaseAssert(wrapperFn != nullptr);
-            ReleaseAssert(wrapperFn->getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage);
-            ReleaseAssert(!wrapperFn->empty());
-            wrapperFn->setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
-
-            RunLLVMOptimizePassIfNotDebug(module.get());
-
-            wrapperFn = module->getFunction(functionName);
             ReleaseAssert(wrapperFn != nullptr);
             ReleaseAssert(wrapperFn->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
             ReleaseAssert(!wrapperFn->empty());
-            wrapperFn->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+
+            // Only run optimization passes in non-debug build
+            //
+            if (!x_isDebugBuild)
+            {
+                RunLLVMOptimizePass(module.get());
+                // The optimization passes should have either dropped the implementation of wrappedFn
+                // (so the symbol is external without body) or have inlined it (so the symbol no longer exists)
+                //
+                implFn = module->getFunction(implFunctionName);
+                if (implFn != nullptr)
+                {
+                    ReleaseAssert(implFn->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+                    ReleaseAssert(implFn->empty());
+                }
+            }
         }
 
         // The output should be the implFunctionName.bc, without leading '*'

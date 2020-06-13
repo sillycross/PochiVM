@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nofree norecurse nounwind uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass214TestSmallClassS2_S2_EEE15call_fn_wrapperIS2_vE4callIJPS2_S7_S7_EEEvS7_DpT_(%class.TestSmallClass* nocapture %0, %class.TestSmallClass* nocapture readonly %1, %class.TestSmallClass* nocapture readonly %2, %class.TestSmallClass* nocapture readonly %3) local_unnamed_addr #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+define dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z21FreeFnTestSmallClass214TestSmallClassS2_S2_EEE15call_fn_wrapperIS2_vE4callIJPS2_S7_S7_EEEvS7_DpT_(%class.TestSmallClass* nocapture %0, %class.TestSmallClass* nocapture readonly %1, %class.TestSmallClass* nocapture readonly %2, %class.TestSmallClass* nocapture readonly %3) local_unnamed_addr #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %5 = bitcast %class.TestSmallClass* %1 to i64*
   %6 = load i64, i64* %5, align 8, !tbaa.struct !4
   %7 = getelementptr inbounds %class.TestSmallClass, %class.TestSmallClass* %1, i64 0, i32 1
