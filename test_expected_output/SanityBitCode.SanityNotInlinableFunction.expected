@@ -1,0 +1,29 @@
+; ModuleID = '_Z15FreeFnRecursivei'
+source_filename = "../../runtime/pochivm_register_runtime.cpp"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: inlinehint uwtable
+declare dso_local i32 @_Z15FreeFnRecursivei(i32) local_unnamed_addr #0
+
+define i32 @testfn(i1 %0, i32 %1) local_unnamed_addr {
+body:
+  br i1 %0, label %path1, label %path2
+
+path1:                                            ; preds = %body
+  %2 = tail call i32 @_Z15FreeFnRecursivei(i32 %1)
+  ret i32 %2
+
+path2:                                            ; preds = %body
+  ret i32 0
+}
+
+attributes #0 = { inlinehint uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.module.flags = !{!0, !1, !2}
+!llvm.ident = !{!3}
+
+!0 = !{i32 7, !"Dwarf Version", i32 4}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{i32 1, !"wchar_size", i32 4}
+!3 = !{!"clang version 10.0.0 "}

@@ -230,3 +230,47 @@ inline TestLargeClass& FreeFnTestLargeClass3(TestLargeClass& a, TestLargeClass b
 
 TestLargeClass& FreeFnTestLargeClass4(TestLargeClass a, TestLargeClass& b, TestLargeClass c);
 
+inline int FreeFnRecursive(int x)
+{
+    if (x <= 1)
+    {
+        return 1;
+    }
+    else
+    {
+        return FreeFnRecursive(x - 1) + FreeFnRecursive(x - 2);
+    }
+}
+
+inline int FreeFnRecursive2(std::string xstr)
+{
+    int x = std::stoi(xstr);
+    if (x <= 1)
+    {
+        return 1;
+    }
+    else
+    {
+        return FreeFnRecursive2(std::to_string(x - 1)) + FreeFnRecursive2(std::to_string(x - 2));
+    }
+}
+
+inline std::string FreeFnRecursive3(std::string xstr)
+{
+    static const int len_prefix = 100;
+    std::string prefix = std::string(len_prefix, '_');
+    xstr = xstr.substr(len_prefix);
+    int x = std::stoi(xstr);
+    if (x <= 1)
+    {
+        return prefix + "1";
+    }
+    else
+    {
+        std::string r1 = FreeFnRecursive3(prefix + std::to_string(x - 1));
+        std::string r2 = FreeFnRecursive3(prefix + std::to_string(x - 2));
+        int i1 = std::stoi(r1.substr(len_prefix));
+        int i2 = std::stoi(r2.substr(len_prefix));
+        return prefix + std::to_string(i1 + i2);
+    }
+}

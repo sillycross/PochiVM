@@ -102,6 +102,10 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&FreeFnTestLargeClass2>();
     RegisterFreeFn<&FreeFnTestLargeClass3>();
     RegisterFreeFn<&FreeFnTestLargeClass4>();
+
+    RegisterFreeFn<&FreeFnRecursive>();
+    RegisterFreeFn<&FreeFnRecursive2>();
+    RegisterFreeFn<&FreeFnRecursive3>();
 }
 
 // DO NOT MODIFY

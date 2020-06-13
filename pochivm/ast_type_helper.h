@@ -254,7 +254,9 @@ struct TypeId
     template<typename T>
     static constexpr TypeId Get()
     {
-        return AstTypeHelper::GetTypeId<T>::value;
+        TypeId ret = AstTypeHelper::GetTypeId<T>::value;
+        assert(!ret.IsInvalid());
+        return ret;
     }
 
     static constexpr TypeId GetCppTypeFromOrdinal(uint64_t ord)

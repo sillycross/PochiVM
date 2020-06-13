@@ -1,0 +1,33 @@
+; ModuleID = '_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive3NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE15call_fn_wrapperIS7_vE4callIJPS7_EEEvSC_DpT_'
+source_filename = "../../runtime/pochivm_register_runtime.cpp"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%"class.std::__cxx11::basic_string" = type { %"struct.std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider", i64, %union.anon }
+%"struct.std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
+%union.anon = type { i64, [8 x i8] }
+
+; Function Attrs: uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive3NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFS7_S7_EvE4callIS7_JLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"* noalias sret, %"class.std::__cxx11::basic_string"*) local_unnamed_addr #0 align 2
+
+define void @testfn(i1 %0, %"class.std::__cxx11::basic_string"* %1, %"class.std::__cxx11::basic_string"* %2) local_unnamed_addr {
+body:
+  br i1 %0, label %path1, label %path2
+
+path1:                                            ; preds = %body
+  tail call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive3NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFS7_S7_EvE4callIS7_JLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"* sret %2, %"class.std::__cxx11::basic_string"* %1)
+  ret void
+
+path2:                                            ; preds = %body
+  ret void
+}
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.module.flags = !{!0, !1, !2}
+!llvm.ident = !{!3}
+
+!0 = !{i32 7, !"Dwarf Version", i32 4}
+!1 = !{i32 2, !"Debug Info Version", i32 3}
+!2 = !{i32 1, !"wchar_size", i32 4}
+!3 = !{!"clang version 10.0.0 "}

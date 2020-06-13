@@ -434,18 +434,20 @@ void CheckBitCodeData(const BitcodeData& data)
 
 TEST(SanityBitCode, Inlining1_Debug)
 {
-#ifndef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
-    CheckBitCodeData(fn);
-#endif
+    if (x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, Inlining1_Release)
 {
-#ifdef NDEBUG
-    const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
-    CheckBitCodeData(fn);
-#endif
+    if (!x_isDebugBuild)
+    {
+        const BitcodeData& fn = __pochivm_internal_bc_0e9e560e773403ef605b0d2c;
+        CheckBitCodeData(fn);
+    }
 }
 
 TEST(SanityBitCode, Inlining2_Debug)
@@ -578,3 +580,255 @@ TEST(SanityBitCode, SanityInliningWorks_2)
     }
 }
 
+TEST(SanityBitCode, SanityNotInlinableFunction)
+{
+    if (!x_isDebugBuild)
+    {
+        // FreeFnRecursive
+        //
+        const BitcodeData& fn = __pochivm_internal_bc_f1b5fa59b278ee9cbb1502aa;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get());
+        {
+            // change linkage to available_externally
+            //
+            llvm::Function* func = module->getFunction(fn.m_symbolName);
+            ReleaseAssert(func != nullptr);
+            ReleaseAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+        }
+
+        llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
+
+        Type* paramTypeArray[2] = { Type::getInt1Ty(*context.get()), Type::getInt32Ty(*context.get()) };
+        FunctionType* funcType = FunctionType::get(Type::getInt32Ty(*context.get()),
+                                                   ArrayRef<Type*>(paramTypeArray, paramTypeArray + 2),
+                                                   false /*isVariadic*/);
+
+        llvm::Function* func = llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
+
+        BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
+        BasicBlock* path1 = BasicBlock::Create(*context.get(), "path1", func);
+        BasicBlock* path2 = BasicBlock::Create(*context.get(), "path2", func);
+        irBuilder->SetInsertPoint(body);
+        irBuilder->CreateCondBr(func->getArg(0), path1, path2);
+
+        irBuilder->SetInsertPoint(path1);
+        llvm::Function* callee = module->getFunction(fn.m_symbolName);
+        ReleaseAssert(callee != nullptr);
+        ReleaseAssert(callee->arg_size() == 1);
+
+        llvm::Value* params[1];
+        params[0] = func->getArg(1);
+
+        llvm::Value* r = irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 1));
+        irBuilder->CreateRet(r);
+
+        irBuilder->SetInsertPoint(path2);
+        irBuilder->CreateRet(ConstantInt::get(*context.get(), APInt(32 /*numBits*/, 0 /*value*/, true /*isSigned*/)));
+
+        ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
+
+        AutoThreadPochiVMContext apv;
+        AutoThreadErrorContext arc;
+        AutoThreadLLVMCodegenContext alc;
+
+        thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
+        thread_llvmContext->RunOptimizationPass(module.get());
+
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        module->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump);
+    }
+}
+
+TEST(SanityBitCode, SanityNotInlinableFunction_2)
+{
+    if (!x_isDebugBuild)
+    {
+        // FreeFnRecursive2
+        //
+        const BitcodeData& fn = __pochivm_internal_bc_d9eab28a0482d30ba19cd1dd;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get());
+        {
+            // change linkage to available_externally
+            //
+            llvm::Function* func = module->getFunction(fn.m_symbolName);
+            ReleaseAssert(func != nullptr);
+            ReleaseAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+        }
+
+        llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
+
+        const char* llvmType = TypeId::Get<std::string>().GetCppTypeLLVMTypeName();
+        StructType* stype = module->getTypeByName(llvmType);
+        ReleaseAssert(stype != nullptr);
+        Type* paramType = stype->getPointerTo();
+
+        Type* paramTypeArray[2] = { Type::getInt1Ty(*context.get()), paramType };
+        FunctionType* funcType = FunctionType::get(Type::getInt32Ty(*context.get()),
+                                                   ArrayRef<Type*>(paramTypeArray, paramTypeArray + 2),
+                                                   false /*isVariadic*/);
+
+        llvm::Function* func = llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
+
+        BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
+        BasicBlock* path1 = BasicBlock::Create(*context.get(), "path1", func);
+        BasicBlock* path2 = BasicBlock::Create(*context.get(), "path2", func);
+        irBuilder->SetInsertPoint(body);
+        irBuilder->CreateCondBr(func->getArg(0), path1, path2);
+
+        irBuilder->SetInsertPoint(path1);
+        llvm::Function* callee = module->getFunction(fn.m_symbolName);
+        ReleaseAssert(callee != nullptr);
+        ReleaseAssert(callee->arg_size() == 1);
+
+        llvm::Value* params[1];
+        params[0] = func->getArg(1);
+
+        llvm::Value* r = irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 1));
+        irBuilder->CreateRet(r);
+
+        irBuilder->SetInsertPoint(path2);
+        irBuilder->CreateRet(ConstantInt::get(*context.get(), APInt(32 /*numBits*/, 0 /*value*/, true /*isSigned*/)));
+
+        ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
+
+        AutoThreadPochiVMContext apv;
+        AutoThreadErrorContext arc;
+        AutoThreadLLVMCodegenContext alc;
+
+        thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
+        thread_llvmContext->RunOptimizationPass(module.get());
+
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        module->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump);
+
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetNonAstModule(std::unique_ptr<ThreadSafeModule>(new ThreadSafeModule(std::move(module), std::move(context))));
+
+        using _FnPrototype = int(*)(bool, std::string*);
+        _FnPrototype testfn = jit.GetFunctionNonAst<_FnPrototype>("testfn");
+
+        std::string input = "10";
+        int result = testfn(true, &input);
+        ReleaseAssert(result == 89);
+
+        result = testfn(false, &input);
+        ReleaseAssert(result == 0);
+    }
+}
+
+TEST(SanityBitCode, SanityNotInlinableFunction_3)
+{
+    if (!x_isDebugBuild)
+    {
+        // FreeFnRecursive3
+        //
+        const BitcodeData& fn = __pochivm_internal_bc_99204e48f216121e0ebdb948;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = GetModuleFromBitcodeStub(fn, context.get());
+        {
+            // change linkage to available_externally
+            //
+            llvm::Function* func = module->getFunction(fn.m_symbolName);
+            ReleaseAssert(func != nullptr);
+            ReleaseAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+        }
+
+        llvm::IRBuilder<>* irBuilder = new llvm::IRBuilder<>(*context.get());
+
+        const char* llvmType = TypeId::Get<std::string>().GetCppTypeLLVMTypeName();
+        StructType* stype = module->getTypeByName(llvmType);
+        ReleaseAssert(stype != nullptr);
+        Type* paramType = stype->getPointerTo();
+
+        Type* paramTypeArray[3] = { Type::getInt1Ty(*context.get()), paramType, paramType };
+        FunctionType* funcType = FunctionType::get(Type::getVoidTy(*context.get()),
+                                                   ArrayRef<Type*>(paramTypeArray, paramTypeArray + 3),
+                                                   false /*isVariadic*/);
+
+        llvm::Function* func = llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, "testfn", module.get());
+
+        BasicBlock* body = BasicBlock::Create(*context.get(), "body", func);
+        BasicBlock* path1 = BasicBlock::Create(*context.get(), "path1", func);
+        BasicBlock* path2 = BasicBlock::Create(*context.get(), "path2", func);
+        irBuilder->SetInsertPoint(body);
+        irBuilder->CreateCondBr(func->getArg(0), path1, path2);
+
+        irBuilder->SetInsertPoint(path1);
+        llvm::Function* callee = module->getFunction(fn.m_symbolName);
+        ReleaseAssert(callee != nullptr);
+        ReleaseAssert(callee->arg_size() == 2);
+
+        llvm::Value* params[2];
+        params[0] = func->getArg(2);
+        params[1] = func->getArg(1);
+
+        irBuilder->CreateCall(callee, ArrayRef<llvm::Value*>(params, params + 2));
+        irBuilder->CreateRetVoid();
+
+        irBuilder->SetInsertPoint(path2);
+        irBuilder->CreateRetVoid();
+
+        ReleaseAssert(llvm::verifyFunction(*func, &outs()) == false);
+
+        AutoThreadPochiVMContext apv;
+        AutoThreadErrorContext arc;
+        AutoThreadLLVMCodegenContext alc;
+
+        thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
+        thread_llvmContext->RunOptimizationPass(module.get());
+
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        module->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump);
+
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetNonAstModule(std::unique_ptr<ThreadSafeModule>(new ThreadSafeModule(std::move(module), std::move(context))));
+
+        using _FnPrototype = void(*)(bool, std::string*, std::string* /*out*/);
+        _FnPrototype testfn = jit.GetFunctionNonAst<_FnPrototype>("testfn");
+
+        std::string prefix = std::string(100, '_');
+        ReleaseAssert(prefix.length() == 100);
+
+        {
+            std::string input = prefix + "10";
+            std::string* output = reinterpret_cast<std::string*>(alloca(sizeof(std::string)));
+            memset(output, 0, sizeof(std::string));
+            testfn(true, &input, output);
+            ReleaseAssert(*output == prefix + "89");
+        }
+
+        {
+            std::string input = prefix + "10";
+            std::string* output = reinterpret_cast<std::string*>(alloca(sizeof(std::string)));
+            memset(output, 0, sizeof(std::string));
+            testfn(false, &input, output);
+            uint8_t* raw = reinterpret_cast<uint8_t*>(output);
+            for (size_t i = 0; i < sizeof(std::string); i++)
+            {
+                ReleaseAssert(raw[i] == 0);
+            }
+        }
+    }
+}
