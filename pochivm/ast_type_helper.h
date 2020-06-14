@@ -93,8 +93,8 @@ struct TypeId
     constexpr explicit TypeId() : value(x_invalid_typeid) {}
     constexpr explicit TypeId(uint64_t _value): value(_value) {}
 
-    bool operator==(const TypeId& other) const { return other.value == value; }
-    bool operator!=(const TypeId& other) const { return !(*this == other); }
+    constexpr bool operator==(const TypeId& other) const { return other.value == value; }
+    constexpr bool operator!=(const TypeId& other) const { return !(*this == other); }
 
     constexpr bool IsInvalid() const
     {
@@ -132,7 +132,7 @@ struct TypeId
         assert(!IsInvalid());
         return (value % x_generated_composite_type) / x_pointer_typeid_inc;
     }
-    TypeId WARN_UNUSED AddPointer() const {
+    constexpr TypeId WARN_UNUSED AddPointer() const {
         assert(!IsInvalid());
         return TypeId { value + x_pointer_typeid_inc };
     }
@@ -277,6 +277,8 @@ struct TypeId
     const static uint64_t x_invalid_typeid = static_cast<uint64_t>(-1);
 };
 
+using InterpCallCppFunctionImpl = void(*)(void* /*ret*/, void** /*params*/);
+
 struct CppFunctionMetadata
 {
     // The symbol name, and the bitcode stub
@@ -292,7 +294,7 @@ struct CppFunctionMetadata
     bool m_isUsingSret;
     // The interp function interface
     //
-    std::function<void(void* /*ret*/, void** /*params*/)> m_interpFn;
+    InterpCallCppFunctionImpl m_interpFn;
 };
 
 namespace AstTypeHelper
@@ -1012,13 +1014,16 @@ struct callable_to_std_function_type<std::function<R(Args...)>>
 template<typename... T>
 using tuple_concat_type = decltype(std::tuple_cat(std::declval<T>()...));
 
-template<typename F, typename R, typename... Args>
+template<auto f>
 struct interp_call_cpp_fn_helper
 {
-    const static size_t numArgs = sizeof...(Args);
+    using F = decltype(f);
+    using R = typename function_type_helper<F>::ReturnType;
+
+    const static size_t numArgs = function_type_helper<F>::numArgs;
 
     template<size_t i>
-    using ArgType = typename std::tuple_element<i, std::tuple<Args...>>::type;
+    using ArgType = typename function_type_helper<F>::template ArgType<i>;
 
     template<size_t i>
     using ArgTypePtr = typename std::add_pointer<ArgType<i>>::type;
@@ -1027,70 +1032,34 @@ struct interp_call_cpp_fn_helper
     struct build_param_helper
     {
         template<typename... TArgs>
-        static void call(F fn, void* retVoid, void** params, TArgs... unpackedParams)
+        static void call(void* retVoid, void** params, TArgs... unpackedParams)
         {
+            static_assert(AstTypeHelper::primitive_or_pointer_type<ArgType<numArgs-n>>::value,
+                          "parameter type must be pointer or primitive type");
             void* param = *params;
-            // We have changed reference to pointer for generated code,
-            // so here we need one extra dereference for reference params
-            //
-            if (std::is_reference<ArgType<numArgs-n>>::value)
-            {
-                ReleaseAssert(std::is_lvalue_reference<ArgType<numArgs-n>>::value);
-                param = *reinterpret_cast<void**>(param);
-            }
-            build_param_helper<n-1>::call(fn, retVoid, params + 1,
+            build_param_helper<n-1>::call(retVoid, params + 1,
                                           unpackedParams...,
                                           reinterpret_cast<ArgTypePtr<numArgs-n>>(reinterpret_cast<uintptr_t>(param)));
         }
     };
 
-    template<typename F2, typename Enable = void>
-    struct call_fn_helper
+    template<typename R2, typename... TArgs>
+    static R2 call_impl(TArgs... unpackedParams)
     {
-        template<typename R2, typename... TArgs>
-        static R2 call(F2 fn, TArgs... unpackedParams)
-        {
-            return fn(*unpackedParams...);
-        }
-    };
-
-    template<typename F2>
-    struct call_fn_helper<F2, typename std::enable_if<(std::is_member_function_pointer<F2>::value)>::type>
-    {
-        template<typename R2, typename C, typename... TArgs>
-        static R2 call(F2 fn, C c, TArgs... unpackedParams)
-        {
-            return (((*c)->*fn)(*unpackedParams...));
-        }
-    };
+        return f(*unpackedParams...);
+    }
 
     template<typename R2, typename Enable = void>
     struct return_value_helper
     {
-        using R2NoConst = typename std::remove_const<R2>::type;
-
         template<typename... TArgs>
-        static void call(F fn, void* retVoid, TArgs... unpackedParams)
+        static void call(void* retVoid, TArgs... unpackedParams)
         {
-            using R2Star = typename std::add_pointer<R2NoConst>::type;
+            static_assert(AstTypeHelper::primitive_or_pointer_type<R2>::value,
+                          "return type must be pointer or primitive type");
+            using R2Star = typename std::add_pointer<R2>::type;
             R2Star ret = reinterpret_cast<R2Star>(reinterpret_cast<uintptr_t>(retVoid));
-            new (ret) R2NoConst(call_fn_helper<F>::template call<R2NoConst>(fn, unpackedParams...));
-        }
-    };
-
-    // if the function returns lvalue reference, we need to change it to a pointer
-    //
-    template<typename R2>
-    struct return_value_helper<R2, typename std::enable_if<(std::is_reference<R2>::value)>::type>
-    {
-        static_assert(std::is_lvalue_reference<R2>::value, "function returning rvalue reference is not supported");
-
-        template<typename... TArgs>
-        static void call(F fn, void* retVoid, TArgs... unpackedParams)
-        {
-            using R2StarStar = typename std::add_pointer<typename std::add_pointer<R2>::type>::type;
-            R2StarStar ret = reinterpret_cast<R2StarStar>(reinterpret_cast<uintptr_t>(retVoid));
-            *ret = &(call_fn_helper<F>::template call<R2>(fn, unpackedParams...));
+            new (ret) R2(call_impl<R2>(unpackedParams...));
         }
     };
 
@@ -1098,9 +1067,9 @@ struct interp_call_cpp_fn_helper
     struct return_value_helper<R2, typename std::enable_if<(std::is_same<R2, void>::value)>::type>
     {
         template<typename... TArgs>
-        static void call(F fn, void* /*retVoid*/, TArgs... unpackedParams)
+        static void call(void* /*retVoid*/, TArgs... unpackedParams)
         {
-            call_fn_helper<F>::template call<R2>(fn, unpackedParams...);
+            call_impl<R2>(unpackedParams...);
         }
     };
 
@@ -1108,22 +1077,19 @@ struct interp_call_cpp_fn_helper
     struct build_param_helper<n, typename std::enable_if<(n == 0)>::type>
     {
         template<typename... TArgs>
-        static void call(F fn, void* retVoid, void** /*params*/, TArgs... unpackedParams)
+        static void call(void* retVoid, void** /*params*/, TArgs... unpackedParams)
         {
             static_assert(sizeof...(unpackedParams) == numArgs, "wrong number of arguments");
-            return_value_helper<R>::call(fn, retVoid, unpackedParams...);
+            return_value_helper<R>::call(retVoid, unpackedParams...);
         }
     };
 
-    static void call(F fn, void* retVoid, void** params)
+    static void call(void* retVoid, void** params)
     {
-        build_param_helper<numArgs>::call(fn, retVoid, params);
+        build_param_helper<numArgs>::call(retVoid, params);
     }
 
-    static std::function<void(void*, void**)> get(F fn)
-    {
-        return std::bind(call, fn, std::placeholders::_1, std::placeholders::_2);
-    }
+    static constexpr InterpCallCppFunctionImpl interpFn = call;
 };
 
 }   // namespace AstTypeHelper
