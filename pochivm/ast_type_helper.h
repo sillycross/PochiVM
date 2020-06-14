@@ -1014,6 +1014,22 @@ struct callable_to_std_function_type<std::function<R(Args...)>>
 template<typename... T>
 using tuple_concat_type = decltype(std::tuple_cat(std::declval<T>()...));
 
+// interp_call_cpp_fn_helper<f>::interpFn
+//    Get the interp implementation to call a CPP function.
+//
+//    In LLVM mode, we only use ReflectionHelper::function_wrapper_helper to wrap the CPP function when actually needed
+//    (i.e. when the CPP function actually contains a non-primitive paramater or return value) for performance.
+//    However in interp mode, we always wrap the CPP function for simplicity.
+//
+//    As such, this class assumes that 'f' must be a function generated from ReflectionHelper::function_wrapper_helper,
+//    which implies that 'f' is always a free function with primitive-or-pointer-type parameters/return-value
+//    (having non-primitive or reference-type params/ret, or 'f' being a member function is not possible).
+//
+//    interp_call_cpp_fn_helper<f>::interpFn is a function with fixed prototype void(*)(void* ret, void** params)
+//    'ret' is the address into which the return value of the call will be stored.
+//    'params' is an array of length 'n' where n is # of parameters of 'f'.
+//    params[i] should be a pointer pointing to the value of the i-th parameter of the call.
+//
 template<auto f>
 struct interp_call_cpp_fn_helper
 {
@@ -1034,7 +1050,7 @@ struct interp_call_cpp_fn_helper
         template<typename... TArgs>
         static void call(void* retVoid, void** params, TArgs... unpackedParams)
         {
-            static_assert(AstTypeHelper::primitive_or_pointer_type<ArgType<numArgs-n>>::value,
+            static_assert(AstTypeHelper::primitive_or_pointer_type<typename std::remove_cv<ArgType<numArgs-n>>::type>::value,
                           "parameter type must be pointer or primitive type");
             void* param = *params;
             build_param_helper<n-1>::call(retVoid, params + 1,
@@ -1052,14 +1068,16 @@ struct interp_call_cpp_fn_helper
     template<typename R2, typename Enable = void>
     struct return_value_helper
     {
+        using R2NoConst = typename std::remove_cv<R2>::type;
+
         template<typename... TArgs>
         static void call(void* retVoid, TArgs... unpackedParams)
         {
-            static_assert(AstTypeHelper::primitive_or_pointer_type<R2>::value,
+            static_assert(AstTypeHelper::primitive_or_pointer_type<R2NoConst>::value,
                           "return type must be pointer or primitive type");
-            using R2Star = typename std::add_pointer<R2>::type;
+            using R2Star = typename std::add_pointer<R2NoConst>::type;
             R2Star ret = reinterpret_cast<R2Star>(reinterpret_cast<uintptr_t>(retVoid));
-            new (ret) R2(call_impl<R2>(unpackedParams...));
+            *ret = call_impl<R2>(unpackedParams...);
         }
     };
 

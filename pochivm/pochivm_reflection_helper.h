@@ -54,6 +54,10 @@ struct remove_param_type_ref {
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
+#define F(t) template<> struct remove_param_type_ref<const t> { using type = const t; };
+FOR_EACH_PRIMITIVE_TYPE
+#undef F
+
 // Pointer types are unchanged
 //
 template<typename T>
@@ -66,6 +70,11 @@ struct remove_param_type_ref<T*> {
 template<>
 struct remove_param_type_ref<void> {
     using type = void;
+};
+
+template<>
+struct remove_param_type_ref<const void> {
+    using type = const void;
 };
 
 // Lockdown rvalue-reference parameter
