@@ -92,6 +92,7 @@ pochivm/api_function_proto.h
 pochivm/api_base.h
 pochivm/pochivm_reflection_helper.h
 pochivm/test_sanity.cpp
+test_call_cpp_func.cpp
 test_error_cases.cpp
 test_fibonacci.cpp
 test_find_nth_prime.cpp

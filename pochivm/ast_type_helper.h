@@ -287,7 +287,7 @@ struct CppFunctionMetadata
     // Types of all params and return value
     //
     const TypeId* m_paramTypes;
-    int m_numParams;
+    size_t m_numParams;
     TypeId m_returnType;
     // Whether this function is using StructRet attribute
     //
@@ -1085,8 +1085,9 @@ struct interp_call_cpp_fn_helper
     struct return_value_helper<R2, typename std::enable_if<(std::is_same<R2, void>::value)>::type>
     {
         template<typename... TArgs>
-        static void call(void* /*retVoid*/, TArgs... unpackedParams)
+        static void call(void* DEBUG_ONLY(retVoid), TArgs... unpackedParams)
         {
+            assert(retVoid == nullptr);
             call_impl<R2>(unpackedParams...);
         }
     };

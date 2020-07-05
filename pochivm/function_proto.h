@@ -530,6 +530,8 @@ public:
         , m_params(params)
         , m_isCppFunction(false)
         , m_cppFunctionMd(nullptr)
+        , m_interpFunction(nullptr)
+        , m_interpStoreParamFns()
     { }
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
@@ -539,6 +541,8 @@ public:
         , m_params(params)
         , m_isCppFunction(true)
         , m_cppFunctionMd(cppFunctionMd)
+        , m_interpFunction(nullptr)
+        , m_interpStoreParamFns()
     {
         assert(m_cppFunctionMd != nullptr);
         TestAssert(params.size() == static_cast<size_t>(m_cppFunctionMd->m_numParams));
@@ -552,31 +556,96 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    void InterpImpl(void* out)
+    void InterpImplGeneratedFunction(void* out)
     {
         m_interpFunction->Interp(m_params.data(), out);
+    }
+
+    void InterpImplCppFunction(void* out)
+    {
+        size_t numParams = m_cppFunctionMd->m_numParams;
+        if (m_cppFunctionMd->m_isUsingSret)
+        {
+            numParams++;
+        }
+        void** params = reinterpret_cast<void**>(alloca(numParams * sizeof(void*)));
+        void** curParam = params;
+        if (m_cppFunctionMd->m_isUsingSret)
+        {
+            *curParam = out;
+            curParam++;
+        }
+        for (size_t i = 0; i < m_cppFunctionMd->m_numParams; i++)
+        {
+            void* storePos = alloca(m_cppFunctionMd->m_paramTypes[i].Size());
+            m_interpStoreParamFns[i](storePos, m_params[i]);
+            *curParam = storePos;
+            curParam++;
+        }
+        // If the function is using sret or returns void,
+        // we should never need to write into 'out'. Make it nullptr to catch any bugs.
+        //
+        if (m_cppFunctionMd->m_isUsingSret || m_cppFunctionMd->m_returnType.IsVoid())
+        {
+            out = nullptr;
+        }
+        m_cppFunctionMd->m_interpFn(out /*ret*/, params);
     }
 
     // Validate that all caller types matches corresponding callee types
     //
     bool WARN_UNUSED ValidateSignature()
     {
-        ReleaseAssert(!m_isCppFunction && "unsupported yet");
-        AstFunction* fn = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
-        CHECK_REPORT_ERR(fn != nullptr, "Call to undefined function %s", m_fnName.c_str());
-        CHECK_ERR(fn->CheckParamTypes(m_params));
-        CHECK_REPORT_ERR(fn->GetReturnType() == GetTypeId(),
-                         "Call to function %s: wrong return type, expects %s got %s",
-                         m_fnName.c_str(), fn->GetReturnType().Print().c_str(), GetTypeId().Print().c_str());
+        if (!m_isCppFunction)
+        {
+            AstFunction* fn = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+            CHECK_REPORT_ERR(fn != nullptr, "Call to undefined function %s", m_fnName.c_str());
+            CHECK_ERR(fn->CheckParamTypes(m_params));
+            CHECK_REPORT_ERR(fn->GetReturnType() == GetTypeId(),
+                             "Call to function %s: wrong return type, expects %s got %s",
+                             m_fnName.c_str(), fn->GetReturnType().Print().c_str(), GetTypeId().Print().c_str());
+        }
+        else
+        {
+            // Shouldn't really fail here since the API is generated, but just to be safe..
+            //
+            CHECK_REPORT_ERR(m_params.size() == m_cppFunctionMd->m_numParams,
+                             "Call to function %s: wrong number of parameters, expects %d got %d",
+                             m_cppFunctionMd->m_bitcodeData->m_symbolName, int(m_params.size()), int(m_cppFunctionMd->m_numParams));
+            for (size_t i = 0; i < m_params.size(); i++)
+            {
+                CHECK_REPORT_ERR(m_params[i]->GetTypeId() == m_cppFunctionMd->m_paramTypes[i],
+                                 "Call to function %s: parameter %d has wrong type, expects %s got %s",
+                                 m_cppFunctionMd->m_bitcodeData->m_symbolName, int(i),
+                                 m_cppFunctionMd->m_paramTypes[i].Print().c_str(),
+                                 m_params[i]->GetTypeId().Print().c_str());
+            }
+            CHECK_REPORT_ERR(m_cppFunctionMd->m_returnType == GetTypeId(),
+                             "Call to function %s: wrong return type, expects %s got %s",
+                             m_cppFunctionMd->m_bitcodeData->m_symbolName,
+                             m_cppFunctionMd->m_returnType.Print().c_str(), GetTypeId().Print().c_str());
+        }
         RETURN_TRUE;
     }
 
     virtual void SetupInterpImpl() override
     {
-        ReleaseAssert(!m_isCppFunction && "unsupported yet");
-        m_interpFunction = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
-        TestAssert(m_interpFunction != nullptr);
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImpl);
+        if (!m_isCppFunction)
+        {
+            m_interpFunction = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+            TestAssert(m_interpFunction != nullptr);
+            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplGeneratedFunction);
+        }
+        else
+        {
+            for (size_t i = 0; i < m_cppFunctionMd->m_numParams; i++)
+            {
+                _StoreParamsFn storeParamsFn = reinterpret_cast<_StoreParamsFn>(
+                        internal::AstFunctionInterpStoreParamsSelector(m_cppFunctionMd->m_paramTypes[i]));
+                m_interpStoreParamFns.push_back(storeParamsFn);
+            }
+            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplCppFunction);
+        }
     }
 
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
@@ -594,9 +663,15 @@ private:
     std::vector<AstNodeBase*> m_params;
     bool m_isCppFunction;
     const CppFunctionMetadata* m_cppFunctionMd;
-    // Function to call, only populated in interp mode
+    // Function to call, only populated in interp mode and for non-cpp function
     //
     AstFunction* m_interpFunction;
+    // Interp mode storeParamHelper helper.
+    // Only populated for CPP function!
+    // The non-CPP function's interp mode storeParamHelper belongs to the AstFunction class.
+    //
+    using _StoreParamsFn = void(*)(void*, AstNodeBase*);
+    std::vector<_StoreParamsFn> m_interpStoreParamFns;
 };
 
 class AstReturnStmt : public AstNodeBase
