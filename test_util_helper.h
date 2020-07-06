@@ -46,12 +46,13 @@ namespace {
 
 const char* const x_expected_output_dir = "test_expected_output";
 
-inline std::string GetExpectedOutputFileName()
+inline std::string GetExpectedOutputFileName(const std::string& suffix)
 {
     const char* namePart1 = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
     const char* namePart2 = ::testing::UnitTest::GetInstance()->current_test_info()->name();
     return std::string(x_expected_output_dir) + std::string("/") +
-           std::string(namePart1) + std::string(".") + std::string(namePart2) + ".expected";
+           std::string(namePart1) + std::string(".") + std::string(namePart2) +
+           (suffix == "" ? "" : std::string(".") + suffix) + ".expected";
 }
 
 inline void CreateExpectedOutputFolderIfNeeded()
@@ -118,12 +119,12 @@ inline void NO_RETURN DumpExpectedAndActualAndFail(const std::string& actual, co
 
 // Check the output against the expected output file of this test
 //
-inline void AssertIsExpectedOutput(std::string out)
+inline void AssertIsExpectedOutput(std::string out, std::string suffix = "")
 {
     if (g_is_update_expected_mode)
     {
         CreateExpectedOutputFolderIfNeeded();
-        std::string filename = GetExpectedOutputFileName();
+        std::string filename = GetExpectedOutputFileName(suffix);
         FILE* pFile = fopen(filename.c_str(), "w");
         if (pFile == nullptr)
         {
@@ -136,7 +137,7 @@ inline void AssertIsExpectedOutput(std::string out)
     }
     else
     {
-        std::string filename = GetExpectedOutputFileName();
+        std::string filename = GetExpectedOutputFileName(suffix);
         FILE* pFile = fopen(filename.c_str(), "r");
         if (pFile == nullptr)
         {

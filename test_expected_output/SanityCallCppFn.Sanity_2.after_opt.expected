@@ -1,0 +1,149 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%class.TestClassA = type <{ %"class.std::vector", i32, [4 x i8] }>
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+
+; Function Attrs: uwtable
+declare dso_local void @_ZN10TestClassA7PushVecEi(%class.TestClassA*, i32) local_unnamed_addr #0 align 2
+
+define i64 @testfn(%class.TestClassA* %_param_0, i32 %_param_1) local_unnamed_addr {
+entry:
+  tail call void @_ZN10TestClassA7PushVecEi(%class.TestClassA* %_param_0, i32 %_param_1)
+  %0 = getelementptr inbounds %class.TestClassA, %class.TestClassA* %_param_0, i64 0, i32 0, i32 0, i32 0, i32 0
+  %1 = load i32*, i32** %0, align 8, !tbaa !4
+  %2 = getelementptr inbounds %class.TestClassA, %class.TestClassA* %_param_0, i64 0, i32 0, i32 0, i32 0, i32 1
+  %3 = load i32*, i32** %2, align 8, !tbaa !4
+  %4 = icmp eq i32* %1, %3
+  br i1 %4, label %_ZN10TestClassA12GetVectorSumEv.exit, label %5
+
+5:                                                ; preds = %entry
+  %6 = ptrtoint i32* %1 to i64
+  %7 = getelementptr i32, i32* %3, i64 -1
+  %8 = ptrtoint i32* %7 to i64
+  %9 = sub i64 %8, %6
+  %10 = lshr i64 %9, 2
+  %11 = add nuw nsw i64 %10, 1
+  %12 = icmp ult i64 %9, 12
+  br i1 %12, label %.preheader, label %13
+
+13:                                               ; preds = %5
+  %14 = and i64 %11, 9223372036854775804
+  %15 = getelementptr i32, i32* %1, i64 %14
+  %16 = add nsw i64 %14, -4
+  %17 = lshr exact i64 %16, 2
+  %18 = add nuw nsw i64 %17, 1
+  %19 = and i64 %18, 1
+  %20 = icmp eq i64 %16, 0
+  br i1 %20, label %.loopexit2.i, label %21
+
+21:                                               ; preds = %13
+  %22 = sub nuw nsw i64 %18, %19
+  br label %23
+
+23:                                               ; preds = %23, %21
+  %24 = phi i64 [ 0, %21 ], [ %49, %23 ]
+  %25 = phi <2 x i64> [ zeroinitializer, %21 ], [ %47, %23 ]
+  %26 = phi <2 x i64> [ zeroinitializer, %21 ], [ %48, %23 ]
+  %27 = phi i64 [ %22, %21 ], [ %50, %23 ]
+  %28 = getelementptr i32, i32* %1, i64 %24
+  %29 = bitcast i32* %28 to <2 x i32>*
+  %30 = load <2 x i32>, <2 x i32>* %29, align 4, !tbaa !8
+  %31 = getelementptr i32, i32* %28, i64 2
+  %32 = bitcast i32* %31 to <2 x i32>*
+  %33 = load <2 x i32>, <2 x i32>* %32, align 4, !tbaa !8
+  %34 = sext <2 x i32> %30 to <2 x i64>
+  %35 = sext <2 x i32> %33 to <2 x i64>
+  %36 = add <2 x i64> %25, %34
+  %37 = add <2 x i64> %26, %35
+  %38 = or i64 %24, 4
+  %39 = getelementptr i32, i32* %1, i64 %38
+  %40 = bitcast i32* %39 to <2 x i32>*
+  %41 = load <2 x i32>, <2 x i32>* %40, align 4, !tbaa !8
+  %42 = getelementptr i32, i32* %39, i64 2
+  %43 = bitcast i32* %42 to <2 x i32>*
+  %44 = load <2 x i32>, <2 x i32>* %43, align 4, !tbaa !8
+  %45 = sext <2 x i32> %41 to <2 x i64>
+  %46 = sext <2 x i32> %44 to <2 x i64>
+  %47 = add <2 x i64> %36, %45
+  %48 = add <2 x i64> %37, %46
+  %49 = add i64 %24, 8
+  %50 = add i64 %27, -2
+  %51 = icmp eq i64 %50, 0
+  br i1 %51, label %.loopexit2.i, label %23, !llvm.loop !10
+
+.loopexit2.i:                                     ; preds = %23, %13
+  %52 = phi <2 x i64> [ undef, %13 ], [ %47, %23 ]
+  %53 = phi <2 x i64> [ undef, %13 ], [ %48, %23 ]
+  %54 = phi i64 [ 0, %13 ], [ %49, %23 ]
+  %55 = phi <2 x i64> [ zeroinitializer, %13 ], [ %47, %23 ]
+  %56 = phi <2 x i64> [ zeroinitializer, %13 ], [ %48, %23 ]
+  %57 = icmp eq i64 %19, 0
+  br i1 %57, label %69, label %58
+
+58:                                               ; preds = %.loopexit2.i
+  %59 = getelementptr i32, i32* %1, i64 %54
+  %60 = getelementptr i32, i32* %59, i64 2
+  %61 = bitcast i32* %60 to <2 x i32>*
+  %62 = load <2 x i32>, <2 x i32>* %61, align 4, !tbaa !8
+  %63 = sext <2 x i32> %62 to <2 x i64>
+  %64 = add <2 x i64> %56, %63
+  %65 = bitcast i32* %59 to <2 x i32>*
+  %66 = load <2 x i32>, <2 x i32>* %65, align 4, !tbaa !8
+  %67 = sext <2 x i32> %66 to <2 x i64>
+  %68 = add <2 x i64> %55, %67
+  br label %69
+
+69:                                               ; preds = %58, %.loopexit2.i
+  %70 = phi <2 x i64> [ %52, %.loopexit2.i ], [ %68, %58 ]
+  %71 = phi <2 x i64> [ %53, %.loopexit2.i ], [ %64, %58 ]
+  %72 = add <2 x i64> %71, %70
+  %73 = shufflevector <2 x i64> %72, <2 x i64> undef, <2 x i32> <i32 1, i32 undef>
+  %74 = add <2 x i64> %73, %72
+  %75 = extractelement <2 x i64> %74, i32 0
+  %76 = icmp eq i64 %11, %14
+  br i1 %76, label %_ZN10TestClassA12GetVectorSumEv.exit, label %.preheader
+
+.preheader:                                       ; preds = %69, %5
+  %.ph = phi i64 [ %75, %69 ], [ 0, %5 ]
+  %.ph14 = phi i32* [ %15, %69 ], [ %1, %5 ]
+  br label %77
+
+77:                                               ; preds = %.preheader, %77
+  %78 = phi i64 [ %82, %77 ], [ %.ph, %.preheader ]
+  %79 = phi i32* [ %83, %77 ], [ %.ph14, %.preheader ]
+  %80 = load i32, i32* %79, align 4, !tbaa !8
+  %81 = sext i32 %80 to i64
+  %82 = add nsw i64 %78, %81
+  %83 = getelementptr inbounds i32, i32* %79, i64 1
+  %84 = icmp eq i32* %83, %3
+  br i1 %84, label %_ZN10TestClassA12GetVectorSumEv.exit, label %77, !llvm.loop !12
+
+_ZN10TestClassA12GetVectorSumEv.exit:             ; preds = %77, %entry, %69
+  %85 = phi i64 [ 0, %entry ], [ %75, %69 ], [ %82, %77 ]
+  ret i64 %85
+}
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"any pointer", !6, i64 0}
+!6 = !{!"omnipotent char", !7, i64 0}
+!7 = !{!"Simple C++ TBAA"}
+!8 = !{!9, !9, i64 0}
+!9 = !{!"int", !6, i64 0}
+!10 = distinct !{!10, !11}
+!11 = !{!"llvm.loop.isvectorized", i32 1}
+!12 = distinct !{!12, !13, !11}
+!13 = !{!"llvm.loop.unroll.runtime.disable"}

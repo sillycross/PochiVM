@@ -628,6 +628,17 @@ public:
         RETURN_TRUE;
     }
 
+    bool IsCppFunction() const
+    {
+        return m_isCppFunction;
+    }
+
+    const CppFunctionMetadata* GetCppFunctionMetadata() const
+    {
+        assert(IsCppFunction());
+        return m_cppFunctionMd;
+    }
+
     virtual void SetupInterpImpl() override
     {
         if (!m_isCppFunction)

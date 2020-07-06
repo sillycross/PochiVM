@@ -295,6 +295,9 @@ struct CppFunctionMetadata
     // The interp function interface
     //
     InterpCallCppFunctionImpl m_interpFn;
+    // The unique ordinal, starting from 0
+    //
+    size_t m_functionOrdinal;
 };
 
 namespace AstTypeHelper

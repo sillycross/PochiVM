@@ -598,6 +598,8 @@ static void PrintFnTemplateParams(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
 }
 
+static int g_curUniqueFunctionOrdinal = 0;
+
 static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 {
     fprintf(fp, "{\n");
@@ -734,7 +736,9 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     fprintf(fp, "        %d /*numParams*/,\n", numParams);
     fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
     fprintf(fp, "        %s /*isUsingSret*/,\n", (isUsingSret ? "true" : "false"));
-    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_generator_t::wrapperFn>::interpFn /*interpFn*/\n");
+    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_generator_t::wrapperFn>::interpFn /*interpFn*/,\n");
+    fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
+    g_curUniqueFunctionOrdinal++;
     fprintf(fp, "    };\n");
 
     fprintf(fp, "    return %s<%s>(new AstCallExpr(\n",
@@ -971,109 +975,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         ss << std::quoted(s);
         return ss.str();
     };
-
-    // generate typename map
-    //
-    {
-        std::string filename = generatedFileFolder + "/pochivm_runtime_cpp_types.generated.h";
-        FILE* fp = fopen(filename.c_str(), "w");
-        if (fp == nullptr)
-        {
-            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                    filename.c_str(), errno, strerror(errno));
-            abort();
-        }
-
-        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
-        fprintf(fp, "#pragma once\n");
-        fprintf(fp, "#include \"pochivm/common.h\"\n");
-        fprintf(fp, "#include \"pochivm/pochivm_reflection_helper.h\"\n");
-        fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
-        fprintf(fp, "#include \"pochivm_runtime_library_bitcodes.generated.h\"\n\n");
-        fprintf(fp, "namespace PochiVM {\n\n");
-        fprintf(fp, "namespace AstTypeHelper {\n\n");
-
-        fprintf(fp, "template<typename T>\n");
-        fprintf(fp, "struct cpp_type_ordinal {\n");
-        fprintf(fp, "    static const uint64_t ordinal = %d;\n", static_cast<int>(typeNameMap.size()));
-        fprintf(fp, "};\n\n");
-
-        std::vector<std::string> llvmTypeNames, cppTypeNames;
-        int ordinal = 0;
-        for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
-        {
-            const std::string& llvmTypeName = it->first;
-            const std::string& cppTypeName = it->second;
-            llvmTypeNames.push_back(llvmTypeName);
-            cppTypeNames.push_back(cppTypeName);
-            fprintf(fp, "template<>\n");
-            fprintf(fp, "struct cpp_type_ordinal<%s> {\n", cppTypeName.c_str());
-            fprintf(fp, "    static const uint64_t ordinal = %d;\n", ordinal);
-            fprintf(fp, "};\n\n");
-            ordinal++;
-        }
-
-        fprintf(fp, "const char* const AstCppTypePrintName[%d] = {\n", ordinal + 1);
-        for (const std::string& cppTypeName : cppTypeNames)
-        {
-            fprintf(fp, "    %s,\n", quoteString(cppTypeName).c_str());
-        }
-        fprintf(fp, "    \"(Unknown CPP type)\"\n");
-        fprintf(fp, "};\n\n");
-
-        fprintf(fp, "const char* const AstCppTypeLLVMTypeName[%d] = {\n", ordinal + 1);
-        for (const std::string& llvmTypeName : llvmTypeNames)
-        {
-            fprintf(fp, "    %s,\n", quoteString(llvmTypeName).c_str());
-        }
-        fprintf(fp, "    nullptr\n");
-        fprintf(fp, "};\n\n");
-
-        if (cppTypeNames.size() > 0)
-        {
-            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \\\n");
-            for (size_t i = 0; i < cppTypeNames.size(); i++)
-            {
-                fprintf(fp, "    F(%s) ", cppTypeNames[i].c_str());
-                if (i == cppTypeNames.size() - 1)
-                {
-                    fprintf(fp, "\n\n");
-                }
-                else
-                {
-                    fprintf(fp, "\\\n");
-                }
-            }
-
-            // Just for use in AstTypeLabelEnum
-            // Bothe cppTypeName and llvmTypeName are too wild to directly used as enum label
-            //
-            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \\\n");
-            for (size_t i = 0; i < cppTypeNames.size(); i++)
-            {
-                fprintf(fp, "  , CPP_TYPE_%d ", static_cast<int>(i));
-                if (i == cppTypeNames.size() - 1)
-                {
-                    fprintf(fp, "\n\n");
-                }
-                else
-                {
-                    fprintf(fp, "\\\n");
-                }
-            }
-        }
-        else
-        {
-            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \n\n");
-            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \n\n");
-        }
-
-        fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
-
-        fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
-        fprintf(fp, "\n} // namespace PochiVM\n\n");
-        fclose(fp);
-    }
 
     // generate Ast syntax header
     //
@@ -1454,6 +1355,110 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             }
         }
 
+        fprintf(fp, "\n} // namespace PochiVM\n\n");
+        fclose(fp);
+    }
+
+    // generate typename map
+    //
+    {
+        std::string filename = generatedFileFolder + "/pochivm_runtime_cpp_types.generated.h";
+        FILE* fp = fopen(filename.c_str(), "w");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    filename.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp, "#pragma once\n");
+        fprintf(fp, "#include \"pochivm/common.h\"\n");
+        fprintf(fp, "#include \"pochivm/pochivm_reflection_helper.h\"\n");
+        fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
+        fprintf(fp, "#include \"pochivm_runtime_library_bitcodes.generated.h\"\n\n");
+        fprintf(fp, "namespace PochiVM {\n\n");
+        fprintf(fp, "namespace AstTypeHelper {\n\n");
+
+        fprintf(fp, "template<typename T>\n");
+        fprintf(fp, "struct cpp_type_ordinal {\n");
+        fprintf(fp, "    static const uint64_t ordinal = %d;\n", static_cast<int>(typeNameMap.size()));
+        fprintf(fp, "};\n\n");
+
+        std::vector<std::string> llvmTypeNames, cppTypeNames;
+        int ordinal = 0;
+        for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
+        {
+            const std::string& llvmTypeName = it->first;
+            const std::string& cppTypeName = it->second;
+            llvmTypeNames.push_back(llvmTypeName);
+            cppTypeNames.push_back(cppTypeName);
+            fprintf(fp, "template<>\n");
+            fprintf(fp, "struct cpp_type_ordinal<%s> {\n", cppTypeName.c_str());
+            fprintf(fp, "    static const uint64_t ordinal = %d;\n", ordinal);
+            fprintf(fp, "};\n\n");
+            ordinal++;
+        }
+
+        fprintf(fp, "const char* const AstCppTypePrintName[%d] = {\n", ordinal + 1);
+        for (const std::string& cppTypeName : cppTypeNames)
+        {
+            fprintf(fp, "    %s,\n", quoteString(cppTypeName).c_str());
+        }
+        fprintf(fp, "    \"(Unknown CPP type)\"\n");
+        fprintf(fp, "};\n\n");
+
+        fprintf(fp, "const char* const AstCppTypeLLVMTypeName[%d] = {\n", ordinal + 1);
+        for (const std::string& llvmTypeName : llvmTypeNames)
+        {
+            fprintf(fp, "    %s,\n", quoteString(llvmTypeName).c_str());
+        }
+        fprintf(fp, "    nullptr\n");
+        fprintf(fp, "};\n\n");
+
+        if (cppTypeNames.size() > 0)
+        {
+            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \\\n");
+            for (size_t i = 0; i < cppTypeNames.size(); i++)
+            {
+                fprintf(fp, "    F(%s) ", cppTypeNames[i].c_str());
+                if (i == cppTypeNames.size() - 1)
+                {
+                    fprintf(fp, "\n\n");
+                }
+                else
+                {
+                    fprintf(fp, "\\\n");
+                }
+            }
+
+            // Just for use in AstTypeLabelEnum
+            // Bothe cppTypeName and llvmTypeName are too wild to directly used as enum label
+            //
+            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \\\n");
+            for (size_t i = 0; i < cppTypeNames.size(); i++)
+            {
+                fprintf(fp, "  , CPP_TYPE_%d ", static_cast<int>(i));
+                if (i == cppTypeNames.size() - 1)
+                {
+                    fprintf(fp, "\n\n");
+                }
+                else
+                {
+                    fprintf(fp, "\\\n");
+                }
+            }
+        }
+        else
+        {
+            fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \n\n");
+            fprintf(fp, "#define CPP_CLASS_ENUM_TYPE_LIST \n\n");
+        }
+
+        fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
+        fprintf(fp, "const static int x_num_cpp_functions = %d;\n\n", g_curUniqueFunctionOrdinal);
+
+        fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
         fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }

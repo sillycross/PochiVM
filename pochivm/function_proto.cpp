@@ -1,6 +1,10 @@
 #include "function_proto.h"
 #include "pochivm.hpp"
 
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/IRReader/IRReader.h"
+
 namespace PochiVM
 {
 
@@ -185,14 +189,66 @@ void AstModule::EmitIR()
     //
     thread_llvmContext->m_dummyBlock = BasicBlock::Create(*thread_llvmContext->m_llvmContext, "dummy");
 
-    // First pass: emit all function prototype.
+    // First pass: find all call-cpp-function expressions,
+    // link in the bitcodes containing the implementation and necessary types
+    //
+    {
+        std::vector<bool> alreadyLinkedin;
+        alreadyLinkedin.resize(AstTypeHelper::x_num_cpp_functions, false /*value*/);
+        Linker linker(*m_llvmModule);
+        TraverseAstTreeFn linkinBitcodeFn = [&](AstNodeBase* cur,
+                                                AstNodeBase* /*parent*/,
+                                                const std::function<void(void)>& Recurse)
+        {
+            if (cur->GetAstNodeType() == AstNodeType::AstCallExpr)
+            {
+                AstCallExpr* callExpr = assert_cast<AstCallExpr*>(cur);
+                if (callExpr->IsCppFunction())
+                {
+                    const CppFunctionMetadata* metadata = callExpr->GetCppFunctionMetadata();
+                    assert(metadata->m_functionOrdinal < alreadyLinkedin.size());
+                    if (!alreadyLinkedin[metadata->m_functionOrdinal])
+                    {
+                        alreadyLinkedin[metadata->m_functionOrdinal] = true;
+                        const BitcodeData* bitcode = metadata->m_bitcodeData;
+                        SMDiagnostic llvmErr;
+                        MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bitcode->m_bitcode), bitcode->m_length),
+                                           StringRef(bitcode->m_symbolName));
+                        std::unique_ptr<Module> bitcodeModule = parseIR(mb, llvmErr, *m_llvmContext);
+                        // TODO: handle error
+                        //
+                        ReleaseAssert(bitcodeModule != nullptr);
+                        // linkInModule returns true on error
+                        // TODO: handle error
+                        //
+                        ReleaseAssert(linker.linkInModule(std::move(bitcodeModule)) == false);
+                        // change linkage to available_externally
+                        //
+                        Function* func = m_llvmModule->getFunction(bitcode->m_symbolName);
+                        TestAssert(func != nullptr);
+                        TestAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+                        func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+                    }
+                }
+            }
+            Recurse();
+        };
+        for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
+        {
+            AstFunction* fn = iter->second;
+            fn->TraverseFunctionBody(linkinBitcodeFn);
+        }
+    }
+
+    // Second pass: emit all function prototype.
     //
     for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
     {
         AstFunction* fn = iter->second;
         fn->EmitDefinition();
     }
-    // Second pass: emit all function bodies.
+
+    // Third pass: emit all function bodies.
     //
     for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
     {
@@ -247,18 +303,33 @@ ThreadSafeModule AstModule::GetThreadSafeModule()
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
 {
-    AstFunction* calleeAst = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
-    TestAssertIff(calleeAst == nullptr, thread_llvmContext->m_module->getFunction(m_fnName) == nullptr);
-    TestAssert(calleeAst != nullptr);
-    Function* callee = calleeAst->GetGeneratedPrototype();
-    TestAssert(callee != nullptr && callee == thread_llvmContext->m_module->getFunction(m_fnName));
+    Function* callee = nullptr;
+    AstFunction* calleeAst = nullptr;
+    if (!m_isCppFunction)
+    {
+        calleeAst = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+        TestAssertIff(calleeAst == nullptr, thread_llvmContext->m_module->getFunction(m_fnName) == nullptr);
+        TestAssert(calleeAst != nullptr);
+        callee = calleeAst->GetGeneratedPrototype();
+        TestAssert(callee != nullptr && callee == thread_llvmContext->m_module->getFunction(m_fnName));
+    }
+    else
+    {
+        // TODO: support sret
+        //
+        ReleaseAssert(!m_cppFunctionMd->m_isUsingSret);
+        callee = thread_llvmContext->m_module->getFunction(m_cppFunctionMd->m_bitcodeData->m_symbolName);
+        TestAssert(callee != nullptr);
+    }
     TestAssert(callee->arg_size() == m_params.size());
+    TestAssertImp(m_isCppFunction, m_params.size() == m_cppFunctionMd->m_numParams);
     Value** params = reinterpret_cast<Value**>(alloca(sizeof(Value*) * m_params.size()));
     for (size_t index = 0; index < m_params.size(); index++)
     {
         Value* param = m_params[index]->EmitIR();
         TestAssert(param->getType() == callee->getArg(static_cast<unsigned>(index))->getType());
-        TestAssert(AstTypeHelper::llvm_value_has_type(calleeAst->GetParamType(index), param));
+        TestAssertImp(!m_isCppFunction, AstTypeHelper::llvm_value_has_type(calleeAst->GetParamType(index), param));
+        TestAssertImp(m_isCppFunction, AstTypeHelper::llvm_value_has_type(m_cppFunctionMd->m_paramTypes[index], param));
         params[index] = param;
     }
     Value* ret = thread_llvmContext->m_builder

@@ -11,8 +11,8 @@ namespace AstTypeHelper
 
 using namespace llvm;
 
-// Type* llvm_type_of(TypeId typeId, LLVMContext& C)
-// This function returns the llvm type corresponding to CPP type T
+// Type* llvm_type_of(TypeId typeId)
+// This function returns the llvm type corresponding to typeId
 //
 inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
 {
@@ -53,26 +53,16 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
             __builtin_unreachable();
         }
     }
+    else if (typeId.IsCppClassType())
+    {
+        StructType* stype = thread_llvmContext->m_module->getTypeByName(typeId.GetCppTypeLLVMTypeName());
+        TestAssert(stype != nullptr);
+        return stype;
+    }
     else if (typeId.IsPointerType())
     {
-        // If after removing all pointers of T, the type is a primitive type (e.g. int****),
-        // the LLVM type should have identical type.
-        // Otherwise, LLVM type should be 'void' adding the same number of pointers.
-        // (e.g. SomeCppClass**** becomes void****)
-        //
         TypeId pointerElementType = typeId.RemovePointer();
-        if (pointerElementType.IsPointerType() || pointerElementType.IsPrimitiveType())
-        {
-            // Either 'foo**' or 'primitive*', recurse.
-            //
-            return llvm_type_of(pointerElementType)->getPointerTo();
-        }
-        else
-        {
-            // 'non-primitive*' case: llvm type should be void*
-            //
-            return Type::getVoidTy(C)->getPointerTo();
-        }
+        return llvm_type_of(pointerElementType)->getPointerTo();
     }
     TestAssert(false);
     __builtin_unreachable();

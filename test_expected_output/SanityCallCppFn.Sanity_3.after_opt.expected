@@ -1,0 +1,27 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%"class.std::__cxx11::basic_string" = type { %"struct.std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider", i64, %union.anon }
+%"struct.std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
+%union.anon = type { i64, [8 x i8] }
+
+; Function Attrs: uwtable
+declare dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive2NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFiS7_EvE4callIiJLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"*) local_unnamed_addr #0 align 2
+
+define i32 @testfn(%"class.std::__cxx11::basic_string"* %_param_0) local_unnamed_addr {
+entry:
+  %0 = tail call i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive2NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFiS7_EvE4callIiJLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"* %_param_0)
+  ret i32 %0
+}
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
