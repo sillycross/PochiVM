@@ -70,10 +70,12 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
     {
         TypeId pointerElementType = typeId.RemovePointer();
         // Special case:
-        // We store a bool value in i8. This is required to maintain compatibility with C++ ABI.
-        // So, type for 'bool' will be i1. But type for 'bool*' will be 'i8*', 'bool**' be 'i8**', etc
+        // (1) We store a bool value in i8. This is required to maintain compatibility with C++ ABI.
+        //     So, type for 'bool' will be i1. But type for 'bool*' will be 'i8*', 'bool**' be 'i8**', etc
+        // (2) void* has type i8* instead of void* in LLVM. (void** is i8**, etc).
+        //     This is also required to maintain compatibility with C++ ABI.
         //
-        if (pointerElementType.IsBool())
+        if (pointerElementType.IsBool() || pointerElementType.IsVoid())
         {
             return llvm_type_of(TypeId::Get<uint8_t>())->getPointerTo();
         }

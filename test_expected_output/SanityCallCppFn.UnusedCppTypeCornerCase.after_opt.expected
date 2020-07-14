@@ -4,10 +4,10 @@ source_filename = "test"
 %"class.std::__cxx11::basic_string" = type opaque
 
 ; Function Attrs: norecurse nounwind readnone
-define void* @testfn(%"class.std::__cxx11::basic_string"* readnone %_param_0) local_unnamed_addr #0 {
+define i8* @testfn(%"class.std::__cxx11::basic_string"* readnone %_param_0) local_unnamed_addr #0 {
 entry:
-  %0 = bitcast %"class.std::__cxx11::basic_string"* %_param_0 to void*
-  ret void* %0
+  %0 = bitcast %"class.std::__cxx11::basic_string"* %_param_0 to i8*
+  ret i8* %0
 }
 
 attributes #0 = { norecurse nounwind readnone }

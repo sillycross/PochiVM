@@ -167,11 +167,10 @@ inline void* VoidStarParamTest1(void* a, void** b)
     return reinterpret_cast<uint64_t*>(a) + 1;
 }
 
-inline void* VoidStarParamTest2(void*& a, void** b)
+inline void VoidStarParamTest2(void*& a, void** b)
 {
     *b = a;
     a = b[1];
-    return reinterpret_cast<uint64_t*>(a) + 1;
 }
 
 }

@@ -1,36 +1,36 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define i64 @compute_linked_list_sum(void* %_p_0) {
+define i64 @compute_linked_list_sum(i8* %_p_0) {
 entry:
-  %p_0 = alloca void*
+  %p_0 = alloca i8*
   %sum_1 = alloca i64
   br label %body
 
 body:                                             ; preds = %entry
-  store void* %_p_0, void** %p_0
+  store i8* %_p_0, i8** %p_0
   store i64 0, i64* %sum_1
   br label %whileloop_head0
 
 whileloop_head0:                                  ; preds = %whileloop_body0, %body
-  %0 = load void*, void** %p_0
-  %1 = ptrtoint void* %0 to i64
+  %0 = load i8*, i8** %p_0
+  %1 = ptrtoint i8* %0 to i64
   %2 = icmp ne i64 %1, 0
   br i1 %2, label %whileloop_body0, label %after_whileloop0
 
 whileloop_body0:                                  ; preds = %whileloop_head0
   %3 = load i64, i64* %sum_1
-  %4 = load void*, void** %p_0
-  %5 = bitcast void* %4 to i64*
+  %4 = load i8*, i8** %p_0
+  %5 = bitcast i8* %4 to i64*
   %6 = load i64, i64* %5
   %7 = add i64 %3, %6
   store i64 %7, i64* %sum_1
-  %8 = load void*, void** %p_0
-  %9 = ptrtoint void* %8 to i64
+  %8 = load i8*, i8** %p_0
+  %9 = ptrtoint i8* %8 to i64
   %10 = add i64 %9, 8
-  %11 = inttoptr i64 %10 to void**
-  %12 = load void*, void** %11
-  store void* %12, void** %p_0
+  %11 = inttoptr i64 %10 to i8**
+  %12 = load i8*, i8** %11
+  store i8* %12, i8** %p_0
   br label %whileloop_head0
 
 after_whileloop0:                                 ; preds = %whileloop_head0
