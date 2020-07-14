@@ -69,7 +69,18 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
     else if (typeId.IsPointerType())
     {
         TypeId pointerElementType = typeId.RemovePointer();
-        return llvm_type_of(pointerElementType)->getPointerTo();
+        // Special case:
+        // We store a bool value in i8. This is required to maintain compatibility with C++ ABI.
+        // So, type for 'bool' will be i1. But type for 'bool*' will be 'i8*', 'bool**' be 'i8**', etc
+        //
+        if (pointerElementType.IsBool())
+        {
+            return llvm_type_of(TypeId::Get<uint8_t>())->getPointerTo();
+        }
+        else
+        {
+            return llvm_type_of(pointerElementType)->getPointerTo();
+        }
     }
     TestAssert(false);
     __builtin_unreachable();
@@ -92,6 +103,52 @@ inline bool WARN_UNUSED llvm_value_has_type(TypeId typeId, Value* value)
 {
     assert(value != nullptr);
     return llvm_type_has_type(typeId, value->getType());
+}
+
+// Create a load instruction, handling the 'bool*' special case.
+//
+inline Value* WARN_UNUSED create_load_helper(TypeId resultType, Value* src)
+{
+    TestAssert(llvm_value_has_type(resultType.AddPointer(), src));
+    if (resultType.IsType<bool>())
+    {
+        // bool itself has type i1, but is stored in i8*.
+        // We need to trunc it to i1 after loading it.
+        //
+        assert(llvm_value_has_type(TypeId::Get<uint8_t*>(), src));
+        Value* i8val = thread_llvmContext->m_builder->CreateLoad(src);
+        assert(llvm_value_has_type(TypeId::Get<uint8_t>(), i8val));
+        Value* i1val = thread_llvmContext->m_builder->CreateTrunc(i8val, AstTypeHelper::llvm_type_of(TypeId::Get<bool>()));
+        assert(llvm_value_has_type(TypeId::Get<bool>(), i1val));
+        return i1val;
+    }
+    else
+    {
+        Value* inst = thread_llvmContext->m_builder->CreateLoad(src);
+        return inst;
+    }
+}
+
+// Create a store instruction, handling the 'bool*' special case.
+//
+inline void create_store_helper(TypeId srcType, Value* src, Value* dst)
+{
+    TestAssert(llvm_value_has_type(srcType, src));
+    TestAssert(llvm_value_has_type(srcType.AddPointer(), dst));
+    if (srcType.IsBool())
+    {
+        // bool itself has type i1, but is stored in i8*. We need to zeroext it.
+        //
+        assert(llvm_value_has_type(TypeId::Get<bool>(), src));
+        Value* zext = thread_llvmContext->m_builder->CreateZExt(src, AstTypeHelper::llvm_type_of(TypeId::Get<uint8_t>()));
+        assert(llvm_value_has_type(TypeId::Get<uint8_t>(), zext));
+        assert(llvm_value_has_type(TypeId::Get<uint8_t*>(), dst));
+        thread_llvmContext->m_builder->CreateStore(zext, dst);
+    }
+    else
+    {
+        thread_llvmContext->m_builder->CreateStore(src, dst);
+    }
 }
 
 }   // namespace AstTypeHelper

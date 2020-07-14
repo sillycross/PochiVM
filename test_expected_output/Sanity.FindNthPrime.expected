@@ -6,7 +6,7 @@ entry:
   %n_0 = alloca i32
   %numPrimesFound_2 = alloca i32
   %valToTest_3 = alloca i32
-  %isPrime_4 = alloca i1
+  %isPrime_4 = alloca i8
   %i_1 = alloca i32
   br label %body
 
@@ -26,7 +26,7 @@ whileloop_body0:                                  ; preds = %whileloop_head0
   %3 = load i32, i32* %valToTest_3
   %4 = add i32 %3, 1
   store i32 %4, i32* %valToTest_3
-  store i1 true, i1* %isPrime_4
+  store i8 1, i8* %isPrime_4
   store i32 2, i32* %i_1
   br label %forloop_head0
 
@@ -46,7 +46,7 @@ forloop_body0:                                    ; preds = %forloop_head0
   br i1 %if0, label %then0, label %after_if0
 
 then0:                                            ; preds = %forloop_body0
-  store i1 false, i1* %isPrime_4
+  store i8 0, i8* %isPrime_4
   br label %after_forloop0
 
 after_if0:                                        ; preds = %forloop_body0
@@ -59,19 +59,20 @@ forloop_step0:                                    ; preds = %after_if0
   br label %forloop_head0
 
 after_forloop0:                                   ; preds = %then0, %forloop_head0
-  %if1 = load i1, i1* %isPrime_4
+  %15 = load i8, i8* %isPrime_4
+  %if1 = trunc i8 %15 to i1
   br i1 %if1, label %then1, label %after_if1
 
 then1:                                            ; preds = %after_forloop0
-  %15 = load i32, i32* %numPrimesFound_2
-  %16 = add i32 %15, 1
-  store i32 %16, i32* %numPrimesFound_2
+  %16 = load i32, i32* %numPrimesFound_2
+  %17 = add i32 %16, 1
+  store i32 %17, i32* %numPrimesFound_2
   br label %after_if1
 
 after_if1:                                        ; preds = %then1, %after_forloop0
   br label %whileloop_head0
 
 after_whileloop0:                                 ; preds = %whileloop_head0
-  %17 = load i32, i32* %valToTest_3
-  ret i32 %17
+  %18 = load i32, i32* %valToTest_3
+  ret i32 %18
 }

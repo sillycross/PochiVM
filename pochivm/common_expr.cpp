@@ -1,5 +1,6 @@
 #include "common_expr.h"
 #include "error_context.h"
+#include "ast_type_helper.hpp"
 #include "pochivm.hpp"
 
 namespace PochiVM
@@ -10,8 +11,7 @@ using namespace llvm;
 Value* WARN_UNUSED AstDereferenceExpr::EmitIRImpl()
 {
     Value* op = m_operand->EmitIR();
-    Value* inst = thread_llvmContext->m_builder->CreateLoad(op);
-    return inst;
+    return AstTypeHelper::create_load_helper(GetTypeId(), op);
 }
 
 Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
@@ -70,7 +70,7 @@ Value* WARN_UNUSED AstAssignExpr::EmitIRImpl()
 {
     Value* src = m_src->EmitIR();
     Value* dst = m_dst->EmitIR();
-    thread_llvmContext->m_builder->CreateStore(src, dst);
+    AstTypeHelper::create_store_helper(m_src->GetTypeId(), src, dst);
     return nullptr;
 }
 

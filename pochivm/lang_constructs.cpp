@@ -21,8 +21,11 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     //
     auto savedIp = thread_llvmContext->m_builder->saveIP();
     thread_llvmContext->m_builder->SetInsertPoint(thread_llvmContext->GetCurFunction()->GetEntryBlock());
+    assert(GetTypeId().IsPointerType());
+    Type* llvmType = AstTypeHelper::llvm_type_of(GetTypeId());
+    assert(llvmType->isPointerTy());
     m_llvmValue = thread_llvmContext->m_builder->CreateAlloca(
-                      AstTypeHelper::llvm_type_of(GetTypeId().RemovePointer()),
+                      llvmType->getPointerElementType(),
                       nullptr /*ArraySize*/,
                       Twine(m_varname).concat("_").concat(Twine(m_varnameSuffix)) /*name*/);
     thread_llvmContext->m_builder->restoreIP(savedIp);
@@ -45,8 +48,7 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
 Value* WARN_UNUSED AstDereferenceVariableExpr::EmitIRImpl()
 {
     Value* op = m_operand->EmitIR();
-    Value* inst = thread_llvmContext->m_builder->CreateLoad(op);
-    return inst;
+    return AstTypeHelper::create_load_helper(GetTypeId(), op);
 }
 
 Value* WARN_UNUSED AstBlock::EmitIRImpl()

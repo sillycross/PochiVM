@@ -1,17 +1,20 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define void @store_bool(i1* %_param_0, i1 %_param_1) {
+define void @store_bool(i8* %_param_0, i1 %_param_1) {
 entry:
-  %param_0 = alloca i1*
-  %param_1 = alloca i1
+  %param_0 = alloca i8*
+  %param_1 = alloca i8
   br label %body
 
 body:                                             ; preds = %entry
-  store i1* %_param_0, i1** %param_0
-  store i1 %_param_1, i1* %param_1
-  %0 = load i1, i1* %param_1
-  %1 = load i1*, i1** %param_0
-  store i1 %0, i1* %1
+  store i8* %_param_0, i8** %param_0
+  %0 = zext i1 %_param_1 to i8
+  store i8 %0, i8* %param_1
+  %1 = load i8, i8* %param_1
+  %2 = trunc i8 %1 to i1
+  %3 = load i8*, i8** %param_0
+  %4 = zext i1 %2 to i8
+  store i8 %4, i8* %3
   ret void
 }

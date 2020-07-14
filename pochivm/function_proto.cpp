@@ -107,7 +107,8 @@ void AstFunction::EmitIR()
         size_t index = 0;
         for (auto &arg : m_generatedPrototype->args())
         {
-            thread_llvmContext->m_builder->CreateStore(&arg, m_params[index]->EmitIR());
+            Value* dst = m_params[index]->EmitIR();
+            AstTypeHelper::create_store_helper(m_params[index]->GetTypeId().RemovePointer(), &arg, dst);
             index++;
         }
     }
