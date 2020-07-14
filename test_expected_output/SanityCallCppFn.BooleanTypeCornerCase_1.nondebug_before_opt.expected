@@ -1,0 +1,61 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: inlinehint nounwind uwtable
+define available_externally dso_local zeroext i1 @_ZN15TestCornerCases14BoolParamTest1EbPbPS0_(i1 zeroext %0, i8* %1, i8** %2) #0 {
+  store i8 1, i8* %1, align 1, !tbaa !4
+  %4 = load i8*, i8** %2, align 8, !tbaa !8
+  %5 = load i8, i8* %4, align 1, !tbaa !4, !range !10
+  %6 = getelementptr inbounds i8, i8* %1, i64 1
+  store i8 %5, i8* %6, align 1, !tbaa !4
+  %7 = getelementptr inbounds i8, i8* %1, i64 2
+  %8 = zext i1 %0 to i8
+  store i8 %8, i8* %7, align 1, !tbaa !4
+  %9 = getelementptr inbounds i8, i8* %4, i64 1
+  %10 = load i8, i8* %9, align 1, !tbaa !4, !range !10
+  %11 = icmp ne i8 %10, 0
+  ret i1 %11
+}
+
+define zeroext i1 @testfn(i32 %_param_0, i8* %_param_1, i8** %_param_2) {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca i8*
+  %param_2 = alloca i8**
+  %var_3 = alloca i8
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store i8* %_param_1, i8** %param_1
+  store i8** %_param_2, i8*** %param_2
+  %0 = load i32, i32* %param_0
+  %1 = icmp eq i32 %0, 233
+  %2 = zext i1 %1 to i8
+  store i8 %2, i8* %var_3
+  %3 = load i8, i8* %var_3
+  %4 = trunc i8 %3 to i1
+  %5 = load i8*, i8** %param_1
+  %6 = load i8**, i8*** %param_2
+  %7 = call i1 @_ZN15TestCornerCases14BoolParamTest1EbPbPS0_(i1 %4, i8* %5, i8** %6)
+  ret i1 %7
+}
+
+attributes #0 = { inlinehint nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"bool", !6, i64 0}
+!6 = !{!"omnipotent char", !7, i64 0}
+!7 = !{!"Simple C++ TBAA"}
+!8 = !{!9, !9, i64 0}
+!9 = !{!"any pointer", !6, i64 0}
+!10 = !{i8 0, i8 2}

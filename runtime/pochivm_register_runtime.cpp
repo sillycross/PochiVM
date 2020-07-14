@@ -106,6 +106,11 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&FreeFnRecursive>();
     RegisterFreeFn<&FreeFnRecursive2>();
     RegisterFreeFn<&FreeFnRecursive3>();
+
+    RegisterFreeFn<&TestCornerCases::BoolParamTest1>();
+    RegisterFreeFn<&TestCornerCases::BoolParamTest2>();
+    RegisterFreeFn<&TestCornerCases::VoidStarParamTest1>();
+    RegisterFreeFn<&TestCornerCases::VoidStarParamTest2>();
 }
 
 // DO NOT MODIFY

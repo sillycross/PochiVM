@@ -1,0 +1,99 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN15TestCornerCases14BoolParamTest2ERbPPbS2_(i8* dereferenceable(1) %0, i8** %1, i8** %2) #0 {
+  %4 = alloca i8*, align 8
+  %5 = alloca i8**, align 8
+  %6 = alloca i8**, align 8
+  store i8* %0, i8** %4, align 8
+  store i8** %1, i8*** %5, align 8
+  store i8** %2, i8*** %6, align 8
+  %7 = load i8*, i8** %4, align 8
+  %8 = load i8, i8* %7, align 1
+  %9 = trunc i8 %8 to i1
+  br i1 %9, label %10, label %18
+
+10:                                               ; preds = %3
+  %11 = load i8*, i8** %4, align 8
+  %12 = load i8, i8* %11, align 1
+  %13 = trunc i8 %12 to i1
+  %14 = load i8**, i8*** %5, align 8
+  %15 = load i8*, i8** %14, align 8
+  %16 = getelementptr inbounds i8, i8* %15, i64 0
+  %17 = zext i1 %13 to i8
+  store i8 %17, i8* %16, align 1
+  br label %28
+
+18:                                               ; preds = %3
+  %19 = load i8**, i8*** %6, align 8
+  %20 = load i8*, i8** %19, align 8
+  %21 = getelementptr inbounds i8, i8* %20, i64 1
+  %22 = load i8, i8* %21, align 1
+  %23 = trunc i8 %22 to i1
+  %24 = load i8**, i8*** %5, align 8
+  %25 = load i8*, i8** %24, align 8
+  %26 = getelementptr inbounds i8, i8* %25, i64 0
+  %27 = zext i1 %23 to i8
+  store i8 %27, i8* %26, align 1
+  br label %28
+
+28:                                               ; preds = %18, %10
+  %29 = load i8**, i8*** %5, align 8
+  %30 = load i8*, i8** %29, align 8
+  %31 = getelementptr inbounds i8, i8* %30, i64 1
+  %32 = load i8, i8* %31, align 1
+  %33 = trunc i8 %32 to i1
+  %34 = load i8*, i8** %4, align 8
+  %35 = zext i1 %33 to i8
+  store i8 %35, i8* %34, align 1
+  %36 = load i8**, i8*** %6, align 8
+  %37 = load i8*, i8** %36, align 8
+  %38 = load i8**, i8*** %5, align 8
+  store i8* %37, i8** %38, align 8
+  %39 = load i8**, i8*** %6, align 8
+  %40 = load i8*, i8** %39, align 8
+  %41 = getelementptr inbounds i8, i8* %40, i64 2
+  store i8 1, i8* %41, align 1
+  %42 = load i8**, i8*** %6, align 8
+  %43 = load i8*, i8** %42, align 8
+  %44 = getelementptr inbounds i8, i8* %43, i64 3
+  store i8 0, i8* %44, align 1
+  ret void
+}
+
+define zeroext i1 @testfn(i32 %_param_0, i8** %_param_1, i8** %_param_2) {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca i8**
+  %param_2 = alloca i8**
+  %var_3 = alloca i8
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store i8** %_param_1, i8*** %param_1
+  store i8** %_param_2, i8*** %param_2
+  %0 = load i32, i32* %param_0
+  %1 = icmp eq i32 %0, 233
+  %2 = zext i1 %1 to i8
+  store i8 %2, i8* %var_3
+  %3 = load i8**, i8*** %param_1
+  %4 = load i8**, i8*** %param_2
+  call void @_ZN15TestCornerCases14BoolParamTest2ERbPPbS2_(i8* %var_3, i8** %3, i8** %4)
+  %5 = load i8, i8* %var_3
+  %6 = trunc i8 %5 to i1
+  ret i1 %6
+}
+
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

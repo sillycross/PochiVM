@@ -125,3 +125,53 @@ inline std::string FreeFunctionConcatStr(TestClassA* a, const std::string& b)
 {
     return a->GetStringY() + "_freefnConcatStr_" + b;
 }
+
+namespace TestCornerCases
+{
+
+inline bool BoolParamTest1(bool a, bool* b, bool** c)
+{
+    b[0] = true;
+    if (a)
+    {
+        b[1] = (*c)[0];
+        b[2] = true;
+    }
+    else
+    {
+        b[1] = (*c)[0];
+        b[2] = false;
+    }
+    return (*c)[1];
+}
+
+inline void BoolParamTest2(bool& a, bool** b, bool** c)
+{
+    if (a)
+    {
+        (*b)[0] = a;
+    }
+    else
+    {
+        (*b)[0] = (*c)[1];
+    }
+    a = (*b)[1];
+    *b = *c;
+    (*c)[2] = true;
+    (*c)[3] = false;
+}
+
+inline void* VoidStarParamTest1(void* a, void** b)
+{
+    *b = a;
+    return reinterpret_cast<uint64_t*>(a) + 1;
+}
+
+inline void* VoidStarParamTest2(void*& a, void** b)
+{
+    *b = a;
+    a = b[1];
+    return reinterpret_cast<uint64_t*>(a) + 1;
+}
+
+}

@@ -673,7 +673,7 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
     else
     {
-        fprintf(fp, "&%s::%s", info.m_prefix.c_str(), info.m_functionName.c_str());
+        fprintf(fp, "&::%s::%s", info.m_prefix.c_str(), info.m_functionName.c_str());
     }
     if (info.m_templateParams.size() > 0)
     {

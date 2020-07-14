@@ -109,6 +109,7 @@ inline bool WARN_UNUSED llvm_value_has_type(TypeId typeId, Value* value)
 //
 inline Value* WARN_UNUSED create_load_helper(TypeId resultType, Value* src)
 {
+    TestAssert(!resultType.IsVoid());
     TestAssert(llvm_value_has_type(resultType.AddPointer(), src));
     if (resultType.IsType<bool>())
     {
@@ -133,6 +134,7 @@ inline Value* WARN_UNUSED create_load_helper(TypeId resultType, Value* src)
 //
 inline void create_store_helper(TypeId srcType, Value* src, Value* dst)
 {
+    TestAssert(!srcType.IsVoid());
     TestAssert(llvm_value_has_type(srcType, src));
     TestAssert(llvm_value_has_type(srcType.AddPointer(), dst));
     if (srcType.IsBool())
