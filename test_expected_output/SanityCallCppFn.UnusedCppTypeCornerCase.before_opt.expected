@@ -1,0 +1,16 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+%"class.std::__cxx11::basic_string" = type opaque
+
+define void* @testfn(%"class.std::__cxx11::basic_string"* %_param_0) {
+entry:
+  %param_0 = alloca %"class.std::__cxx11::basic_string"*
+  br label %body
+
+body:                                             ; preds = %entry
+  store %"class.std::__cxx11::basic_string"* %_param_0, %"class.std::__cxx11::basic_string"** %param_0
+  %0 = load %"class.std::__cxx11::basic_string"*, %"class.std::__cxx11::basic_string"** %param_0
+  %1 = bitcast %"class.std::__cxx11::basic_string"* %0 to void*
+  ret void* %1
+}

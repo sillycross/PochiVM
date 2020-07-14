@@ -56,7 +56,14 @@ inline Type* WARN_UNUSED llvm_type_of(TypeId typeId)
     else if (typeId.IsCppClassType())
     {
         StructType* stype = thread_llvmContext->m_module->getTypeByName(typeId.GetCppTypeLLVMTypeName());
-        TestAssert(stype != nullptr);
+        if (stype == nullptr)
+        {
+            // We have imported all CPP types which definitions are needed.
+            // If it is not imported, its definition is never used, so an opaque type is enough.
+            //
+            stype = StructType::create(C, typeId.GetCppTypeLLVMTypeName());
+            TestAssert(stype != nullptr);
+        }
         return stype;
     }
     else if (typeId.IsPointerType())
