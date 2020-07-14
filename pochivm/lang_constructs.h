@@ -99,55 +99,6 @@ private:
     uint32_t m_interpOffset;
 };
 
-class AstDeclareVariable : public AstNodeBase
-{
-public:
-    AstDeclareVariable(AstVariable* variable)
-        : AstNodeBase(TypeId::Get<void>())
-        , m_assignExpr(nullptr)
-        , m_variable(variable)
-    { }
-
-    AstDeclareVariable(AstVariable* variable, AstAssignExpr* assignExpr)
-        : AstNodeBase(TypeId::Get<void>())
-        , m_assignExpr(assignExpr)
-        , m_variable(variable)
-    {
-        TestAssert(m_assignExpr->GetValueType().AddPointer() == m_variable->GetTypeId());
-        TestAssert(assert_cast<AstVariable*>(m_assignExpr->GetDst()) == m_variable);
-    }
-
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
-
-    void InterpImpl(void* /*out*/)
-    {
-        if (m_assignExpr != nullptr)
-        {
-            m_assignExpr->Interp(nullptr /*out*/);
-        }
-    }
-
-    virtual void SetupInterpImpl() override
-    {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
-    }
-
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
-    {
-        if (m_assignExpr != nullptr) { fn(m_assignExpr); }
-        fn(m_variable);
-    }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDeclareVariable; }
-
-    // An assign statement for primitive type variable initialization.
-    // nullptr if no initial value.
-    // TODO: support constructor
-    //
-    AstAssignExpr* m_assignExpr;
-    AstVariable* m_variable;
-};
-
 // Functionality is identical to AstDereferenceExpr, except that
 // (1) This works only directly on an AstVariable
 // (2) This node may be reused in AST tree

@@ -32,19 +32,6 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     return m_llvmValue;
 }
 
-Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
-{
-    // If there is an initial value, alloc the var and assign it. Otherwise this is a no-op,
-    // the variable will be automatically alloca'ed later when it is first used later.
-    //
-    if (m_assignExpr != nullptr)
-    {
-        std::ignore = m_variable->EmitIR();
-        std::ignore = m_assignExpr->EmitIR();
-    }
-    return nullptr;
-}
-
 Value* WARN_UNUSED AstDereferenceVariableExpr::EmitIRImpl()
 {
     Value* op = m_operand->EmitIR();
