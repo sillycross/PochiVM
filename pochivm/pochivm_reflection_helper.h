@@ -393,7 +393,8 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value
                               && !std::is_reference<OutType<k>>::value, "wrong specialization");
 
-        static OutType<k>& get(InType<k> v)
+        using type = OutType<k>&;
+        static type get(InType<k> v)
         {
             return *v;
         }
@@ -410,7 +411,8 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value,
                       "InType should be the pointer type");
 
-        static OutType<k> get(InType<k> v)
+        using type = OutType<k>;
+        static type get(InType<k> v)
         {
             return *v;
         }
@@ -424,14 +426,15 @@ private:
     {
         static_assert(std::is_same<InType<k>, OutType<k>>::value, "wrong specialization");
 
-        static OutType<k> get(InType<k> v)
+        using type = OutType<k>;
+        static type get(InType<k> v)
         {
             return v;
         }
     };
 
     template<int k, typename T>
-    static OutType<k> convert_param(T input)
+    static typename convert_param_internal<k>::type convert_param(T input)
     {
         return convert_param_internal<k>::get(std::get<k>(input));
     }

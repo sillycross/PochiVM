@@ -54,3 +54,5 @@ TestLargeClass& FreeFnTestLargeClass4(TestLargeClass a, TestLargeClass& b, TestL
     b.m_val3 -= c.m_val3;
     return b;
 }
+
+int TestNonTrivialCopyConstructor::counter = 0;

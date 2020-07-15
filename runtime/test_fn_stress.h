@@ -291,3 +291,32 @@ public:
 
     int m_value;
 };
+
+struct TestNonTrivialCopyConstructor
+{
+    static int counter;
+
+    TestNonTrivialCopyConstructor(int x)
+        : value(x)
+    { }
+
+    TestNonTrivialCopyConstructor(const TestNonTrivialCopyConstructor& other)
+    {
+        counter++;
+        value = other.value;
+    }
+
+    TestNonTrivialCopyConstructor& operator=(const TestNonTrivialCopyConstructor& other)
+    {
+        counter++;
+        value = other.value;
+        return (*this);
+    }
+
+    static int Fn(TestNonTrivialCopyConstructor h)
+    {
+        return h.value;
+    }
+
+    int value;
+};

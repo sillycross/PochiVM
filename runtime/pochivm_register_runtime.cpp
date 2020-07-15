@@ -114,6 +114,8 @@ static void RegisterRuntimeLibrary()
 
     RegisterStaticMemberFn<&TestNonTrivialConstructor::Create>();
     RegisterMemberFn<&TestNonTrivialConstructor::GetValue>();
+
+    RegisterStaticMemberFn<&TestNonTrivialCopyConstructor::Fn>();
 }
 
 // DO NOT MODIFY

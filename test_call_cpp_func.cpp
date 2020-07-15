@@ -773,3 +773,75 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
         ReleaseAssert(jitFn(234) == false);
     }
 }
+
+TEST(SanityCallCppFn, NonTrivialCopyConstructor)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<int(TestNonTrivialCopyConstructor*)>;
+    {
+        auto [fn, param] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(Variable<TestNonTrivialCopyConstructor>::Fn(param.Deref()))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        TestNonTrivialCopyConstructor::counter = 0;
+        TestNonTrivialCopyConstructor x(5);
+        ReleaseAssert(interpFn(&x) == 5);
+        ReleaseAssert(TestNonTrivialCopyConstructor::counter == 1);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        TestNonTrivialCopyConstructor::counter = 0;
+        TestNonTrivialCopyConstructor x(5);
+        ReleaseAssert(jitFn(&x) == 5);
+        ReleaseAssert(TestNonTrivialCopyConstructor::counter == 1);
+    }
+}

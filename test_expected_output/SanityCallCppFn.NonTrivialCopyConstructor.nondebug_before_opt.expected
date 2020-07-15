@@ -1,0 +1,48 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%struct.TestNonTrivialCopyConstructor = type { i32 }
+
+@_ZN29TestNonTrivialCopyConstructor7counterE = external dso_local local_unnamed_addr global i32, align 4
+
+; Function Attrs: uwtable
+define available_externally dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN29TestNonTrivialCopyConstructor2FnES2_EEE15call_fn_wrapperIivE4callIJPS2_EEEiDpT_(%struct.TestNonTrivialCopyConstructor* %0) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %2 = load i32, i32* @_ZN29TestNonTrivialCopyConstructor7counterE, align 4, !tbaa !4
+  %3 = add nsw i32 %2, 1
+  store i32 %3, i32* @_ZN29TestNonTrivialCopyConstructor7counterE, align 4, !tbaa !4
+  %4 = getelementptr inbounds %struct.TestNonTrivialCopyConstructor, %struct.TestNonTrivialCopyConstructor* %0, i64 0, i32 0
+  %5 = load i32, i32* %4, align 4, !tbaa !8
+  ret i32 %5
+}
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+define i32 @testfn(%struct.TestNonTrivialCopyConstructor* %_param_0) {
+entry:
+  %param_0 = alloca %struct.TestNonTrivialCopyConstructor*
+  br label %body
+
+body:                                             ; preds = %entry
+  store %struct.TestNonTrivialCopyConstructor* %_param_0, %struct.TestNonTrivialCopyConstructor** %param_0
+  %0 = load %struct.TestNonTrivialCopyConstructor*, %struct.TestNonTrivialCopyConstructor** %param_0
+  %1 = call i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN29TestNonTrivialCopyConstructor2FnES2_EEE15call_fn_wrapperIivE4callIJPS2_EEEiDpT_(%struct.TestNonTrivialCopyConstructor* %0)
+  ret i32 %1
+}
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"int", !6, i64 0}
+!6 = !{!"omnipotent char", !7, i64 0}
+!7 = !{!"Simple C++ TBAA"}
+!8 = !{!9, !5, i64 0}
+!9 = !{!"_ZTS29TestNonTrivialCopyConstructor", !5, i64 0}
