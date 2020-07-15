@@ -763,7 +763,9 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
 
     {
         SimpleJIT jit;
-        jit.SetAllowResolveSymbolInHostProcess(true);
+        // in non-debug build, the whole thing should have been inlined and optimized out
+        //
+        jit.SetAllowResolveSymbolInHostProcess(x_isDebugBuild);
         jit.SetModule(thread_pochiVMContext->m_curModule);
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
 
