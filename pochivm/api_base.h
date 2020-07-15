@@ -22,7 +22,7 @@ template<typename T>
 class Value
 {
 public:
-    // CPP types values are not supported
+    // CPP types are specialized, should not hit here
     //
     static_assert(std::is_same<T, void>::value || AstTypeHelper::is_primitive_type<T>::value ||
                   std::is_pointer<T>::value, "Bad type T. Add to runtime/pochivm_register_runtime.cpp?");
@@ -246,7 +246,7 @@ class Variable : public Value<T>
 public:
     // CPP types are specialized, should not hit here
     //
-    static_assert(std::is_same<T, void>::value || AstTypeHelper::is_primitive_type<T>::value ||
+    static_assert(AstTypeHelper::is_primitive_type<T>::value ||
                   std::is_pointer<T>::value, "Bad type T. Add to runtime/pochivm_register_runtime.cpp?");
 
     Variable(AstVariable* ptr)

@@ -572,7 +572,9 @@ public:
         void** curParam = params;
         if (m_cppFunctionMd->m_isUsingSret)
         {
-            *curParam = out;
+            void* outPos = alloca(sizeof(void*));
+            *reinterpret_cast<void**>(outPos) = out;
+            *curParam = outPos;
             curParam++;
         }
         for (size_t i = 0; i < m_cppFunctionMd->m_numParams; i++)
@@ -691,16 +693,29 @@ public:
     AstDeclareVariable(AstVariable* variable)
         : AstNodeBase(TypeId::Get<void>())
           , m_assignExpr(nullptr)
+          , m_callExpr(nullptr)
           , m_variable(variable)
-    { }
+    {
+        TestAssert(m_variable->GetTypeId().IsPrimitiveType() || m_variable->GetTypeId().IsPointerType());
+    }
 
     AstDeclareVariable(AstVariable* variable, AstAssignExpr* assignExpr)
         : AstNodeBase(TypeId::Get<void>())
           , m_assignExpr(assignExpr)
+          , m_callExpr(nullptr)
           , m_variable(variable)
     {
         TestAssert(m_assignExpr->GetValueType().AddPointer() == m_variable->GetTypeId());
         TestAssert(assert_cast<AstVariable*>(m_assignExpr->GetDst()) == m_variable);
+    }
+
+    AstDeclareVariable(AstVariable* variable, AstCallExpr* callExpr)
+        : AstNodeBase(TypeId::Get<void>())
+          , m_assignExpr(nullptr)
+          , m_callExpr(callExpr)
+          , m_variable(variable)
+    {
+        TestAssert(m_callExpr->GetTypeId().AddPointer() == m_variable->GetTypeId());
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
@@ -710,6 +725,16 @@ public:
         if (m_assignExpr != nullptr)
         {
             m_assignExpr->Interp(nullptr /*out*/);
+        }
+        else if (m_callExpr != nullptr)
+        {
+            void* addr;
+            // 'addr' now points to the storing address of the variable
+            //
+            m_variable->Interp(&addr /*out*/);
+            // evaluate the call expression, which will construct the return value in-place at 'addr'
+            //
+            m_callExpr->Interp(addr /*out*/);
         }
     }
 
@@ -721,16 +746,18 @@ public:
     virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
     {
         if (m_assignExpr != nullptr) { fn(m_assignExpr); }
+        if (m_callExpr != nullptr) { fn(m_callExpr); }
         fn(m_variable);
     }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDeclareVariable; }
 
     // An assign statement for primitive type variable initialization.
-    // nullptr if no initial value.
-    // TODO: support constructor
     //
     AstAssignExpr* m_assignExpr;
+    // A call expression for non-primitive type variable initialization
+    //
+    AstCallExpr* m_callExpr;
     AstVariable* m_variable;
 };
 

@@ -195,6 +195,9 @@ FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramN
 template<typename T>
 Value<void> Declare(const Variable<T>& var)
 {
+    static_assert(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value,
+                  "Cannot declare a non-primitive type variable with no initial value. "
+                  "You must give an initial value by either calling a constructor, or calling a function that returns such type.");
     return Value<void>(new AstDeclareVariable(var.m_varPtr));
 }
 
@@ -203,9 +206,26 @@ Value<void> Declare(const Variable<T>& var)
 template<typename T>
 Value<void> Declare(const Variable<T>& var, const Value<T>& value)
 {
-    return Value<void>(new AstDeclareVariable(
-                           var.m_varPtr,
-                           new AstAssignExpr(var.m_varPtr, value.m_ptr)));
+    if constexpr(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value)
+    {
+        return Value<void>(new AstDeclareVariable(
+                               var.m_varPtr,
+                               new AstAssignExpr(var.m_varPtr, value.m_ptr)));
+    }
+    else
+    {
+        // non-primitive type, rhs must be a CallExpr:
+        // this is the only way to get a Value<T> for non-primitive T in current design
+        //
+        static_assert(AstTypeHelper::is_cpp_class_type<T>::value,
+                      "T must be a CPP class type registered in pochivm_register_runtime.cpp");
+        AstCallExpr* callExpr = assert_cast<AstCallExpr*>(value.m_ptr);
+        // A Variable<T> may not always be holding an AstVariable. TestAssert that it is indeed holding an AstVariable.
+        //
+        TestAssert(dynamic_cast<AstVariable*>(var.m_varPtr) != nullptr);
+        AstVariable* variable = assert_cast<AstVariable*>(var.m_varPtr);
+        return Value<void>(new AstDeclareVariable(variable, callExpr));
+    }
 }
 
 // Declare a variable, with constant value initialization

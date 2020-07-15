@@ -57,6 +57,13 @@ FOR_EACH_PRIMITIVE_TYPE
 #undef F
 };
 
+const size_t AstCppTypeStorageSizeInBytes[1 + x_num_cpp_class_types] = {
+#define F(...) sizeof(__VA_ARGS__),
+FOR_EACH_CPP_CLASS_TYPE
+#undef F
+    static_cast<size_t>(-1) /*dummy value for bad CPP type */
+};
+
 template<typename T>
 struct GetTypeId;
 
@@ -185,7 +192,6 @@ struct TypeId
     bool MayReinterpretCastTo(TypeId other) const;
 
     // Return the size of this type in bytes.
-    // Does not work for CPP class type or generated types because it's not necessary.
     //
     // This agrees with the type size in llvm, except that
     // bool has a size of 1 byte in C++, but 1 bit (i1) in llvm
@@ -204,7 +210,13 @@ struct TypeId
         {
             return AstTypeHelper::AstPrimitiveTypeSizeInBytes[value];
         }
-        else if (IsCppClassType() || IsGeneratedCompositeType())
+        else if (IsCppClassType())
+        {
+            uint64_t ord = value - x_num_primitive_types - 1;
+            assert(ord < AstTypeHelper::x_num_cpp_class_types);
+            return AstTypeHelper::AstCppTypeStorageSizeInBytes[ord];
+        }
+        else if (IsGeneratedCompositeType())
         {
             // Not supported for now
             //

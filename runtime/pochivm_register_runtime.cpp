@@ -111,6 +111,9 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&TestCornerCases::BoolParamTest2>();
     RegisterFreeFn<&TestCornerCases::VoidStarParamTest1>();
     RegisterFreeFn<&TestCornerCases::VoidStarParamTest2>();
+
+    RegisterStaticMemberFn<&TestNonTrivialConstructor::Create>();
+    RegisterMemberFn<&TestNonTrivialConstructor::GetValue>();
 }
 
 // DO NOT MODIFY

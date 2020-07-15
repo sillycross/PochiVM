@@ -701,3 +701,72 @@ TEST(SanityCallCppFn, VoidStarCornerCase_2)
         ReleaseAssert(b[0] == reinterpret_cast<void*>(233));
     }
 }
+
+TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<bool()>;
+    {
+        auto [fn] = NewFunction<FnPrototype>("testfn");
+        auto v = fn.NewVariable<TestNonTrivialConstructor>();
+        fn.SetBody(
+                Declare(v, Variable<TestNonTrivialConstructor>::Create()),
+                Return(v.GetValue() == Literal<int>(233))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        ReleaseAssert(interpFn() == true);
+    }
+#if 0
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        ReleaseAssert(jitFn() == true);
+    }
+#endif
+}

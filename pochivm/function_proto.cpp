@@ -345,6 +345,7 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     // If there is an initial value, alloc the var and assign it. Otherwise this is a no-op,
     // the variable will be automatically alloca'ed later when it is first used later.
     //
+    ReleaseAssert(m_callExpr == nullptr);
     if (m_assignExpr != nullptr)
     {
         std::ignore = m_variable->EmitIR();

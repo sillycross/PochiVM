@@ -31,8 +31,6 @@ public:
         , m_interpOffset(static_cast<uint32_t>(-1))
     {
         TestAssert(GetTypeId().IsPointerType());
-        TestAssert(GetTypeId().RemovePointer().IsPrimitiveType() ||
-                   GetTypeId().RemovePointer().IsPointerType());
     }
 
     void SetVarName(const char* newName)

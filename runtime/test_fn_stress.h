@@ -274,3 +274,20 @@ inline std::string FreeFnRecursive3(std::string xstr)
         return prefix + std::to_string(i1 + i2);
     }
 }
+
+class TestNonTrivialConstructor
+{
+public:
+    TestNonTrivialConstructor()
+        : m_value(233)
+    { }
+
+    static TestNonTrivialConstructor Create()
+    {
+        return TestNonTrivialConstructor();
+    }
+
+    int GetValue() { return m_value; }
+
+    int m_value;
+};
