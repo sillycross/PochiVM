@@ -532,6 +532,7 @@ public:
         , m_cppFunctionMd(nullptr)
         , m_interpFunction(nullptr)
         , m_interpStoreParamFns()
+        , m_sretAddress(nullptr)
     { }
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
@@ -543,6 +544,7 @@ public:
         , m_cppFunctionMd(cppFunctionMd)
         , m_interpFunction(nullptr)
         , m_interpStoreParamFns()
+        , m_sretAddress(nullptr)
     {
         assert(m_cppFunctionMd != nullptr);
         TestAssert(params.size() == static_cast<size_t>(m_cppFunctionMd->m_numParams));
@@ -641,6 +643,8 @@ public:
         return m_cppFunctionMd;
     }
 
+    void SetSretAddress(llvm::Value* address);
+
     virtual void SetupInterpImpl() override
     {
         if (!m_isCppFunction)
@@ -685,6 +689,9 @@ private:
     //
     using _StoreParamsFn = void(*)(void*, AstNodeBase*);
     std::vector<_StoreParamsFn> m_interpStoreParamFns;
+    // In LLVM mode, for function using sret, the position to which its return value shall be stored
+    //
+    llvm::Value* m_sretAddress;
 };
 
 class AstDeclareVariable : public AstNodeBase

@@ -11,8 +11,16 @@ using namespace llvm;
 inline Value* WARN_UNUSED AstNodeBase::EmitIR()
 {
     Value* value = EmitIRImpl();
-    TestAssertImp(GetTypeId().IsVoid(), value == nullptr);
-    TestAssertImp(!GetTypeId().IsVoid(), AstTypeHelper::llvm_value_has_type(GetTypeId(), value));
+#ifdef TESTBUILD
+    if (GetTypeId().IsVoid() || GetTypeId().IsCppClassType())
+    {
+        TestAssert(value == nullptr);
+    }
+    else
+    {
+        TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), value));
+    }
+#endif
     return value;
 }
 

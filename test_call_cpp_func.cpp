@@ -710,12 +710,12 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<bool()>;
+    using FnPrototype = std::function<bool(int)>;
     {
-        auto [fn] = NewFunction<FnPrototype>("testfn");
+        auto [fn, param] = NewFunction<FnPrototype>("testfn");
         auto v = fn.NewVariable<TestNonTrivialConstructor>();
         fn.SetBody(
-                Declare(v, Variable<TestNonTrivialConstructor>::Create()),
+                Declare(v, Variable<TestNonTrivialConstructor>::Create(param)),
                 Return(v.GetValue() == Literal<int>(233))
         );
     }
@@ -727,9 +727,10 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                                GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
 
-        ReleaseAssert(interpFn() == true);
+        ReleaseAssert(interpFn(233) == true);
+        ReleaseAssert(interpFn(234) == false);
     }
-#if 0
+
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
@@ -766,7 +767,7 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
         jit.SetModule(thread_pochiVMContext->m_curModule);
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
 
-        ReleaseAssert(jitFn() == true);
+        ReleaseAssert(jitFn(233) == true);
+        ReleaseAssert(jitFn(234) == false);
     }
-#endif
 }

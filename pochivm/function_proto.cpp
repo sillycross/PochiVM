@@ -302,6 +302,14 @@ ThreadSafeModule AstModule::GetThreadSafeModule()
     return std::move(r);
 }
 
+void AstCallExpr::SetSretAddress(Value* address)
+{
+    TestAssert(m_isCppFunction && m_cppFunctionMd->m_isUsingSret);
+    TestAssert(m_sretAddress == nullptr && address != nullptr);
+    TestAssert(AstTypeHelper::llvm_value_has_type(m_cppFunctionMd->m_returnType.AddPointer(), address));
+    m_sretAddress = address;
+}
+
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
 {
     Function* callee = nullptr;
@@ -316,27 +324,42 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
     }
     else
     {
-        // TODO: support sret
-        //
-        ReleaseAssert(!m_cppFunctionMd->m_isUsingSret);
+        TestAssertIff(m_cppFunctionMd->m_isUsingSret, m_sretAddress != nullptr);
         callee = thread_llvmContext->m_module->getFunction(m_cppFunctionMd->m_bitcodeData->m_symbolName);
         TestAssert(callee != nullptr);
     }
-    TestAssert(callee->arg_size() == m_params.size());
+    TestAssert(callee->arg_size() == m_params.size() + ((m_isCppFunction && m_cppFunctionMd->m_isUsingSret) ? 1 : 0));
     TestAssertImp(m_isCppFunction, m_params.size() == m_cppFunctionMd->m_numParams);
-    Value** params = reinterpret_cast<Value**>(alloca(sizeof(Value*) * m_params.size()));
+    Value** params = reinterpret_cast<Value**>(alloca(sizeof(Value*) * callee->arg_size()));
+    size_t curParamIndex = 0;
+    if (m_isCppFunction && m_cppFunctionMd->m_isUsingSret)
+    {
+        TestAssert(AstTypeHelper::llvm_value_has_type(m_cppFunctionMd->m_returnType.AddPointer(), m_sretAddress));
+        TestAssert(m_sretAddress->getType() == callee->getArg(static_cast<unsigned>(curParamIndex))->getType());
+        params[curParamIndex] = m_sretAddress;
+        curParamIndex++;
+    }
     for (size_t index = 0; index < m_params.size(); index++)
     {
         Value* param = m_params[index]->EmitIR();
-        TestAssert(param->getType() == callee->getArg(static_cast<unsigned>(index))->getType());
+        TestAssert(param->getType() == callee->getArg(static_cast<unsigned>(curParamIndex))->getType());
         TestAssertImp(!m_isCppFunction, AstTypeHelper::llvm_value_has_type(calleeAst->GetParamType(index), param));
         TestAssertImp(m_isCppFunction, AstTypeHelper::llvm_value_has_type(m_cppFunctionMd->m_paramTypes[index], param));
-        params[index] = param;
+        params[curParamIndex] = param;
+        curParamIndex++;
     }
+    TestAssert(curParamIndex == callee->arg_size());
     Value* ret = thread_llvmContext->m_builder
-                         ->CreateCall(callee, ArrayRef<Value*>(params, params + m_params.size()));
-    TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), ret));
-    if (GetTypeId().IsVoid()) { ret = nullptr; }
+                         ->CreateCall(callee, ArrayRef<Value*>(params, params + callee->arg_size()));
+    if (GetTypeId().IsVoid() || GetTypeId().IsCppClassType())
+    {
+        TestAssert(AstTypeHelper::llvm_value_has_type(TypeId::Get<void>(), ret));
+        ret = nullptr;
+    }
+    else
+    {
+        TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), ret));
+    }
     return ret;
 }
 
@@ -345,11 +368,16 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     // If there is an initial value, alloc the var and assign it. Otherwise this is a no-op,
     // the variable will be automatically alloca'ed later when it is first used later.
     //
-    ReleaseAssert(m_callExpr == nullptr);
     if (m_assignExpr != nullptr)
     {
         std::ignore = m_variable->EmitIR();
         std::ignore = m_assignExpr->EmitIR();
+    }
+    else if (m_callExpr != nullptr)
+    {
+        Value* pos = m_variable->EmitIR();
+        m_callExpr->SetSretAddress(pos);
+        std::ignore = m_callExpr->EmitIR();
     }
     return nullptr;
 }

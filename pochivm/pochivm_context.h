@@ -28,7 +28,6 @@ struct PochiVMContext
         : m_astTraverseColorMark(1)
         , m_interpStackFrameBase(0)
         , m_curModule(nullptr)
-        , m_variableBeingDeclared(nullptr)
     { }
 
     // The current value used to mark an AST node in traversal
@@ -47,10 +46,6 @@ struct PochiVMContext
     // Current module
     //
     AstModule* m_curModule;
-
-    // For Declare(var, value), the 'var' being declared right now
-    //
-    AstVariable* m_variableBeingDeclared;
 };
 
 }   // namespace PochiVM

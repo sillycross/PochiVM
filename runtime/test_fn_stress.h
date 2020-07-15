@@ -278,13 +278,13 @@ inline std::string FreeFnRecursive3(std::string xstr)
 class TestNonTrivialConstructor
 {
 public:
-    TestNonTrivialConstructor()
-        : m_value(233)
+    TestNonTrivialConstructor(int v)
+        : m_value(v)
     { }
 
-    static TestNonTrivialConstructor Create()
+    static TestNonTrivialConstructor Create(int v)
     {
-        return TestNonTrivialConstructor();
+        return TestNonTrivialConstructor(v);
     }
 
     int GetValue() { return m_value; }
