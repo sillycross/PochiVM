@@ -375,9 +375,16 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     }
     else if (m_callExpr != nullptr)
     {
-        Value* pos = m_variable->EmitIR();
-        m_callExpr->SetSretAddress(pos);
-        std::ignore = m_callExpr->EmitIR();
+        if (!m_isCtor)
+        {
+            Value* pos = m_variable->EmitIR();
+            m_callExpr->SetSretAddress(pos);
+            std::ignore = m_callExpr->EmitIR();
+        }
+        else
+        {
+            std::ignore = m_callExpr->EmitIR();
+        }
     }
     return nullptr;
 }

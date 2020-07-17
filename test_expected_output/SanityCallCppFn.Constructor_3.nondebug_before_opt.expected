@@ -1,0 +1,241 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+
+; Function Attrs: uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmiEE4callIJmiEEEvPS4_DpT_(%"class.std::vector"* %0, i64 %1, i32 %2) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %4 = bitcast %"class.std::vector"* %0 to i8*
+  tail call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %4, i8 0, i64 24, i1 false) #5
+  %5 = icmp eq i64 %1, 0
+  br i1 %5, label %13, label %6
+
+6:                                                ; preds = %3
+  %7 = icmp ugt i64 %1, 4611686018427387903
+  br i1 %7, label %8, label %9
+
+8:                                                ; preds = %6
+  tail call void @_ZSt17__throw_bad_allocv() #6
+  unreachable
+
+9:                                                ; preds = %6
+  %10 = shl nuw i64 %1, 2
+  %11 = tail call i8* @_Znwm(i64 %10)
+  %12 = bitcast i8* %11 to i32*
+  br label %13
+
+13:                                               ; preds = %9, %3
+  %14 = phi i32* [ %12, %9 ], [ null, %3 ]
+  %15 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %0, i64 0, i32 0, i32 0, i32 0
+  store i32* %14, i32** %15, align 8, !tbaa !4
+  %16 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %0, i64 0, i32 0, i32 0, i32 1
+  store i32* %14, i32** %16, align 8, !tbaa !10
+  %17 = getelementptr inbounds i32, i32* %14, i64 %1
+  %18 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %0, i64 0, i32 0, i32 0, i32 2
+  store i32* %17, i32** %18, align 8, !tbaa !11
+  br i1 %5, label %105, label %19
+
+19:                                               ; preds = %13
+  %20 = icmp ult i64 %1, 8
+  br i1 %20, label %96, label %21
+
+21:                                               ; preds = %19
+  %22 = and i64 %1, -8
+  %23 = sub i64 %1, %22
+  %24 = getelementptr i32, i32* %14, i64 %22
+  %25 = insertelement <4 x i32> undef, i32 %2, i32 0
+  %26 = shufflevector <4 x i32> %25, <4 x i32> undef, <4 x i32> zeroinitializer
+  %27 = insertelement <4 x i32> undef, i32 %2, i32 0
+  %28 = shufflevector <4 x i32> %27, <4 x i32> undef, <4 x i32> zeroinitializer
+  %29 = add i64 %22, -8
+  %30 = lshr exact i64 %29, 3
+  %31 = add nuw nsw i64 %30, 1
+  %32 = and i64 %31, 7
+  %33 = icmp ult i64 %29, 56
+  br i1 %33, label %81, label %34
+
+34:                                               ; preds = %21
+  %35 = sub nsw i64 %31, %32
+  br label %36
+
+36:                                               ; preds = %36, %34
+  %37 = phi i64 [ 0, %34 ], [ %78, %36 ]
+  %38 = phi i64 [ %35, %34 ], [ %79, %36 ]
+  %39 = getelementptr i32, i32* %14, i64 %37
+  %40 = bitcast i32* %39 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %40, align 4, !tbaa !12
+  %41 = getelementptr i32, i32* %39, i64 4
+  %42 = bitcast i32* %41 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %42, align 4, !tbaa !12
+  %43 = or i64 %37, 8
+  %44 = getelementptr i32, i32* %14, i64 %43
+  %45 = bitcast i32* %44 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %45, align 4, !tbaa !12
+  %46 = getelementptr i32, i32* %44, i64 4
+  %47 = bitcast i32* %46 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %47, align 4, !tbaa !12
+  %48 = or i64 %37, 16
+  %49 = getelementptr i32, i32* %14, i64 %48
+  %50 = bitcast i32* %49 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %50, align 4, !tbaa !12
+  %51 = getelementptr i32, i32* %49, i64 4
+  %52 = bitcast i32* %51 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %52, align 4, !tbaa !12
+  %53 = or i64 %37, 24
+  %54 = getelementptr i32, i32* %14, i64 %53
+  %55 = bitcast i32* %54 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %55, align 4, !tbaa !12
+  %56 = getelementptr i32, i32* %54, i64 4
+  %57 = bitcast i32* %56 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %57, align 4, !tbaa !12
+  %58 = or i64 %37, 32
+  %59 = getelementptr i32, i32* %14, i64 %58
+  %60 = bitcast i32* %59 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %60, align 4, !tbaa !12
+  %61 = getelementptr i32, i32* %59, i64 4
+  %62 = bitcast i32* %61 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %62, align 4, !tbaa !12
+  %63 = or i64 %37, 40
+  %64 = getelementptr i32, i32* %14, i64 %63
+  %65 = bitcast i32* %64 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %65, align 4, !tbaa !12
+  %66 = getelementptr i32, i32* %64, i64 4
+  %67 = bitcast i32* %66 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %67, align 4, !tbaa !12
+  %68 = or i64 %37, 48
+  %69 = getelementptr i32, i32* %14, i64 %68
+  %70 = bitcast i32* %69 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %70, align 4, !tbaa !12
+  %71 = getelementptr i32, i32* %69, i64 4
+  %72 = bitcast i32* %71 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %72, align 4, !tbaa !12
+  %73 = or i64 %37, 56
+  %74 = getelementptr i32, i32* %14, i64 %73
+  %75 = bitcast i32* %74 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %75, align 4, !tbaa !12
+  %76 = getelementptr i32, i32* %74, i64 4
+  %77 = bitcast i32* %76 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %77, align 4, !tbaa !12
+  %78 = add i64 %37, 64
+  %79 = add i64 %38, -8
+  %80 = icmp eq i64 %79, 0
+  br i1 %80, label %81, label %36, !llvm.loop !14
+
+81:                                               ; preds = %36, %21
+  %82 = phi i64 [ 0, %21 ], [ %78, %36 ]
+  %83 = icmp eq i64 %32, 0
+  br i1 %83, label %94, label %84
+
+84:                                               ; preds = %84, %81
+  %85 = phi i64 [ %91, %84 ], [ %82, %81 ]
+  %86 = phi i64 [ %92, %84 ], [ %32, %81 ]
+  %87 = getelementptr i32, i32* %14, i64 %85
+  %88 = bitcast i32* %87 to <4 x i32>*
+  store <4 x i32> %26, <4 x i32>* %88, align 4, !tbaa !12
+  %89 = getelementptr i32, i32* %87, i64 4
+  %90 = bitcast i32* %89 to <4 x i32>*
+  store <4 x i32> %28, <4 x i32>* %90, align 4, !tbaa !12
+  %91 = add i64 %85, 8
+  %92 = add i64 %86, -1
+  %93 = icmp eq i64 %92, 0
+  br i1 %93, label %94, label %84, !llvm.loop !16
+
+94:                                               ; preds = %84, %81
+  %95 = icmp eq i64 %22, %1
+  br i1 %95, label %105, label %96
+
+96:                                               ; preds = %94, %19
+  %97 = phi i64 [ %1, %19 ], [ %23, %94 ]
+  %98 = phi i32* [ %14, %19 ], [ %24, %94 ]
+  br label %99
+
+99:                                               ; preds = %99, %96
+  %100 = phi i64 [ %102, %99 ], [ %97, %96 ]
+  %101 = phi i32* [ %103, %99 ], [ %98, %96 ]
+  store i32 %2, i32* %101, align 4, !tbaa !12
+  %102 = add i64 %100, -1
+  %103 = getelementptr inbounds i32, i32* %101, i64 1
+  %104 = icmp eq i64 %102, 0
+  br i1 %104, label %105, label %99, !llvm.loop !18
+
+105:                                              ; preds = %99, %94, %13
+  %106 = phi i32* [ %14, %13 ], [ %24, %94 ], [ %103, %99 ]
+  store i32* %106, i32** %16, align 8, !tbaa !10
+  ret void
+}
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+
+; Function Attrs: noreturn
+declare dso_local void @_ZSt17__throw_bad_allocv() local_unnamed_addr #2
+
+; Function Attrs: nobuiltin nofree
+declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #3
+
+; Function Attrs: inlinehint uwtable
+define available_externally dso_local void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %0, %"class.std::vector"* %1) #4 {
+  %3 = tail call dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %0, %"class.std::vector"* dereferenceable(24) %1)
+  ret void
+}
+
+; Function Attrs: uwtable
+declare dso_local dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"*, %"class.std::vector"* dereferenceable(24)) local_unnamed_addr #0 align 2
+
+define void @testfn(%"class.std::vector"* %_param_0, i64 %_param_1, i32 %_param_2) {
+entry:
+  %param_0 = alloca %"class.std::vector"*
+  %param_1 = alloca i64
+  %param_2 = alloca i32
+  %var_3 = alloca %"class.std::vector"
+  br label %body
+
+body:                                             ; preds = %entry
+  store %"class.std::vector"* %_param_0, %"class.std::vector"** %param_0
+  store i64 %_param_1, i64* %param_1
+  store i32 %_param_2, i32* %param_2
+  %0 = load i64, i64* %param_1
+  %1 = load i32, i32* %param_2
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmiEE4callIJmiEEEvPS4_DpT_(%"class.std::vector"* %var_3, i64 %0, i32 %1)
+  %2 = load %"class.std::vector"*, %"class.std::vector"** %param_0
+  call void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %2, %"class.std::vector"* %var_3)
+  ret void
+}
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { argmemonly nounwind willreturn }
+attributes #2 = { noreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { inlinehint uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { nounwind }
+attributes #6 = { noreturn }
+
+!llvm.ident = !{!0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !7, i64 0}
+!5 = !{!"_ZTSSt12_Vector_baseIiSaIiEE", !6, i64 0}
+!6 = !{!"_ZTSNSt12_Vector_baseIiSaIiEE12_Vector_implE", !7, i64 0, !7, i64 8, !7, i64 16}
+!7 = !{!"any pointer", !8, i64 0}
+!8 = !{!"omnipotent char", !9, i64 0}
+!9 = !{!"Simple C++ TBAA"}
+!10 = !{!5, !7, i64 8}
+!11 = !{!5, !7, i64 16}
+!12 = !{!13, !13, i64 0}
+!13 = !{!"int", !8, i64 0}
+!14 = distinct !{!14, !15}
+!15 = !{!"llvm.loop.isvectorized", i32 1}
+!16 = distinct !{!16, !17}
+!17 = !{!"llvm.loop.unroll.disable"}
+!18 = distinct !{!18, !19, !15}
+!19 = !{!"llvm.loop.unroll.runtime.disable"}

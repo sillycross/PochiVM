@@ -68,9 +68,9 @@ struct ParsedFnTypeNamesInfo
             m_isParamsApiVar.push_back(src->m_apiRetAndArgTypenames[i].second);
         }
         m_fnType = src->m_fnType;
-        std::string fnName = ParseValueName(src->m_fnName);
         if (m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
         {
+            std::string fnName = ParseValueName(src->m_fnName);
             std::string className = ParseTypeName(src->m_classTypename);
             ReleaseAssert(fnName.length() > className.length() + 2);
             ReleaseAssert(fnName.substr(0, className.length()) == className);
@@ -79,8 +79,15 @@ struct ParsedFnTypeNamesInfo
             m_prefix = className;
             m_functionName = fnName.substr(className.length() + 2);
         }
+        else if (m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor)
+        {
+            std::string className = ParseTypeName(src->m_classTypename);
+            m_prefix = className;
+            m_functionName = "";
+        }
         else
         {
+            std::string fnName = ParseValueName(src->m_fnName);
             int k = static_cast<int>(fnName.length()) - 1;
             while (k >= 0 && fnName[static_cast<size_t>(k)] != ':')
             {
@@ -223,8 +230,17 @@ struct ParsedFnTypeNamesInfo
             ReleaseAssert(i > 0);
             // push the last template parameter
             //
-            ReleaseAssert(i + 1 <= lastPos - 1);
-            m_templateParams.push_back(demangledSymbolName.substr(i + 1, lastPos - i - 1));
+            if (i + 1 <= lastPos - 1)
+            {
+                m_templateParams.push_back(demangledSymbolName.substr(i + 1, lastPos - i - 1));
+            }
+            else
+            {
+                // This is a variadic-number templated function which took no template parameters
+                // e.g. the prototype is template<typename... Arg> f(), and the instantiation is f<>
+                //
+                ReleaseAssert(m_templateParams.size() == 0);
+            }
             std::reverse(m_templateParams.begin(), m_templateParams.end());
             // Remove leading and trailing whitespace, just for sanity
             //
@@ -384,6 +400,7 @@ struct ParsedFnTypeNamesInfo
     // The prefix before the function
     // For member function this is namespace + class name,
     // for free function this is only namespace
+    // for constructor this is the class name (namespace + class name)
     //
     std::string m_prefix;
     // name of function
@@ -567,15 +584,16 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     return a.m_wrapperFnMangledSymbolName < b.m_wrapperFnMangledSymbolName;
 }
 
-static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNotPrintVarName = false)
+static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNotPrintVarName = false, size_t firstParam = 0)
 {
-    fprintf(fp, "(%s", (info.m_params.size() == 0 ? ")" : "\n"));
-    for (size_t i = 0; i < info.m_params.size(); i++)
+    ReleaseAssert(info.m_params.size() >= firstParam);
+    fprintf(fp, "(%s", (info.m_params.size() == firstParam ? ")" : "\n"));
+    for (size_t i = firstParam; i < info.m_params.size(); i++)
     {
         fprintf(fp, "        %s<%s>", (info.m_isParamsApiVar[i] ? "Variable" : "Value"), info.m_params[i].c_str());
         if (!doNotPrintVarName)
         {
-            fprintf(fp, " __pochivm_%d", static_cast<int>(i));
+            fprintf(fp, " __pochivm_%d", static_cast<int>(i - firstParam));
         }
         fprintf(fp, "%s", (i == info.m_params.size() - 1) ? ")" : ",\n");
     }
@@ -602,6 +620,7 @@ static int g_curUniqueFunctionOrdinal = 0;
 
 static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 {
+    ReleaseAssert(info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor);
     fprintf(fp, "{\n");
     int numParams = static_cast<int>(info.m_params.size());
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
@@ -772,6 +791,94 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
     fprintf(fp, "}\n");
     fprintf(fp, "    ));\n");
+    fprintf(fp, "}\n\n");
+}
+
+static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
+{
+    ReleaseAssert(info.m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor);
+    fprintf(fp, "{\n");
+    ReleaseAssert(info.m_params.size() > 0);
+    int numCtorParams = static_cast<int>(info.m_params.size()) - 1;
+    fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_params[%d] = {", static_cast<int>(info.m_params.size()));
+    for (size_t i = 0; i < info.m_params.size(); i++)
+    {
+        fprintf(fp, "\n        TypeId::Get<%s%s%s>()",
+                (info.m_isParamsApiVar[i] ? "typename std::add_pointer<" : ""),
+                info.m_params[i].c_str(),
+                (info.m_isParamsApiVar[i] ? ">::type" : ""));
+        if (i != info.m_params.size() - 1)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    fprintf(fp, "};\n");
+    fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<%s%s%s>();\n",
+            (info.m_isRetApiVar ? "typename std::add_pointer<" : ""),
+            info.m_ret.c_str(),
+            (info.m_isRetApiVar ? ">::type" : ""));
+    fprintf(fp, "    using __pochivm_wrapper_t = ReflectionHelper::constructor_wrapper_helper<");
+    for (size_t i = 0; i < info.m_params.size(); i++)
+    {
+        fprintf(fp, "\n        %s%s%s",
+                (i == 0 ? "typename std::remove_pointer<" : ""),
+                info.m_origParams[i].c_str(),
+                (i == 0 ? ">::type" : ""));
+        if (i != info.m_params.size() - 1)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    fprintf(fp, ">;\n");
+
+    fprintf(fp, "    using __pochivm_wrapper_fn_typeinfo = AstTypeHelper::function_type_helper<__pochivm_wrapper_t::WrapperFnPtrType>;\n");
+
+    for (int i = 0; i < static_cast<int>(info.m_params.size()); i++)
+    {
+        fprintf(fp, "    static_assert(TypeId::Get<typename ReflectionHelper::recursive_remove_cv<typename __pochivm_wrapper_fn_typeinfo::ArgType<%d>>::type>() ==\n",
+                i);
+        fprintf(fp, "                  __pochivm_cpp_fn_params[%d], ", i);
+        fprintf(fp, "\"unexpected param type (constructor param %d)\");\n", i);
+    }
+    fprintf(fp, "    static_assert(__pochivm_cpp_fn_ret == TypeId::Get<void>(), \"unexpected return type\");\n");
+    fprintf(fp, "    static_assert(__pochivm_wrapper_fn_typeinfo::numArgs == %d + 1, \"unexpected number of arguments\");\n", numCtorParams);
+
+    fprintf(fp, "    static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
+    std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
+    fprintf(fp, "        &%s,\n", varname.c_str());
+    fprintf(fp, "        __pochivm_cpp_fn_params,\n");
+    fprintf(fp, "        %d /*numParams*/,\n", static_cast<int>(info.m_params.size()));
+    fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
+    fprintf(fp, "        false /*isUsingSret*/,\n");
+    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+    fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
+    g_curUniqueFunctionOrdinal++;
+    fprintf(fp, "    };\n");
+
+    fprintf(fp, "    m_constructorMd = &__pochivm_cpp_fn_metadata;\n");
+    fprintf(fp, "    m_params = std::vector<AstNodeBase*>{");
+    for (size_t i = 0; i < static_cast<size_t>(numCtorParams); i++)
+    {
+        fprintf(fp, "\n        __pochivm_%d.%s",
+                static_cast<int>(i), (info.m_isParamsApiVar[i + 1] ? "m_varPtr" : "m_ptr"));
+        if (i != static_cast<size_t>(numCtorParams) - 1)
+        {
+            fprintf(fp, ",");
+        }
+        else
+        {
+            fprintf(fp, "\n    ");
+        }
+    }
+    fprintf(fp, "};\n");
     fprintf(fp, "}\n\n");
 }
 
@@ -1037,7 +1144,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
                 ParsedFnTypeNamesInfo& info = it->second;
-                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn)
+                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1313,7 +1421,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
             {
                 ParsedFnTypeNamesInfo& info = it->second;
-                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn)
+                if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1352,6 +1461,56 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     fprintf(fp, "\n");
                     PrintFnCallBody(fp, info);
                 }
+            }
+        }
+
+        // generate all constructors
+        //
+        {
+            fprintf(fp, "// Constructors\n//\n");
+
+            fprintf(fp, "template<typename T>\n");
+            fprintf(fp, "class Constructor {\n");
+            fprintf(fp, "    static_assert(sizeof(T) == 0, \"unknown class, register the constructor in pochivm_register_runtime.cpp?\");\n");
+            fprintf(fp, "};\n\n");
+
+            std::map<std::string /*class*/, std::vector<ParsedFnTypeNamesInfo> > fns;
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor)
+                {
+                    fns[info.m_prefix].push_back(info);
+                }
+            }
+
+            for (auto it = fns.begin(); it != fns.end(); it++)
+            {
+                ReleaseAssert(it->second.size() > 0);
+                std::string className = it->first;
+                std::vector<ParsedFnTypeNamesInfo>& data = it->second;
+                std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
+
+                fprintf(fp, "template<> class Constructor<%s> : public ConstructorParamInfo\n{\npublic:\n\n", className.c_str());
+                for (size_t k = 0; k < data.size(); k++)
+                {
+                    ParsedFnTypeNamesInfo& info = data[k];
+                    fprintf(fp, "// Original parameters:\n");
+                    for (const std::string& param : info.m_origParams)
+                    {
+                        fprintf(fp, "//          %s\n", param.c_str());
+                    }
+                    fprintf(fp, "//\n");
+                    ReleaseAssert(info.m_templateParams.size() == 0);
+                    fprintf(fp, "Constructor");
+                    // The first parameter is 'ClassName*', we should not print it.
+                    //
+                    PrintFnParams(fp, info, false /*doNotPrintVarName*/, 1 /*firstParam*/);
+                    fprintf(fp, "\n");
+                    PrintConstructorFnCallBody(fp, info);
+                }
+                fprintf(fp, "};\n\n");
             }
         }
 
@@ -1720,12 +1879,25 @@ int main(int argc, char** argv)
             uintptr_t addr = reinterpret_cast<uintptr_t>(it->first);
             ReleaseAssert(addrToSymbol.count(addr));
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
-            it->second.FindTemplateParameters(symbolPair.second /*demangled*/);
+            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+            {
+                // For constructors, the symbol is a generated wrapper function, not the original prototype
+                // The original prototype must have no template parameters since our API dit not support specifying them
+                //
+                it->second.FindTemplateParameters(symbolPair.second /*demangled*/);
+            }
             it->second.RecordMangledSymbolName(symbolPair.first /*mangled*/);
-            uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
-            ReleaseAssert(addrToSymbol.count(wrapperAddr));
-            symbolPair = addrToSymbol[wrapperAddr];
-            it->second.RecordWrapperFnMangledSymbolName(symbolPair.first /*mangled*/);
+            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+            {
+                uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
+                ReleaseAssert(addrToSymbol.count(wrapperAddr));
+                symbolPair = addrToSymbol[wrapperAddr];
+                it->second.RecordWrapperFnMangledSymbolName(symbolPair.first /*mangled*/);
+            }
+            else
+            {
+                ReleaseAssert(it->second.m_wrapperFnAddress == nullptr);
+            }
         }
 
         // Write 'needed_symbols_info_output'

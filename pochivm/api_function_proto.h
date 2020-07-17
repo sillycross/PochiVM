@@ -224,8 +224,36 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
         //
         TestAssert(dynamic_cast<AstVariable*>(var.m_varPtr) != nullptr);
         AstVariable* variable = assert_cast<AstVariable*>(var.m_varPtr);
-        return Value<void>(new AstDeclareVariable(variable, callExpr));
+        return Value<void>(new AstDeclareVariable(variable, callExpr, false /*isCtor*/));
     }
+}
+
+// Declare a variable, with constructor initialization
+//
+template<typename T>
+Value<void> Declare(const Variable<T>& var, const ConstructorParamInfo& ctorParams)
+{
+    static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a cpp class type");
+    TestAssert(ctorParams.m_constructorMd->m_numParams > 0);
+    TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == TypeId::Get<T>().AddPointer());
+    TestAssert(ctorParams.m_params.size() == ctorParams.m_constructorMd->m_numParams - 1);
+#ifdef TESTBUILD
+    for (size_t i = 0; i < ctorParams.m_params.size(); i++)
+    {
+        TestAssert(ctorParams.m_params[i]->GetTypeId() == ctorParams.m_constructorMd->m_paramTypes[i+1]);
+    }
+#endif
+    // A Variable<T> may not always be holding an AstVariable. TestAssert that it is indeed holding an AstVariable.
+    //
+    TestAssert(dynamic_cast<AstVariable*>(var.m_varPtr) != nullptr);
+    AstVariable* variable = assert_cast<AstVariable*>(var.m_varPtr);
+    std::vector<AstNodeBase*> params;
+    params.reserve(ctorParams.m_constructorMd->m_numParams);
+    params.push_back(variable);
+    params.insert(params.end(), ctorParams.m_params.begin(), ctorParams.m_params.end());
+    return Value<void>(new AstDeclareVariable(variable,
+                                              new AstCallExpr(ctorParams.m_constructorMd, params),
+                                              true /*isCtor*/));
 }
 
 // Declare a variable, with constant value initialization

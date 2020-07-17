@@ -643,6 +643,11 @@ public:
         return m_cppFunctionMd;
     }
 
+    const std::vector<AstNodeBase*>& GetParams() const
+    {
+        return m_params;
+    }
+
     void SetSretAddress(llvm::Value* address);
 
     virtual void SetupInterpImpl() override
@@ -702,6 +707,7 @@ public:
           , m_assignExpr(nullptr)
           , m_callExpr(nullptr)
           , m_variable(variable)
+          , m_isCtor(false)
     {
         TestAssert(m_variable->GetTypeId().IsPrimitiveType() || m_variable->GetTypeId().IsPointerType());
     }
@@ -711,18 +717,26 @@ public:
           , m_assignExpr(assignExpr)
           , m_callExpr(nullptr)
           , m_variable(variable)
+          , m_isCtor(false)
     {
         TestAssert(m_assignExpr->GetValueType().AddPointer() == m_variable->GetTypeId());
         TestAssert(assert_cast<AstVariable*>(m_assignExpr->GetDst()) == m_variable);
     }
 
-    AstDeclareVariable(AstVariable* variable, AstCallExpr* callExpr)
+    AstDeclareVariable(AstVariable* variable, AstCallExpr* callExpr, bool isCtor)
         : AstNodeBase(TypeId::Get<void>())
           , m_assignExpr(nullptr)
           , m_callExpr(callExpr)
           , m_variable(variable)
+          , m_isCtor(isCtor)
     {
-        TestAssert(m_callExpr->GetTypeId().AddPointer() == m_variable->GetTypeId());
+        TestAssertImp(!isCtor, m_callExpr->GetTypeId().AddPointer() == m_variable->GetTypeId());
+        TestAssertImp(isCtor,
+                      m_callExpr->GetTypeId() == TypeId::Get<void>() &&
+                      m_callExpr->IsCppFunction() &&
+                      m_callExpr->GetCppFunctionMetadata()->m_numParams > 0 &&
+                      m_callExpr->GetCppFunctionMetadata()->m_paramTypes[0] == m_variable->GetTypeId() &&
+                      m_callExpr->GetParams()[0] == m_variable);
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
@@ -735,13 +749,23 @@ public:
         }
         else if (m_callExpr != nullptr)
         {
-            void* addr;
-            // 'addr' now points to the storing address of the variable
-            //
-            m_variable->Interp(&addr /*out*/);
-            // evaluate the call expression, which will construct the return value in-place at 'addr'
-            //
-            m_callExpr->Interp(addr /*out*/);
+            if (!m_isCtor)
+            {
+                void* addr;
+                // 'addr' now points to the storing address of the variable
+                //
+                m_variable->Interp(&addr /*out*/);
+                // evaluate the call expression, which will construct the return value in-place at 'addr'
+                //
+                m_callExpr->Interp(addr /*out*/);
+            }
+            else
+            {
+                // For ctor, return value is void, and the address of the variable
+                // has been placed on the first parameter
+                //
+                m_callExpr->Interp(nullptr /*out*/);
+            }
         }
     }
 
@@ -766,6 +790,7 @@ public:
     //
     AstCallExpr* m_callExpr;
     AstVariable* m_variable;
+    bool m_isCtor;
 };
 
 class AstReturnStmt : public AstNodeBase

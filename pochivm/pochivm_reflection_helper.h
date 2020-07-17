@@ -620,6 +620,104 @@ public:
     static constexpr bool isSretTransformed = FnTypeInfo::isRetValNontriviallyConverted();
 };
 
+// constructor_wrapper_helper<C, Args...>::wrapperFn
+//    A function of prototype void(*)(C* ret, Args... args), which executes 'new (ret) C(args...)'.
+//    Non-primitive parameter types are transformed using the same rule as function_wrapper_helper.
+//
+template<typename C, typename... Args>
+class constructor_wrapper_helper
+{
+private:
+    static const size_t numArgs = sizeof...(Args);
+
+    template<size_t i> using ArgType = typename std::tuple_element<i, std::tuple<Args...>>::type;
+    template<size_t i> using RemovedRefArgType = typename arg_transform_helper<ArgType<i>>::RemovedRefArgType;
+
+    using SeqType = typename gen_tpl_sequence<numArgs>::type;
+    template<int k> using InType = RemovedRefArgType<k>;
+    template<int k> using OutType = ArgType<k>;
+
+    // object type parameter (passed in by value)
+    //
+    template<int k, typename Enable = void>
+    struct convert_param_internal
+    {
+        static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value
+                              && !std::is_reference<OutType<k>>::value, "wrong specialization");
+
+        using type = OutType<k>&;
+        static type get(InType<k> v)
+        {
+            return *v;
+        }
+    };
+
+    // reference type parameter
+    //
+    template<int k>
+    struct convert_param_internal<k, typename std::enable_if<(
+                                             std::is_reference<OutType<k>>::value)>::type>
+    {
+        static_assert(std::is_lvalue_reference<OutType<k>>::value,
+                      "function returning rvalue reference is not supported");
+        static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value,
+                      "InType should be the pointer type");
+
+        using type = OutType<k>;
+        static type get(InType<k> v)
+        {
+            return *v;
+        }
+    };
+
+    // primitive type or pointer type parameter
+    //
+    template<int k>
+    struct convert_param_internal<k, typename std::enable_if<(
+                                             !is_converted_reference_type<OutType<k>>::value)>::type>
+    {
+        static_assert(std::is_same<InType<k>, OutType<k>>::value, "wrong specialization");
+
+        using type = OutType<k>;
+        static type get(InType<k> v)
+        {
+            return v;
+        }
+    };
+
+    template<int k, typename T>
+    static typename convert_param_internal<k>::type convert_param(T input)
+    {
+        return convert_param_internal<k>::get(std::get<k>(input));
+    }
+
+    template<int... S, typename... TArgs>
+    static void call_impl(tpl_sequence<S...> /*unused*/, C* ret, TArgs... args)
+    {
+        new (ret) C(convert_param<S>(std::forward_as_tuple(args...))...);
+    }
+
+    template<typename... TArgs>
+    static void call(C* ret, TArgs... args)
+    {
+        call_impl(SeqType(), ret, args...);
+    }
+
+    template<int N, int... S>
+    struct impl : impl<N-1, N-1, S...> { };
+
+    template<int... S>
+    struct impl<0, S...>
+    {
+        using type = void(*)(C*, InType<S>...);
+        static constexpr type value = call<InType<S>...>;
+    };
+
+public:
+    using WrapperFnPtrType = typename impl<numArgs>::type;
+    static constexpr WrapperFnPtrType wrapperFn = impl<numArgs>::value;
+};
+
 template <typename MethPtr>
 void* GetClassMethodPtrHelper(MethPtr p)
 {
@@ -666,7 +764,8 @@ enum class FunctionType
 {
     FreeFn,
     StaticMemberFn,
-    NonStaticMemberFn
+    NonStaticMemberFn,
+    Constructor
 };
 
 struct RawFnTypeNamesInfo
@@ -759,6 +858,7 @@ struct get_raw_fn_typenames_info
 
     static RawFnTypeNamesInfo get(FunctionType fnType)
     {
+        ReleaseAssert(fnType != FunctionType::Constructor);
         if (fnType == FunctionType::StaticMemberFn || fnType == FunctionType::FreeFn)
         {
             if (!(std::is_pointer<decltype(t)>::value &&
@@ -768,7 +868,7 @@ struct get_raw_fn_typenames_info
                 abort();
             }
         }
-        else
+        else if (fnType == FunctionType::NonStaticMemberFn)
         {
             if (!std::is_member_pointer<decltype(t)>::value)
             {
@@ -789,6 +889,43 @@ struct get_raw_fn_typenames_info
                                   wrapper::isWrapperFnRequired,
                                   wrapper::isSretTransformed,
                                   reinterpret_cast<void*>(wrapperFn));
+    }
+
+    static RawFnTypeNamesInfo get_constructor(size_t numArgs,
+                                              const char* class_typename,
+                                              const char* const* orig_ret_and_param_typenames,
+                                              const std::pair<const char*, bool>* api_ret_and_param_typenames)
+    {
+        if (!(std::is_pointer<decltype(t)>::value &&
+              std::is_function<typename std::remove_pointer<decltype(t)>::type>::value))
+        {
+            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor is not a function pointer!\n");
+            abort();
+        }
+        if (wrapper::isWrapperFnRequired)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor should not require another wrapper!\n");
+            abort();
+        }
+        if (wrapper::isSretTransformed)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor should not require sret transform!\n");
+            abort();
+        }
+
+        ReleaseAssert(numArgs == fnInfo::numArgs);
+        return RawFnTypeNamesInfo(FunctionType::Constructor,
+                                  numArgs,
+                                  api_ret_and_param_typenames,
+                                  orig_ret_and_param_typenames,
+                                  class_typename,
+                                  nullptr /*function_name*/,
+                                  get_function_pointer_address(t),
+                                  false /*is_const*/,
+                                  false /*is_noexcept*/,
+                                  false /*is_wrapper_fn_required*/,
+                                  false /*is_sret_transform_required*/,
+                                  nullptr /*wrapperFn*/);
     }
 };
 
@@ -817,6 +954,25 @@ void RegisterStaticMemberFn()
 {
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<t>::get(ReflectionHelper::FunctionType::StaticMemberFn);
+    __pochivm_report_info__(&info);
+}
+
+template<typename C, typename... Args>
+void RegisterConstructor()
+{
+    static_assert(std::is_constructible<C, Args...>::value, "Invalid constructor parameter types");
+    // WARNING: If you change wrapper_t, make sure to change dump_symbols.cpp correspondingly.
+    // The generated header currently hardcodes the definition of 'wrapper_t'.
+    //
+    using wrapper_t = ReflectionHelper::constructor_wrapper_helper<C, Args...>;
+    ReflectionHelper::RawFnTypeNamesInfo info =
+            ReflectionHelper::get_raw_fn_typenames_info<wrapper_t::wrapperFn>::get_constructor(
+                    sizeof...(Args) + 1 /*numArgs*/,
+                    ReflectionHelper::class_name_helper_internal<C>::get_class_typename(),
+                    ReflectionHelper::function_typenames_helper_internal<
+                            void /*ret*/, C* /*firstParam*/, Args...>::get_original_ret_and_param_typenames(),
+                    ReflectionHelper::function_typenames_helper_internal<
+                            void /*ret*/, C* /*firstParam*/, Args...>::get_api_ret_and_param_typenames());
     __pochivm_report_info__(&info);
 }
 

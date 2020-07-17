@@ -142,6 +142,8 @@ static_assert(false, "NDEBUG should always be defined in non-testbuild");
 #define AssertImp(a, b) assert((!(a)) || (b))
 #define TestAssertIff(a, b) TestAssert((!!(a)) == (!!(b)))
 #define TestAssertImp(a, b) TestAssert((!(a)) || (b))
+#define ReleaseAssertIff(a, b) ReleaseAssert((!!(a)) == (!!(b)))
+#define ReleaseAssertImp(a, b) ReleaseAssert((!(a)) || (b))
 
 #ifdef TESTBUILD
 const static bool x_isTestBuild = true;

@@ -15,6 +15,7 @@ static void RegisterRuntimeLibrary()
     //    void RegisterFreeFn<function pointer>()
     //    void RegisterMemberFn<member function pointer>()
     //    void RegisterStaticMemberFn<member function pointer>()
+    //    void RegisterConstructor<ClassName, ArgTypeNames...>()
     //
     // While you may write any logic you like, keep in mind that you will get a segfault if you try to
     // call functions or access global values which implementations reside in other CPP files.
@@ -116,6 +117,16 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&TestNonTrivialConstructor::GetValue>();
 
     RegisterStaticMemberFn<&TestNonTrivialCopyConstructor::Fn>();
+
+    RegisterConstructor<std::vector<int>>();
+    RegisterConstructor<std::vector<int>, size_t /*count*/>();
+    RegisterConstructor<std::vector<int>, size_t /*count*/, int /*value*/>();
+    RegisterConstructor<std::vector<int>, const std::vector<int>& /*other*/>();
+
+    RegisterFreeFn<&CopyVectorInt>();
+
+    RegisterConstructor<TestConstructor1>();
+    RegisterMemberFn<&TestConstructor1::GetValue>();
 }
 
 // DO NOT MODIFY

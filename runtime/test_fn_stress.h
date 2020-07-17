@@ -320,3 +320,17 @@ struct TestNonTrivialCopyConstructor
 
     int value;
 };
+
+inline void CopyVectorInt(std::vector<int>* src, std::vector<int>* dst)
+{
+    *src = *dst;
+}
+
+class TestConstructor1
+{
+public:
+    TestConstructor1() { value = 233; }
+    int GetValue() { return value; }
+
+    int value;
+};

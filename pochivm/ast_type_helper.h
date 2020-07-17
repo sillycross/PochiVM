@@ -312,6 +312,20 @@ struct CppFunctionMetadata
     size_t m_functionOrdinal;
 };
 
+class AstNodeBase;
+
+// A helper storing the constructor, and the parameters passed to the constructor
+//
+class ConstructorParamInfo : NonCopyable
+{
+public:
+    const CppFunctionMetadata* m_constructorMd;
+    std::vector<AstNodeBase*> m_params;
+
+protected:
+    ConstructorParamInfo() {}
+};
+
 namespace AstTypeHelper
 {
 
