@@ -1085,6 +1085,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
     // generate Ast syntax header
     //
+    std::set<std::string> allDefaultConstructibleClasses;
     {
         std::string filename = generatedFileFolder + "/pochivm_runtime_headers.generated.h";
         FILE* fp = fopen(filename.c_str(), "w");
@@ -1493,10 +1494,16 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 std::vector<ParsedFnTypeNamesInfo>& data = it->second;
                 std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
 
+                bool isDefaultConstructible = false;
                 fprintf(fp, "template<> class Constructor<%s> : public ConstructorParamInfo\n{\npublic:\n\n", className.c_str());
                 for (size_t k = 0; k < data.size(); k++)
                 {
                     ParsedFnTypeNamesInfo& info = data[k];
+                    ReleaseAssert(info.m_params.size() > 0);
+                    if (info.m_params.size() == 1)
+                    {
+                        isDefaultConstructible = true;
+                    }
                     fprintf(fp, "// Original parameters:\n");
                     for (const std::string& param : info.m_origParams)
                     {
@@ -1512,6 +1519,12 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     PrintConstructorFnCallBody(fp, info);
                 }
                 fprintf(fp, "};\n\n");
+
+                if (isDefaultConstructible)
+                {
+                    ReleaseAssert(!allDefaultConstructibleClasses.count(className));
+                    allDefaultConstructibleClasses.insert(className);
+                }
             }
         }
 
@@ -1617,6 +1630,13 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
         fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
         fprintf(fp, "const static int x_num_cpp_functions = %d;\n\n", g_curUniqueFunctionOrdinal);
+
+        fprintf(fp, "template<typename T> struct is_default_ctor_registered : std::false_type {};\n");
+        for (const std::string& className : allDefaultConstructibleClasses)
+        {
+            fprintf(fp, "template<> struct is_default_ctor_registered<%s> : std::true_type {};\n", className.c_str());
+        }
+        fprintf(fp, "\n");
 
         fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
         fprintf(fp, "\n} // namespace PochiVM\n\n");

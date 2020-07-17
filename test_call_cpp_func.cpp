@@ -859,7 +859,7 @@ TEST(SanityCallCppFn, Constructor_1)
         auto [fn, param] = NewFunction<FnPrototype>("testfn");
         auto v = fn.NewVariable<std::vector<int>>();
         fn.SetBody(
-                Declare(v, Constructor<std::vector<int>>()),
+                Declare(v),
                 CallFreeFn::CopyVectorInt(param, v.Addr())
         );
     }
@@ -1167,7 +1167,7 @@ TEST(SanityCallCppFn, Constructor_5)
         auto [fn] = NewFunction<FnPrototype>("testfn");
         auto v = fn.NewVariable<TestConstructor1>();
         fn.SetBody(
-                Declare(v, Constructor<TestConstructor1>()),
+                Declare(v),
                 Return(v.GetValue())
         );
     }

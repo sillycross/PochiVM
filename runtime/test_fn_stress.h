@@ -334,3 +334,13 @@ public:
 
     int value;
 };
+
+class TestConstructor2
+{
+public:
+    TestConstructor2(int x) { value = x; }
+    int GetValue() { return value; }
+
+    int value;
+};
+

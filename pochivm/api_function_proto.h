@@ -192,17 +192,6 @@ FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramN
     return internal::params_user_tuple<T>::build(fn, fn.GetPtr()->GetParamsVector());
 }
 
-// Declare a variable
-//
-template<typename T>
-Value<void> Declare(const Variable<T>& var)
-{
-    static_assert(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value,
-                  "Cannot declare a non-primitive type variable with no initial value. "
-                  "You must give an initial value by either calling a constructor, or calling a function that returns such type.");
-    return Value<void>(new AstDeclareVariable(var.m_varPtr));
-}
-
 // Declare a variable, with initialization expression
 //
 template<typename T>
@@ -259,6 +248,25 @@ Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorPar
     return Value<void>(new AstDeclareVariable(variable,
                                               new AstCallExpr(ctorParams.m_constructorMd, params),
                                               true /*isCtor*/));
+}
+
+// Declare a variable, with default constructor (for objects) or uninitialized (for primitive types)
+//
+template<typename T>
+Value<void> Declare(const Variable<T>& var)
+{
+    if constexpr(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value)
+    {
+        return Value<void>(new AstDeclareVariable(var.m_varPtr));
+    }
+    else
+    {
+        static_assert(AstTypeHelper::is_default_ctor_registered<T>::value,
+                      "Cannot default-construct a non-primitive type variable with no registered default constructor. "
+                      "You must either register a default constructor in pochivm_register_runtime.cpp, "
+                      "or call a custom constructor with parameters, or call a function that returns such type.");
+        return Declare<T>(var, Constructor<T>());
+    }
 }
 
 // Declare a variable, with constant value initialization
