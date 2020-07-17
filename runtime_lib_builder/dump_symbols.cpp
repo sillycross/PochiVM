@@ -1096,6 +1096,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         }
 
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp, "#pragma once\n");
         fprintf(fp, "#include \"runtime/pochivm_runtime_headers.h\"\n");
         fprintf(fp, "#include \"pochivm_runtime_cpp_types.generated.h\"\n");
         fprintf(fp, "#include \"pochivm/function_proto.h\"\n");

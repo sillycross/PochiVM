@@ -4,6 +4,8 @@
 #include "function_proto.h"
 #include "api_lang_constructs.h"
 
+#include "generated/pochivm_runtime_headers.generated.h"
+
 namespace PochiVM
 {
 
@@ -231,8 +233,11 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
 // Declare a variable, with constructor initialization
 //
 template<typename T>
-Value<void> Declare(const Variable<T>& var, const ConstructorParamInfo& ctorParams)
+Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorParams)
 {
+    static_assert(std::is_base_of<ConstructorParamInfo, Constructor<T>>::value,
+                  "Constructor<T> is supposed to be derived from ConstructorParamInfo");
+    const ConstructorParamInfo& ctorParams = constructorParams;
     static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a cpp class type");
     TestAssert(ctorParams.m_constructorMd->m_numParams > 0);
     TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == TypeId::Get<T>().AddPointer());
