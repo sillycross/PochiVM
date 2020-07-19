@@ -211,11 +211,7 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
         static_assert(AstTypeHelper::is_cpp_class_type<T>::value,
                       "T must be a CPP class type registered in pochivm_register_runtime.cpp");
         AstCallExpr* callExpr = assert_cast<AstCallExpr*>(value.m_ptr);
-        // A Variable<T> may not always be holding an AstVariable. TestAssert that it is indeed holding an AstVariable.
-        //
-        TestAssert(dynamic_cast<AstVariable*>(var.m_varPtr) != nullptr);
-        AstVariable* variable = assert_cast<AstVariable*>(var.m_varPtr);
-        return Value<void>(new AstDeclareVariable(variable, callExpr, false /*isCtor*/));
+        return Value<void>(new AstDeclareVariable(var.m_varPtr, callExpr, false /*isCtor*/));
     }
 }
 
@@ -237,15 +233,11 @@ Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorPar
         TestAssert(ctorParams.m_params[i]->GetTypeId() == ctorParams.m_constructorMd->m_paramTypes[i+1]);
     }
 #endif
-    // A Variable<T> may not always be holding an AstVariable. TestAssert that it is indeed holding an AstVariable.
-    //
-    TestAssert(dynamic_cast<AstVariable*>(var.m_varPtr) != nullptr);
-    AstVariable* variable = assert_cast<AstVariable*>(var.m_varPtr);
     std::vector<AstNodeBase*> params;
     params.reserve(ctorParams.m_constructorMd->m_numParams);
-    params.push_back(variable);
+    params.push_back(var.m_varPtr);
     params.insert(params.end(), ctorParams.m_params.begin(), ctorParams.m_params.end());
-    return Value<void>(new AstDeclareVariable(variable,
+    return Value<void>(new AstDeclareVariable(var.m_varPtr,
                                               new AstCallExpr(ctorParams.m_constructorMd, params),
                                               true /*isCtor*/));
 }
