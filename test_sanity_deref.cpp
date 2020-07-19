@@ -108,14 +108,14 @@ TEST(Sanity, StoreIntoLocalVar)
     {
         auto [fn, addr, value] = NewFunction<FnPrototype1>("store_value");
         fn.SetBody(
-            (value + Literal<int>(233)).StoreIntoAddress(addr)
+            Assign(addr.Deref(), value + Literal<int>(233))
         );
     }
 
     {
         auto [fn, addr, value] = NewFunction<FnPrototype1>("inc_value");
         fn.SetBody(
-            (addr.Deref() + value).StoreIntoAddress(addr)
+            Assign(addr.Deref(), addr.Deref() + value)
         );
     }
 
@@ -208,7 +208,7 @@ TEST(Sanity, BoolDeref)
     {
         auto [fn, addr, value] = NewFunction<FnPrototype>("store_bool");
         fn.SetBody(
-            value.StoreIntoAddress(addr)
+                Assign(addr.Deref(), value)
         );
     }
 

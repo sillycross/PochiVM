@@ -77,10 +77,9 @@ void CheckOnce()
     {
         auto [fn, r, dst, offset] = NewFunction<SideEffectFn>("f", "r", "dst", "offset");
         fn.SetBody(
-            (dst.Deref() + Literal<int32_t>(1)).StoreIntoAddress(dst),
-            dst.Deref().StoreIntoAddress(
-                        (dst.ReinterpretCast<uint64_t>() + offset * Literal<uint64_t>(4))
-                                .ReinterpretCast<int32_t*>()),
+            Assign(dst.Deref(), dst.Deref() + Literal<int32_t>(1)),
+            Assign((dst.ReinterpretCast<uint64_t>() + offset * Literal<uint64_t>(4))
+                               .ReinterpretCast<int32_t*>().Deref(), dst.Deref()),
             Return(r)
         );
     }
@@ -160,10 +159,9 @@ TEST(SanityIrCodeDump, LogicalOp)
     {
         auto [fn, r, dst, offset] = NewFunction<SideEffectFn>("f", "r", "dst", "offset");
         fn.SetBody(
-            (dst.Deref() + Literal<int32_t>(1)).StoreIntoAddress(dst),
-            dst.Deref().StoreIntoAddress(
-                        (dst.ReinterpretCast<uint64_t>() + offset * Literal<uint64_t>(4))
-                                .ReinterpretCast<int32_t*>()),
+            Assign(dst.Deref(), dst.Deref() + Literal<int32_t>(1)),
+            Assign((dst.ReinterpretCast<uint64_t>() + offset * Literal<uint64_t>(4))
+                               .ReinterpretCast<int32_t*>().Deref(), dst.Deref()),
             Return(r)
         );
     }

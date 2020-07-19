@@ -435,7 +435,7 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_2)
 
         fn.SetBody(
                 Declare(d, a == Literal<int>(233)),
-                CallFreeFn::TestCornerCases::BoolParamTest2(d, b, c),
+                CallFreeFn::TestCornerCases::BoolParamTest2(d, b.Deref(), c),
                 Return(d)
         );
     }

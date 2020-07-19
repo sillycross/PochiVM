@@ -12,9 +12,9 @@ namespace PochiVM
 {
 
 template<typename T>
-class Variable;
+class Reference;
 
-// A wrapper class holding a RValue of type known at C++ build time (so static_asserts are possible),
+// A wrapper class holding a RValue of type known at C++ build time (so static_asserts on types are possible),
 // It holds a pointer to a AstNodeBase class with same type. This class is safe to pass around by value.
 // This class is the core of the various APIs that allows user to build up the AST tree.
 //
@@ -62,48 +62,16 @@ public:
         return Value<U>(new AstReinterpretCastExpr(m_ptr, TypeId::Get<U>()));
     }
 
-    // StoreIntoAddress(T* ptr): execute *ptr = v
-    //
-    template<typename Enable = void, std::enable_if_t<(
-             std::is_same<Enable, void>::value && !std::is_same<T, void>::value
-    )>* = nullptr >
-    Value<void> StoreIntoAddress(Value<T*> dest)
-    {
-        static_assert(!std::is_same<T, void>::value, "cannot store a void");
-        return Value<void>(new AstAssignExpr(dest.m_ptr, m_ptr));
-    }
-
     // Deref(): possible for T* where T is not void*.
-    // It is intentional design decision that Deref() returns RValue (class Value), not LValue (class Variable)
-    // like in C. The motivation is to prevent users from getting unexpected behaviors. If we were returning a LValue,
-    // suppose b is RValue int*, then our 'auto a = b.Deref()' would actually behaves like 'int& a = *b' in C++,
-    // despite the grammer looks intuitively more like 'int a = *b'. The user who later used 'a' as RValue
-    // might wrongly expected 'a' to be the value held in *b at the time the deref was executed.
-    //
-    // If the type is T* where T is a CPP class type, this deref itself will be a no-op, since when we later
-    // invoke a method of the class, an Addr() must be executed and cancel out this Deref() (and since we don't
-    // support composite RValue, access a method/member of the class is the only way a class type could be used).
-    // Instead, a Variable<T> class is returned. The class provides the various APIs to access T's members and methods.
+    // Returns a reference to the value at the pointer address.
+    // This is internally a no-op, since a reference is internally just a value of type T*,
+    // but this allows users to write code in a more C++-like manner.
     //
     template<typename Enable = void, std::enable_if_t<(
              std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
-             !std::is_same<T, void*>::value && !AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
+             !std::is_same<T, void*>::value
     )>* = nullptr >
-    Value<typename std::remove_pointer<T>::type> Deref() const
-    {
-        static_assert(std::is_pointer<T>::value && !std::is_same<T, void*>::value,
-                      "must be a non void* pointer to deref");
-
-        using _PointerElementType = typename std::remove_pointer<T>::type;
-        static_assert(!AstTypeHelper::is_cpp_class_type<_PointerElementType>::value, "must not be cpp class type");
-        return Value<_PointerElementType>(new AstDereferenceExpr(m_ptr));
-    }
-
-    template<typename Enable = void, std::enable_if_t<(
-             std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
-             !std::is_same<T, void*>::value && AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
-    )>* = nullptr >
-    Variable<typename std::remove_pointer<T>::type> Deref() const;
+    Reference<typename std::remove_pointer<T>::type> Deref() const;
 
     // Immutable. There is no reason to modify m_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
@@ -236,12 +204,16 @@ Value<T> Trashptr()
     return Value<T>(new AstTrashPtrExpr(TypeId::Get<T>()));
 }
 
-// Stores a m_ptr of type T*
-// This class inherits Value<T>, allowing a Variable to be used in all constructs that
-// expects a Value (and the current value stored in the variable is used)
+// Stores a reference to Type T
+// Internally this is just a value of type T*
+// This class inherits Value<T>, allowing a Reference to be used in all constructs that
+// expects a Value, and in that case, the value stored in the address is used.
+//
+// Note that this class, like most nodes, cannot be reused in AST tree (unless when this class
+// is used as the base class of Variable), so there is no ambiguity on the value stored in the address.
 //
 template<typename T>
-class Variable : public Value<T>
+class Reference : public Value<T>
 {
 public:
     // CPP types are specialized, should not hit here
@@ -249,25 +221,55 @@ public:
     static_assert(AstTypeHelper::is_primitive_type<T>::value ||
                   std::is_pointer<T>::value, "Bad type T. Add to runtime/pochivm_register_runtime.cpp?");
 
-    Variable(AstVariable* ptr)
-        : Value<T>(new AstDereferenceVariableExpr(ptr))
-        , m_varPtr(ptr)
+    Reference(AstNodeBase* ptr)
+        : Value<T>(new AstDereferenceExpr(ptr))
+        , m_refPtr(ptr)
     {
-        TestAssert(m_varPtr->GetTypeId().IsType<T*>());
+        TestAssert(m_refPtr->GetTypeId().IsType<T*>());
     }
 
-    // Explicitly load the value currently stored in the variable.
+protected:
+    // constructor used only by Variable
+    // AstDereferenceVariableExpr is an exceptional node that may be reused,
+    // allowing the variable to be used in multiple places in the AST tree.
     //
-    Value<T> Load() const
+    // The unused 'bool' parameter is just to distinguish with the ctor that takes AstNodeBase*
+    //
+    Reference(AstVariable* ptr, bool /*unused*/)
+        : Value<T>(new AstDereferenceVariableExpr(ptr))
+        , m_refPtr(ptr)
     {
-        return *static_cast<const Value<T>*>(this);
+        TestAssert(m_refPtr->GetTypeId().IsType<T*>());
     }
+
+public:
 
     // Address of this variable
     //
     Value<T*> Addr() const
     {
-        return Value<T*>(m_varPtr);
+        return Value<T*>(m_refPtr);
+    }
+
+    // Immutable. There is no reason to modify m_varPtr after construction, and
+    // it is catches errors like a = b (should instead write Assign(a, b))
+    //
+    AstNodeBase* const m_refPtr;
+};
+
+// A local variable of type T.
+// This class inherits Reference<T>, allowing a Variable to be used in all constructs that
+// expects a Reference or Value (and in the case of Value the current value stored in the variable is used)
+//
+template<typename T>
+class Variable : public Reference<T>
+{
+public:
+    Variable(AstVariable* ptr)
+        : Reference<T>(ptr, true)
+        , m_varPtr(ptr)
+    {
+        TestAssert(m_varPtr->GetTypeId().IsType<T*>());
     }
 
     // Immutable. There is no reason to modify m_varPtr after construction, and
@@ -279,31 +281,30 @@ public:
 template<typename T>
 template<typename Enable, std::enable_if_t<(
          std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
-         !std::is_same<T, void*>::value && AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
-)>* >
-Variable<typename std::remove_pointer<T>::type> Value<T>::Deref() const
+         !std::is_same<T, void*>::value
+)>*>
+Reference<typename std::remove_pointer<T>::type> Value<T>::Deref() const
 {
     static_assert(std::is_pointer<T>::value && !std::is_same<T, void*>::value,
                   "must be a non void* pointer to deref");
 
     using _PointerElementType = typename std::remove_pointer<T>::type;
-    static_assert(AstTypeHelper::is_cpp_class_type<_PointerElementType>::value);
-    return Variable<_PointerElementType>(m_ptr);
+    return Reference<_PointerElementType>(m_ptr);
 }
 
 // Language utility: Assign a value to a variable
 //
 template<typename T>
-Value<void> Assign(const Variable<T>& lhs, const Value<T>& rhs)
+Value<void> Assign(const Reference<T>& lhs, const Value<T>& rhs)
 {
-    return Value<void>(new AstAssignExpr(lhs.m_varPtr, rhs.m_ptr));
+    return Value<void>(new AstAssignExpr(lhs.m_refPtr, rhs.m_ptr));
 }
 
 // Language utility: increment an integer
 // TODO: support pointers as well maybe?
 //
 template<typename T>
-Value<void> Increment(const Variable<T>& var)
+Value<void> Increment(const Reference<T>& var)
 {
     static_assert(AstTypeHelper::is_primitive_int_type<T>::value, "may only increment integer");
     return Assign(var, var + Literal<T>(1));

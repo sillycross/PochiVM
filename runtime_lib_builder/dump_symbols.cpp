@@ -590,7 +590,7 @@ static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNo
     fprintf(fp, "(%s", (info.m_params.size() == firstParam ? ")" : "\n"));
     for (size_t i = firstParam; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "        %s<%s>", (info.m_isParamsApiVar[i] ? "Variable" : "Value"), info.m_params[i].c_str());
+        fprintf(fp, "        %s<%s>", (info.m_isParamsApiVar[i] ? "Reference" : "Value"), info.m_params[i].c_str());
         if (!doNotPrintVarName)
         {
             fprintf(fp, " __pochivm_%d", static_cast<int>(i - firstParam));
@@ -761,12 +761,12 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     fprintf(fp, "    };\n");
 
     fprintf(fp, "    return %s<%s>(new AstCallExpr(\n",
-            (info.m_isRetApiVar ? "Variable" : "Value"), info.m_ret.c_str());
+            (info.m_isRetApiVar ? "Reference" : "Value"), info.m_ret.c_str());
     fprintf(fp, "            &__pochivm_cpp_fn_metadata,\n");
     fprintf(fp, "            std::vector<AstNodeBase*>{");
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
     {
-        fprintf(fp, "\n                m_varPtr");
+        fprintf(fp, "\n                m_refPtr");
         if (info.m_params.size() > 0)
         {
             fprintf(fp, ",");
@@ -779,7 +779,7 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
         fprintf(fp, "\n                __pochivm_%d.%s",
-                static_cast<int>(i), (info.m_isParamsApiVar[i] ? "m_varPtr" : "m_ptr"));
+                static_cast<int>(i), (info.m_isParamsApiVar[i] ? "m_refPtr" : "m_ptr"));
         if (i != info.m_params.size() - 1)
         {
             fprintf(fp, ",");
@@ -868,7 +868,7 @@ static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& in
     for (size_t i = 0; i < static_cast<size_t>(numCtorParams); i++)
     {
         fprintf(fp, "\n        __pochivm_%d.%s",
-                static_cast<int>(i), (info.m_isParamsApiVar[i + 1] ? "m_varPtr" : "m_ptr"));
+                static_cast<int>(i), (info.m_isParamsApiVar[i + 1] ? "m_refPtr" : "m_ptr"));
         if (i != static_cast<size_t>(numCtorParams) - 1)
         {
             fprintf(fp, ",");
@@ -884,16 +884,21 @@ static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& in
 
 static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
 {
-    fprintf(fp, "Variable<%s>(AstNodeBase* varPtr) : m_varPtr(varPtr) {\n", className.c_str());
+    fprintf(fp, "public:\n");
+    fprintf(fp, "Reference<%s>(AstNodeBase* refPtr) : m_refPtr(refPtr) {\n", className.c_str());
     // The 'ReleaseAssert' actually evaluates to constant expression.
     // Ideally we want to delete the constructor in that case, but for now go simple.
     //
     fprintf(fp, "    ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", className.c_str());
-    fprintf(fp, "    TestAssert((m_varPtr->GetTypeId() == TypeId::Get<%s>().AddPointer()));\n", className.c_str());
+    fprintf(fp, "    TestAssert((m_refPtr->GetTypeId() == TypeId::Get<%s>().AddPointer()));\n", className.c_str());
     fprintf(fp, "}\n");
-    fprintf(fp, "AstNodeBase* m_varPtr;\n\n");
+    fprintf(fp, "protected:\n");
+    fprintf(fp, "// Used by Variable<> class\n");
+    fprintf(fp, "Reference<%s>(AstNodeBase* refPtr, bool /*unused*/) : Reference<%s>(refPtr) {} \n", className.c_str(), className.c_str());
+    fprintf(fp, "public:\n");
+    fprintf(fp, "AstNodeBase* m_refPtr;\n\n");
     fprintf(fp, "Value<%s*> Addr() const {\n", className.c_str());
-    fprintf(fp, "    return Value<%s*>(m_varPtr);\n", className.c_str());
+    fprintf(fp, "    return Value<%s*>(m_refPtr);\n", className.c_str());
     fprintf(fp, "}\n\n");
 }
 
@@ -1114,12 +1119,12 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             //
             std::set<std::string> unprinted;
 
-            // forward declare all Variable<> classes
+            // forward declare all Reference<> classes
             //
             for (auto it = typeNameMap.begin(); it != typeNameMap.end(); it++)
             {
                 const std::string& cppTypeName = it->second;
-                fprintf(fp, "template<> class Variable<%s>;\n", cppTypeName.c_str());
+                fprintf(fp, "template<> class Reference<%s>;\n", cppTypeName.c_str());
             }
             fprintf(fp, "\n");
 
@@ -1160,7 +1165,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 std::vector<ParsedFnTypeNamesInfo>& data = it->second;
                 std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
 
-                fprintf(fp, "template<> class Variable<%s>\n{\npublic:\n", className.c_str());
+                fprintf(fp, "template<> class Reference<%s>\n{\n", className.c_str());
                 PrintBoilerplateMethods(fp, className);
 
                 if (unprinted.count(className))
@@ -1206,7 +1211,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             fprintf(fp, "//\n");
                             fprintf(fp, "%s%s<%s> %s",
                                     (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                    (info.m_isRetApiVar ? "Variable" : "Value"),
+                                    (info.m_isRetApiVar ? "Reference" : "Value"),
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, ";\n");
@@ -1249,7 +1254,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             }
                             fprintf(fp, "%s%s<%s> %s",
                                     (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                    (data[start].m_isRetApiVar ? "Variable" : "Value"),
+                                    (data[start].m_isRetApiVar ? "Reference" : "Value"),
                                     data[start].m_ret.c_str(), data[start].m_functionName.c_str());
                             PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
                             fprintf(fp, " = delete;\n");
@@ -1259,7 +1264,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     start = end;
                 }
 
-                fprintf(fp, "}; // class Variable<%s>\n\n", className.c_str());
+                fprintf(fp, "}; // class Reference<%s>\n\n", className.c_str());
             }
 
             // Print the yet unprinted classes.
@@ -1267,7 +1272,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             //
             for (const std::string& className : unprinted)
             {
-                fprintf(fp, "template<> class Variable<%s>\n{\npublic:\n", className.c_str());
+                fprintf(fp, "template<> class Reference<%s>\n{\n", className.c_str());
                 PrintBoilerplateMethods(fp, className);
                 fprintf(fp, "};\n\n");
             }
@@ -1336,7 +1341,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             }
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
-                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Variable" : "Value"),
+                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Reference" : "Value"),
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
@@ -1378,7 +1383,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                                     fprintf(fp, ">\n");
                                 }
                             }
-                            fprintf(fp, "%s<%s> %s", (data[start].m_isRetApiVar ? "Variable" : "Value"),
+                            fprintf(fp, "%s<%s> %s", (data[start].m_isRetApiVar ? "Reference" : "Value"),
                                     data[start].m_ret.c_str(), data[start].m_functionName.c_str());
                             PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
                             fprintf(fp, " = delete;\n");
@@ -1396,7 +1401,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
                             fprintf(fp, "//\n");
                             fprintf(fp, "template<>\n");
-                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Variable" : "Value"),
+                            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Reference" : "Value"),
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnTemplateParams(fp, info);
                             PrintFnParams(fp, info);
@@ -1452,8 +1457,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     {
                         fprintf(fp, "template<>\n");
                     }
-                    fprintf(fp, "inline %s<%s> Variable<%s>::%s",
-                            (info.m_isRetApiVar ? "Variable" : "Value"),
+                    fprintf(fp, "inline %s<%s> Reference<%s>::%s",
+                            (info.m_isRetApiVar ? "Reference" : "Value"),
                             info.m_ret.c_str(), info.m_prefix.c_str(), info.m_functionName.c_str());
                     if (tplSize > 0)
                     {

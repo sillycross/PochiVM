@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define available_externally dso_local void @_ZN15TestCornerCases14BoolParamTest2ERbPPbS2_(i8* dereferenceable(1) %0, i8** %1, i8** %2) #0 {
+define available_externally dso_local void @_ZN15TestCornerCases14BoolParamTest2ERbRPbPS1_(i8* dereferenceable(1) %0, i8** dereferenceable(8) %1, i8** %2) #0 {
   %4 = alloca i8*, align 8
   %5 = alloca i8**, align 8
   %6 = alloca i8**, align 8
@@ -82,7 +82,7 @@ body:                                             ; preds = %entry
   store i8 %2, i8* %var_3
   %3 = load i8**, i8*** %param_1
   %4 = load i8**, i8*** %param_2
-  call void @_ZN15TestCornerCases14BoolParamTest2ERbPPbS2_(i8* %var_3, i8** %3, i8** %4)
+  call void @_ZN15TestCornerCases14BoolParamTest2ERbRPbPS1_(i8* %var_3, i8** %3, i8** %4)
   %5 = load i8, i8* %var_3
   %6 = trunc i8 %5 to i1
   ret i1 %6

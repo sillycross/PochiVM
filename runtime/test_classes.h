@@ -145,18 +145,18 @@ inline bool BoolParamTest1(bool a, bool* b, bool** c)
     return (*c)[1];
 }
 
-inline void BoolParamTest2(bool& a, bool** b, bool** c)
+inline void BoolParamTest2(bool& a, bool*& b, bool** c)
 {
     if (a)
     {
-        (*b)[0] = a;
+        b[0] = a;
     }
     else
     {
-        (*b)[0] = (*c)[1];
+        b[0] = (*c)[1];
     }
-    a = (*b)[1];
-    *b = *c;
+    a = b[1];
+    b = *c;
     (*c)[2] = true;
     (*c)[3] = false;
 }
