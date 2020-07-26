@@ -397,4 +397,13 @@ Value<void> Return(const Value<T>& val)
     return Value<void>(new AstReturnStmt(val.m_ptr));
 }
 
+// CallDestructor<T>(T* ptr): manually call the destructor to destruct the object at 'ptr'
+//
+template<typename T>
+Value<void> CallDestructor(const Value<T*>& val)
+{
+    static_assert(is_destructor_registered<T>::value, "Destructor for T is not registered. Register in pochivm_register_runtime.cpp?");
+    return Value<void>(new AstCallExpr(DestructorCppFnMetadata<T>::value, { val.m_ptr }));
+}
+
 }   // namespace PochiVM

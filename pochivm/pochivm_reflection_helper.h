@@ -277,6 +277,7 @@ struct function_typenames_helper<R(*)(Args...)>
     : function_typenames_helper_internal<R, Args...>
     , return_nullptr_class_typename
 {
+    using ReturnType = R;
     static bool is_noexcept() { return false; }
     static bool is_const() { return false; }
 };
@@ -286,6 +287,7 @@ struct function_typenames_helper<R(*)(Args...) noexcept>
     : function_typenames_helper_internal<R, Args...>
     , return_nullptr_class_typename
 {
+    using ReturnType = R;
     static bool is_noexcept() { return true; }
     static bool is_const() { return false; }
 };
@@ -310,6 +312,7 @@ struct function_typenames_helper<R(C::*)(Args...)>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
 {
+    using ReturnType = R;
     using ClassType = C;
     static bool is_noexcept() { return false; }
     static bool is_const() { return false; }
@@ -320,6 +323,7 @@ struct function_typenames_helper<R(C::*)(Args...) noexcept>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
 {
+    using ReturnType = R;
     using ClassType = C;
     static bool is_noexcept() { return true; }
     static bool is_const() { return false; }
@@ -330,6 +334,7 @@ struct function_typenames_helper<R(C::*)(Args...) const>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
 {
+    using ReturnType = R;
     using ClassType = C;
     static bool is_noexcept() { return false; }
     static bool is_const() { return true; }
@@ -340,6 +345,7 @@ struct function_typenames_helper<R(C::*)(Args...) const noexcept>
     : function_typenames_helper_internal<R, Args...>
     , class_name_helper_internal<C>
 {
+    using ReturnType = R;
     using ClassType = C;
     static bool is_noexcept() { return true; }
     static bool is_const() { return true; }
@@ -718,6 +724,17 @@ public:
     static constexpr WrapperFnPtrType wrapperFn = impl<numArgs>::value;
 };
 
+template<typename C>
+struct destructor_wrapper_helper
+{
+    using WrapperFnPtrType = void(*)(C*);
+
+    static void wrapperFn(C* c)
+    {
+        c->~C();
+    }
+};
+
 template <typename MethPtr>
 void* GetClassMethodPtrHelper(MethPtr p)
 {
@@ -765,7 +782,8 @@ enum class FunctionType
     FreeFn,
     StaticMemberFn,
     NonStaticMemberFn,
-    Constructor
+    Constructor,
+    Destructor
 };
 
 struct RawFnTypeNamesInfo
@@ -858,7 +876,7 @@ struct get_raw_fn_typenames_info
 
     static RawFnTypeNamesInfo get(FunctionType fnType)
     {
-        ReleaseAssert(fnType != FunctionType::Constructor);
+        ReleaseAssert(fnType != FunctionType::Constructor && fnType != FunctionType::Destructor);
         if (fnType == FunctionType::StaticMemberFn || fnType == FunctionType::FreeFn)
         {
             if (!(std::is_pointer<decltype(t)>::value &&
@@ -927,11 +945,50 @@ struct get_raw_fn_typenames_info
                                   false /*is_sret_transform_required*/,
                                   nullptr /*wrapperFn*/);
     }
+
+    static RawFnTypeNamesInfo get_destructor(const char* class_typename)
+    {
+        return RawFnTypeNamesInfo(FunctionType::Destructor,
+                                  fnInfo::numArgs,
+                                  fnInfo::get_api_ret_and_param_typenames(),
+                                  fnInfo::get_original_ret_and_param_typenames(),
+                                  class_typename,
+                                  get_function_name(),
+                                  get_function_pointer_address(t),
+                                  fnInfo::is_const(),
+                                  fnInfo::is_noexcept(),
+                                  false /*is_wrapper_fn_required*/,
+                                  false /*is_sret_transform_required*/,
+                                  nullptr /*wrapperFn*/);
+    }
 };
 
 }   // namespace ReflectionHelper
 
 void __pochivm_report_info__(ReflectionHelper::RawFnTypeNamesInfo*);
+
+template<typename C>
+void RegisterDestructor()
+{
+    using wrapper_generator_t = ReflectionHelper::destructor_wrapper_helper<C>;
+    ReflectionHelper::RawFnTypeNamesInfo info =
+            ReflectionHelper::get_raw_fn_typenames_info<wrapper_generator_t::wrapperFn>::get_destructor(
+                    ReflectionHelper::class_name_helper_internal<C>::get_class_typename());
+    __pochivm_report_info__(&info);
+}
+
+// Internal helper: if the function returns an object, register its destructor.
+//
+template<auto t>
+void RegisterDestructorIfNeeded()
+{
+    using fnInfo = ReflectionHelper::function_typenames_helper<decltype(t)>;
+    if constexpr(fnInfo::isRetValNontriviallyConverted())
+    {
+        using ReturnedClassType = typename ReflectionHelper::arg_transform_helper<typename fnInfo::ReturnType>::ApiArgType;
+        RegisterDestructor<ReturnedClassType>();
+    }
+}
 
 template<auto t>
 void RegisterFreeFn()
@@ -939,6 +996,7 @@ void RegisterFreeFn()
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<t>::get(ReflectionHelper::FunctionType::FreeFn);
     __pochivm_report_info__(&info);
+    RegisterDestructorIfNeeded<t>();
 }
 
 template<auto t>
@@ -947,6 +1005,7 @@ void RegisterMemberFn()
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<t>::get(ReflectionHelper::FunctionType::NonStaticMemberFn);
     __pochivm_report_info__(&info);
+    RegisterDestructorIfNeeded<t>();
 }
 
 template<auto t>
@@ -955,6 +1014,7 @@ void RegisterStaticMemberFn()
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<t>::get(ReflectionHelper::FunctionType::StaticMemberFn);
     __pochivm_report_info__(&info);
+    RegisterDestructorIfNeeded<t>();
 }
 
 template<typename C, typename... Args>
@@ -974,6 +1034,7 @@ void RegisterConstructor()
                     ReflectionHelper::function_typenames_helper_internal<
                             void /*ret*/, C* /*firstParam*/, Args...>::get_api_ret_and_param_typenames());
     __pochivm_report_info__(&info);
+    RegisterDestructor<C>();
 }
 
 }   // namespace PochiVM

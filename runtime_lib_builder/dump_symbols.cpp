@@ -79,7 +79,8 @@ struct ParsedFnTypeNamesInfo
             m_prefix = className;
             m_functionName = fnName.substr(className.length() + 2);
         }
-        else if (m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor)
+        else if (m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor ||
+                 m_fnType == PochiVM::ReflectionHelper::FunctionType::Destructor)
         {
             std::string className = ParseTypeName(src->m_classTypename);
             m_prefix = className;
@@ -400,7 +401,7 @@ struct ParsedFnTypeNamesInfo
     // The prefix before the function
     // For member function this is namespace + class name,
     // for free function this is only namespace
-    // for constructor this is the class name (namespace + class name)
+    // for constructor/destructor this is the class name (namespace + class name)
     //
     std::string m_prefix;
     // name of function
@@ -431,8 +432,11 @@ void PochiVM::__pochivm_report_info__(PochiVM::ReflectionHelper::RawFnTypeNamesI
     }
     else
     {
-        fprintf(stderr, "[WARNING] function %s::%s appeared to be registered more than once, ignored multiple occurrance.\n",
-                (info->m_classTypename != nullptr ? info->m_classTypename : ""), info->m_fnName);
+        if (info->m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
+        {
+            fprintf(stderr, "[WARNING] function %s::%s appeared to be registered more than once, ignored multiple occurrance.\n",
+                    (info->m_classTypename != nullptr ? info->m_classTypename : ""), info->m_fnName);
+        }
     }
 }
 
@@ -620,7 +624,8 @@ static int g_curUniqueFunctionOrdinal = 0;
 
 static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 {
-    ReleaseAssert(info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor);
+    ReleaseAssert(info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
+                  info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor);
     fprintf(fp, "{\n");
     int numParams = static_cast<int>(info.m_params.size());
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
@@ -1152,7 +1157,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             {
                 ParsedFnTypeNamesInfo& info = it->second;
                 if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
-                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1429,7 +1435,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             {
                 ParsedFnTypeNamesInfo& info = it->second;
                 if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
-                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1531,6 +1538,71 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     allDefaultConstructibleClasses.insert(className);
                 }
             }
+        }
+
+        // generate all destructors
+        //
+        {
+            fprintf(fp, "template<typename T>\nclass DestructorCppFnMetadata\n{\npublic:\n");
+            fprintf(fp, "    static constexpr const CppFunctionMetadata* value = nullptr;\n");
+            fprintf(fp, "};\n\n");
+
+            std::map<std::string /*class*/, ParsedFnTypeNamesInfo > fns;
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::Destructor)
+                {
+                    if (fns.find(info.m_prefix) != fns.end())
+                    {
+                        fprintf(stderr, "Multiple destructors with different function addresses is registered! Offending class: %s\n",
+                                info.m_prefix.c_str());
+                        abort();
+                    }
+                    fns[info.m_prefix] = info;
+                }
+            }
+
+            for (auto it = fns.begin(); it != fns.end(); it++)
+            {
+                std::string className = it->first;
+                ParsedFnTypeNamesInfo& info = it->second;
+                fprintf(fp, "template<> class DestructorCppFnMetadata<%s> {\nprivate:\n", className.c_str());
+                ReleaseAssert(info.m_params.size() == 1);
+                ReleaseAssert(info.m_templateParams.size() == 0);
+                ReleaseAssert(!info.m_isParamsApiVar[0]);
+                ReleaseAssert(!info.m_isRetApiVar);
+                fprintf(fp, "    using __pochivm_classname = %s;\n", className.c_str());
+                fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_params[1] = { TypeId::Get<%s>() };\n",
+                        info.m_params[0].c_str());
+                fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<%s>();\n",
+                        info.m_ret.c_str());
+                fprintf(fp, "    static_assert(__pochivm_cpp_fn_params[0] == TypeId::Get<__pochivm_classname>().AddPointer(), \"unexpected param type\");\n");
+                fprintf(fp, "    static_assert(__pochivm_cpp_fn_ret == TypeId::Get<void>(), \"unexpected return type\");\n");
+
+                fprintf(fp, "    using __pochivm_wrapper_t = ReflectionHelper::destructor_wrapper_helper<__pochivm_classname>;\n");
+                fprintf(fp, "    static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
+                std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
+                fprintf(fp, "        &%s,\n", varname.c_str());
+                fprintf(fp, "        __pochivm_cpp_fn_params,\n");
+                fprintf(fp, "        1 /*numParams*/,\n");
+                fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
+                fprintf(fp, "        false /*isUsingSret*/,\n");
+                fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+                fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
+                g_curUniqueFunctionOrdinal++;
+                fprintf(fp, "    };\n");
+                fprintf(fp, "public:\n");
+                fprintf(fp, "    static constexpr const CppFunctionMetadata* value = &__pochivm_cpp_fn_metadata;\n");
+                fprintf(fp, "};\n\n");
+            }
+
+            fprintf(fp, "template<typename T>\n");
+            fprintf(fp, "struct is_destructor_registered : std::integral_constant<bool,\n");
+            fprintf(fp, "        (DestructorCppFnMetadata<T>::value != nullptr)\n");
+            fprintf(fp, "> {};\n\n");
+
         }
 
         fprintf(fp, "\n} // namespace PochiVM\n\n");
@@ -1905,15 +1977,19 @@ int main(int argc, char** argv)
             uintptr_t addr = reinterpret_cast<uintptr_t>(it->first);
             ReleaseAssert(addrToSymbol.count(addr));
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
-            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
             {
                 // For constructors, the symbol is a generated wrapper function, not the original prototype
-                // The original prototype must have no template parameters since our API dit not support specifying them
+                // The original prototype must have no template parameters since our API dit not support
+                // specifying them (for constructors, we do not support templated-constructors),
+                // or is not possible (for destructors, which always have a fixed prototype)
                 //
                 it->second.FindTemplateParameters(symbolPair.second /*demangled*/);
             }
             it->second.RecordMangledSymbolName(symbolPair.first /*mangled*/);
-            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor)
+            if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
             {
                 uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
                 ReleaseAssert(addrToSymbol.count(wrapperAddr));

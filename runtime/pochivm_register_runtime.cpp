@@ -130,6 +130,8 @@ static void RegisterRuntimeLibrary()
 
     RegisterConstructor<TestConstructor2, int>();
     RegisterMemberFn<&TestConstructor2::GetValue>();
+
+    RegisterConstructor<TestDestructor1, int, int*>();
 }
 
 // DO NOT MODIFY

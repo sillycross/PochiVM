@@ -344,3 +344,15 @@ public:
     int value;
 };
 
+class TestDestructor1
+{
+public:
+    TestDestructor1(int x, int* y) { value = x; dst = y; }
+    ~TestDestructor1()
+    {
+        *dst = value;
+    }
+
+    int value;
+    int* dst;
+};
