@@ -1285,7 +1285,7 @@ TEST(SanityCallCppFn, ManuallyCallDestructor)
 
     {
         SimpleJIT jit;
-        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetAllowResolveSymbolInHostProcess(x_isDebugBuild);
         jit.SetModule(thread_pochiVMContext->m_curModule);
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
 
