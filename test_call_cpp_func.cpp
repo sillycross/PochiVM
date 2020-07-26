@@ -1246,8 +1246,10 @@ TEST(SanityCallCppFn, ManuallyCallDestructor)
                                GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
 
         int out = 0;
-        TestDestructor1 obj(233, &out);
-        interpFn(&obj);
+        TestDestructor1* obj = reinterpret_cast<TestDestructor1*>(alloca(sizeof(TestDestructor1)));
+        new (obj) TestDestructor1(233, &out);
+        ReleaseAssert(out == 0);
+        interpFn(obj);
         ReleaseAssert(out == 233);
     }
 
@@ -1288,8 +1290,10 @@ TEST(SanityCallCppFn, ManuallyCallDestructor)
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
 
         int out = 0;
-        TestDestructor1 obj(233, &out);
-        jitFn(&obj);
+        TestDestructor1* obj = reinterpret_cast<TestDestructor1*>(alloca(sizeof(TestDestructor1)));
+        new (obj) TestDestructor1(233, &out);
+        ReleaseAssert(out == 0);
+        jitFn(obj);
         ReleaseAssert(out == 233);
     }
 }
