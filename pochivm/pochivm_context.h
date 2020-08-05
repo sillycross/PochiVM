@@ -9,19 +9,6 @@ class AstScope;
 class AstVariable;
 class AstModule;
 
-// The list of variables with non-trivial destructor declared in a scope
-//
-struct VarDtorInScope
-{
-    VarDtorInScope(AstScope* scope)
-        : m_scope(scope)
-        , m_variables()
-    { }
-
-    AstScope* m_scope;
-    std::vector<AstVariable*> m_variables;
-};
-
 struct PochiVMContext
 {
     PochiVMContext()
@@ -37,7 +24,10 @@ struct PochiVMContext
     // The current stack of scopes, used to figure out the variable destructors to call
     // when leaving a scope naturally or by break/continue/return statements
     //
-    std::vector<VarDtorInScope> m_scopeStack;
+    // Each element in m_scopeStack is a variable scope,
+    // which is a std::vector holding all the variables that have been declared in the scope
+    //
+    std::vector<std::vector<AstVariable*>> m_scopeStack;
 
     // Current interp stack frame base
     //

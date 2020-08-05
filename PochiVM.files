@@ -11,6 +11,8 @@ pochivm/ast_expr_base.hpp
 pochivm/ast_misc_helper.h
 pochivm/ast_type_helper.h
 pochivm/ast_type_helper.hpp
+pochivm/ast_variable.cpp
+pochivm/ast_variable.h
 pochivm/bitcode_data.h
 pochivm/cast_expr.cpp
 pochivm/cast_expr.h
@@ -24,6 +26,7 @@ pochivm/for_each_primitive_type.h
 pochivm/function_proto.cpp
 pochivm/function_proto.h
 pochivm/global_vars.cpp
+pochivm/interp_destructor_helper.h
 pochivm/lang_constructs.cpp
 pochivm/lang_constructs.h
 pochivm/logical_operator.cpp

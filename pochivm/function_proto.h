@@ -5,6 +5,8 @@
 #include "error_context.h"
 #include "bitcode_data.h"
 
+#include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
+
 namespace llvm
 {
 

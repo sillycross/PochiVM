@@ -6,5 +6,6 @@ add_library(pochivm
   cast_expr.cpp   
   function_proto.cpp  
   lang_constructs.cpp
+  ast_variable.cpp
 )
 
