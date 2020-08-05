@@ -161,11 +161,17 @@ struct TypeId
         return static_cast<AstTypeHelper::AstTypeLabelEnum>(value);
     }
 
-    const char* GetCppTypeLLVMTypeName() const
+    uint64_t GetCppClassTypeOrdinal() const
     {
         assert(IsCppClassType());
         uint64_t ord = value - x_num_primitive_types - 1;
         assert(ord < AstTypeHelper::x_num_cpp_class_types);
+        return ord;
+    }
+
+    const char* GetCppTypeLLVMTypeName() const
+    {
+        uint64_t ord = GetCppClassTypeOrdinal();
         const char* ret = AstTypeHelper::AstCppTypeLLVMTypeName[ord];
         assert(ret != nullptr);
         return ret;
@@ -212,8 +218,7 @@ struct TypeId
         }
         else if (IsCppClassType())
         {
-            uint64_t ord = value - x_num_primitive_types - 1;
-            assert(ord < AstTypeHelper::x_num_cpp_class_types);
+            uint64_t ord = GetCppClassTypeOrdinal();
             return AstTypeHelper::AstCppTypeStorageSizeInBytes[ord];
         }
         else if (IsGeneratedCompositeType())

@@ -1540,6 +1540,27 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             }
         }
 
+        fprintf(fp, "\n} // namespace PochiVM\n\n");
+        fclose(fp);
+    }
+
+    // generate typename info (may use AstTypeHelper and other helper classes)
+    //
+    {
+        std::string filename = generatedFileFolder + "/pochivm_runtime_cpp_typeinfo.generated.h";
+        FILE* fp = fopen(filename.c_str(), "w");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    filename.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp, "#pragma once\n");
+        fprintf(fp, "#include \"pochivm/ast_type_helper.h\"\n\n");
+        fprintf(fp, "namespace PochiVM {\n\n");
+
         // generate all destructors
         //
         {
@@ -1602,14 +1623,14 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             fprintf(fp, "struct is_destructor_registered : std::integral_constant<bool,\n");
             fprintf(fp, "        (DestructorCppFnMetadata<T>::value != nullptr)\n");
             fprintf(fp, "> {};\n\n");
-
         }
 
         fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }
 
-    // generate typename map
+    // generate typename map (this file is very low-level and included BY ast_type_helper.h,
+    // so it only has access to a very limited set of utilities)
     //
     {
         std::string filename = generatedFileFolder + "/pochivm_runtime_cpp_types.generated.h";

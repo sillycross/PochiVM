@@ -4,6 +4,7 @@
 #include "function_proto.h"
 #include "api_lang_constructs.h"
 
+#include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
 #include "generated/pochivm_runtime_headers.generated.h"
 
 namespace PochiVM
