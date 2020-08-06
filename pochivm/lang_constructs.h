@@ -4,6 +4,7 @@
 #include "common_expr.h"
 #include "pochivm_context.h"
 #include "ast_variable.h"
+#include "interp_destructor_helper.h"
 
 namespace PochiVM
 {
@@ -154,6 +155,7 @@ public:
 
     void InterpImpl(InterpControlSignal* ics)
     {
+        AutoInterpExecutionScope aies;
         assert(ics != nullptr && *ics == InterpControlSignal::None);
         for (AstNodeBase* stmt : m_contents)
         {
@@ -163,7 +165,6 @@ public:
                 break;
             }
         }
-        // TODO: call destructors after they are supported
     }
 
     virtual void SetupInterpImpl() override
@@ -351,6 +352,12 @@ public:
     void InterpImpl(InterpControlSignal* ics)
     {
         assert(ics != nullptr && *ics == InterpControlSignal::None);
+
+        // The for-loop itself is implicitly a variable scope (in addition to the loop body which is also
+        // a variable scope), since variables declared in init-block is destructed when the for-loop ends,
+        // so we need to declare a AutoInterpExecutionScope here.
+        //
+        AutoInterpExecutionScope aies;
 
         m_startClause->Interp(ics);
         // Break/Continue/Return statements not allowed in for-loop init block

@@ -206,10 +206,19 @@ public:
         uintptr_t oldStackFrameBase = thread_pochiVMContext->m_interpStackFrameBase;
         thread_pochiVMContext->m_interpStackFrameBase = reinterpret_cast<uintptr_t>(stackFrameBase);
 
+        // Save the old variable scope stack, and switch to a new empty scope stack.
+        //
+        std::vector<std::vector<AstVariable*>> oldScopeStack;
+        oldScopeStack.swap(thread_pochiVMContext->m_interpScopeStack);
+
         // Execute function
         //
         InterpControlSignal ics = InterpControlSignal::None;
         m_body->Interp(&ics);
+
+        // The scope stack must end up empty after the function's execution
+        //
+        TestAssert(thread_pochiVMContext->m_interpScopeStack.size() == 0);
 
         // The control signal must not be continue/break: they should never reach here
         //
@@ -225,9 +234,10 @@ public:
         //
         m_interpStoreRetValFn(returnValueOut /*dst*/, stackFrameBase /*src*/);
 
-        // Restore stack frame
+        // Restore stack frame and variable scope stack
         //
         thread_pochiVMContext->m_interpStackFrameBase = oldStackFrameBase;
+        thread_pochiVMContext->m_interpScopeStack.swap(oldScopeStack);
     }
 
     // Set up various information needed for interp execution
@@ -706,20 +716,20 @@ class AstDeclareVariable : public AstNodeBase
 public:
     AstDeclareVariable(AstVariable* variable)
         : AstNodeBase(TypeId::Get<void>())
-          , m_assignExpr(nullptr)
-          , m_callExpr(nullptr)
-          , m_variable(variable)
-          , m_isCtor(false)
+        , m_assignExpr(nullptr)
+        , m_callExpr(nullptr)
+        , m_variable(variable)
+        , m_isCtor(false)
     {
         TestAssert(m_variable->GetTypeId().IsPrimitiveType() || m_variable->GetTypeId().IsPointerType());
     }
 
     AstDeclareVariable(AstVariable* variable, AstAssignExpr* assignExpr)
         : AstNodeBase(TypeId::Get<void>())
-          , m_assignExpr(assignExpr)
-          , m_callExpr(nullptr)
-          , m_variable(variable)
-          , m_isCtor(false)
+        , m_assignExpr(assignExpr)
+        , m_callExpr(nullptr)
+        , m_variable(variable)
+        , m_isCtor(false)
     {
         TestAssert(m_assignExpr->GetValueType().AddPointer() == m_variable->GetTypeId());
         TestAssert(assert_cast<AstVariable*>(m_assignExpr->GetDst()) == m_variable);
@@ -727,10 +737,10 @@ public:
 
     AstDeclareVariable(AstVariable* variable, AstCallExpr* callExpr, bool isCtor)
         : AstNodeBase(TypeId::Get<void>())
-          , m_assignExpr(nullptr)
-          , m_callExpr(callExpr)
-          , m_variable(variable)
-          , m_isCtor(isCtor)
+        , m_assignExpr(nullptr)
+        , m_callExpr(callExpr)
+        , m_variable(variable)
+        , m_isCtor(isCtor)
     {
         TestAssertImp(!isCtor, m_callExpr->GetTypeId().AddPointer() == m_variable->GetTypeId());
         TestAssertImp(isCtor,
@@ -768,6 +778,14 @@ public:
                 //
                 m_callExpr->Interp(nullptr /*out*/);
             }
+        }
+        // If the variable being declared is a CPP class, we should push it into the current variable scope.
+        // When we leave the scope, the destructor will be called.
+        //
+        if (m_variable->GetTypeId().RemovePointer().IsCppClassType())
+        {
+            assert(thread_pochiVMContext->m_interpScopeStack.size() > 0);
+            thread_pochiVMContext->m_interpScopeStack.back().push_back(m_variable);
         }
     }
 
