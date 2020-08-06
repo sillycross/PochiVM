@@ -31,4 +31,23 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     return m_llvmValue;
 }
 
+void AstVariable::EmitDestructVariableIR()
+{
+    TestAssert(GetTypeId().RemovePointer().IsCppClassType());
+    const CppFunctionMetadata* cppFunctionMd = GetDestructorMetadata(GetTypeId().RemovePointer());
+    TestAssert(cppFunctionMd != nullptr);
+    TestAssert(!cppFunctionMd->m_isUsingSret && cppFunctionMd->m_returnType.IsVoid() &&
+               cppFunctionMd->m_numParams == 1 && cppFunctionMd->m_paramTypes[0] == GetTypeId());
+    Function* callee = thread_llvmContext->m_module->getFunction(cppFunctionMd->m_bitcodeData->m_symbolName);
+    TestAssert(callee != nullptr);
+    TestAssert(callee->arg_size() == 1);
+    Value* params[1];
+    params[0] = EmitIR();
+    TestAssert(params[0]->getType() == callee->getArg(0)->getType());
+    TestAssert(AstTypeHelper::llvm_value_has_type(GetTypeId(), params[0]));
+    Value* ret = thread_llvmContext->m_builder->CreateCall(callee, ArrayRef<Value*>(params, params + 1));
+    TestAssert(AstTypeHelper::llvm_value_has_type(TypeId::Get<void>(), ret));
+    std::ignore = ret;
+}
+
 }   // namespace PochiVM

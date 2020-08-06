@@ -35,6 +35,11 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
+    // Emit the LLVM IR code that calls the destructor for this variable
+    // May only be called if the variable is a CPP class type
+    //
+    void EmitDestructVariableIR();
+
     template<typename T>
     void InterpImpl(T* out)
     {

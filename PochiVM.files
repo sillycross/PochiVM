@@ -21,12 +21,13 @@ pochivm/common.h
 pochivm/common_expr.cpp
 pochivm/common_expr.h
 pochivm/constexpr_array_concat_helper.h
+pochivm/destructor_helper.cpp
+pochivm/destructor_helper.h
 pochivm/error_context.h
 pochivm/for_each_primitive_type.h
 pochivm/function_proto.cpp
 pochivm/function_proto.h
 pochivm/global_vars.cpp
-pochivm/interp_destructor_helper.h
 pochivm/lang_constructs.cpp
 pochivm/lang_constructs.h
 pochivm/logical_operator.cpp

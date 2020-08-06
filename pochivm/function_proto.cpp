@@ -1,4 +1,5 @@
 #include "function_proto.h"
+#include "destructor_helper.h"
 #include "pochivm.hpp"
 
 #include "llvm/Support/MemoryBuffer.h"
@@ -71,6 +72,7 @@ void AstFunction::EmitIR()
     thread_llvmContext->m_isCursorAtDummyBlock = false;
     thread_llvmContext->m_breakStmtTarget.clear();
     thread_llvmContext->m_continueStmtTarget.clear();
+    thread_llvmContext->m_scopeStack.clear();
 
     // Generated code structure:
     //
@@ -157,6 +159,10 @@ void AstFunction::EmitIR()
     //
     TestAssert(llvm::verifyFunction(*m_generatedPrototype, &outs()) == false);
 
+    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
+    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
+    TestAssert(thread_llvmContext->m_scopeStack.size() == 0);
+
     // Reset curFunction back to nullptr
     //
     thread_llvmContext->m_curFunction = nullptr;
@@ -197,6 +203,32 @@ void AstModule::EmitIR()
         std::vector<bool> alreadyLinkedin;
         alreadyLinkedin.resize(AstTypeHelper::x_num_cpp_functions, false /*value*/);
         Linker linker(*m_llvmModule);
+        auto linkinFunctionByMetadata = [&](const CppFunctionMetadata* metadata)
+        {
+            assert(metadata->m_functionOrdinal < alreadyLinkedin.size());
+            if (!alreadyLinkedin[metadata->m_functionOrdinal])
+            {
+                alreadyLinkedin[metadata->m_functionOrdinal] = true;
+                const BitcodeData* bitcode = metadata->m_bitcodeData;
+                SMDiagnostic llvmErr;
+                MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bitcode->m_bitcode), bitcode->m_length),
+                                   StringRef(bitcode->m_symbolName));
+                std::unique_ptr<Module> bitcodeModule = parseIR(mb, llvmErr, *m_llvmContext);
+                // TODO: handle error
+                //
+                ReleaseAssert(bitcodeModule != nullptr);
+                // linkInModule returns true on error
+                // TODO: handle error
+                //
+                ReleaseAssert(linker.linkInModule(std::move(bitcodeModule)) == false);
+                // change linkage to available_externally
+                //
+                Function* func = m_llvmModule->getFunction(bitcode->m_symbolName);
+                TestAssert(func != nullptr);
+                TestAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+                func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
+            }
+        };
         TraverseAstTreeFn linkinBitcodeFn = [&](AstNodeBase* cur,
                                                 AstNodeBase* /*parent*/,
                                                 const std::function<void(void)>& Recurse)
@@ -207,29 +239,17 @@ void AstModule::EmitIR()
                 if (callExpr->IsCppFunction())
                 {
                     const CppFunctionMetadata* metadata = callExpr->GetCppFunctionMetadata();
-                    assert(metadata->m_functionOrdinal < alreadyLinkedin.size());
-                    if (!alreadyLinkedin[metadata->m_functionOrdinal])
-                    {
-                        alreadyLinkedin[metadata->m_functionOrdinal] = true;
-                        const BitcodeData* bitcode = metadata->m_bitcodeData;
-                        SMDiagnostic llvmErr;
-                        MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bitcode->m_bitcode), bitcode->m_length),
-                                           StringRef(bitcode->m_symbolName));
-                        std::unique_ptr<Module> bitcodeModule = parseIR(mb, llvmErr, *m_llvmContext);
-                        // TODO: handle error
-                        //
-                        ReleaseAssert(bitcodeModule != nullptr);
-                        // linkInModule returns true on error
-                        // TODO: handle error
-                        //
-                        ReleaseAssert(linker.linkInModule(std::move(bitcodeModule)) == false);
-                        // change linkage to available_externally
-                        //
-                        Function* func = m_llvmModule->getFunction(bitcode->m_symbolName);
-                        TestAssert(func != nullptr);
-                        TestAssert(func->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
-                        func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
-                    }
+                    linkinFunctionByMetadata(metadata);
+                }
+            }
+            else if (cur->GetAstNodeType() == AstNodeType::AstDeclareVariable)
+            {
+                AstDeclareVariable* declareVar = assert_cast<AstDeclareVariable*>(cur);
+                AstVariable* var = declareVar->m_variable;
+                if (var->GetTypeId().RemovePointer().IsCppClassType())
+                {
+                    const CppFunctionMetadata* metadata = GetDestructorMetadata(var->GetTypeId().RemovePointer());
+                    linkinFunctionByMetadata(metadata);
                 }
             }
             Recurse();
@@ -262,8 +282,6 @@ void AstModule::EmitIR()
     //
     TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
 
-    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
-    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
     thread_llvmContext->m_dummyBlock = nullptr;
     thread_llvmContext->ClearModule();
 }
@@ -386,6 +404,14 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
             std::ignore = m_callExpr->EmitIR();
         }
     }
+    // If it is a CPP class type variable, push it into the variable scope,
+    // so the destructor will be called when this variable goes out of scope.
+    //
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0);
+    if (m_variable->GetTypeId().RemovePointer().IsCppClassType())
+    {
+        thread_llvmContext->m_scopeStack.back().second.push_back(m_variable);
+    }
     return nullptr;
 }
 
@@ -397,15 +423,13 @@ Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
         TestAssert(!function->GetReturnType().IsVoid());
         Value* retVal = m_retVal->EmitIR();
         TestAssert(AstTypeHelper::llvm_value_has_type(function->GetReturnType(), retVal));
-        // TODO: call all destructors
-        //
+        EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
         thread_llvmContext->m_builder->CreateRet(retVal);
     }
     else
     {
-        // TODO: call all destructors
-        //
         TestAssert(function->GetReturnType().IsVoid());
+        EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
         thread_llvmContext->m_builder->CreateRetVoid();
     }
     thread_llvmContext->SetInsertPointToDummyBlock();

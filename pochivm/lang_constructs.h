@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "ast_expr_base.h"
 #include "common_expr.h"
 #include "pochivm_context.h"
 #include "ast_variable.h"
-#include "interp_destructor_helper.h"
+#include "destructor_helper.h"
 
 namespace PochiVM
 {

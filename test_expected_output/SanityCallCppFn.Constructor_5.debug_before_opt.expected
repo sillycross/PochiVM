@@ -6,8 +6,16 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.TestConstructor1 = type { i32 }
 %"struct.PochiVM::ReflectionHelper::tpl_sequence" = type { i8 }
 
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI16TestConstructor1E9wrapperFnEPS2_(%class.TestConstructor1* %0) #0 align 2 {
+  %2 = alloca %class.TestConstructor1*, align 8
+  store %class.TestConstructor1* %0, %class.TestConstructor1** %2, align 8
+  %3 = load %class.TestConstructor1*, %class.TestConstructor1** %2, align 8
+  ret void
+}
+
 ; Function Attrs: noinline optnone uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %0) #0 align 2 {
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %0) #1 align 2 {
   %2 = alloca %class.TestConstructor1*, align 8
   %3 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence", align 1
   store %class.TestConstructor1* %0, %class.TestConstructor1** %2, align 8
@@ -17,10 +25,10 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 }
 
 ; Function Attrs: noinline optnone uwtable
-declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE9call_implIJEJEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%class.TestConstructor1*) #0 align 2
+declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE9call_implIJEJEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%class.TestConstructor1*) #1 align 2
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define available_externally dso_local i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %0) #1 align 2 {
+define available_externally dso_local i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %0) #0 align 2 {
   %2 = alloca %class.TestConstructor1*, align 8
   store %class.TestConstructor1* %0, %class.TestConstructor1** %2, align 8
   %3 = load %class.TestConstructor1*, %class.TestConstructor1** %2, align 8
@@ -37,13 +45,14 @@ entry:
 body:                                             ; preds = %entry
   call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %var_0)
   %0 = call i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %var_0)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI16TestConstructor1E9wrapperFnEPS2_(%class.TestConstructor1* %var_0)
   ret i32 %0
 }
 
-attributes #0 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}

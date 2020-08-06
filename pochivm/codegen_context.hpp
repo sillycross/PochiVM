@@ -23,9 +23,9 @@
 namespace PochiVM
 {
 
+class AstNodeBase;
+class AstVariable;
 class AstFunction;
-
-}   // namespace PochiVM;
 
 struct LLVMCodegenContext
 {
@@ -53,7 +53,7 @@ struct LLVMCodegenContext
         m_MPM = m_passBuilder.buildPerModuleDefaultPipeline(x_optimizationLevel);
     }
 
-    PochiVM::AstFunction* GetCurFunction() const
+    AstFunction* GetCurFunction() const
     {
         assert(m_curFunction != nullptr);
         return m_curFunction;
@@ -115,12 +115,20 @@ struct LLVMCodegenContext
 
     // The current function being codegen'ed
     //
-    PochiVM::AstFunction* m_curFunction;
+    AstFunction* m_curFunction;
 
     // Current break/continue target
+    // The llvm::BasicBlock is the LLVM block target we should branch to.
+    // The AstNodeBase* is the variable scope corresponding to the target (we branch to the end of the scope),
+    // which may be a AstScope or a AstForLoop. All variables in the scope stack until 'scope' (inclusive)
+    // should be destructed before branching to 'branchTarget' when the break/continue statement is executed.
     //
-    std::vector<llvm::BasicBlock*> m_breakStmtTarget;
-    std::vector<llvm::BasicBlock*> m_continueStmtTarget;
+    std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_breakStmtTarget;
+    std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_continueStmtTarget;
+
+    // Current stack of variable scopes and declared variables in each scope
+    //
+    std::vector<std::pair<AstNodeBase* /*scope*/, std::vector<AstVariable*>>> m_scopeStack;
 };
 
 extern thread_local LLVMCodegenContext* thread_llvmContext;
@@ -147,3 +155,5 @@ private:
     LLVMCodegenContext* m_contextPtr;
 };
 #define AutoLLVMCodegenContext(...) static_assert(false, "Wrong use of 'auto'-pattern!");
+
+}   // namespace PochiVM

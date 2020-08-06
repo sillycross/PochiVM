@@ -9,23 +9,26 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
+; Function Attrs: nobuiltin nounwind
+declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #0
+
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #0
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
 
 ; Function Attrs: noreturn
-declare dso_local void @_ZSt17__throw_bad_allocv() local_unnamed_addr #1
+declare dso_local void @_ZSt17__throw_bad_allocv() local_unnamed_addr #2
 
 ; Function Attrs: nobuiltin nofree
-declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #2
+declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #3
 
 ; Function Attrs: uwtable
-declare dso_local dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"*, %"class.std::vector"* dereferenceable(24)) local_unnamed_addr #3 align 2
+declare dso_local dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"*, %"class.std::vector"* dereferenceable(24)) local_unnamed_addr #4 align 2
 
 define void @testfn(%"class.std::vector"* %_param_0, i64 %_param_1) local_unnamed_addr personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %var_2 = alloca %"class.std::vector", align 8
   %0 = bitcast %"class.std::vector"* %var_2 to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %0, i8 0, i64 24, i1 false) #4
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %0, i8 0, i64 24, i1 false) #5
   %1 = icmp eq i64 %_param_1, 0
   br i1 %1, label %9, label %2
 
@@ -34,7 +37,7 @@ entry:
   br i1 %3, label %4, label %5
 
 4:                                                ; preds = %2
-  tail call void @_ZSt17__throw_bad_allocv() #5
+  tail call void @_ZSt17__throw_bad_allocv() #6
   unreachable
 
 5:                                                ; preds = %2
@@ -64,17 +67,28 @@ _ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4
   %18 = phi i32* [ %10, %9 ], [ %13, %15 ]
   store i32* %18, i32** %12, align 8, !tbaa !10
   %19 = call dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_2)
+  %20 = load i32*, i32** %11, align 8, !tbaa !4
+  %21 = icmp eq i32* %20, null
+  br i1 %21, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit, label %22
+
+22:                                               ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit
+  %23 = bitcast i32* %20 to i8*
+  call void @_ZdlPv(i8* nonnull %23) #5
+  br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit
+
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit, %22
   ret void
 }
 
-attributes #0 = { argmemonly nounwind willreturn }
-attributes #1 = { noreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind }
-attributes #5 = { noreturn }
+attributes #0 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { argmemonly nounwind willreturn }
+attributes #2 = { noreturn "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { nounwind }
+attributes #6 = { noreturn }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}

@@ -11,7 +11,7 @@ entry:
 
 attributes #0 = { nofree norecurse nounwind }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}

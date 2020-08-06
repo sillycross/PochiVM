@@ -1327,7 +1327,6 @@ TEST(SanityCallCppFn, DestructorSanity_1)
         ReleaseAssert(out == 233);
     }
 
-#if 0
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
@@ -1365,11 +1364,7 @@ TEST(SanityCallCppFn, DestructorSanity_1)
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
 
         int out = 0;
-        TestDestructor1* obj = reinterpret_cast<TestDestructor1*>(alloca(sizeof(TestDestructor1)));
-        new (obj) TestDestructor1(233, &out);
-        ReleaseAssert(out == 0);
-        jitFn(obj);
+        jitFn(233, &out);
         ReleaseAssert(out == 233);
     }
-#endif
 }

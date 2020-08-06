@@ -2,6 +2,9 @@
 
 #include "common.h"
 
+namespace PochiVM
+{
+
 // Error reporting utility
 //
 struct ErrorContext
@@ -88,3 +91,5 @@ private:
         return FalseOrNullptr(); \
     } \
 } while (false)
+
+}   // namespace PochiVM

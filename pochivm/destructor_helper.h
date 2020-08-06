@@ -61,12 +61,21 @@ struct AutoInterpExecutionScope
     ~AutoInterpExecutionScope()
     {
         assert(thread_pochiVMContext->m_interpScopeStack.size() > 0);
-        for (AstVariable* var : thread_pochiVMContext->m_interpScopeStack.back())
+        // Call destructors in reverse order of the variables are declared
+        //
+        const std::vector<AstVariable*>& vec = thread_pochiVMContext->m_interpScopeStack.back();
+        for (auto rit = vec.rbegin(); rit != vec.rend(); rit++)
         {
+            AstVariable* var = *rit;
             InterpDestructLocalVariableHelper(var);
         }
         thread_pochiVMContext->m_interpScopeStack.pop_back();
     }
 };
+
+// Emit IR that calls destructors in reverse order of declaration for all variables declared,
+// until scope 'boundaryScope' (inclusive). When boundaryScope == nullptr, destructs everything.
+//
+void EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope);
 
 }   // namespace PochiVM

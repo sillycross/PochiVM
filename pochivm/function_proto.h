@@ -972,7 +972,8 @@ inline bool WARN_UNUSED AstFunction::Validate()
 
     // Whether we are inside for-loop init-block or step-block
     //
-    bool isInsideForLoopInitOrStepBlock = false;
+    bool isInsideForLoopInitBlock = false;
+    bool isInsideForLoopStepBlock = false;
 
     // First of all, all parameters are valid to use at all time.
     //
@@ -1250,7 +1251,7 @@ inline bool WARN_UNUSED AstFunction::Validate()
             }
         }
 
-        if (isInsideForLoopInitOrStepBlock)
+        if (isInsideForLoopInitBlock || isInsideForLoopStepBlock)
         {
             // Inside for-loop init-block or step-block,
             // we disallow break/continue/return statement, or further nested loops
@@ -1279,15 +1280,34 @@ inline bool WARN_UNUSED AstFunction::Validate()
             }
         }
 
+        if (isInsideForLoopStepBlock)
+        {
+            // Inside for-loop step-block, we additionally disallow declaring variables,
+            // since it is unclear what those variables' lifetime would be.
+            //
+            if (nodeType == AstNodeType::AstDeclareVariable)
+            {
+                REPORT_ERR("Function %s: use of 'DeclareVariable' statement inside for-loop step-block is unsupported",
+                           m_name.c_str());
+                success = false;
+                return;
+            }
+        }
+
         if (nodeType == AstNodeType::AstBlock &&
             parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstForLoop)
         {
-#ifdef TESTBUILD
             AstForLoop* forLoop = assert_cast<AstForLoop*>(parent);
             TestAssert(cur == forLoop->GetInitBlock() || cur == forLoop->GetStepBlock());
-#endif
-            TestAssert(!isInsideForLoopInitOrStepBlock);
-            isInsideForLoopInitOrStepBlock = true;
+            TestAssert(!isInsideForLoopInitBlock && !isInsideForLoopStepBlock);
+            if (cur == forLoop->GetInitBlock())
+            {
+                isInsideForLoopInitBlock = true;
+            }
+            else
+            {
+                isInsideForLoopStepBlock = true;
+            }
         }
 
         AssertImp(reachability != _REACHABLE,
@@ -1304,8 +1324,10 @@ inline bool WARN_UNUSED AstFunction::Validate()
         if (nodeType == AstNodeType::AstBlock &&
             parent != nullptr && parent->GetAstNodeType() == AstNodeType::AstForLoop)
         {
-            TestAssert(isInsideForLoopInitOrStepBlock);
-            isInsideForLoopInitOrStepBlock = false;
+            TestAssert(isInsideForLoopInitBlock || isInsideForLoopStepBlock);
+            TestAssert(!isInsideForLoopInitBlock || !isInsideForLoopStepBlock);
+            isInsideForLoopInitBlock = false;
+            isInsideForLoopStepBlock = false;
         }
 
         // Update reachablity flag to reflect the reachablity status of the code right after this statement.

@@ -5,8 +5,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %class.TestNonTrivialConstructor = type { i32 }
 
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI25TestNonTrivialConstructorE9wrapperFnEPS2_(%class.TestNonTrivialConstructor* %0) #0 align 2 {
+  ret void
+}
+
 ; Function Attrs: uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN25TestNonTrivialConstructor6CreateEiEEE15call_fn_wrapperIS2_vE4callIJiEEEvPS2_DpT_(%class.TestNonTrivialConstructor* %0, i32 %1) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN25TestNonTrivialConstructor6CreateEiEEE15call_fn_wrapperIS2_vE4callIJiEEEvPS2_DpT_(%class.TestNonTrivialConstructor* %0, i32 %1) #1 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %3 = getelementptr inbounds %class.TestNonTrivialConstructor, %class.TestNonTrivialConstructor* %0, i64 0, i32 0
   store i32 %1, i32* %3, align 4
   ret void
@@ -15,7 +20,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23funct
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nounwind uwtable
-define available_externally dso_local i32 @_ZN25TestNonTrivialConstructor8GetValueEv(%class.TestNonTrivialConstructor* %0) #1 align 2 {
+define available_externally dso_local i32 @_ZN25TestNonTrivialConstructor8GetValueEv(%class.TestNonTrivialConstructor* %0) #0 align 2 {
   %2 = getelementptr inbounds %class.TestNonTrivialConstructor, %class.TestNonTrivialConstructor* %0, i64 0, i32 0
   %3 = load i32, i32* %2, align 4, !tbaa !4
   ret i32 %3
@@ -33,13 +38,14 @@ body:                                             ; preds = %entry
   call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN25TestNonTrivialConstructor6CreateEiEEE15call_fn_wrapperIS2_vE4callIJiEEEvPS2_DpT_(%class.TestNonTrivialConstructor* %var_1, i32 %0)
   %1 = call i32 @_ZN25TestNonTrivialConstructor8GetValueEv(%class.TestNonTrivialConstructor* %var_1)
   %2 = icmp eq i32 %1, 233
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI25TestNonTrivialConstructorE9wrapperFnEPS2_(%class.TestNonTrivialConstructor* %var_1)
   ret i1 %2
 }
 
-attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}

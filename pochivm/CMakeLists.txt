@@ -7,5 +7,6 @@ add_library(pochivm
   function_proto.cpp  
   lang_constructs.cpp
   ast_variable.cpp
+  destructor_helper.cpp
 )
 

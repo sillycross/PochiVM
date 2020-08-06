@@ -38,12 +38,7 @@ struct PochiVMContext
     AstModule* m_curModule;
 };
 
-}   // namespace PochiVM
-
-extern thread_local PochiVM::PochiVMContext* thread_pochiVMContext;
-
-namespace PochiVM
-{
+extern thread_local PochiVMContext* thread_pochiVMContext;
 
 class AutoThreadPochiVMContext
 {

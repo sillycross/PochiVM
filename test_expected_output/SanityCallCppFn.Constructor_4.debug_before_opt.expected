@@ -8,8 +8,20 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
 %"struct.PochiVM::ReflectionHelper::tpl_sequence.4" = type { i8 }
 
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_(%"class.std::vector"* %0) #0 align 2 {
+  %2 = alloca %"class.std::vector"*, align 8
+  store %"class.std::vector"* %0, %"class.std::vector"** %2, align 8
+  %3 = load %"class.std::vector"*, %"class.std::vector"** %2, align 8
+  call void @_ZNSt6vectorIiSaIiEED2Ev(%"class.std::vector"* %3) #2
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+declare dso_local void @_ZNSt6vectorIiSaIiEED2Ev(%"class.std::vector"*) unnamed_addr #0 align 2
+
 ; Function Attrs: noinline optnone uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_(%"class.std::vector"* %0, %"class.std::vector"* %1) #0 align 2 {
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_(%"class.std::vector"* %0, %"class.std::vector"* %1) #1 align 2 {
   %3 = alloca %"class.std::vector"*, align 8
   %4 = alloca %"class.std::vector"*, align 8
   %5 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.4", align 1
@@ -22,10 +34,10 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 }
 
 ; Function Attrs: noinline optnone uwtable
-declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE9call_implIJLi0EEJPS5_EEEvNS0_12tpl_sequenceIJXspT_EEEEPS4_DpT0_(%"class.std::vector"*, %"class.std::vector"*) #0 align 2
+declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE9call_implIJLi0EEJPS5_EEEvNS0_12tpl_sequenceIJXspT_EEEEPS4_DpT0_(%"class.std::vector"*, %"class.std::vector"*) #1 align 2
 
 ; Function Attrs: noinline optnone uwtable
-define available_externally dso_local void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %0, %"class.std::vector"* %1) #0 {
+define available_externally dso_local void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %0, %"class.std::vector"* %1) #1 {
   %3 = alloca %"class.std::vector"*, align 8
   %4 = alloca %"class.std::vector"*, align 8
   store %"class.std::vector"* %0, %"class.std::vector"** %3, align 8
@@ -37,7 +49,7 @@ define available_externally dso_local void @_Z13CopyVectorIntPSt6vectorIiSaIiEES
 }
 
 ; Function Attrs: noinline optnone uwtable
-declare dso_local dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"*, %"class.std::vector"* dereferenceable(24)) #0 align 2
+declare dso_local dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"*, %"class.std::vector"* dereferenceable(24)) #1 align 2
 
 define void @testfn(%"class.std::vector"* %_param_0, %"class.std::vector"* %_param_1) {
 entry:
@@ -53,12 +65,15 @@ body:                                             ; preds = %entry
   call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_(%"class.std::vector"* %var_2, %"class.std::vector"* %0)
   %1 = load %"class.std::vector"*, %"class.std::vector"** %param_0
   call void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %1, %"class.std::vector"* %var_2)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_(%"class.std::vector"* %var_2)
   ret void
 }
 
-attributes #0 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nounwind }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}

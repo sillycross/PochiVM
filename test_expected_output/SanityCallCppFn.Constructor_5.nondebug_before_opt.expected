@@ -5,15 +5,20 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %class.TestConstructor1 = type { i32 }
 
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI16TestConstructor1E9wrapperFnEPS2_(%class.TestConstructor1* %0) #0 align 2 {
+  ret void
+}
+
 ; Function Attrs: uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %0) #0 align 2 {
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %0) #1 align 2 {
   %2 = getelementptr inbounds %class.TestConstructor1, %class.TestConstructor1* %0, i64 0, i32 0
   store i32 233, i32* %2, align 4, !tbaa !4
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define available_externally dso_local i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %0) #1 align 2 {
+define available_externally dso_local i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %0) #0 align 2 {
   %2 = getelementptr inbounds %class.TestConstructor1, %class.TestConstructor1* %0, i64 0, i32 0
   %3 = load i32, i32* %2, align 4, !tbaa !4
   ret i32 %3
@@ -27,13 +32,14 @@ entry:
 body:                                             ; preds = %entry
   call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI16TestConstructor1JEE4callIJEEEvPS2_DpT_(%class.TestConstructor1* %var_0)
   %0 = call i32 @_ZN16TestConstructor18GetValueEv(%class.TestConstructor1* %var_0)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI16TestConstructor1E9wrapperFnEPS2_(%class.TestConstructor1* %var_0)
   ret i32 %0
 }
 
-attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}
