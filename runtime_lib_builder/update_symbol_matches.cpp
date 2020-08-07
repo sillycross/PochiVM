@@ -1,4 +1,4 @@
-#include "pochivm/common.h"
+﻿#include "pochivm/common.h"
 #include "runtime_lib_builder/symbol_list_util.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -118,6 +118,23 @@ static void ExtractFunction(const std::string& generatedFileDir,
         fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bcFileName.c_str());
         llvmErr.print("update_symbol_matches", errs());
         abort();
+    }
+
+    // For each global variable, if the global variable is not a constant,
+    // the definition (address storing the value of the global variable) resides in the host process!
+    // We must make this global variable a declaration (instead of a definition),
+    // so it correctly resolves to the address in host process.
+    //
+    for (GlobalVariable& gv : module->globals())
+    {
+        if (!gv.hasLocalLinkage() && !gv.isConstant())
+        {
+            // Drop the definition to make this global variable a declaration.
+            //
+            gv.setLinkage(GlobalValue::ExternalLinkage);
+            gv.setInitializer(nullptr);
+            gv.setComdat(nullptr);
+        }
     }
 
     std::map< Constant*, std::set<GlobalValue*> > constExprUsageGraph;
@@ -266,7 +283,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
             callee->getLinkage() == GlobalValue::LinkageTypes::InternalLinkage)
         {
             fprintf(stderr, "[ERROR] Function '%s' in module '%s' called function '%s', which "
-                            "has internal linkage type. To include the function in runtime libary, "
+                            "has local linkage type. To include the function in runtime libary, "
                             "you have to either (1) make callee '%s' have external linkage type"
                             "(by removing the 'static' keyword etc) "
                             "or (2) make caller '%s' non-inlinable by generated code by specifying "
@@ -515,6 +532,69 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
+    auto SanityCheckGlobals = [&module, &functionName, &bcFileName]()
+    {
+        Function* target = module->getFunction(functionName);
+        ReleaseAssert(target != nullptr);
+        ReleaseAssert(!target->empty());
+
+        // Assert that for each global variable that is not constant, it must have non-local linkage,
+        // since it should be resolved to an address in the host process.
+        //
+        for (GlobalVariable& gv : module->globals())
+        {
+            if (!gv.isConstant())
+            {
+                if (gv.hasLocalLinkage())
+                {
+                    fprintf(stderr, "[ERROR] Function '%s' in module '%s' referenced non-constant global "
+                                    "variable '%s', which has local linkage type. To include the function in "
+                                    "runtime libary, you have to make global variable '%s' have external linkage type "
+                                    "(by removing the 'static' keyword etc).\n",
+                            functionName.c_str(),
+                            bcFileName.c_str(),
+                            gv.getGlobalIdentifier().c_str(),
+                            gv.getGlobalIdentifier().c_str());
+                    abort();
+                }
+                // We have dropped the definition earlier. Just sanity check again.
+                //
+                ReleaseAssert(gv.hasExternalLinkage());
+                ReleaseAssert(!gv.hasInitializer());
+                ReleaseAssert(!gv.hasComdat());
+            }
+        }
+
+        // Assert that all functions, except our target, has become external declarations.
+        //
+        for (Function& fn : module->functions())
+        {
+            if (&fn != target)
+            {
+                if (x_isDebugBuild)
+                {
+                    // In debug build, if the function needs wrapper (is a symbol pair),
+                    // the implementation is left there with available externally linkage.
+                    // This should not happen in release build because we will run the optimization
+                    // pass to either inline it or drop it.
+                    //
+                    ReleaseAssert(fn.empty() || fn.hasAvailableExternallyLinkage());
+                }
+                else
+                {
+                    ReleaseAssert(fn.empty());
+                }
+            }
+            else
+            {
+                ReleaseAssert(!fn.empty());
+                ReleaseAssert(fn.hasExternalLinkage());
+            }
+        }
+    };
+
+    SanityCheckGlobals();
+
     if (isSymbolPair)
     {
         // If it is a symbol pair, we should link in the implementation IR file,
@@ -621,6 +701,8 @@ static void ExtractFunction(const std::string& generatedFileDir,
             module = std::move(newModule);
             context = std::move(newContext);
         }
+
+        SanityCheckGlobals();
     }
 
     // Generate data file in header file format

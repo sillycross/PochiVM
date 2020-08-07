@@ -176,10 +176,12 @@ int main(int argc, char** argv)
 
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
 
+        fprintf(fp, "#pragma once\n");
         fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
 
         fprintf(fp, "namespace PochiVM {\n\n");
 
+        std::vector<std::string> allVarnames;
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
         for (const std::string& symbolOrSymbolPair : allSymbols)
         {
@@ -208,6 +210,22 @@ int main(int argc, char** argv)
                 fprintf(fp, "// Wrapper: %s\n", symbolOrSymbolPair.substr(0, commaPos).c_str());
             }
             fprintf(fp, "extern const BitcodeData %s;\n\n", varname.c_str());
+            allVarnames.push_back(varname);
+        }
+
+        {
+            bool isFirst = true;
+            fprintf(fp, "const BitcodeData* const x_all_bitcode_data[] = {\n");
+            for (const std::string& varname : allVarnames)
+            {
+                if (!isFirst)
+                {
+                    fprintf(fp, ",\n");
+                }
+                isFirst = false;
+                fprintf(fp, "    &%s", varname.c_str());
+            }
+            fprintf(fp, "\n};\n\n");
         }
 
         fprintf(fp, "} // namespace PochiVM\n\n");

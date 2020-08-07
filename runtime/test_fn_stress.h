@@ -385,3 +385,18 @@ public:
     CtorDtorOrderRecorder* m_recorder;
     int m_value;
 };
+
+inline int TestStaticVarInFunction(bool reset)
+{
+    static int x = 123;
+    const static int y = 12;
+    if (reset)
+    {
+        x = 123;
+    }
+    else
+    {
+        x += y;
+    }
+    return x;
+}
