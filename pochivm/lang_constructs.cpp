@@ -303,25 +303,17 @@ Value* WARN_UNUSED AstBreakOrContinueStmt::EmitIRImpl()
 
     // Call destructors, in reverse order of the variables being declared
     //
-    AstNodeBase* scopeBoundary;
+    std::pair<BasicBlock* /*branchTarget*/, AstNodeBase* /*scopeBoundary*/> target;
     if (IsBreakStatement())
     {
-        scopeBoundary = thread_llvmContext->m_breakStmtTarget.back().second;
+        target = thread_llvmContext->m_breakStmtTarget.back();
     }
     else
     {
-        scopeBoundary = thread_llvmContext->m_continueStmtTarget.back().second;
+        target = thread_llvmContext->m_continueStmtTarget.back();
     }
-    EmitIRDestructAllVariablesUntilScope(scopeBoundary);
-
-    if (IsBreakStatement())
-    {
-        thread_llvmContext->m_builder->CreateBr(thread_llvmContext->m_breakStmtTarget.back().first);
-    }
-    else
-    {
-        thread_llvmContext->m_builder->CreateBr(thread_llvmContext->m_continueStmtTarget.back().first);
-    }
+    EmitIRDestructAllVariablesUntilScope(target.second);
+    thread_llvmContext->m_builder->CreateBr(target.first);
     thread_llvmContext->SetInsertPointToDummyBlock();
     return nullptr;
 }

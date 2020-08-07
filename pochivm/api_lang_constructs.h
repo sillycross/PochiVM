@@ -91,15 +91,8 @@ namespace internal
 
 struct SmartWrapWithScopeHelper
 {
-    static AstScope* handle_one()
+    static AstScope* handle_one(Value<void> stmt)
     {
-        ReleaseAssert(false);
-    }
-
-    template<typename... T>
-    static AstScope* handle_one(Value<void> stmt, T... /*args*/)
-    {
-        TestAssert(sizeof...(T) == 0);
         AstNodeBase* p = stmt.m_ptr;
         if (p->GetAstNodeType() == AstNodeType::AstScope)
         {
@@ -132,9 +125,8 @@ struct SmartWrapWithScopeHelper
 template<typename... T>
 AstScope* SmartWrapWithScope(T... args)
 {
-    static const size_t numArgs = sizeof...(T);
     AstScope* scope;
-    if (numArgs == 1)
+    if constexpr(sizeof...(T) == 1)
     {
         scope = SmartWrapWithScopeHelper::handle_one(args...);
     }

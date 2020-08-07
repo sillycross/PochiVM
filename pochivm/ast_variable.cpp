@@ -33,6 +33,7 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
 
 void AstVariable::EmitDestructVariableIR()
 {
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     TestAssert(GetTypeId().RemovePointer().IsCppClassType());
     const CppFunctionMetadata* cppFunctionMd = GetDestructorMetadata(GetTypeId().RemovePointer());
     TestAssert(cppFunctionMd != nullptr);

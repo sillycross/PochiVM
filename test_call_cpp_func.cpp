@@ -1368,3 +1368,1852 @@ TEST(SanityCallCppFn, DestructorSanity_1)
         ReleaseAssert(out == 233);
     }
 }
+
+TEST(SanityCallCppFn, DestructorCalledInReverseOrder_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*)>;
+    {
+        auto [fn, r] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                r.Deref().Push(Literal<int>(1003)),
+                Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                r.Deref().Push(Literal<int>(1004))
+        );
+    }
+
+    std::vector<int> expectedAns {
+            1000, 1, 1001, 2, 1002, 3, 1003, 4, 1004, -4, -3, -2, -1
+    };
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        jitFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+}
+
+TEST(SanityCallCppFn, DestructorCalledInReverseOrder_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*)>;
+    {
+        auto [fn, r] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Scope(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004))
+                ),
+                r.Deref().Push(Literal<int>(1005)),
+                Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                r.Deref().Push(Literal<int>(1006)),
+                Scope(
+                    r.Deref().Push(Literal<int>(1007)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1008)),
+                    Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                    r.Deref().Push(Literal<int>(1009))
+                ),
+                r.Deref().Push(Literal<int>(1010)),
+                Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                r.Deref().Push(Literal<int>(1011))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004, -3, -2, 1005, 4, 1006,
+            1007, 5, 1008, 6, 1009, -6, -5, 1010, 7, 1011, -7, -4, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        jitFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+}
+
+TEST(SanityCallCppFn, BlockDoesNotConstituteVariableScope)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*)>;
+    {
+        auto [fn, r] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Block(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004))
+                ),
+                r.Deref().Push(Literal<int>(1005)),
+                Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                r.Deref().Push(Literal<int>(1006)),
+                Block(
+                    r.Deref().Push(Literal<int>(1007)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1008)),
+                    Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                    r.Deref().Push(Literal<int>(1009))
+                ),
+                r.Deref().Push(Literal<int>(1010)),
+                Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                r.Deref().Push(Literal<int>(1011))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004, 1005, 4, 1006, 1007, 5, 1008, 6, 1009,
+            1010, 7, 1011, -7, -6, -5, -4, -3, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        jitFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+}
+
+TEST(SanityCallCppFn, DestructorCalledUponReturnStmt)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*)>;
+    {
+        auto [fn, r] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                Scope(
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1005)),
+                    Scope(
+                        r.Deref().Push(Literal<int>(1006)),
+                        Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                        r.Deref().Push(Literal<int>(1007)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1008))
+                    ),
+                    r.Deref().Push(Literal<int>(1009)),
+                    Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                    r.Deref().Push(Literal<int>(1010)),
+                    Scope(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013)),
+                        Return()
+                    )
+                )
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns {
+            1000, 1, 1001, 2, 1002, 1003, 3, 1004, 4, 1005, 1006, 5, 1007, 6, 1008,
+            -6, -5, 1009, 7, 1010, 1011, 8, 1012, 9, 1013, -9, -8, -7, -4, -3, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        jitFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, bool, bool)>;
+    {
+        auto [fn, r, b1, b2] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        auto v13 = fn.NewVariable<TestDestructor2>();
+        auto v14 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                If(b1).Then(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1004)),
+                        Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                        r.Deref().Push(Literal<int>(1005)),
+                        Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                        r.Deref().Push(Literal<int>(1006))
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1007)),
+                        Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009))
+                    ),
+                    r.Deref().Push(Literal<int>(1010)),
+                    Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                    r.Deref().Push(Literal<int>(1011))
+                ).Else(
+                    r.Deref().Push(Literal<int>(1012)),
+                    Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                    r.Deref().Push(Literal<int>(1013)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1014)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1015)),
+                        Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                        r.Deref().Push(Literal<int>(1016))
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1017)),
+                        Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                        r.Deref().Push(Literal<int>(1018)),
+                        Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                        r.Deref().Push(Literal<int>(1019))
+                    ),
+                    r.Deref().Push(Literal<int>(1020)),
+                    Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
+                    r.Deref().Push(Literal<int>(1021))
+                ),
+                r.Deref().Push(Literal<int>(1022)),
+                Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
+                r.Deref().Push(Literal<int>(1023))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3,
+            1010, 7, 1011, -7, -2, 1022, 14, 1023, -14, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 1007, 5, 1008, 6, 1009, -6, -5,
+            1010, 7, 1011, -7, -2, 1022, 14, 1023, -14, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1012, 8, 1013, 1014, 9, 1015, 10, 1016, -10, -9,
+            1020, 13, 1021, -13, -8, 1022, 14, 1023, -14, -1
+    };
+    std::vector<int> expectedAns4 {
+            1000, 1, 1001, 1012, 8, 1013, 1017, 11, 1018, 12, 1019, -12, -11,
+            1020, 13, 1021, -13, -8, 1022, 14, 1023, -14, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, bool, bool)>;
+    {
+        auto [fn, r, b1, b2] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        auto v13 = fn.NewVariable<TestDestructor2>();
+        auto v14 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                If(b1).Then(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1004)),
+                        Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                        r.Deref().Push(Literal<int>(1005)),
+                        Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                        r.Deref().Push(Literal<int>(1006)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1007)),
+                        Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009))
+                    ),
+                    r.Deref().Push(Literal<int>(1010)),
+                    Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                    r.Deref().Push(Literal<int>(1011)),
+                    Return()
+                ).Else(
+                    r.Deref().Push(Literal<int>(1012)),
+                    Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                    r.Deref().Push(Literal<int>(1013)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1014)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1015)),
+                        Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                        r.Deref().Push(Literal<int>(1016)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1017)),
+                        Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                        r.Deref().Push(Literal<int>(1018)),
+                        Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                        r.Deref().Push(Literal<int>(1019))
+                    ),
+                    r.Deref().Push(Literal<int>(1020)),
+                    Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
+                    r.Deref().Push(Literal<int>(1021))
+                ),
+                r.Deref().Push(Literal<int>(1022)),
+                Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
+                r.Deref().Push(Literal<int>(1023))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 1007, 5, 1008, 6, 1009, -6, -5,
+            1010, 7, 1011, -7, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1012, 8, 1013, 1014, 9, 1015, 10, 1016, -10, -9, -8, -1
+    };
+    std::vector<int> expectedAns4 {
+            1000, 1, 1001, 1012, 8, 1013, 1017, 11, 1018, 12, 1019, -12, -11,
+            1020, 13, 1021, -13, -8, 1022, 14, 1023, -14, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, bool, bool)>;
+    {
+        auto [fn, r, b1, b2] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        auto v13 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                If(b1).Then(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1004)),
+                        Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                        r.Deref().Push(Literal<int>(1005)),
+                        Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                        r.Deref().Push(Literal<int>(1006)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1007)),
+                        Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Return()
+                    )
+                ).Else(
+                    r.Deref().Push(Literal<int>(1012)),
+                    Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                    r.Deref().Push(Literal<int>(1013)),
+                    If(b2).Then(
+                        r.Deref().Push(Literal<int>(1014)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1015)),
+                        Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                        r.Deref().Push(Literal<int>(1016)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1017)),
+                        Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                        r.Deref().Push(Literal<int>(1018)),
+                        Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                        r.Deref().Push(Literal<int>(1019))
+                    ),
+                    r.Deref().Push(Literal<int>(1020)),
+                    Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
+                    r.Deref().Push(Literal<int>(1021)),
+                    Return()
+                )
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 1007, 5, 1008, 6, 1009, -6, -5, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1012, 8, 1013, 1014, 9, 1015, 10, 1016, -10, -9, -8, -1
+    };
+    std::vector<int> expectedAns4 {
+            1000, 1, 1001, 1012, 8, 1013, 1017, 11, 1018, 12, 1019, -12, -11,
+            1020, 13, 1021, -13, -8, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithForLoop_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                For(Block(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004)),
+                    Declare(i, Literal<int>(0))
+                ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Break()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithForLoop_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                For(Block(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004)),
+                    Declare(i, Literal<int>(0))
+                ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Continue()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithForLoop_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                For(Block(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004)),
+                    Declare(i, Literal<int>(0))
+                ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -3, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            -3, -2, 1017, 12, 1018, -12, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithForLoop_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, bool)>;
+    {
+        auto [fn, r, b] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                For(Block(
+                    r.Deref().Push(Literal<int>(1002)),
+                    Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                    r.Deref().Push(Literal<int>(1003)),
+                    Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                    r.Deref().Push(Literal<int>(1004))
+                ), b, Block()).Do(
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    Break()
+                ),
+                r.Deref().Push(Literal<int>(1008)),
+                Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                r.Deref().Push(Literal<int>(1009))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            1005, 4, 1006, 5, 1007, -5, -4, -3, -2, 1008, 6, 1009, -6, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 1002, 2, 1003, 3, 1004,
+            -3, -2, 1008, 6, 1009, -6, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                Declare(i, Literal<int>(0)),
+                While(i < Literal<int>(3)).Do(
+                    Assign(i, i + Literal<int>(1)),
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i - Literal<int>(1) == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Return()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -2, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                Declare(i, Literal<int>(0)),
+                While(i < Literal<int>(3)).Do(
+                    Assign(i, i + Literal<int>(1)),
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i - Literal<int>(1) == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Break()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, int)>;
+    {
+        auto [fn, r, x] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                Declare(i, Literal<int>(0)),
+                While(i < Literal<int>(3)).Do(
+                    Assign(i, i + Literal<int>(1)),
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    If(i - Literal<int>(1) == x).Then(
+                        r.Deref().Push(Literal<int>(1008)),
+                        Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                        r.Deref().Push(Literal<int>(1009)),
+                        Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                        r.Deref().Push(Literal<int>(1010)),
+                        Continue()
+                    ).Else(
+                        r.Deref().Push(Literal<int>(1011)),
+                        Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                        r.Deref().Push(Literal<int>(1012)),
+                        Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                        r.Deref().Push(Literal<int>(1013))
+                    ),
+                    r.Deref().Push(Literal<int>(1014)),
+                    Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                    r.Deref().Push(Literal<int>(1015)),
+                    Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                    r.Deref().Push(Literal<int>(1016))
+                ),
+                r.Deref().Push(Literal<int>(1017)),
+                Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                r.Deref().Push(Literal<int>(1018))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns0 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1008, 6, 1009, 7, 1010, -7, -6, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1005, 4, 1006, 5, 1007, 1011, 8, 1012, 9, 1013, -9, -8, 1014, 10, 1015, 11, 1016, -11, -10, -5, -4,
+            1017, 12, 1018, -12, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+}
+
+TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*, bool)>;
+    {
+        auto [fn, r, b] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().Push(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                r.Deref().Push(Literal<int>(1001)),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().Push(Literal<int>(1002)),
+                While(b).Do(
+                    r.Deref().Push(Literal<int>(1005)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().Push(Literal<int>(1006)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    r.Deref().Push(Literal<int>(1007)),
+                    Break()
+                ),
+                r.Deref().Push(Literal<int>(1008)),
+                Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                r.Deref().Push(Literal<int>(1009))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1 {
+            1000, 1, 1001, 2, 1002,
+            1005, 4, 1006, 5, 1007, -5, -4, 1008, 6, 1009, -6, -2, -1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 1001, 2, 1002, 1008, 6, 1009, -6, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            jitFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+}

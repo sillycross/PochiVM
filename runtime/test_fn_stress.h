@@ -356,3 +356,32 @@ public:
     int value;
     int* dst;
 };
+
+class CtorDtorOrderRecorder
+{
+public:
+    void Push(int value)
+    {
+        order.push_back(value);
+    }
+    std::vector<int> order;
+};
+
+class TestDestructor2
+{
+public:
+    TestDestructor2(CtorDtorOrderRecorder* recorder, int value)
+    {
+        m_recorder = recorder;
+        m_value = value;
+        m_recorder->Push(m_value);
+    }
+
+    ~TestDestructor2()
+    {
+        m_recorder->Push(-m_value);
+    }
+
+    CtorDtorOrderRecorder* m_recorder;
+    int m_value;
+};
