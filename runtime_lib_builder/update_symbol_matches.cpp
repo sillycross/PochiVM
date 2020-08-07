@@ -550,7 +550,9 @@ static void ExtractFunction(const std::string& generatedFileDir,
                     fprintf(stderr, "[ERROR] Function '%s' in module '%s' referenced non-constant global "
                                     "variable '%s', which has local linkage type. To include the function in "
                                     "runtime libary, you have to make global variable '%s' have external linkage type "
-                                    "(by removing the 'static' keyword etc).\n",
+                                    "(by removing the 'static' keyword etc). If it is a static variable inside a "
+                                    "function, try to move the function to a header file and add 'inline', which will "
+                                    "give the static variable linkonce_odr linkage.\n",
                             functionName.c_str(),
                             bcFileName.c_str(),
                             gv.getGlobalIdentifier().c_str(),
@@ -582,7 +584,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
                 }
                 else
                 {
-                    ReleaseAssert(fn.empty());
+                    ReleaseAssert(fn.empty() && fn.hasExternalLinkage());
                 }
             }
             else
