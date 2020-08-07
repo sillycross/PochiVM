@@ -1,0 +1,30 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str.68 = private unnamed_addr constant [13 x i8] c"asdfghjkl123\00", align 1
+
+; Function Attrs: inlinehint nounwind uwtable
+define available_externally dso_local i8* @_Z29StringInterningQuirkyBehaviorv() #0 {
+  ret i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.68, i64 0, i64 0)
+}
+
+define i8* @testfn() {
+entry:
+  br label %body
+
+body:                                             ; preds = %entry
+  %0 = call i8* @_Z29StringInterningQuirkyBehaviorv()
+  ret i8* %0
+}
+
+attributes #0 = { inlinehint nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

@@ -139,6 +139,7 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&TestStaticVarInFunction>();
     RegisterFreeFn<&TestConstantWithSignificantAddress>();
     RegisterFreeFn<&TestConstantWithInsignificantAddress>();
+    RegisterFreeFn<&StringInterningQuirkyBehavior>();
 }
 
 // DO NOT MODIFY

@@ -419,3 +419,24 @@ inline bool TestConstantWithInsignificantAddress(const uint8_t* s)
     static const char* const v = "12345678";
     return strcmp(reinterpret_cast<const char*>(s), v) == 0;
 }
+
+// This is a quirky (but unfixable) behavior for generated code.
+// C++ interns const string literals, so the string constant is an unnamed_addr private symbol
+// despite its address is returned to outside.
+//
+// The fact that the symbol is private in C++ makes it impossible to resolve
+// the symbol in generated code to the same symbol in C++.
+// So in generated code, this function will return a different value
+// from when it is directly called from host process, and the memory holding the
+// constant string literal would actually belong to the generated code and could go away
+// when the module is unloaded.
+//
+// This quirky behavior only applies for address of constant string literals since
+// its root cause is C++'s string interning (C++ code does not have this quirky
+// behavior because unnamed_addr constants with same value will be merged together during linking).
+//
+inline const uint8_t* StringInterningQuirkyBehavior()
+{
+    static const char* const v = "asdfghjkl123";
+    return reinterpret_cast<const uint8_t*>(v);
+}

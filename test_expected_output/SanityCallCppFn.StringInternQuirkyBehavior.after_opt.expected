@@ -1,0 +1,22 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str.68 = private unnamed_addr constant [13 x i8] c"asdfghjkl123\00", align 1
+
+; Function Attrs: norecurse nounwind readnone
+define i8* @testfn() local_unnamed_addr #0 {
+entry:
+  ret i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.68, i64 0, i64 0)
+}
+
+attributes #0 = { norecurse nounwind readnone }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

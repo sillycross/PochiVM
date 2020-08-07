@@ -3437,3 +3437,86 @@ TEST(SanityCallCppFn, ConstantWithInsignificantAddress)
         ReleaseAssert(jitFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("12345678"))) == true);
     }
 }
+
+TEST(SanityCallCppFn, StringInternQuirkyBehavior)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<uint8_t*()>;
+    {
+        auto [fn] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(CallFreeFn::StringInterningQuirkyBehavior())
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        const uint8_t* v1 = StringInterningQuirkyBehavior();
+        const uint8_t* v2 = interpFn();
+        ReleaseAssert(v1 == v2);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        const uint8_t* v1 = StringInterningQuirkyBehavior();
+        const uint8_t* v2 = jitFn();
+        if (!x_isDebugBuild)
+        {
+            // in release build, the function should have been optimized out,
+            // resulting in two different symbols
+            //
+            ReleaseAssert(v1 != v2);
+            ReleaseAssert(strcmp(reinterpret_cast<const char*>(v1), reinterpret_cast<const char*>(v2)) == 0);
+        }
+        else
+        {
+            // in debug build, no inlining happens, we should still be calling the host process's function
+            //
+            ReleaseAssert(v1 == v2);
+        }
+    }
+}
