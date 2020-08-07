@@ -125,15 +125,50 @@ static void ExtractFunction(const std::string& generatedFileDir,
     // We must make this global variable a declaration (instead of a definition),
     // so it correctly resolves to the address in host process.
     //
+    // For constants, if the address is significant, we also must make it a declaration,
+    // otherwise we would get different addresses inside generated code and inside host process.
+    //
+    auto mustDropDefintion = [](const GlobalVariable& gv)
+    {
+        bool mustDrop = false;
+        if (!gv.isConstant())
+        {
+            // For variables, we must always drop definition, so the generated code and host process
+            // resolve the variable to the same address.
+            //
+            mustDrop = true;
+        }
+        else
+        {
+            // For constant, if it is at least local_unnamed_addr (global_unnamed_addr is not required),
+            // its address is not significant, so it's OK to keep the definition,
+            // and it allows optimizer to potentially work better.
+            // Otherwise, we must make it a declaration to resolve it to the correct address.
+            //
+            if (!gv.hasAtLeastLocalUnnamedAddr())
+            {
+                mustDrop = true;
+            }
+        }
+        return mustDrop;
+    };
     for (GlobalVariable& gv : module->globals())
     {
-        if (!gv.hasLocalLinkage() && !gv.isConstant())
+        // We can only drop definition for globals with non-local linkage.
+        // If there is a global with local linkage that is both needed by the function and
+        // must drop defintion, it is an irrecoverable error.
+        // We will check for that after we eliminate all the unneeded code, and fail it is the case.
+        //
+        if (!gv.hasLocalLinkage())
         {
-            // Drop the definition to make this global variable a declaration.
-            //
-            gv.setLinkage(GlobalValue::ExternalLinkage);
-            gv.setInitializer(nullptr);
-            gv.setComdat(nullptr);
+            if (mustDropDefintion(gv))
+            {
+                // Drop the definition to make this global variable a declaration.
+                //
+                gv.setLinkage(GlobalValue::ExternalLinkage);
+                gv.setInitializer(nullptr);
+                gv.setComdat(nullptr);
+            }
         }
     }
 
@@ -532,7 +567,7 @@ static void ExtractFunction(const std::string& generatedFileDir,
         }
     }
 
-    auto SanityCheckGlobals = [&module, &functionName, &bcFileName]()
+    auto SanityCheckGlobals = [&module, &functionName, &bcFileName, &mustDropDefintion]()
     {
         Function* target = module->getFunction(functionName);
         ReleaseAssert(target != nullptr);
@@ -543,11 +578,11 @@ static void ExtractFunction(const std::string& generatedFileDir,
         //
         for (GlobalVariable& gv : module->globals())
         {
-            if (!gv.isConstant())
+            if (mustDropDefintion(gv))
             {
                 if (gv.hasLocalLinkage())
                 {
-                    fprintf(stderr, "[ERROR] Function '%s' in module '%s' referenced non-constant global "
+                    fprintf(stderr, "[ERROR] Function '%s' in module '%s' referenced global "
                                     "variable '%s', which has local linkage type. To include the function in "
                                     "runtime libary, you have to make global variable '%s' have external linkage type "
                                     "(by removing the 'static' keyword etc). If it is a static variable inside a "

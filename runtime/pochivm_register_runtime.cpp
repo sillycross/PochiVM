@@ -137,6 +137,8 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&CtorDtorOrderRecorder::Push>();
 
     RegisterFreeFn<&TestStaticVarInFunction>();
+    RegisterFreeFn<&TestConstantWithSignificantAddress>();
+    RegisterFreeFn<&TestConstantWithInsignificantAddress>();
 }
 
 // DO NOT MODIFY

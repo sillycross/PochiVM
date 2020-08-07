@@ -3299,3 +3299,141 @@ TEST(SanityCallCppFn, StaticVarInFunction)
         }
     }
 }
+
+TEST(SanityCallCppFn, ConstantWithSignificantAddress)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<TestConstantClass*()>;
+    {
+        auto [fn] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(CallFreeFn::TestConstantWithSignificantAddress())
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        const TestConstantClass* expectedAddr = TestConstantWithSignificantAddress();
+        const TestConstantClass* actualAddr = interpFn();
+        ReleaseAssert(expectedAddr == actualAddr);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        const TestConstantClass* expectedAddr = TestConstantWithSignificantAddress();
+        const TestConstantClass* actualAddr = jitFn();
+        ReleaseAssert(expectedAddr == actualAddr);
+    }
+}
+
+TEST(SanityCallCppFn, ConstantWithInsignificantAddress)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<bool(uint8_t*)>;
+    {
+        auto [fn, x] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(CallFreeFn::TestConstantWithInsignificantAddress(x))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("123"))) == false);
+        ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("12345678"))) == true);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        ReleaseAssert(jitFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("123"))) == false);
+        ReleaseAssert(jitFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("12345678"))) == true);
+    }
+}

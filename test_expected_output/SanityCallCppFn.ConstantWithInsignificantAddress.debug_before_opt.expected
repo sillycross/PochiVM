@@ -1,0 +1,43 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@.str.65 = private unnamed_addr constant [9 x i8] c"12345678\00", align 1
+
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local zeroext i1 @_Z36TestConstantWithInsignificantAddressPKh(i8* %0) #0 {
+  %2 = alloca i8*, align 8
+  store i8* %0, i8** %2, align 8
+  %3 = load i8*, i8** %2, align 8
+  %4 = call i32 @strcmp(i8* %3, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str.65, i32 0, i32 0)) #2
+  %5 = icmp eq i32 %4, 0
+  ret i1 %5
+}
+
+; Function Attrs: nounwind readonly
+declare dso_local i32 @strcmp(i8*, i8*) #1
+
+define zeroext i1 @testfn(i8* %_param_0) {
+entry:
+  %param_0 = alloca i8*
+  br label %body
+
+body:                                             ; preds = %entry
+  store i8* %_param_0, i8** %param_0
+  %0 = load i8*, i8** %param_0
+  %1 = call i1 @_Z36TestConstantWithInsignificantAddressPKh(i8* %0)
+  ret i1 %1
+}
+
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nounwind readonly }
+
+!llvm.ident = !{!0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

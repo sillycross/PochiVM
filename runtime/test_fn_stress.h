@@ -400,3 +400,22 @@ inline int TestStaticVarInFunction(bool reset)
     }
     return x;
 }
+
+struct TestConstantClass
+{
+    int m_x;
+    int m_y;
+    int m_z;
+};
+
+inline const TestConstantClass* TestConstantWithSignificantAddress()
+{
+    static const TestConstantClass tc { 123, 456, 789 };
+    return &tc;
+}
+
+inline bool TestConstantWithInsignificantAddress(const uint8_t* s)
+{
+    static const char* const v = "12345678";
+    return strcmp(reinterpret_cast<const char*>(s), v) == 0;
+}
