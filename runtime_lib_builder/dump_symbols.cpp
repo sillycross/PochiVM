@@ -4,6 +4,7 @@
 #include "pochivm/common.h"
 #include "pochivm/pochivm_reflection_helper.h"
 #include "runtime_lib_builder/symbol_list_util.h"
+#include "pochivm/ir_special_function_patch.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1742,6 +1743,25 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
     }
 }
 
+// Replace calls to special IR functions to our own version.
+//
+static void PatchCallsToSpecialIrFunctions(Module* module)
+{
+    size_t n = std::extent<decltype(PochiVM::x_ir_special_function_replacement_list)>::value;
+    for (size_t i = 0; i < n; i++)
+    {
+        std::string originalFnName = PochiVM::x_ir_special_function_replacement_list[i][0];
+        std::string replacementFnName = PochiVM::x_ir_special_function_replacement_list[i][1];
+        Function* replacementFn = module->getFunction(replacementFnName);
+        ReleaseAssert(replacementFn != nullptr);
+        Function* originalFn = module->getFunction(originalFnName);
+        if (originalFn != nullptr)
+        {
+            originalFn->replaceAllUsesWith(replacementFn);
+        }
+    }
+}
+
 }   // anonymous namespace
 
 int main(int argc, char** argv)
@@ -1792,6 +1812,8 @@ int main(int argc, char** argv)
     {
         StripDebugInfo(*module.get());
     }
+
+    PatchCallsToSpecialIrFunctions(module.get());
 
     {
         int fd = creat(strippedBcFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

@@ -152,6 +152,20 @@ target_link_libraries(main PUBLIC
 target_link_libraries(main PUBLIC
   gtest
   pochivm
-  ${LLVM_EXTRA_LINK_LIBRARIES}
+  ${LLVM_EXTRA_LINK_LIBRARIES} 
+)
+
+add_subdirectory(post_build_verifier)
+
+set(POST_BUILD_DUMMY_TIMESTAMP_FILE "${PROJECT_BINARY_DIR}/post_build_validate_symbols_fake_target")
+add_custom_command(
+  OUTPUT ${POST_BUILD_DUMMY_TIMESTAMP_FILE}
+  COMMAND ${PROJECT_BINARY_DIR}/post_build_verifier/post_build_verifier ARGS "${PROJECT_BINARY_DIR}/main"
+  COMMAND ${CMAKE_COMMAND} -E touch "${POST_BUILD_DUMMY_TIMESTAMP_FILE}"
+  DEPENDS main post_build_verifier
+)
+
+add_custom_target(post_build_verifer_event ALL
+  DEPENDS ${POST_BUILD_DUMMY_TIMESTAMP_FILE}
 )
 

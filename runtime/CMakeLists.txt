@@ -14,11 +14,13 @@ add_library(runtime_internal2 OBJECT
   pochivm_register_runtime.cpp
 )
 
-# instruct clang++ to generate .bc instead of .o
-# Note that CMake will still name the .bc file as if they were an object file.
+# (1) instruct clang++ to generate .bc instead of .o
+#     Note that CMake will still name the .bc file as if they were an object file.
+# (2) Force include file 'ir_special_function_patch.h', 
+#     which contains necessary patch functions that we will need to process IR file.
 #
-set_target_properties(runtime_internal1 PROPERTIES COMPILE_FLAGS " -emit-llvm ")
-set_target_properties(runtime_internal2 PROPERTIES COMPILE_FLAGS " -emit-llvm ")
+set_target_properties(runtime_internal1 PROPERTIES COMPILE_FLAGS " -emit-llvm --include ${PROJECT_SOURCE_DIR}/pochivm/ir_special_function_patch.h ")
+set_target_properties(runtime_internal2 PROPERTIES COMPILE_FLAGS " -emit-llvm --include ${PROJECT_SOURCE_DIR}/pochivm/ir_special_function_patch.h ")
 
 add_library(runtime_bc 
   ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
