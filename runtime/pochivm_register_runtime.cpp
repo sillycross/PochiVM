@@ -140,6 +140,8 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&TestConstantWithSignificantAddress>();
     RegisterFreeFn<&TestConstantWithInsignificantAddress>();
     RegisterFreeFn<&StringInterningQuirkyBehavior>();
+
+    RegisterConstructor<TestDestructorThrow, int>();
 }
 
 // DO NOT MODIFY

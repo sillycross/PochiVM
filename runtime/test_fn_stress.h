@@ -440,3 +440,31 @@ inline const uint8_t* StringInterningQuirkyBehavior()
     static const char* const v = "asdfghjkl123";
     return reinterpret_cast<const uint8_t*>(v);
 }
+
+// Test the case that destructor is noexcept but actually throws.
+// In that case __clang_call_terminate() will be called.
+// The interesting part is that __clang_call_terminate has hidden visibility,
+// so we will replace it with our own __pochivm_clang_call_terminate.
+// This test tests that the above replacement indeed happened and worked correctly.
+//
+class TestDestructorThrow
+{
+public:
+    TestDestructorThrow(int value) : m_value(value) {}
+
+    // Destructor is no throw even if there is a throw statement inside
+    // If the throw statement fired, the program terminates.
+    //
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wexceptions"
+    ~TestDestructorThrow() noexcept(true)
+    {
+        if (m_value == 123)
+        {
+            throw 2333;
+        }
+    }
+#pragma clang diagnostic pop
+
+    int m_value;
+};

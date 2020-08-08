@@ -182,21 +182,26 @@ int main(int argc, char** argv)
             std::string symbol = line.substr(19);
             std::string symbolBak = symbol;
 
-            // For undefined symbol, strip the '@@library' part
+            // strip the '@@library' part
+            // All undefined symbols have that part, but not only undefined symbols have that part.
+            // One counterexample (weak object): 00000000029b51b0 V _ZTIi@@CXXABI_1.3
             //
-            if (symbolType == 'U')
             {
                 size_t pos = symbol.find("@@");
-                if (pos == 0 || pos == std::string::npos)
+                ReleaseAssert(pos != 0);
+                if (symbolType == 'U' && pos == std::string::npos)
                 {
                     fprintf(stderr, "[INTERNAL ERROR] Unexpected nm output: undefined symbol %s does "
                                     "not have the expectedformat of 'symbolname@@library'.",
                             symbol.c_str());
                     abort();
                 }
-                std::string library = symbol.substr(pos + 2);
-                ReleaseAssert(library.find("@@") == std::string::npos);
-                symbol = symbol.substr(0, pos);
+                if (pos != std::string::npos)
+                {
+                    std::string library = symbol.substr(pos + 2);
+                    ReleaseAssert(library.find("@@") == std::string::npos);
+                    symbol = symbol.substr(0, pos);
+                }
             }
             if (binSymbols.count(symbol))
             {
@@ -212,6 +217,7 @@ int main(int argc, char** argv)
         fclose(fp);
     }
 
+    bool hasErrors = false;
     for (std::pair<std::string, std::string> symbol : allNeededSymbols)
     {
         if (!binSymbols.count(symbol.first))
@@ -220,8 +226,12 @@ int main(int argc, char** argv)
                             "but does not present in the binary executable, "
                             "or is not a global (aka external) symbol. Please report a bug.\n",
                     symbol.first.c_str(), symbol.second.c_str());
-            abort();
+            hasErrors = true;
         }
+    }
+    if (hasErrors)
+    {
+        abort();
     }
 
     return 0;
