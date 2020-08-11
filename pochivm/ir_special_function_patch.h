@@ -29,7 +29,7 @@ extern "C" void* __cxa_begin_catch(void* exceptionObject) noexcept(true);
 //     }
 //
 extern "C" __attribute__((__noreturn__, __noinline__, __used__))
-inline void __pochivm_clang_call_terminate(void* ptr)
+inline void __pochivm_clang_call_terminate(void* ptr) noexcept(true)
 {
     __cxa_begin_catch(ptr);
     std::terminate();

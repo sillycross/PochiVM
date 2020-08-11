@@ -461,7 +461,7 @@ public:
     {
         for (uintptr_t addr : m_pastAddrs)
         {
-            int r = munmap(reinterpret_cast<void*>(addr), x_length);
+            int r = munmap(reinterpret_cast<void*>(addr), x_length + x_overflow_protection_buffer * 2);
             ReleaseAssert(r == 0);
         }
     }
@@ -504,11 +504,12 @@ private:
     {
         if (m_curAddr == 0 || m_curAddr >= m_addrEnd)
         {
-            void* r = mmap(nullptr, x_length, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1 /*fd*/, 0 /*offset*/);
+            void* r = mmap(nullptr, x_length + x_overflow_protection_buffer * 2,
+                           PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1 /*fd*/, 0 /*offset*/);
             ReleaseAssert(r != reinterpret_cast<void*>(-1));
-            m_curAddr = reinterpret_cast<uintptr_t>(r);
+            m_curAddr = reinterpret_cast<uintptr_t>(r) + x_overflow_protection_buffer;
             m_addrEnd = m_curAddr + x_length;
-            m_pastAddrs.push_back(m_curAddr);
+            m_pastAddrs.push_back(reinterpret_cast<uintptr_t>(r));
         }
 
         ReleaseAssert(m_curAddr != 0 && m_curAddr < m_addrEnd);
@@ -518,6 +519,7 @@ private:
     }
 
     static const size_t x_length = 1024 * 1024;
+    static const size_t x_overflow_protection_buffer = 1024 * 1024;
 
     std::mutex m_lock;
     uintptr_t m_curAddr;
@@ -1994,6 +1996,7 @@ int main(int argc, char** argv)
         // Match the type defintion with the symbol name by symbol address.
         //
         std::map<uintptr_t, std::pair< std::string /*mangled*/, std::string /*demangled*/> > addrToSymbol;
+        std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
 
         for (std::string& symbol : allDeclarations)
         {
@@ -2006,18 +2009,26 @@ int main(int argc, char** argv)
             // turns out to have the same demangled name 'std::allocator<char>::~allocator()'
             // and have the same address pointer in host space. I have no idea why
             // this could happen, but this should never happen to the functions registered
-            // for the runtime library. In the worst case that it did somehow happened,
-            // we will trace a warning (in our __pochivm_report_info__ hook) and all
-            // but the first function prototype would be ignored with nothing else bad happening
-            // (other than when the user attempted to use the ignored prototype he gets a compile
-            // error), so it should be safe.
+            // for the runtime library, so we assert this instead.
             //
+            if (addrToSymbol.count(addr))
+            {
+                hasMultipleSymbolsMappingToThisAddress.insert(addr);
+            }
             addrToSymbol[addr] = std::make_pair(symbol, demangledSymbols[symbol]);
         }
 
         for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
         {
             uintptr_t addr = reinterpret_cast<uintptr_t>(it->first);
+            if (hasMultipleSymbolsMappingToThisAddress.count(addr))
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Function %s::%s (FnType: %d) is resolved to an ambiguous address, "
+                                "please report a bug.\n",
+                        it->second.m_prefix.c_str(), it->second.m_functionName.c_str(),
+                        static_cast<int>(it->second.m_fnType));
+                abort();
+            }
             ReleaseAssert(addrToSymbol.count(addr));
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
             if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
