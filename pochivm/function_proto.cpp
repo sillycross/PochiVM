@@ -229,9 +229,9 @@ void AstModule::EmitIR()
                 func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
             }
         };
-        TraverseAstTreeFn linkinBitcodeFn = [&](AstNodeBase* cur,
-                                                AstNodeBase* /*parent*/,
-                                                const std::function<void(void)>& Recurse)
+        auto linkinBitcodeFn = [&](AstNodeBase* cur,
+                                   AstNodeBase* /*parent*/,
+                                   FunctionRef<void(void)> Recurse)
         {
             if (cur->GetAstNodeType() == AstNodeType::AstCallExpr)
             {

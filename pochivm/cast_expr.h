@@ -71,7 +71,7 @@ public:
         m_interpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_operand);
     }
@@ -111,7 +111,7 @@ public:
         m_interpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_operand);
     }

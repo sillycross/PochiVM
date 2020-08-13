@@ -48,7 +48,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_lhs);
         fn(m_rhs);
@@ -89,7 +89,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalNotExpr::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_op);
     }

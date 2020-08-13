@@ -27,6 +27,7 @@ pochivm/error_context.h
 pochivm/for_each_primitive_type.h
 pochivm/function_proto.cpp
 pochivm/function_proto.h
+pochivm/function_ref.h
 pochivm/global_vars.cpp
 pochivm/ir_special_function_patch.h
 pochivm/lang_constructs.cpp

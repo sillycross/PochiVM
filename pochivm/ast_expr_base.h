@@ -131,7 +131,7 @@ public:
 
     // For each of the children c of this node, invoke fn(c)
     //
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) = 0;
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) = 0;
 
     // Returns the AstNodeType of this node
     //
@@ -181,24 +181,32 @@ protected:
 };
 
 // Traverse AST tree, invoking a custom lambda on each node. Example:
-//   auto fn = [](AstNodeBase* cur, AstNodeBase* parent, const std::function<void(void)>& Recurse) {
+//   auto fn = [](AstNodeBase* cur, AstNodeBase* parent, FunctionRef<void(void)> Recurse) {
 //       DoSomething(cur);
 //       Recurse();     // Recurse on all children. If not called, no recursion on subtree of cur happens.
 //   }
 //   TraverseAstTree(root, fn);
 //
-using TraverseAstTreeFn = std::function<void(AstNodeBase* /*cur*/,
+inline void TraverseAstTree(AstNodeBase* root,
+                            FunctionRef<void(AstNodeBase* /*cur*/,
                                              AstNodeBase* /*parent*/,
-                                             const std::function<void(void)>& /*Recurse*/)>;
-
-inline void TraverseAstTree(AstNodeBase* root, const TraverseAstTreeFn& fn)
+                                             FunctionRef<void(void)> /*Recurse*/)> fn)
 {
-    std::function<void(AstNodeBase*)> RecurseFactory = [&fn, &RecurseFactory](AstNodeBase* p) {
+    // Syntax is a bit stupid to create a FunctionRef that captures itself..
+    //
+    FunctionRef<void(AstNodeBase*)> RecurseFactory;
+    auto _lambda = [&fn, &RecurseFactory](AstNodeBase* p) {
         p->ForEachChildren([p, &fn, &RecurseFactory](AstNodeBase* c) {
-            fn(c, p, std::bind(RecurseFactory, c));
+            fn(c, p, [&RecurseFactory, c]() {
+                RecurseFactory(c);
+            });
         });
     };
-    fn(root, nullptr, std::bind(RecurseFactory, root));
+    RecurseFactory = _lambda;
+
+    fn(root, nullptr, [&RecurseFactory, root]() {
+        RecurseFactory(root);
+    });
 }
 
 }   // namespace PochiVM

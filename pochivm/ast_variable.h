@@ -53,7 +53,7 @@ public:
         m_interpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstVariable; }
 

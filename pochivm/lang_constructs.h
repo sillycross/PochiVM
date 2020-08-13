@@ -49,7 +49,7 @@ public:
         m_interpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_operand);
     }
@@ -101,7 +101,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstBlock::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -172,7 +172,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstScope::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -239,7 +239,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstIfStatement::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         // The order is important: reachability analysis relies on this order
         //
@@ -316,7 +316,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstWhileLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_condClause);
         fn(m_body);
@@ -406,7 +406,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstForLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         // The order is important: reachability analysis relies on this order
         //
@@ -461,7 +461,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstBreakOrContinueStmt::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstBreakOrContinueStmt; }
 

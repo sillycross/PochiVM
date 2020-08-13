@@ -38,7 +38,7 @@ public:
         m_interpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_operand);
     }
@@ -74,7 +74,7 @@ public:
         m_interpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstLiteralExpr; }
 
@@ -164,7 +164,7 @@ public:
         m_interpFn = SelectImpl(m_src->GetTypeId());
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_src);
         fn(m_dst);
@@ -197,7 +197,7 @@ public:
         TestAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstNullptrExpr; }
 };
@@ -233,7 +233,7 @@ public:
         TestAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstTrashPtrExpr; }
 };

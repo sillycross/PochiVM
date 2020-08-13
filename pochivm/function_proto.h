@@ -83,7 +83,9 @@ public:
     // Traverse the function body
     // The parameter list is not traversed
     //
-    void TraverseFunctionBody(const TraverseAstTreeFn& fn)
+    void TraverseFunctionBody(FunctionRef<void(AstNodeBase* /*cur*/,
+                                               AstNodeBase* /*parent*/,
+                                               FunctionRef<void(void)> /*Recurse*/)> fn)
     {
         TraverseAstTree(m_body, fn);
     }
@@ -682,7 +684,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         for (auto it = m_params.begin(); it != m_params.end(); it++)
         {
@@ -794,7 +796,7 @@ public:
         m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         if (m_assignExpr != nullptr) { fn(m_assignExpr); }
         if (m_callExpr != nullptr) { fn(m_callExpr); }
@@ -854,7 +856,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(const std::function<void(AstNodeBase*)>& fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         if (m_retVal != nullptr)
         {
@@ -923,9 +925,9 @@ inline void AstFunction::PrepareForInterp()
     }
     // Allocate space for variables, and do per-node interp preparation
     //
-    TraverseAstTreeFn traverseFn = [&](AstNodeBase* cur,
-                                       AstNodeBase* /*parent*/,
-                                       const std::function<void(void)>& Recurse)
+    auto traverseFn = [&](AstNodeBase* cur,
+                          AstNodeBase* /*parent*/,
+                          FunctionRef<void(void)> Recurse)
     {
         if (cur->GetColorMark().IsColorA())
         {
@@ -1012,9 +1014,9 @@ inline bool WARN_UNUSED AstFunction::Validate()
 
     bool success = true;
     _Reachability reachability = _REACHABLE;
-    TraverseAstTreeFn traverseFn = [&](AstNodeBase* cur,
-                                       AstNodeBase* parent,
-                                       const std::function<void(void)>& Recurse)
+    auto traverseFn = [&](AstNodeBase* cur,
+                          AstNodeBase* parent,
+                          FunctionRef<void(void)> Recurse)
     {
         TestAssertIff(thread_errorContext->HasError(), !success);
         if (!success) { return; }
