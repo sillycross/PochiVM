@@ -278,8 +278,8 @@ struct function_typenames_helper<R(*)(Args...)>
     , return_nullptr_class_typename
 {
     using ReturnType = R;
-    static bool is_noexcept() { return false; }
-    static bool is_const() { return false; }
+    static constexpr bool is_noexcept() { return false; }
+    static constexpr bool is_const() { return false; }
 };
 
 template<typename R, typename... Args>
@@ -288,8 +288,8 @@ struct function_typenames_helper<R(*)(Args...) noexcept>
     , return_nullptr_class_typename
 {
     using ReturnType = R;
-    static bool is_noexcept() { return true; }
-    static bool is_const() { return false; }
+    static constexpr bool is_noexcept() { return true; }
+    static constexpr bool is_const() { return false; }
 };
 
 template<typename T>
@@ -314,8 +314,8 @@ struct function_typenames_helper<R(C::*)(Args...)>
 {
     using ReturnType = R;
     using ClassType = C;
-    static bool is_noexcept() { return false; }
-    static bool is_const() { return false; }
+    static constexpr bool is_noexcept() { return false; }
+    static constexpr bool is_const() { return false; }
 };
 
 template<typename R, typename C, typename... Args>
@@ -325,8 +325,8 @@ struct function_typenames_helper<R(C::*)(Args...) noexcept>
 {
     using ReturnType = R;
     using ClassType = C;
-    static bool is_noexcept() { return true; }
-    static bool is_const() { return false; }
+    static constexpr bool is_noexcept() { return true; }
+    static constexpr bool is_const() { return false; }
 };
 
 template<typename R, typename C, typename... Args>
@@ -336,8 +336,8 @@ struct function_typenames_helper<R(C::*)(Args...) const>
 {
     using ReturnType = R;
     using ClassType = C;
-    static bool is_noexcept() { return false; }
-    static bool is_const() { return true; }
+    static constexpr bool is_noexcept() { return false; }
+    static constexpr bool is_const() { return true; }
 };
 
 template<typename R, typename C, typename... Args>
@@ -347,8 +347,8 @@ struct function_typenames_helper<R(C::*)(Args...) const noexcept>
 {
     using ReturnType = R;
     using ClassType = C;
-    static bool is_noexcept() { return true; }
-    static bool is_const() { return true; }
+    static constexpr bool is_noexcept() { return true; }
+    static constexpr bool is_const() { return true; }
 };
 
 template<int... >
@@ -651,8 +651,13 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value
                               && !std::is_reference<OutType<k>>::value, "wrong specialization");
 
+        static constexpr bool is_nothrow = std::is_nothrow_copy_constructible<
+                typename std::remove_const<OutType<k>>::type>::value;
+
+        // This function returns reference, so it's always noexcept
+        //
         using type = OutType<k>&;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return *v;
         }
@@ -669,8 +674,10 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value,
                       "InType should be the pointer type");
 
+        static constexpr bool is_nothrow = true;
+
         using type = OutType<k>;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return *v;
         }
@@ -684,27 +691,46 @@ private:
     {
         static_assert(std::is_same<InType<k>, OutType<k>>::value, "wrong specialization");
 
+        static constexpr bool is_nothrow = true;
+
         using type = OutType<k>;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return v;
         }
     };
 
+    template<size_t n>
+    static constexpr bool is_param_wrappings_nothrow()
+    {
+        if constexpr(n == 0)
+        {
+            return true;
+        }
+        else
+        {
+            return (convert_param_internal<n-1>::is_nothrow) && is_param_wrappings_nothrow<n-1>();
+        }
+    }
+
+    static constexpr bool is_all_param_wrapping_nothrow = is_param_wrappings_nothrow<numArgs>();
+    static constexpr bool is_constructor_nothrow = std::is_nothrow_constructible<C, Args...>::value;
+    static constexpr bool is_wrapper_nothrow = is_all_param_wrapping_nothrow && is_constructor_nothrow;
+
     template<int k, typename T>
-    static typename convert_param_internal<k>::type convert_param(T input)
+    static typename convert_param_internal<k>::type convert_param(T input) noexcept
     {
         return convert_param_internal<k>::get(std::get<k>(input));
     }
 
     template<int... S, typename... TArgs>
-    static void call_impl(tpl_sequence<S...> /*unused*/, C* ret, TArgs... args)
+    static void call_impl(tpl_sequence<S...> /*unused*/, C* ret, TArgs... args) noexcept(is_wrapper_nothrow)
     {
         new (ret) C(convert_param<S>(std::forward_as_tuple(args...))...);
     }
 
     template<typename... TArgs>
-    static void call(C* ret, TArgs... args)
+    static void call(C* ret, TArgs... args) noexcept(is_wrapper_nothrow)
     {
         call_impl(SeqType(), ret, args...);
     }
@@ -715,13 +741,14 @@ private:
     template<int... S>
     struct impl<0, S...>
     {
-        using type = void(*)(C*, InType<S>...);
+        using type = void(*)(C*, InType<S>...) noexcept(is_wrapper_nothrow);
         static constexpr type value = call<InType<S>...>;
     };
 
 public:
     using WrapperFnPtrType = typename impl<numArgs>::type;
     static constexpr WrapperFnPtrType wrapperFn = impl<numArgs>::value;
+    static constexpr bool isWrapperFnNoExcept = is_wrapper_nothrow;
 };
 
 template<typename C>
@@ -729,7 +756,7 @@ struct destructor_wrapper_helper
 {
     using WrapperFnPtrType = void(*)(C*);
 
-    static void wrapperFn(C* c)
+    static void wrapperFn(C* c) noexcept
     {
         c->~C();
     }
@@ -912,7 +939,8 @@ struct get_raw_fn_typenames_info
     static RawFnTypeNamesInfo get_constructor(size_t numArgs,
                                               const char* class_typename,
                                               const char* const* orig_ret_and_param_typenames,
-                                              const std::pair<const char*, bool>* api_ret_and_param_typenames)
+                                              const std::pair<const char*, bool>* api_ret_and_param_typenames,
+                                              bool isNoExcept)
     {
         if (!(std::is_pointer<decltype(t)>::value &&
               std::is_function<typename std::remove_pointer<decltype(t)>::type>::value))
@@ -940,7 +968,7 @@ struct get_raw_fn_typenames_info
                                   nullptr /*function_name*/,
                                   get_function_pointer_address(t),
                                   false /*is_const*/,
-                                  false /*is_noexcept*/,
+                                  isNoExcept /*is_noexcept*/,
                                   false /*is_wrapper_fn_required*/,
                                   false /*is_sret_transform_required*/,
                                   nullptr /*wrapperFn*/);
@@ -948,6 +976,7 @@ struct get_raw_fn_typenames_info
 
     static RawFnTypeNamesInfo get_destructor(const char* class_typename)
     {
+        static_assert(fnInfo::is_noexcept(), "Potentially throwing destructor is not supported.");
         return RawFnTypeNamesInfo(FunctionType::Destructor,
                                   fnInfo::numArgs,
                                   fnInfo::get_api_ret_and_param_typenames(),
@@ -970,6 +999,10 @@ void __pochivm_report_info__(ReflectionHelper::RawFnTypeNamesInfo*);
 template<typename C>
 void RegisterDestructor()
 {
+    static_assert(std::is_same<typename std::remove_cv<C>::type, C>::value && !std::is_reference<C>::value,
+            "C must be a non-cv-qualified class type");
+    static_assert(std::is_nothrow_destructible<C>::value,
+            "Register a class with inaccessible destructor, or potentially throwing destructor is not supported");
     using wrapper_generator_t = ReflectionHelper::destructor_wrapper_helper<C>;
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<wrapper_generator_t::wrapperFn>::get_destructor(
@@ -1032,7 +1065,8 @@ void RegisterConstructor()
                     ReflectionHelper::function_typenames_helper_internal<
                             void /*ret*/, C* /*firstParam*/, Args...>::get_original_ret_and_param_typenames(),
                     ReflectionHelper::function_typenames_helper_internal<
-                            void /*ret*/, C* /*firstParam*/, Args...>::get_api_ret_and_param_typenames());
+                            void /*ret*/, C* /*firstParam*/, Args...>::get_api_ret_and_param_typenames(),
+                    wrapper_t::isWrapperFnNoExcept);
     __pochivm_report_info__(&info);
     RegisterDestructor<C>();
 }

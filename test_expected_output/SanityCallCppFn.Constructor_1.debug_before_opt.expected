@@ -20,13 +20,13 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 ; Function Attrs: noinline nounwind optnone uwtable
 declare dso_local void @_ZNSt6vectorIiSaIiEED2Ev(%"class.std::vector"*) unnamed_addr #0 align 2
 
-; Function Attrs: noinline optnone uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJEE4callIJEEEvPS4_DpT_(%"class.std::vector"* %0) #1 align 2 {
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJEE4callIJEEEvPS4_DpT_(%"class.std::vector"* %0) #0 align 2 {
   %2 = alloca %"class.std::vector"*, align 8
   %3 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence", align 1
   store %"class.std::vector"* %0, %"class.std::vector"** %2, align 8
   %4 = load %"class.std::vector"*, %"class.std::vector"** %2, align 8
-  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJEE9call_implIJEJEEEvNS0_12tpl_sequenceIJXspT_EEEEPS4_DpT0_(%"class.std::vector"* %4)
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJEE9call_implIJEJEEEvNS0_12tpl_sequenceIJXspT_EEEEPS4_DpT0_(%"class.std::vector"* %4) #2
   ret void
 }
 

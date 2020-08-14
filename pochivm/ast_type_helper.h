@@ -939,7 +939,27 @@ struct function_type_helper<std::function<R(Args...)> >
 };
 
 template<typename R, typename... Args>
+struct function_type_helper<std::function<R(Args...) noexcept> >
+    : function_type_helper_internal<R, Args...>
+{
+    using ReturnType = typename function_type_helper_internal<R, Args...>::ReturnType;
+
+    template<size_t i>
+    using ArgType = typename function_type_helper_internal<R, Args...>::template ArgType<i>;
+};
+
+template<typename R, typename... Args>
 struct function_type_helper<R(*)(Args...)>
+    : function_type_helper_internal<R, Args...>
+{
+    using ReturnType = typename function_type_helper_internal<R, Args...>::ReturnType;
+
+    template<size_t i>
+    using ArgType = typename function_type_helper_internal<R, Args...>::template ArgType<i>;
+};
+
+template<typename R, typename... Args>
+struct function_type_helper<R(*)(Args...) noexcept>
     : function_type_helper_internal<R, Args...>
 {
     using ReturnType = typename function_type_helper_internal<R, Args...>::ReturnType;
