@@ -41,6 +41,10 @@ void AstVariable::EmitDestructVariableIR()
                cppFunctionMd->m_numParams == 1 && cppFunctionMd->m_paramTypes[0] == GetTypeId());
     Function* callee = thread_llvmContext->m_module->getFunction(cppFunctionMd->m_bitcodeData->m_symbolName);
     TestAssert(callee != nullptr);
+    // We do not support destructors that may throw, and our destructor wrapper always have 'noexcept' set,
+    // so the IR we extracted should have 'NoUnwind' attribute set. Assert this.
+    //
+    TestAssert(callee->hasFnAttribute(Attribute::AttrKind::NoUnwind));
     TestAssert(callee->arg_size() == 1);
     Value* params[1];
     params[0] = EmitIR();
