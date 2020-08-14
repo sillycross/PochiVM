@@ -399,8 +399,11 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value
                               && !std::is_reference<OutType<k>>::value, "wrong specialization");
 
+        static constexpr bool is_nothrow = std::is_nothrow_copy_constructible<
+                typename std::remove_const<OutType<k>>::type>::value;
+
         using type = OutType<k>&;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return *v;
         }
@@ -417,8 +420,10 @@ private:
         static_assert(std::is_same<InType<k>, typename std::add_pointer<OutType<k>>::type>::value,
                       "InType should be the pointer type");
 
+        static constexpr bool is_nothrow = true;
+
         using type = OutType<k>;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return *v;
         }
@@ -432,15 +437,34 @@ private:
     {
         static_assert(std::is_same<InType<k>, OutType<k>>::value, "wrong specialization");
 
+        static constexpr bool is_nothrow = true;
+
         using type = OutType<k>;
-        static type get(InType<k> v)
+        static type get(InType<k> v) noexcept
         {
             return v;
         }
     };
 
+    template<size_t n>
+    static constexpr bool is_param_wrappings_nothrow()
+    {
+        if constexpr(n == 0)
+        {
+            return true;
+        }
+        else
+        {
+            return (convert_param_internal<n-1>::is_nothrow) && is_param_wrappings_nothrow<n-1>();
+        }
+    }
+
+    static constexpr bool is_all_param_wrapping_nothrow = is_param_wrappings_nothrow<FnTypeInfo::numArgs>();
+    static constexpr bool is_function_nothrow = FnTypeInfo::is_noexcept();
+    static constexpr bool is_wrapper_nothrow = is_all_param_wrapping_nothrow && is_function_nothrow;
+
     template<int k, typename T>
-    static typename convert_param_internal<k>::type convert_param(T input)
+    static typename convert_param_internal<k>::type convert_param(T input) noexcept
     {
         return convert_param_internal<k>::get(std::get<k>(input));
     }
@@ -449,7 +473,7 @@ private:
     struct call_fn_helper
     {
         template<typename R2, int... S, typename... Args>
-        static R2 call(tpl_sequence<S...> /*unused*/, Args... args)
+        static R2 call(tpl_sequence<S...> /*unused*/, Args... args) noexcept(is_wrapper_nothrow)
         {
             return fnPtr(convert_param<S>(std::forward_as_tuple(args...))...);
         }
@@ -459,14 +483,14 @@ private:
     struct call_fn_helper<F2, typename std::enable_if<(std::is_member_function_pointer<F2>::value)>::type>
     {
         template<typename R2, int... S, typename C, typename... Args>
-        static R2 call(tpl_sequence<S...> /*unused*/, C c, Args... args)
+        static R2 call(tpl_sequence<S...> /*unused*/, C c, Args... args) noexcept(is_wrapper_nothrow)
         {
             return (c->*fnPtr)(convert_param<S>(std::forward_as_tuple(args...))...);
         }
     };
 
     template<typename R2, typename... Args>
-    static R2 call_fn_impl(Args... args)
+    static R2 call_fn_impl(Args... args) noexcept(is_wrapper_nothrow)
     {
         return call_fn_helper<FnType>::template call<R2>(SeqType(), args...);
     }
@@ -478,8 +502,11 @@ private:
     {
         using R2NoConst = typename std::remove_const<R2>::type;
 
+        // C++17 guaranteed copy-elision makes sure that no copy/move constructor will be called
+        // so we don't need to consider whether the copy/move constructor may throw
+        //
         template<typename... Args>
-        static void call(R2NoConst* ret, Args... args)
+        static void call(R2NoConst* ret, Args... args) noexcept(is_wrapper_nothrow)
         {
             new (ret) R2NoConst(call_fn_impl<R2NoConst>(args...));
         }
@@ -493,7 +520,7 @@ private:
             template<int... S>
             struct impl<0, S...>
             {
-                using type = void(*)(R2NoConst*, InType<S>...);
+                using type = void(*)(R2NoConst*, InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<InType<S>...>;
             };
         };
@@ -508,7 +535,7 @@ private:
             struct impl<0, S...>
             {
                 using ClassTypeStar = typename std::add_pointer<typename FnTypeInfo::ClassType>::type;
-                using type = void(*)(R2NoConst*, ClassTypeStar, InType<S>...);
+                using type = void(*)(R2NoConst*, ClassTypeStar, InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<ClassTypeStar, InType<S>...>;
             };
         };
@@ -521,7 +548,7 @@ private:
             !is_converted_reference_type<R2>::value)>::type>
     {
         template<typename... Args>
-        static R2 call(Args... args)
+        static R2 call(Args... args) noexcept(is_wrapper_nothrow)
         {
             return call_fn_impl<R2>(args...);
         }
@@ -535,7 +562,7 @@ private:
             template<int... S>
             struct impl<0, S...>
             {
-                using type = R2(*)(InType<S>...);
+                using type = R2(*)(InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<InType<S>...>;
             };
         };
@@ -550,7 +577,7 @@ private:
             struct impl<0, S...>
             {
                 using ClassTypeStar = typename std::add_pointer<typename FnTypeInfo::ClassType>::type;
-                using type = R2(*)(ClassTypeStar, InType<S>...);
+                using type = R2(*)(ClassTypeStar, InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<ClassTypeStar, InType<S>...>;
             };
         };
@@ -566,7 +593,7 @@ private:
         using R2Star = typename std::add_pointer<R2>::type;
 
         template<typename... Args>
-        static R2Star call(Args... args)
+        static R2Star call(Args... args) noexcept(is_wrapper_nothrow)
         {
             return &call_fn_impl<R2>(args...);
         }
@@ -580,7 +607,7 @@ private:
             template<int... S>
             struct impl<0, S...>
             {
-                using type = R2Star(*)(InType<S>...);
+                using type = R2Star(*)(InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<InType<S>...>;
             };
         };
@@ -595,7 +622,7 @@ private:
             struct impl<0, S...>
             {
                 using ClassTypeStar = typename std::add_pointer<typename FnTypeInfo::ClassType>::type;
-                using type = R2Star(*)(ClassTypeStar, InType<S>...);
+                using type = R2Star(*)(ClassTypeStar, InType<S>...) noexcept(is_wrapper_nothrow);
                 static constexpr type value = call<ClassTypeStar, InType<S>...>;
             };
         };
