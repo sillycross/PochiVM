@@ -3592,7 +3592,7 @@ TEST(SanityCallCppFn, StringInternQuirkyBehavior)
     }
 }
 
-TEST(SanityCallCppFn, DestructorThrowAndTerminates_Interp)
+TEST(SanityCallCppFn, UnexpectedException_Interp)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -3603,9 +3603,8 @@ TEST(SanityCallCppFn, DestructorThrowAndTerminates_Interp)
     using FnPrototype = std::function<void(int)>;
     {
         auto [fn, r] = NewFunction<FnPrototype>("testfn");
-        auto x = fn.NewVariable<TestDestructorThrow>();
         fn.SetBody(
-                Declare(x, Constructor<TestDestructorThrow>(r))
+                CallFreeFn::TestNoExceptButThrows(r)
         );
     }
 
@@ -3630,7 +3629,7 @@ TEST(SanityCallCppFn, DestructorThrowAndTerminates_Interp)
     }
 }
 
-TEST(SanityCallCppFn, DestructorThrowAndTerminates_LLVM)
+TEST(SanityCallCppFn, UnexpectedException_LLVM)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -3641,9 +3640,8 @@ TEST(SanityCallCppFn, DestructorThrowAndTerminates_LLVM)
     using FnPrototype = std::function<void(int)>;
     {
         auto [fn, r] = NewFunction<FnPrototype>("testfn");
-        auto x = fn.NewVariable<TestDestructorThrow>();
         fn.SetBody(
-                Declare(x, Constructor<TestDestructorThrow>(r))
+                CallFreeFn::TestNoExceptButThrows(r)
         );
     }
 

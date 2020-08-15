@@ -18,7 +18,7 @@ declare dso_local void @__pochivm_clang_call_terminate(i8*) local_unnamed_addr #
 define void @testfn(i32 %_param_0) local_unnamed_addr #1 personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %0 = icmp eq i32 %_param_0, 123
-  br i1 %0, label %1, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI19TestDestructorThrowE9wrapperFnEPS2_.exit
+  br i1 %0, label %1, label %_Z21TestNoExceptButThrowsi.exit
 
 1:                                                ; preds = %entry
   %2 = tail call i8* @__cxa_allocate_exception(i64 4) #1
@@ -37,7 +37,7 @@ entry:
 7:                                                ; preds = %1
   unreachable
 
-_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI19TestDestructorThrowE9wrapperFnEPS2_.exit: ; preds = %entry
+_Z21TestNoExceptButThrowsi.exit:                  ; preds = %entry
   ret void
 }
 
@@ -46,7 +46,7 @@ attributes #1 = { nounwind }
 attributes #2 = { noreturn }
 attributes #3 = { noreturn nounwind }
 
-!llvm.ident = !{!0, !0}
+!llvm.ident = !{!0}
 !llvm.module.flags = !{!1, !2, !3}
 
 !0 = !{!"clang version 10.0.0 "}
