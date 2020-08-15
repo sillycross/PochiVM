@@ -8,6 +8,8 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
 %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: uwtable
 define available_externally dso_local void @_ZN10TestClassA7PushVecEi(%class.TestClassA* %0, i32 %1) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %3 = getelementptr inbounds %class.TestClassA, %class.TestClassA* %0, i64 0, i32 0, i32 0, i32 0, i32 1
@@ -102,8 +104,6 @@ define available_externally dso_local void @_ZN10TestClassA7PushVecEi(%class.Tes
   store i32* %62, i32** %61, align 8, !tbaa !13
   ret void
 }
-
-declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nobuiltin nofree
 declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
@@ -230,7 +230,7 @@ define available_externally dso_local i64 @_ZN10TestClassA12GetVectorSumEv(%clas
   br i1 %92, label %83, label %85, !llvm.loop !17
 }
 
-define i64 @testfn(%class.TestClassA* %_param_0, i32 %_param_1) {
+define i64 @testfn(%class.TestClassA* %_param_0, i32 %_param_1) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %param_0 = alloca %class.TestClassA*
   %param_1 = alloca i32

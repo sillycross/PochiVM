@@ -8,5 +8,6 @@ add_library(pochivm
   lang_constructs.cpp
   ast_variable.cpp
   destructor_helper.cpp
+  exception_helper.cpp
 )
 

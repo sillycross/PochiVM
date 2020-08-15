@@ -3,6 +3,8 @@ source_filename = "test"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: inlinehint nounwind uwtable
 define available_externally dso_local zeroext i1 @_ZN15TestCornerCases14BoolParamTest1EbPbPS0_(i1 zeroext %0, i8* %1, i8** %2) #0 {
   store i8 1, i8* %1, align 1, !tbaa !4
@@ -19,7 +21,7 @@ define available_externally dso_local zeroext i1 @_ZN15TestCornerCases14BoolPara
   ret i1 %11
 }
 
-define zeroext i1 @testfn(i32 %_param_0, i8* %_param_1, i8** %_param_2) {
+define zeroext i1 @testfn(i32 %_param_0, i8* %_param_1, i8** %_param_2) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %param_0 = alloca i32
   %param_1 = alloca i8*

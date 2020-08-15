@@ -5,6 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %class.TestDestructor1 = type { i32, i32* }
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: nounwind uwtable
 define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor1E9wrapperFnEPS2_(%class.TestDestructor1* %0) #0 align 2 {
   %2 = getelementptr inbounds %class.TestDestructor1, %class.TestDestructor1* %0, i64 0, i32 0
@@ -15,7 +17,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
   ret void
 }
 
-define void @testfn(%class.TestDestructor1* %_param_0) {
+define void @testfn(%class.TestDestructor1* %_param_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %param_0 = alloca %class.TestDestructor1*
   br label %body

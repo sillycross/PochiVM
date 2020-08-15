@@ -42,7 +42,12 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
     {
         EmitIRDestructAllVariablesUntilScope(this);
     }
+    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
     thread_llvmContext->m_scopeStack.pop_back();
+    if (thread_llvmContext->m_exceptionDtorTree.size() > thread_llvmContext->m_scopeStack.size())
+    {
+        thread_llvmContext->m_exceptionDtorTree.pop_back();
+    }
     return nullptr;
 }
 
@@ -291,7 +296,12 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
 
     // Pop off the variable scope
     //
+    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
     thread_llvmContext->m_scopeStack.pop_back();
+    if (thread_llvmContext->m_exceptionDtorTree.size() > thread_llvmContext->m_scopeStack.size())
+    {
+        thread_llvmContext->m_exceptionDtorTree.pop_back();
+    }
     return nullptr;
 }
 

@@ -129,6 +129,36 @@ struct LLVMCodegenContext
     // Current stack of variable scopes and declared variables in each scope
     //
     std::vector<std::pair<AstNodeBase* /*scope*/, std::vector<AstVariable*>>> m_scopeStack;
+    // Current "stack" of destructor blocks for handling exceptions
+    // It is actually a tree, with each node branching to its parent in the end,
+    // but it's sufficient to only keep track of the current "dtor position" in each scope stack.
+    // Example: { ctor1; E; ctor2; { ctor3; E; ctor4; } { ctor5; E; ctor6; } ctor7; E; ctor8; }
+    // would have a tree structure of                /- dtor3 <- dtor4
+    //                                dtor1 <- dtor2 -- dtor5 <- dtor6
+    //                                               \- dtor7 <- dtor8
+    // and each exception 'E' would just branch to the corresponding dtor node in the tree.
+    //
+    // m_exceptionDtorTree[i] would store a 'boundary' and a 'branchTarget', which means destructors
+    // for the the first 'boundary' objects constructed in scope stack 'i', and any alive objects
+    // in earlier scopes, would be called when branching to 'branchTarget'.
+    //
+    std::vector<std::pair<int /*boundary*/,  llvm::BasicBlock* /*branchTarget*/>> m_exceptionDtorTree;
+    // An alloca of { i8*, i32 } holding the return value of personalityFn
+    //
+    llvm::Value* m_ehCurExceptionObject;
+    llvm::Value* m_ehCurExceptionType;
+    // The generated catch-block for the current inner-most try-block we are inside, or nullptr if there isn't any
+    //
+    llvm::BasicBlock* m_currentEHCatchBlock;
+    // Ordinal used by dtor tree blocks
+    //
+    uint32_t m_dtorTreeBlockOrdinal;
+    // Ordinal used by landingpad blocks
+    //
+    uint32_t m_landingPadBlockOrdinal;
+    // The personalityFn in this module ("__gxx_personality_v0")
+    //
+    llvm::Constant* m_personalityFn;
 };
 
 extern thread_local LLVMCodegenContext* thread_llvmContext;

@@ -1,7 +1,9 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define i64 @compute_linked_list_sum(i8* %_p_0) {
+declare dso_local i32 @__gxx_personality_v0(...)
+
+define i64 @compute_linked_list_sum(i8* %_p_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %p_0 = alloca i8*
   %sum_1 = alloca i64

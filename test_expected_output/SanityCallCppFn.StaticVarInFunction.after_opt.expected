@@ -5,8 +5,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @_ZZ23TestStaticVarInFunctionbE1x = external dso_local local_unnamed_addr global i32, align 4
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: nofree norecurse nounwind
-define i32 @testfn() local_unnamed_addr #0 {
+define i32 @testfn() local_unnamed_addr #0 personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %0 = load i32, i32* @_ZZ23TestStaticVarInFunctionbE1x, align 4
   %1 = add nsw i32 %0, 12

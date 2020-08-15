@@ -5,6 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @.str.65 = private unnamed_addr constant [9 x i8] c"12345678\00", align 1
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: noinline nounwind optnone uwtable
 define available_externally dso_local zeroext i1 @_Z36TestConstantWithInsignificantAddressPKh(i8* %0) #0 {
   %2 = alloca i8*, align 8
@@ -18,7 +20,7 @@ define available_externally dso_local zeroext i1 @_Z36TestConstantWithInsignific
 ; Function Attrs: nounwind readonly
 declare dso_local i32 @strcmp(i8*, i8*) #1
 
-define zeroext i1 @testfn(i8* %_param_0) {
+define zeroext i1 @testfn(i8* %_param_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %param_0 = alloca i8*
   br label %body

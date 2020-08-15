@@ -7,10 +7,12 @@ target triple = "x86_64-unknown-linux-gnu"
 %"struct.std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
 %union.anon = type { i64, [8 x i8] }
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: uwtable
 declare dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive2NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFiS7_EvE4callIiJLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"*) local_unnamed_addr #0 align 2
 
-define i32 @testfn(%"class.std::__cxx11::basic_string"* %_param_0) local_unnamed_addr {
+define i32 @testfn(%"class.std::__cxx11::basic_string"* %_param_0) local_unnamed_addr personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %0 = tail call i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_Z16FreeFnRecursive2NSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEEE14call_fn_helperIPFiS7_EvE4callIiJLi0EEJPS7_EEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%"class.std::__cxx11::basic_string"* %_param_0)
   ret i32 %0

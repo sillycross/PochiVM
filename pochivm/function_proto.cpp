@@ -1,5 +1,6 @@
 #include "function_proto.h"
 #include "destructor_helper.h"
+#include "exception_helper.h"
 #include "pochivm.hpp"
 
 #include "llvm/Support/MemoryBuffer.h"
@@ -42,6 +43,8 @@ void AstFunction::EmitDefinition()
         m_generatedPrototype->addAttribute(AttributeList::AttrIndex::ReturnIndex, Attribute::AttrKind::ZExt);
     }
 
+    m_generatedPrototype->setPersonalityFn(thread_llvmContext->m_personalityFn);
+
     // Set parameter names
     //
     {
@@ -73,6 +76,12 @@ void AstFunction::EmitIR()
     thread_llvmContext->m_breakStmtTarget.clear();
     thread_llvmContext->m_continueStmtTarget.clear();
     thread_llvmContext->m_scopeStack.clear();
+    thread_llvmContext->m_exceptionDtorTree.clear();
+    thread_llvmContext->m_ehCurExceptionObject = nullptr;
+    thread_llvmContext->m_ehCurExceptionType = nullptr;
+    thread_llvmContext->m_currentEHCatchBlock = nullptr;
+    thread_llvmContext->m_dtorTreeBlockOrdinal = 0;
+    thread_llvmContext->m_landingPadBlockOrdinal = 0;
 
     // Generated code structure:
     //
@@ -162,6 +171,7 @@ void AstFunction::EmitIR()
     TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
     TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
     TestAssert(thread_llvmContext->m_scopeStack.size() == 0);
+    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() == 0);
 
     // Reset curFunction back to nullptr
     //
@@ -195,6 +205,20 @@ void AstModule::EmitIR()
     // TODO: does this leak memory?
     //
     thread_llvmContext->m_dummyBlock = BasicBlock::Create(*thread_llvmContext->m_llvmContext, "dummy");
+
+    // Declare the __gxx_personality_v0 function for exception handling
+    //     declare dso_local i32 @__gxx_personality_v0(...)
+    //
+    {
+        Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<int32_t>());
+        FunctionType* funcType = FunctionType::get(returnType,
+                                                   ArrayRef<Type*>(),
+                                                   true /*isVariadic*/);
+        Function* personalityFn = Function::Create(
+                    funcType, Function::ExternalLinkage, "__gxx_personality_v0", thread_llvmContext->m_module);
+        personalityFn->setDSOLocal(true);
+        thread_llvmContext->m_personalityFn = personalityFn;
+    }
 
     // First pass: find all call-cpp-function expressions,
     // link in the bitcodes containing the implementation and necessary types
@@ -330,6 +354,7 @@ void AstCallExpr::SetSretAddress(Value* address)
 
 Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
 {
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     Function* callee = nullptr;
     AstFunction* calleeAst = nullptr;
     if (!m_isCppFunction)
@@ -367,8 +392,27 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
         curParamIndex++;
     }
     TestAssert(curParamIndex == callee->arg_size());
-    Value* ret = thread_llvmContext->m_builder
-                         ->CreateCall(callee, ArrayRef<Value*>(params, params + callee->arg_size()));
+
+    Value* ret;
+    // If the function is nothrow, or there is no need to set up a landing pad since there are no destructors or catch,
+    // just use normal 'Call' instruction. Otherwise we need to use Invoke.
+    //
+    if (callee->hasFnAttribute(Attribute::AttrKind::NoUnwind) || IsNoLandingPadNeeded())
+    {
+        ret = thread_llvmContext->m_builder
+                ->CreateCall(callee, ArrayRef<Value*>(params, params + callee->arg_size()));
+    }
+    else
+    {
+        BasicBlock* unwindDest = EmitEHLandingPadForCurrentPosition();
+        BasicBlock* normalDest = BasicBlock::Create(
+                    *thread_llvmContext->m_llvmContext,
+                    Twine("L") /*name*/,
+                    thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+        ret = thread_llvmContext->m_builder
+                ->CreateInvoke(callee, normalDest, unwindDest, ArrayRef<Value*>(params, params + callee->arg_size()));
+        thread_llvmContext->m_builder->SetInsertPoint(normalDest);
+    }
     if (GetTypeId().IsVoid() || GetTypeId().IsCppClassType())
     {
         TestAssert(AstTypeHelper::llvm_value_has_type(TypeId::Get<void>(), ret));

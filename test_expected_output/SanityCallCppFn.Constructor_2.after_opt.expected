@@ -66,17 +66,35 @@ entry:
 _ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit: ; preds = %9, %15
   %18 = phi i32* [ %10, %9 ], [ %13, %15 ]
   store i32* %18, i32** %12, align 8, !tbaa !10
-  %19 = call dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_2)
-  %20 = load i32*, i32** %11, align 8, !tbaa !4
-  %21 = icmp eq i32* %20, null
-  br i1 %21, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit, label %22
+  %19 = invoke dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_2)
+          to label %L unwind label %landing_pad_0
 
-22:                                               ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit
-  %23 = bitcast i32* %20 to i8*
-  call void @_ZdlPv(i8* nonnull %23) #5
+landing_pad_0:                                    ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit
+  %20 = landingpad { i8*, i32 }
+          cleanup
+  %21 = load i32*, i32** %11, align 8, !tbaa !4
+  %22 = icmp eq i32* %21, null
+  br i1 %22, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit, label %23
+
+23:                                               ; preds = %landing_pad_0
+  %24 = bitcast i32* %21 to i8*
+  call void @_ZdlPv(i8* nonnull %24) #5
   br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit
 
-_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit, %22
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %landing_pad_0, %23
+  resume { i8*, i32 } %20
+
+L:                                                ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmEE4callIJmEEEvPS4_DpT_.exit
+  %25 = load i32*, i32** %11, align 8, !tbaa !4
+  %26 = icmp eq i32* %25, null
+  br i1 %26, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1, label %27
+
+27:                                               ; preds = %L
+  %28 = bitcast i32* %25 to i8*
+  call void @_ZdlPv(i8* nonnull %28) #5
+  br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1
+
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1: ; preds = %L, %27
   ret void
 }
 

@@ -22,18 +22,37 @@ define void @testfn(%"class.std::vector"* %_param_0, i64 %_param_1, i32 %_param_
 entry:
   %var_3 = alloca %"class.std::vector", align 8
   call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJmiEE4callIJmiEEEvPS4_DpT_(%"class.std::vector"* nonnull %var_3, i64 %_param_1, i32 %_param_2)
-  %0 = call dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_3)
-  %1 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %var_3, i64 0, i32 0, i32 0, i32 0
-  %2 = load i32*, i32** %1, align 8, !tbaa !4
-  %3 = icmp eq i32* %2, null
-  br i1 %3, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit, label %4
+  %0 = invoke dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_3)
+          to label %L unwind label %landing_pad_0
 
-4:                                                ; preds = %entry
-  %5 = bitcast i32* %2 to i8*
-  call void @_ZdlPv(i8* nonnull %5) #2
+landing_pad_0:                                    ; preds = %entry
+  %1 = landingpad { i8*, i32 }
+          cleanup
+  %2 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %var_3, i64 0, i32 0, i32 0, i32 0
+  %3 = load i32*, i32** %2, align 8, !tbaa !4
+  %4 = icmp eq i32* %3, null
+  br i1 %4, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit, label %5
+
+5:                                                ; preds = %landing_pad_0
+  %6 = bitcast i32* %3 to i8*
+  call void @_ZdlPv(i8* nonnull %6) #2
   br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit
 
-_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %entry, %4
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %landing_pad_0, %5
+  resume { i8*, i32 } %1
+
+L:                                                ; preds = %entry
+  %7 = getelementptr inbounds %"class.std::vector", %"class.std::vector"* %var_3, i64 0, i32 0, i32 0, i32 0
+  %8 = load i32*, i32** %7, align 8, !tbaa !4
+  %9 = icmp eq i32* %8, null
+  br i1 %9, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1, label %10
+
+10:                                               ; preds = %L
+  %11 = bitcast i32* %8 to i8*
+  call void @_ZdlPv(i8* nonnull %11) #2
+  br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1
+
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1: ; preds = %L, %10
   ret void
 }
 

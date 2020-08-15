@@ -7,6 +7,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @_ZN29TestNonTrivialCopyConstructor7counterE = external dso_local local_unnamed_addr global i32, align 4
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: uwtable
 define available_externally dso_local i32 @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN29TestNonTrivialCopyConstructor2FnES2_EEE15call_fn_wrapperIivE4callIJPS2_EEEiDpT_(%struct.TestNonTrivialCopyConstructor* %0) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %2 = load i32, i32* @_ZN29TestNonTrivialCopyConstructor7counterE, align 4, !tbaa !4
@@ -17,9 +19,7 @@ define available_externally dso_local i32 @_ZN7PochiVM16ReflectionHelper23functi
   ret i32 %5
 }
 
-declare dso_local i32 @__gxx_personality_v0(...)
-
-define i32 @testfn(%struct.TestNonTrivialCopyConstructor* %_param_0) {
+define i32 @testfn(%struct.TestNonTrivialCopyConstructor* %_param_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %param_0 = alloca %struct.TestNonTrivialCopyConstructor*
   br label %body

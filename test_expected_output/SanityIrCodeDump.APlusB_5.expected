@@ -1,7 +1,9 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) {
+declare dso_local i32 @__gxx_personality_v0(...)
+
+define i32 @a_plus_b(i32 %_a_0, i32 %_b_1) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %a_0 = alloca i32
   %b_1 = alloca i32

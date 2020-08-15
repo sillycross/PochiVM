@@ -1,7 +1,9 @@
 ; ModuleID = 'test'
 source_filename = "test"
 
-define i32 @find_nth_prime(i32 %_n_0) {
+declare dso_local i32 @__gxx_personality_v0(...)
+
+define i32 @find_nth_prime(i32 %_n_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %n_0 = alloca i32
   %numPrimesFound_2 = alloca i32

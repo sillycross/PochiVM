@@ -6,6 +6,8 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.TestConstructor1 = type { i32 }
 %"struct.PochiVM::ReflectionHelper::tpl_sequence" = type { i8 }
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: noinline nounwind optnone uwtable
 define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI16TestConstructor1E9wrapperFnEPS2_(%class.TestConstructor1* %0) #0 align 2 {
   %2 = alloca %class.TestConstructor1*, align 8
@@ -37,7 +39,7 @@ define available_externally dso_local i32 @_ZN16TestConstructor18GetValueEv(%cla
   ret i32 %5
 }
 
-define i32 @testfn() {
+define i32 @testfn() personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %var_0 = alloca %class.TestConstructor1
   br label %body

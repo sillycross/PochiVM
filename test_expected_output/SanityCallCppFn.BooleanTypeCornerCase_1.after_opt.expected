@@ -3,8 +3,10 @@ source_filename = "test"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: nofree norecurse nounwind
-define zeroext i1 @testfn(i32 %_param_0, i8* nocapture %_param_1, i8** nocapture readonly %_param_2) local_unnamed_addr #0 {
+define zeroext i1 @testfn(i32 %_param_0, i8* nocapture %_param_1, i8** nocapture readonly %_param_2) local_unnamed_addr #0 personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %0 = icmp eq i32 %_param_0, 233
   store i8 1, i8* %_param_1, align 1, !tbaa !4

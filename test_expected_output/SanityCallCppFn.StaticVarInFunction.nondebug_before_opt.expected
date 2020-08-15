@@ -5,6 +5,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @_ZZ23TestStaticVarInFunctionbE1x = external dso_local local_unnamed_addr global i32, align 4
 
+declare dso_local i32 @__gxx_personality_v0(...)
+
 ; Function Attrs: inlinehint nounwind uwtable
 define available_externally dso_local i32 @_Z23TestStaticVarInFunctionb(i1 zeroext %0) #0 {
   %2 = load i32, i32* @_ZZ23TestStaticVarInFunctionbE1x, align 4
@@ -14,7 +16,7 @@ define available_externally dso_local i32 @_Z23TestStaticVarInFunctionb(i1 zeroe
   ret i32 %4
 }
 
-define i32 @testfn() {
+define i32 @testfn() personality i32 (...)* @__gxx_personality_v0 {
 entry:
   br label %body
 
