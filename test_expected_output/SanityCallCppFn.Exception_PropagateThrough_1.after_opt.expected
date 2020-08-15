@@ -1,0 +1,811 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+%class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
+
+@_ZTIi = external dso_local constant i8*
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: uwtable
+declare dso_local void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"*, i32* dereferenceable(4)) local_unnamed_addr #0 align 2
+
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+
+; Function Attrs: nounwind uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2*) local_unnamed_addr #1 align 2
+
+; Function Attrs: uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2*, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #0 align 2
+
+define void @testfn(%class.CtorDtorOrderRecorder* %_param_0) local_unnamed_addr personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %0 = alloca i32, align 4
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32, align 4
+  %4 = alloca i32, align 4
+  %5 = alloca i32, align 4
+  %6 = alloca i32, align 4
+  %7 = alloca i32, align 4
+  %8 = alloca i32, align 4
+  %9 = alloca i32, align 4
+  %10 = alloca i32, align 4
+  %11 = alloca i32, align 4
+  %12 = alloca i32, align 4
+  %13 = alloca i32, align 4
+  %14 = alloca i32, align 4
+  %15 = alloca i32, align 4
+  %var_1 = alloca %class.TestDestructor2, align 8
+  %var_2 = alloca %class.TestDestructor2, align 8
+  %var_3 = alloca %class.TestDestructor2, align 8
+  %var_4 = alloca %class.TestDestructor2, align 8
+  %var_5 = alloca %class.TestDestructor2, align 8
+  %var_6 = alloca %class.TestDestructor2, align 8
+  %var_7 = alloca %class.TestDestructor2, align 8
+  %var_8 = alloca %class.TestDestructor2, align 8
+  %var_9 = alloca %class.TestDestructor2, align 8
+  %var_10 = alloca %class.TestDestructor2, align 8
+  %var_11 = alloca %class.TestDestructor2, align 8
+  %var_12 = alloca %class.TestDestructor2, align 8
+  %var_13 = alloca %class.TestDestructor2, align 8
+  %var_14 = alloca %class.TestDestructor2, align 8
+  %16 = bitcast i32* %15 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %16)
+  store i32 1000, i32* %15, align 4, !tbaa !4
+  %17 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %_param_0, i64 0, i32 1
+  call void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %15)
+  %18 = load i32, i32* %15, align 4, !tbaa !4
+  %19 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %_param_0, i64 0, i32 0
+  %20 = load i32, i32* %19, align 8, !tbaa !8
+  %21 = icmp eq i32 %18, %20
+  br i1 %21, label %22, label %_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi.exit
+
+22:                                               ; preds = %entry
+  %23 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %24 = bitcast i8* %23 to i32*
+  %25 = load i32, i32* %15, align 4, !tbaa !4
+  store i32 %25, i32* %24, align 16, !tbaa !4
+  call void @__cxa_throw(i8* %23, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+  unreachable
+
+_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi.exit: ; preds = %entry
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %16)
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_1, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 1)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_2, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 2)
+          to label %31 unwind label %landing_pad_0
+
+dtor_tree_0:                                      ; preds = %dtor_tree_1, %landing_pad_0
+  %_cur_exception_object.0 = phi i8* [ %_cur_exception_object.1, %dtor_tree_1 ], [ %29, %landing_pad_0 ]
+  %_cur_exception_type.0 = phi i32 [ %_cur_exception_type.1, %dtor_tree_1 ], [ %30, %landing_pad_0 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_1)
+  %26 = insertvalue { i8*, i32 } undef, i8* %_cur_exception_object.0, 0
+  %27 = insertvalue { i8*, i32 } %26, i32 %_cur_exception_type.0, 1
+  resume { i8*, i32 } %27
+
+landing_pad_0:                                    ; preds = %_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi.exit
+  %28 = landingpad { i8*, i32 }
+          cleanup
+  %29 = extractvalue { i8*, i32 } %28, 0
+  %30 = extractvalue { i8*, i32 } %28, 1
+  br label %dtor_tree_0
+
+31:                                               ; preds = %_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi.exit
+  %32 = bitcast i32* %14 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %32)
+  store i32 1001, i32* %14, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %14)
+          to label %.noexc unwind label %landing_pad_1
+
+.noexc:                                           ; preds = %31
+  %33 = load i32, i32* %14, align 4, !tbaa !4
+  %34 = load i32, i32* %19, align 8, !tbaa !8
+  %35 = icmp eq i32 %33, %34
+  br i1 %35, label %36, label %43
+
+36:                                               ; preds = %.noexc
+  %37 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %38 = bitcast i8* %37 to i32*
+  %39 = load i32, i32* %14, align 4, !tbaa !4
+  store i32 %39, i32* %38, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %37, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc30 unwind label %landing_pad_1
+
+.noexc30:                                         ; preds = %36
+  unreachable
+
+dtor_tree_1:                                      ; preds = %dtor_tree_2, %landing_pad_2, %landing_pad_1
+  %_cur_exception_object.1 = phi i8* [ %_cur_exception_object.2, %dtor_tree_2 ], [ %45, %landing_pad_2 ], [ %41, %landing_pad_1 ]
+  %_cur_exception_type.1 = phi i32 [ %_cur_exception_type.2, %dtor_tree_2 ], [ %46, %landing_pad_2 ], [ %42, %landing_pad_1 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_2)
+  br label %dtor_tree_0
+
+landing_pad_1:                                    ; preds = %36, %31
+  %40 = landingpad { i8*, i32 }
+          cleanup
+  %41 = extractvalue { i8*, i32 } %40, 0
+  %42 = extractvalue { i8*, i32 } %40, 1
+  br label %dtor_tree_1
+
+43:                                               ; preds = %.noexc
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %32)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_3, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 3)
+          to label %47 unwind label %landing_pad_2
+
+landing_pad_2:                                    ; preds = %43
+  %44 = landingpad { i8*, i32 }
+          cleanup
+  %45 = extractvalue { i8*, i32 } %44, 0
+  %46 = extractvalue { i8*, i32 } %44, 1
+  br label %dtor_tree_1
+
+47:                                               ; preds = %43
+  %48 = bitcast i32* %13 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %48)
+  store i32 1002, i32* %13, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %13)
+          to label %.noexc32 unwind label %landing_pad_3
+
+.noexc32:                                         ; preds = %47
+  %49 = load i32, i32* %13, align 4, !tbaa !4
+  %50 = load i32, i32* %19, align 8, !tbaa !8
+  %51 = icmp eq i32 %49, %50
+  br i1 %51, label %52, label %59
+
+52:                                               ; preds = %.noexc32
+  %53 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %54 = bitcast i8* %53 to i32*
+  %55 = load i32, i32* %13, align 4, !tbaa !4
+  store i32 %55, i32* %54, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %53, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc33 unwind label %landing_pad_3
+
+.noexc33:                                         ; preds = %52
+  unreachable
+
+dtor_tree_2:                                      ; preds = %landing_pad_3, %landing_pad_4, %dtor_tree_4, %dtor_tree_7, %landing_pad_10, %landing_pad_9
+  %_cur_exception_object.2 = phi i8* [ %_cur_exception_object.5, %dtor_tree_7 ], [ %109, %landing_pad_10 ], [ %105, %landing_pad_9 ], [ %_cur_exception_object.3, %dtor_tree_4 ], [ %61, %landing_pad_4 ], [ %57, %landing_pad_3 ]
+  %_cur_exception_type.2 = phi i32 [ %_cur_exception_type.5, %dtor_tree_7 ], [ %110, %landing_pad_10 ], [ %106, %landing_pad_9 ], [ %_cur_exception_type.3, %dtor_tree_4 ], [ %62, %landing_pad_4 ], [ %58, %landing_pad_3 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_3)
+  br label %dtor_tree_1
+
+landing_pad_3:                                    ; preds = %52, %47
+  %56 = landingpad { i8*, i32 }
+          cleanup
+  %57 = extractvalue { i8*, i32 } %56, 0
+  %58 = extractvalue { i8*, i32 } %56, 1
+  br label %dtor_tree_2
+
+59:                                               ; preds = %.noexc32
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %48)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_4, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 4)
+          to label %63 unwind label %landing_pad_4
+
+landing_pad_4:                                    ; preds = %59
+  %60 = landingpad { i8*, i32 }
+          cleanup
+  %61 = extractvalue { i8*, i32 } %60, 0
+  %62 = extractvalue { i8*, i32 } %60, 1
+  br label %dtor_tree_2
+
+63:                                               ; preds = %59
+  %64 = bitcast i32* %12 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %64)
+  store i32 1003, i32* %12, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %12)
+          to label %.noexc35 unwind label %landing_pad_5
+
+.noexc35:                                         ; preds = %63
+  %65 = load i32, i32* %12, align 4, !tbaa !4
+  %66 = load i32, i32* %19, align 8, !tbaa !8
+  %67 = icmp eq i32 %65, %66
+  br i1 %67, label %68, label %75
+
+68:                                               ; preds = %.noexc35
+  %69 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %70 = bitcast i8* %69 to i32*
+  %71 = load i32, i32* %12, align 4, !tbaa !4
+  store i32 %71, i32* %70, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %69, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc36 unwind label %landing_pad_5
+
+.noexc36:                                         ; preds = %68
+  unreachable
+
+dtor_tree_4:                                      ; preds = %dtor_tree_5, %landing_pad_6, %landing_pad_5
+  %_cur_exception_object.3 = phi i8* [ %_cur_exception_object.4, %dtor_tree_5 ], [ %77, %landing_pad_6 ], [ %73, %landing_pad_5 ]
+  %_cur_exception_type.3 = phi i32 [ %_cur_exception_type.4, %dtor_tree_5 ], [ %78, %landing_pad_6 ], [ %74, %landing_pad_5 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_4)
+  br label %dtor_tree_2
+
+landing_pad_5:                                    ; preds = %68, %63
+  %72 = landingpad { i8*, i32 }
+          cleanup
+  %73 = extractvalue { i8*, i32 } %72, 0
+  %74 = extractvalue { i8*, i32 } %72, 1
+  br label %dtor_tree_4
+
+75:                                               ; preds = %.noexc35
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %64)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_5, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 5)
+          to label %79 unwind label %landing_pad_6
+
+landing_pad_6:                                    ; preds = %75
+  %76 = landingpad { i8*, i32 }
+          cleanup
+  %77 = extractvalue { i8*, i32 } %76, 0
+  %78 = extractvalue { i8*, i32 } %76, 1
+  br label %dtor_tree_4
+
+79:                                               ; preds = %75
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_6, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 6)
+          to label %83 unwind label %landing_pad_7
+
+dtor_tree_5:                                      ; preds = %landing_pad_8, %landing_pad_7
+  %_cur_exception_object.4 = phi i8* [ %93, %landing_pad_8 ], [ %81, %landing_pad_7 ]
+  %_cur_exception_type.4 = phi i32 [ %94, %landing_pad_8 ], [ %82, %landing_pad_7 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_5)
+  br label %dtor_tree_4
+
+landing_pad_7:                                    ; preds = %79
+  %80 = landingpad { i8*, i32 }
+          cleanup
+  %81 = extractvalue { i8*, i32 } %80, 0
+  %82 = extractvalue { i8*, i32 } %80, 1
+  br label %dtor_tree_5
+
+83:                                               ; preds = %79
+  %84 = bitcast i32* %11 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %84)
+  store i32 1004, i32* %11, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %11)
+          to label %.noexc38 unwind label %landing_pad_8
+
+.noexc38:                                         ; preds = %83
+  %85 = load i32, i32* %11, align 4, !tbaa !4
+  %86 = load i32, i32* %19, align 8, !tbaa !8
+  %87 = icmp eq i32 %85, %86
+  br i1 %87, label %88, label %95
+
+88:                                               ; preds = %.noexc38
+  %89 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %90 = bitcast i8* %89 to i32*
+  %91 = load i32, i32* %11, align 4, !tbaa !4
+  store i32 %91, i32* %90, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %89, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc39 unwind label %landing_pad_8
+
+.noexc39:                                         ; preds = %88
+  unreachable
+
+landing_pad_8:                                    ; preds = %88, %83
+  %92 = landingpad { i8*, i32 }
+          cleanup
+  %93 = extractvalue { i8*, i32 } %92, 0
+  %94 = extractvalue { i8*, i32 } %92, 1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_6)
+  br label %dtor_tree_5
+
+95:                                               ; preds = %.noexc38
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %84)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_6)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_5)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_4)
+  %96 = bitcast i32* %10 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %96)
+  store i32 1005, i32* %10, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %10)
+          to label %.noexc41 unwind label %landing_pad_9
+
+.noexc41:                                         ; preds = %95
+  %97 = load i32, i32* %10, align 4, !tbaa !4
+  %98 = load i32, i32* %19, align 8, !tbaa !8
+  %99 = icmp eq i32 %97, %98
+  br i1 %99, label %100, label %107
+
+100:                                              ; preds = %.noexc41
+  %101 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %102 = bitcast i8* %101 to i32*
+  %103 = load i32, i32* %10, align 4, !tbaa !4
+  store i32 %103, i32* %102, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %101, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc42 unwind label %landing_pad_9
+
+.noexc42:                                         ; preds = %100
+  unreachable
+
+landing_pad_9:                                    ; preds = %100, %95
+  %104 = landingpad { i8*, i32 }
+          cleanup
+  %105 = extractvalue { i8*, i32 } %104, 0
+  %106 = extractvalue { i8*, i32 } %104, 1
+  br label %dtor_tree_2
+
+107:                                              ; preds = %.noexc41
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %96)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_7, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 7)
+          to label %111 unwind label %landing_pad_10
+
+landing_pad_10:                                   ; preds = %107
+  %108 = landingpad { i8*, i32 }
+          cleanup
+  %109 = extractvalue { i8*, i32 } %108, 0
+  %110 = extractvalue { i8*, i32 } %108, 1
+  br label %dtor_tree_2
+
+111:                                              ; preds = %107
+  %112 = bitcast i32* %9 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %112)
+  store i32 1006, i32* %9, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %9)
+          to label %.noexc44 unwind label %landing_pad_11
+
+.noexc44:                                         ; preds = %111
+  %113 = load i32, i32* %9, align 4, !tbaa !4
+  %114 = load i32, i32* %19, align 8, !tbaa !8
+  %115 = icmp eq i32 %113, %114
+  br i1 %115, label %116, label %123
+
+116:                                              ; preds = %.noexc44
+  %117 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %118 = bitcast i8* %117 to i32*
+  %119 = load i32, i32* %9, align 4, !tbaa !4
+  store i32 %119, i32* %118, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %117, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc45 unwind label %landing_pad_11
+
+.noexc45:                                         ; preds = %116
+  unreachable
+
+dtor_tree_7:                                      ; preds = %landing_pad_11, %landing_pad_12, %dtor_tree_9, %landing_pad_27, %landing_pad_26, %landing_pad_25
+  %_cur_exception_object.5 = phi i8* [ %255, %landing_pad_27 ], [ %243, %landing_pad_26 ], [ %239, %landing_pad_25 ], [ %_cur_exception_object.6, %dtor_tree_9 ], [ %125, %landing_pad_12 ], [ %121, %landing_pad_11 ]
+  %_cur_exception_type.5 = phi i32 [ %256, %landing_pad_27 ], [ %244, %landing_pad_26 ], [ %240, %landing_pad_25 ], [ %_cur_exception_type.6, %dtor_tree_9 ], [ %126, %landing_pad_12 ], [ %122, %landing_pad_11 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_7)
+  br label %dtor_tree_2
+
+landing_pad_11:                                   ; preds = %116, %111
+  %120 = landingpad { i8*, i32 }
+          cleanup
+  %121 = extractvalue { i8*, i32 } %120, 0
+  %122 = extractvalue { i8*, i32 } %120, 1
+  br label %dtor_tree_7
+
+123:                                              ; preds = %.noexc44
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %112)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_8, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 8)
+          to label %127 unwind label %landing_pad_12
+
+landing_pad_12:                                   ; preds = %123
+  %124 = landingpad { i8*, i32 }
+          cleanup
+  %125 = extractvalue { i8*, i32 } %124, 0
+  %126 = extractvalue { i8*, i32 } %124, 1
+  br label %dtor_tree_7
+
+127:                                              ; preds = %123
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_9, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 9)
+          to label %131 unwind label %landing_pad_13
+
+dtor_tree_9:                                      ; preds = %dtor_tree_10, %landing_pad_13
+  %_cur_exception_object.6 = phi i8* [ %_cur_exception_object.7, %dtor_tree_10 ], [ %129, %landing_pad_13 ]
+  %_cur_exception_type.6 = phi i32 [ %_cur_exception_type.7, %dtor_tree_10 ], [ %130, %landing_pad_13 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_8)
+  br label %dtor_tree_7
+
+landing_pad_13:                                   ; preds = %127
+  %128 = landingpad { i8*, i32 }
+          cleanup
+  %129 = extractvalue { i8*, i32 } %128, 0
+  %130 = extractvalue { i8*, i32 } %128, 1
+  br label %dtor_tree_9
+
+131:                                              ; preds = %127
+  %132 = bitcast i32* %8 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %132)
+  store i32 1007, i32* %8, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %8)
+          to label %.noexc47 unwind label %landing_pad_14
+
+.noexc47:                                         ; preds = %131
+  %133 = load i32, i32* %8, align 4, !tbaa !4
+  %134 = load i32, i32* %19, align 8, !tbaa !8
+  %135 = icmp eq i32 %133, %134
+  br i1 %135, label %136, label %143
+
+136:                                              ; preds = %.noexc47
+  %137 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %138 = bitcast i8* %137 to i32*
+  %139 = load i32, i32* %8, align 4, !tbaa !4
+  store i32 %139, i32* %138, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %137, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc48 unwind label %landing_pad_14
+
+.noexc48:                                         ; preds = %136
+  unreachable
+
+dtor_tree_10:                                     ; preds = %landing_pad_14, %landing_pad_15, %dtor_tree_12, %dtor_tree_16, %landing_pad_22, %landing_pad_21
+  %_cur_exception_object.7 = phi i8* [ %216, %dtor_tree_16 ], [ %205, %landing_pad_22 ], [ %201, %landing_pad_21 ], [ %_cur_exception_object.8, %dtor_tree_12 ], [ %145, %landing_pad_15 ], [ %141, %landing_pad_14 ]
+  %_cur_exception_type.7 = phi i32 [ %217, %dtor_tree_16 ], [ %206, %landing_pad_22 ], [ %202, %landing_pad_21 ], [ %_cur_exception_type.8, %dtor_tree_12 ], [ %146, %landing_pad_15 ], [ %142, %landing_pad_14 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_9)
+  br label %dtor_tree_9
+
+landing_pad_14:                                   ; preds = %136, %131
+  %140 = landingpad { i8*, i32 }
+          cleanup
+  %141 = extractvalue { i8*, i32 } %140, 0
+  %142 = extractvalue { i8*, i32 } %140, 1
+  br label %dtor_tree_10
+
+143:                                              ; preds = %.noexc47
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %132)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_10, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 10)
+          to label %147 unwind label %landing_pad_15
+
+landing_pad_15:                                   ; preds = %143
+  %144 = landingpad { i8*, i32 }
+          cleanup
+  %145 = extractvalue { i8*, i32 } %144, 0
+  %146 = extractvalue { i8*, i32 } %144, 1
+  br label %dtor_tree_10
+
+147:                                              ; preds = %143
+  %148 = bitcast i32* %7 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %148)
+  store i32 1008, i32* %7, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %7)
+          to label %.noexc50 unwind label %landing_pad_16
+
+.noexc50:                                         ; preds = %147
+  %149 = load i32, i32* %7, align 4, !tbaa !4
+  %150 = load i32, i32* %19, align 8, !tbaa !8
+  %151 = icmp eq i32 %149, %150
+  br i1 %151, label %152, label %159
+
+152:                                              ; preds = %.noexc50
+  %153 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %154 = bitcast i8* %153 to i32*
+  %155 = load i32, i32* %7, align 4, !tbaa !4
+  store i32 %155, i32* %154, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %153, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc51 unwind label %landing_pad_16
+
+.noexc51:                                         ; preds = %152
+  unreachable
+
+dtor_tree_12:                                     ; preds = %landing_pad_16, %landing_pad_17, %landing_pad_18, %landing_pad_20, %landing_pad_19
+  %_cur_exception_object.8 = phi i8* [ %189, %landing_pad_20 ], [ %177, %landing_pad_19 ], [ %173, %landing_pad_18 ], [ %161, %landing_pad_17 ], [ %157, %landing_pad_16 ]
+  %_cur_exception_type.8 = phi i32 [ %190, %landing_pad_20 ], [ %178, %landing_pad_19 ], [ %174, %landing_pad_18 ], [ %162, %landing_pad_17 ], [ %158, %landing_pad_16 ]
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_10)
+  br label %dtor_tree_10
+
+landing_pad_16:                                   ; preds = %152, %147
+  %156 = landingpad { i8*, i32 }
+          cleanup
+  %157 = extractvalue { i8*, i32 } %156, 0
+  %158 = extractvalue { i8*, i32 } %156, 1
+  br label %dtor_tree_12
+
+159:                                              ; preds = %.noexc50
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %148)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_11, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 11)
+          to label %163 unwind label %landing_pad_17
+
+landing_pad_17:                                   ; preds = %159
+  %160 = landingpad { i8*, i32 }
+          cleanup
+  %161 = extractvalue { i8*, i32 } %160, 0
+  %162 = extractvalue { i8*, i32 } %160, 1
+  br label %dtor_tree_12
+
+163:                                              ; preds = %159
+  %164 = bitcast i32* %6 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %164)
+  store i32 1009, i32* %6, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %6)
+          to label %.noexc53 unwind label %landing_pad_18
+
+.noexc53:                                         ; preds = %163
+  %165 = load i32, i32* %6, align 4, !tbaa !4
+  %166 = load i32, i32* %19, align 8, !tbaa !8
+  %167 = icmp eq i32 %165, %166
+  br i1 %167, label %168, label %175
+
+168:                                              ; preds = %.noexc53
+  %169 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %170 = bitcast i8* %169 to i32*
+  %171 = load i32, i32* %6, align 4, !tbaa !4
+  store i32 %171, i32* %170, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %169, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc54 unwind label %landing_pad_18
+
+.noexc54:                                         ; preds = %168
+  unreachable
+
+landing_pad_18:                                   ; preds = %168, %163
+  %172 = landingpad { i8*, i32 }
+          cleanup
+  %173 = extractvalue { i8*, i32 } %172, 0
+  %174 = extractvalue { i8*, i32 } %172, 1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_11)
+  br label %dtor_tree_12
+
+175:                                              ; preds = %.noexc53
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %164)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_11)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_12, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 12)
+          to label %179 unwind label %landing_pad_19
+
+landing_pad_19:                                   ; preds = %175
+  %176 = landingpad { i8*, i32 }
+          cleanup
+  %177 = extractvalue { i8*, i32 } %176, 0
+  %178 = extractvalue { i8*, i32 } %176, 1
+  br label %dtor_tree_12
+
+179:                                              ; preds = %175
+  %180 = bitcast i32* %5 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %180)
+  store i32 1010, i32* %5, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %5)
+          to label %.noexc56 unwind label %landing_pad_20
+
+.noexc56:                                         ; preds = %179
+  %181 = load i32, i32* %5, align 4, !tbaa !4
+  %182 = load i32, i32* %19, align 8, !tbaa !8
+  %183 = icmp eq i32 %181, %182
+  br i1 %183, label %184, label %191
+
+184:                                              ; preds = %.noexc56
+  %185 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %186 = bitcast i8* %185 to i32*
+  %187 = load i32, i32* %5, align 4, !tbaa !4
+  store i32 %187, i32* %186, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %185, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc57 unwind label %landing_pad_20
+
+.noexc57:                                         ; preds = %184
+  unreachable
+
+landing_pad_20:                                   ; preds = %184, %179
+  %188 = landingpad { i8*, i32 }
+          cleanup
+  %189 = extractvalue { i8*, i32 } %188, 0
+  %190 = extractvalue { i8*, i32 } %188, 1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_12)
+  br label %dtor_tree_12
+
+191:                                              ; preds = %.noexc56
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %180)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_12)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_10)
+  %192 = bitcast i32* %4 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %192)
+  store i32 1011, i32* %4, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %4)
+          to label %.noexc59 unwind label %landing_pad_21
+
+.noexc59:                                         ; preds = %191
+  %193 = load i32, i32* %4, align 4, !tbaa !4
+  %194 = load i32, i32* %19, align 8, !tbaa !8
+  %195 = icmp eq i32 %193, %194
+  br i1 %195, label %196, label %203
+
+196:                                              ; preds = %.noexc59
+  %197 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %198 = bitcast i8* %197 to i32*
+  %199 = load i32, i32* %4, align 4, !tbaa !4
+  store i32 %199, i32* %198, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %197, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc60 unwind label %landing_pad_21
+
+.noexc60:                                         ; preds = %196
+  unreachable
+
+landing_pad_21:                                   ; preds = %196, %191
+  %200 = landingpad { i8*, i32 }
+          cleanup
+  %201 = extractvalue { i8*, i32 } %200, 0
+  %202 = extractvalue { i8*, i32 } %200, 1
+  br label %dtor_tree_10
+
+203:                                              ; preds = %.noexc59
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %192)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_13, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 13)
+          to label %207 unwind label %landing_pad_22
+
+landing_pad_22:                                   ; preds = %203
+  %204 = landingpad { i8*, i32 }
+          cleanup
+  %205 = extractvalue { i8*, i32 } %204, 0
+  %206 = extractvalue { i8*, i32 } %204, 1
+  br label %dtor_tree_10
+
+207:                                              ; preds = %203
+  %208 = bitcast i32* %3 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %208)
+  store i32 1012, i32* %3, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %3)
+          to label %.noexc62 unwind label %landing_pad_23
+
+.noexc62:                                         ; preds = %207
+  %209 = load i32, i32* %3, align 4, !tbaa !4
+  %210 = load i32, i32* %19, align 8, !tbaa !8
+  %211 = icmp eq i32 %209, %210
+  br i1 %211, label %212, label %219
+
+212:                                              ; preds = %.noexc62
+  %213 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %214 = bitcast i8* %213 to i32*
+  %215 = load i32, i32* %3, align 4, !tbaa !4
+  store i32 %215, i32* %214, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %213, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc63 unwind label %landing_pad_23
+
+.noexc63:                                         ; preds = %212
+  unreachable
+
+dtor_tree_16:                                     ; preds = %landing_pad_24, %landing_pad_23
+  %.sink74 = phi { i8*, i32 } [ %228, %landing_pad_24 ], [ %218, %landing_pad_23 ]
+  %216 = extractvalue { i8*, i32 } %.sink74, 0
+  %217 = extractvalue { i8*, i32 } %.sink74, 1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_13)
+  br label %dtor_tree_10
+
+landing_pad_23:                                   ; preds = %212, %207
+  %218 = landingpad { i8*, i32 }
+          cleanup
+  br label %dtor_tree_16
+
+219:                                              ; preds = %.noexc62
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %208)
+  %220 = bitcast i32* %2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %220)
+  store i32 1013, i32* %2, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %2)
+          to label %.noexc65 unwind label %landing_pad_24
+
+.noexc65:                                         ; preds = %219
+  %221 = load i32, i32* %2, align 4, !tbaa !4
+  %222 = load i32, i32* %19, align 8, !tbaa !8
+  %223 = icmp eq i32 %221, %222
+  br i1 %223, label %224, label %229
+
+224:                                              ; preds = %.noexc65
+  %225 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %226 = bitcast i8* %225 to i32*
+  %227 = load i32, i32* %2, align 4, !tbaa !4
+  store i32 %227, i32* %226, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %225, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc66 unwind label %landing_pad_24
+
+.noexc66:                                         ; preds = %224
+  unreachable
+
+landing_pad_24:                                   ; preds = %224, %219
+  %228 = landingpad { i8*, i32 }
+          cleanup
+  br label %dtor_tree_16
+
+229:                                              ; preds = %.noexc65
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %220)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_13)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_9)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_8)
+  %230 = bitcast i32* %1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %230)
+  store i32 1014, i32* %1, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %1)
+          to label %.noexc68 unwind label %landing_pad_25
+
+.noexc68:                                         ; preds = %229
+  %231 = load i32, i32* %1, align 4, !tbaa !4
+  %232 = load i32, i32* %19, align 8, !tbaa !8
+  %233 = icmp eq i32 %231, %232
+  br i1 %233, label %234, label %241
+
+234:                                              ; preds = %.noexc68
+  %235 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %236 = bitcast i8* %235 to i32*
+  %237 = load i32, i32* %1, align 4, !tbaa !4
+  store i32 %237, i32* %236, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %235, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc69 unwind label %landing_pad_25
+
+.noexc69:                                         ; preds = %234
+  unreachable
+
+landing_pad_25:                                   ; preds = %234, %229
+  %238 = landingpad { i8*, i32 }
+          cleanup
+  %239 = extractvalue { i8*, i32 } %238, 0
+  %240 = extractvalue { i8*, i32 } %238, 1
+  br label %dtor_tree_7
+
+241:                                              ; preds = %.noexc68
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %230)
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* nonnull %var_14, %class.CtorDtorOrderRecorder* nonnull %_param_0, i32 14)
+          to label %245 unwind label %landing_pad_26
+
+landing_pad_26:                                   ; preds = %241
+  %242 = landingpad { i8*, i32 }
+          cleanup
+  %243 = extractvalue { i8*, i32 } %242, 0
+  %244 = extractvalue { i8*, i32 } %242, 1
+  br label %dtor_tree_7
+
+245:                                              ; preds = %241
+  %246 = bitcast i32* %0 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %246)
+  store i32 1015, i32* %0, align 4, !tbaa !4
+  invoke void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* nonnull %17, i32* nonnull dereferenceable(4) %0)
+          to label %.noexc71 unwind label %landing_pad_27
+
+.noexc71:                                         ; preds = %245
+  %247 = load i32, i32* %0, align 4, !tbaa !4
+  %248 = load i32, i32* %19, align 8, !tbaa !8
+  %249 = icmp eq i32 %247, %248
+  br i1 %249, label %250, label %257
+
+250:                                              ; preds = %.noexc71
+  %251 = call i8* @__cxa_allocate_exception(i64 4) #3
+  %252 = bitcast i8* %251 to i32*
+  %253 = load i32, i32* %0, align 4, !tbaa !4
+  store i32 %253, i32* %252, align 16, !tbaa !4
+  invoke void @__cxa_throw(i8* %251, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #4
+          to label %.noexc72 unwind label %landing_pad_27
+
+.noexc72:                                         ; preds = %250
+  unreachable
+
+landing_pad_27:                                   ; preds = %250, %245
+  %254 = landingpad { i8*, i32 }
+          cleanup
+  %255 = extractvalue { i8*, i32 } %254, 0
+  %256 = extractvalue { i8*, i32 } %254, 1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_14)
+  br label %dtor_tree_7
+
+257:                                              ; preds = %.noexc71
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %246)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_14)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_7)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_3)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_2)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* nonnull %var_1)
+  ret void
+}
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+
+attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { argmemonly nounwind willreturn }
+attributes #3 = { nounwind }
+attributes #4 = { noreturn }
+
+!llvm.ident = !{!0, !0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !5, i64 0}
+!5 = !{!"int", !6, i64 0}
+!6 = !{!"omnipotent char", !7, i64 0}
+!7 = !{!"Simple C++ TBAA"}
+!8 = !{!9, !5, i64 0}
+!9 = !{!"_ZTS21CtorDtorOrderRecorder", !5, i64 0, !10, i64 8}
+!10 = !{!"_ZTSSt6vectorIiSaIiEE"}

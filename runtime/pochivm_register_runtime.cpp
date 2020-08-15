@@ -135,6 +135,7 @@ static void RegisterRuntimeLibrary()
 
     RegisterConstructor<TestDestructor2, CtorDtorOrderRecorder*, int>();
     RegisterMemberFn<&CtorDtorOrderRecorder::Push>();
+    RegisterMemberFn<&CtorDtorOrderRecorder::PushMaybeThrow>();
 
     RegisterFreeFn<&TestStaticVarInFunction>();
     RegisterFreeFn<&TestConstantWithSignificantAddress>();

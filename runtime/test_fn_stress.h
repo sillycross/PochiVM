@@ -360,10 +360,25 @@ public:
 class CtorDtorOrderRecorder
 {
 public:
+    CtorDtorOrderRecorder()
+        : throwValue(-1)
+    { }
+
     void Push(int value)
     {
         order.push_back(value);
     }
+
+    void PushMaybeThrow(int value)
+    {
+        order.push_back(value);
+        if (value == throwValue)
+        {
+            throw value;
+        }
+    }
+
+    int throwValue;
     std::vector<int> order;
 };
 
@@ -375,6 +390,10 @@ public:
         m_recorder = recorder;
         m_value = value;
         m_recorder->Push(m_value);
+        if (value == recorder->throwValue)
+        {
+            throw value;
+        }
     }
 
     ~TestDestructor2()

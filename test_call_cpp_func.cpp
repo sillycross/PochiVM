@@ -3696,3 +3696,310 @@ TEST(SanityCallCppFn, UnexpectedException_LLVM)
 #pragma clang diagnostic pop
     }
 }
+
+TEST(SanityCallCppFn, Exception_PropagateThrough_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<void(CtorDtorOrderRecorder*)>;
+    {
+        auto [fn, r] = NewFunction<FnPrototype>("testfn");
+        auto v1 = fn.NewVariable<TestDestructor2>();
+        auto v2 = fn.NewVariable<TestDestructor2>();
+        auto v3 = fn.NewVariable<TestDestructor2>();
+        auto v4 = fn.NewVariable<TestDestructor2>();
+        auto v5 = fn.NewVariable<TestDestructor2>();
+        auto v6 = fn.NewVariable<TestDestructor2>();
+        auto v7 = fn.NewVariable<TestDestructor2>();
+        auto v8 = fn.NewVariable<TestDestructor2>();
+        auto v9 = fn.NewVariable<TestDestructor2>();
+        auto v10 = fn.NewVariable<TestDestructor2>();
+        auto v11 = fn.NewVariable<TestDestructor2>();
+        auto v12 = fn.NewVariable<TestDestructor2>();
+        auto v13 = fn.NewVariable<TestDestructor2>();
+        auto v14 = fn.NewVariable<TestDestructor2>();
+        fn.SetBody(
+                r.Deref().PushMaybeThrow(Literal<int>(1000)),
+                Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
+                Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
+                r.Deref().PushMaybeThrow(Literal<int>(1001)),
+                Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
+                Scope(
+                    r.Deref().PushMaybeThrow(Literal<int>(1002)),
+                    Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
+                    r.Deref().PushMaybeThrow(Literal<int>(1003)),
+                    Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
+                    Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
+                    r.Deref().PushMaybeThrow(Literal<int>(1004))
+                ),
+                r.Deref().PushMaybeThrow(Literal<int>(1005)),
+                Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
+                Scope(
+                    r.Deref().PushMaybeThrow(Literal<int>(1006)),
+                    Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
+                    Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
+                    Scope(
+                        r.Deref().PushMaybeThrow(Literal<int>(1007)),
+                        Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
+                        Scope(
+                            r.Deref().PushMaybeThrow(Literal<int>(1008)),
+                            Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
+                            r.Deref().PushMaybeThrow(Literal<int>(1009))
+                        ),
+                        Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
+                        r.Deref().PushMaybeThrow(Literal<int>(1010))
+                    ),
+                    r.Deref().PushMaybeThrow(Literal<int>(1011)),
+                    Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
+                    r.Deref().PushMaybeThrow(Literal<int>(1012)),
+                    r.Deref().PushMaybeThrow(Literal<int>(1013))
+                ),
+                r.Deref().PushMaybeThrow(Literal<int>(1014)),
+                Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
+                r.Deref().PushMaybeThrow(Literal<int>(1015))
+        );
+    }
+
+    auto testFn = [](const FnPrototype& f, int value, const std::vector<int>& expectedAns, bool expectThrow) {
+        CtorDtorOrderRecorder r;
+        r.throwValue = value;
+        try {
+            f(&r);
+            ReleaseAssert(!expectThrow);
+        } catch(int v) {
+            if (expectThrow) {
+                ReleaseAssert(v == value);
+            } else {
+                ReleaseAssert(false);
+            }
+        } catch(...) {
+            ReleaseAssert(false);
+        }
+        ReleaseAssert(r.order == expectedAns);
+    };
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    std::vector<int> expectedAns1000 {
+            1000
+    };
+    std::vector<int> expectedAns1 {
+            1000, 1
+    };
+    std::vector<int> expectedAns2 {
+            1000, 1, 2, -1
+    };
+    std::vector<int> expectedAns1001 {
+            1000, 1, 2, 1001, -2, -1
+    };
+    std::vector<int> expectedAns3 {
+            1000, 1, 2, 1001, 3, -2, -1
+    };
+    std::vector<int> expectedAns1002 {
+            1000, 1, 2, 1001, 3, 1002, -3, -2, -1
+    };
+    std::vector<int> expectedAns4 {
+            1000, 1, 2, 1001, 3, 1002, 4, -3, -2, -1
+    };
+    std::vector<int> expectedAns1003 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns5 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns6 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, -5, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns1004 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, -3, -2, -1
+    };
+    std::vector<int> expectedAns1005 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, -3, -2, -1
+    };
+    std::vector<int> expectedAns7 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1006 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns8 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns9 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1007 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns10 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1008 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, -10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns11 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, -10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1009 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, -10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns12 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, -10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1010 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1011 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns13 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1012 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, -13, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1013 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, 1013, -13, -9, -8, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1014 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, 1013, -13, -9, -8, 1014, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns14 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, 1013, -13, -9, -8, 1014, 14, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1015 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, 1013, -13, -9, -8, 1014, 14, 1015,
+            -14, -7, -3, -2, -1
+    };
+    std::vector<int> expectedAns1016 {
+            1000, 1, 2, 1001, 3, 1002, 4, 1003, 5, 6, 1004, -6, -5, -4, 1005, 7, 1006, 8, 9, 1007,
+            10, 1008, 11, 1009, -11, 12, 1010, -12, -10, 1011, 13, 1012, 1013, -13, -9, -8, 1014, 14, 1015,
+            -14, -7, -3, -2, -1
+    };
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        testFn(interpFn, 1000, expectedAns1000, true);
+        testFn(interpFn, 1001, expectedAns1001, true);
+        testFn(interpFn, 1002, expectedAns1002, true);
+        testFn(interpFn, 1003, expectedAns1003, true);
+        testFn(interpFn, 1004, expectedAns1004, true);
+        testFn(interpFn, 1005, expectedAns1005, true);
+        testFn(interpFn, 1006, expectedAns1006, true);
+        testFn(interpFn, 1007, expectedAns1007, true);
+        testFn(interpFn, 1008, expectedAns1008, true);
+        testFn(interpFn, 1009, expectedAns1009, true);
+        testFn(interpFn, 1010, expectedAns1010, true);
+        testFn(interpFn, 1011, expectedAns1011, true);
+        testFn(interpFn, 1012, expectedAns1012, true);
+        testFn(interpFn, 1013, expectedAns1013, true);
+        testFn(interpFn, 1014, expectedAns1014, true);
+        testFn(interpFn, 1015, expectedAns1015, true);
+        testFn(interpFn, 1016, expectedAns1016, false);
+        testFn(interpFn, 1, expectedAns1, true);
+        testFn(interpFn, 2, expectedAns2, true);
+        testFn(interpFn, 3, expectedAns3, true);
+        testFn(interpFn, 4, expectedAns4, true);
+        testFn(interpFn, 5, expectedAns5, true);
+        testFn(interpFn, 6, expectedAns6, true);
+        testFn(interpFn, 7, expectedAns7, true);
+        testFn(interpFn, 8, expectedAns8, true);
+        testFn(interpFn, 9, expectedAns9, true);
+        testFn(interpFn, 10, expectedAns10, true);
+        testFn(interpFn, 11, expectedAns11, true);
+        testFn(interpFn, 12, expectedAns12, true);
+        testFn(interpFn, 13, expectedAns13, true);
+        testFn(interpFn, 14, expectedAns14, true);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        testFn(jitFn, 1000, expectedAns1000, true);
+        testFn(jitFn, 1001, expectedAns1001, true);
+        testFn(jitFn, 1002, expectedAns1002, true);
+        testFn(jitFn, 1003, expectedAns1003, true);
+        testFn(jitFn, 1004, expectedAns1004, true);
+        testFn(jitFn, 1005, expectedAns1005, true);
+        testFn(jitFn, 1006, expectedAns1006, true);
+        testFn(jitFn, 1007, expectedAns1007, true);
+        testFn(jitFn, 1008, expectedAns1008, true);
+        testFn(jitFn, 1009, expectedAns1009, true);
+        testFn(jitFn, 1010, expectedAns1010, true);
+        testFn(jitFn, 1011, expectedAns1011, true);
+        testFn(jitFn, 1012, expectedAns1012, true);
+        testFn(jitFn, 1013, expectedAns1013, true);
+        testFn(jitFn, 1014, expectedAns1014, true);
+        testFn(jitFn, 1015, expectedAns1015, true);
+        testFn(jitFn, 1016, expectedAns1016, false);
+        testFn(jitFn, 1, expectedAns1, true);
+        testFn(jitFn, 2, expectedAns2, true);
+        testFn(jitFn, 3, expectedAns3, true);
+        testFn(jitFn, 4, expectedAns4, true);
+        testFn(jitFn, 5, expectedAns5, true);
+        testFn(jitFn, 6, expectedAns6, true);
+        testFn(jitFn, 7, expectedAns7, true);
+        testFn(jitFn, 8, expectedAns8, true);
+        testFn(jitFn, 9, expectedAns9, true);
+        testFn(jitFn, 10, expectedAns10, true);
+        testFn(jitFn, 11, expectedAns11, true);
+        testFn(jitFn, 12, expectedAns12, true);
+        testFn(jitFn, 13, expectedAns13, true);
+        testFn(jitFn, 14, expectedAns14, true);
+    }
+}
+

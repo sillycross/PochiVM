@@ -1,0 +1,604 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+%class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
+%"struct.PochiVM::ReflectionHelper::tpl_sequence.28" = type { i8 }
+
+@_ZTIi = external dso_local constant i8*
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: noinline optnone uwtable
+define available_externally dso_local void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %0, i32 %1) #0 align 2 {
+  %3 = alloca %class.CtorDtorOrderRecorder*, align 8
+  %4 = alloca i32, align 4
+  store %class.CtorDtorOrderRecorder* %0, %class.CtorDtorOrderRecorder** %3, align 8
+  store i32 %1, i32* %4, align 4
+  %5 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %3, align 8
+  %6 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %5, i32 0, i32 1
+  call void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"* %6, i32* dereferenceable(4) %4)
+  %7 = load i32, i32* %4, align 4
+  %8 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %5, i32 0, i32 0
+  %9 = load i32, i32* %8, align 8
+  %10 = icmp eq i32 %7, %9
+  br i1 %10, label %11, label %15
+
+11:                                               ; preds = %2
+  %12 = call i8* @__cxa_allocate_exception(i64 4) #2
+  %13 = bitcast i8* %12 to i32*
+  %14 = load i32, i32* %4, align 4
+  store i32 %14, i32* %13, align 16
+  call void @__cxa_throw(i8* %12, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #3
+  unreachable
+
+15:                                               ; preds = %2
+  ret void
+}
+
+; Function Attrs: noinline optnone uwtable
+declare dso_local void @_ZNSt6vectorIiSaIiEE9push_backERKi(%"class.std::vector"*, i32* dereferenceable(4)) #0 align 2
+
+declare dso_local i8* @__cxa_allocate_exception(i64)
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #1 align 2 {
+  %2 = alloca %class.TestDestructor2*, align 8
+  store %class.TestDestructor2* %0, %class.TestDestructor2** %2, align 8
+  %3 = load %class.TestDestructor2*, %class.TestDestructor2** %2, align 8
+  call void @_ZN15TestDestructor2D2Ev(%class.TestDestructor2* %3) #2
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+declare dso_local void @_ZN15TestDestructor2D2Ev(%class.TestDestructor2*) unnamed_addr #1 align 2
+
+; Function Attrs: noinline optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #0 align 2 {
+  %4 = alloca %class.TestDestructor2*, align 8
+  %5 = alloca %class.CtorDtorOrderRecorder*, align 8
+  %6 = alloca i32, align 4
+  %7 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.28", align 1
+  store %class.TestDestructor2* %0, %class.TestDestructor2** %4, align 8
+  store %class.CtorDtorOrderRecorder* %1, %class.CtorDtorOrderRecorder** %5, align 8
+  store i32 %2, i32* %6, align 4
+  %8 = load %class.TestDestructor2*, %class.TestDestructor2** %4, align 8
+  %9 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %5, align 8
+  %10 = load i32, i32* %6, align 4
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE9call_implIJLi0ELi1EEJS4_iEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%class.TestDestructor2* %8, %class.CtorDtorOrderRecorder* %9, i32 %10)
+  ret void
+}
+
+; Function Attrs: noinline optnone uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE9call_implIJLi0ELi1EEJS4_iEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%class.TestDestructor2*, %class.CtorDtorOrderRecorder*, i32) #0 align 2
+
+define void @testfn(%class.CtorDtorOrderRecorder* %_param_0) personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %param_0 = alloca %class.CtorDtorOrderRecorder*
+  %var_1 = alloca %class.TestDestructor2
+  %var_2 = alloca %class.TestDestructor2
+  %_cur_exception_object = alloca i8*
+  %_cur_exception_type = alloca i32
+  %var_3 = alloca %class.TestDestructor2
+  %var_4 = alloca %class.TestDestructor2
+  %var_5 = alloca %class.TestDestructor2
+  %var_6 = alloca %class.TestDestructor2
+  %var_7 = alloca %class.TestDestructor2
+  %var_8 = alloca %class.TestDestructor2
+  %var_9 = alloca %class.TestDestructor2
+  %var_10 = alloca %class.TestDestructor2
+  %var_11 = alloca %class.TestDestructor2
+  %var_12 = alloca %class.TestDestructor2
+  %var_13 = alloca %class.TestDestructor2
+  %var_14 = alloca %class.TestDestructor2
+  br label %body
+
+body:                                             ; preds = %entry
+  store %class.CtorDtorOrderRecorder* %_param_0, %class.CtorDtorOrderRecorder** %param_0
+  %0 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  call void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %0, i32 1000)
+  %1 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_1, %class.CtorDtorOrderRecorder* %1, i32 1)
+  %2 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_2, %class.CtorDtorOrderRecorder* %2, i32 2)
+          to label %10 unwind label %landing_pad_0
+
+resume_exception:                                 ; preds = %dtor_tree_0
+  %3 = load i8*, i8** %_cur_exception_object
+  %4 = load i32, i32* %_cur_exception_type
+  %5 = insertvalue { i8*, i32 } undef, i8* %3, 0
+  %6 = insertvalue { i8*, i32 } %5, i32 %4, 1
+  resume { i8*, i32 } %6
+
+dtor_tree_0:                                      ; preds = %dtor_tree_1, %landing_pad_0
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_1)
+  br label %resume_exception
+
+landing_pad_0:                                    ; preds = %body
+  %7 = landingpad { i8*, i32 }
+          cleanup
+  %8 = extractvalue { i8*, i32 } %7, 0
+  store i8* %8, i8** %_cur_exception_object
+  %9 = extractvalue { i8*, i32 } %7, 1
+  store i32 %9, i32* %_cur_exception_type
+  br label %dtor_tree_0
+
+10:                                               ; preds = %body
+  %11 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %11, i32 1001)
+          to label %15 unwind label %landing_pad_1
+
+dtor_tree_1:                                      ; preds = %dtor_tree_2, %landing_pad_2, %landing_pad_1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_2)
+  br label %dtor_tree_0
+
+landing_pad_1:                                    ; preds = %10
+  %12 = landingpad { i8*, i32 }
+          cleanup
+  %13 = extractvalue { i8*, i32 } %12, 0
+  store i8* %13, i8** %_cur_exception_object
+  %14 = extractvalue { i8*, i32 } %12, 1
+  store i32 %14, i32* %_cur_exception_type
+  br label %dtor_tree_1
+
+15:                                               ; preds = %10
+  %16 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_3, %class.CtorDtorOrderRecorder* %16, i32 3)
+          to label %20 unwind label %landing_pad_2
+
+landing_pad_2:                                    ; preds = %15
+  %17 = landingpad { i8*, i32 }
+          cleanup
+  %18 = extractvalue { i8*, i32 } %17, 0
+  store i8* %18, i8** %_cur_exception_object
+  %19 = extractvalue { i8*, i32 } %17, 1
+  store i32 %19, i32* %_cur_exception_type
+  br label %dtor_tree_1
+
+20:                                               ; preds = %15
+  %21 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %21, i32 1002)
+          to label %25 unwind label %landing_pad_3
+
+dtor_tree_2:                                      ; preds = %dtor_tree_7, %landing_pad_10, %landing_pad_9, %dtor_tree_3
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_3)
+  br label %dtor_tree_1
+
+dtor_tree_3:                                      ; preds = %dtor_tree_4, %landing_pad_4, %landing_pad_3
+  br label %dtor_tree_2
+
+landing_pad_3:                                    ; preds = %20
+  %22 = landingpad { i8*, i32 }
+          cleanup
+  %23 = extractvalue { i8*, i32 } %22, 0
+  store i8* %23, i8** %_cur_exception_object
+  %24 = extractvalue { i8*, i32 } %22, 1
+  store i32 %24, i32* %_cur_exception_type
+  br label %dtor_tree_3
+
+25:                                               ; preds = %20
+  %26 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_4, %class.CtorDtorOrderRecorder* %26, i32 4)
+          to label %30 unwind label %landing_pad_4
+
+landing_pad_4:                                    ; preds = %25
+  %27 = landingpad { i8*, i32 }
+          cleanup
+  %28 = extractvalue { i8*, i32 } %27, 0
+  store i8* %28, i8** %_cur_exception_object
+  %29 = extractvalue { i8*, i32 } %27, 1
+  store i32 %29, i32* %_cur_exception_type
+  br label %dtor_tree_3
+
+30:                                               ; preds = %25
+  %31 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %31, i32 1003)
+          to label %35 unwind label %landing_pad_5
+
+dtor_tree_4:                                      ; preds = %dtor_tree_5, %landing_pad_6, %landing_pad_5
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_4)
+  br label %dtor_tree_3
+
+landing_pad_5:                                    ; preds = %30
+  %32 = landingpad { i8*, i32 }
+          cleanup
+  %33 = extractvalue { i8*, i32 } %32, 0
+  store i8* %33, i8** %_cur_exception_object
+  %34 = extractvalue { i8*, i32 } %32, 1
+  store i32 %34, i32* %_cur_exception_type
+  br label %dtor_tree_4
+
+35:                                               ; preds = %30
+  %36 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_5, %class.CtorDtorOrderRecorder* %36, i32 5)
+          to label %40 unwind label %landing_pad_6
+
+landing_pad_6:                                    ; preds = %35
+  %37 = landingpad { i8*, i32 }
+          cleanup
+  %38 = extractvalue { i8*, i32 } %37, 0
+  store i8* %38, i8** %_cur_exception_object
+  %39 = extractvalue { i8*, i32 } %37, 1
+  store i32 %39, i32* %_cur_exception_type
+  br label %dtor_tree_4
+
+40:                                               ; preds = %35
+  %41 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_6, %class.CtorDtorOrderRecorder* %41, i32 6)
+          to label %45 unwind label %landing_pad_7
+
+dtor_tree_5:                                      ; preds = %dtor_tree_6, %landing_pad_7
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_5)
+  br label %dtor_tree_4
+
+landing_pad_7:                                    ; preds = %40
+  %42 = landingpad { i8*, i32 }
+          cleanup
+  %43 = extractvalue { i8*, i32 } %42, 0
+  store i8* %43, i8** %_cur_exception_object
+  %44 = extractvalue { i8*, i32 } %42, 1
+  store i32 %44, i32* %_cur_exception_type
+  br label %dtor_tree_5
+
+45:                                               ; preds = %40
+  %46 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %46, i32 1004)
+          to label %50 unwind label %landing_pad_8
+
+dtor_tree_6:                                      ; preds = %landing_pad_8
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_6)
+  br label %dtor_tree_5
+
+landing_pad_8:                                    ; preds = %45
+  %47 = landingpad { i8*, i32 }
+          cleanup
+  %48 = extractvalue { i8*, i32 } %47, 0
+  store i8* %48, i8** %_cur_exception_object
+  %49 = extractvalue { i8*, i32 } %47, 1
+  store i32 %49, i32* %_cur_exception_type
+  br label %dtor_tree_6
+
+50:                                               ; preds = %45
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_6)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_5)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_4)
+  %51 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %51, i32 1005)
+          to label %55 unwind label %landing_pad_9
+
+landing_pad_9:                                    ; preds = %50
+  %52 = landingpad { i8*, i32 }
+          cleanup
+  %53 = extractvalue { i8*, i32 } %52, 0
+  store i8* %53, i8** %_cur_exception_object
+  %54 = extractvalue { i8*, i32 } %52, 1
+  store i32 %54, i32* %_cur_exception_type
+  br label %dtor_tree_2
+
+55:                                               ; preds = %50
+  %56 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_7, %class.CtorDtorOrderRecorder* %56, i32 7)
+          to label %60 unwind label %landing_pad_10
+
+landing_pad_10:                                   ; preds = %55
+  %57 = landingpad { i8*, i32 }
+          cleanup
+  %58 = extractvalue { i8*, i32 } %57, 0
+  store i8* %58, i8** %_cur_exception_object
+  %59 = extractvalue { i8*, i32 } %57, 1
+  store i32 %59, i32* %_cur_exception_type
+  br label %dtor_tree_2
+
+60:                                               ; preds = %55
+  %61 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %61, i32 1006)
+          to label %65 unwind label %landing_pad_11
+
+dtor_tree_7:                                      ; preds = %dtor_tree_17, %landing_pad_26, %landing_pad_25, %dtor_tree_8
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_7)
+  br label %dtor_tree_2
+
+dtor_tree_8:                                      ; preds = %dtor_tree_9, %landing_pad_12, %landing_pad_11
+  br label %dtor_tree_7
+
+landing_pad_11:                                   ; preds = %60
+  %62 = landingpad { i8*, i32 }
+          cleanup
+  %63 = extractvalue { i8*, i32 } %62, 0
+  store i8* %63, i8** %_cur_exception_object
+  %64 = extractvalue { i8*, i32 } %62, 1
+  store i32 %64, i32* %_cur_exception_type
+  br label %dtor_tree_8
+
+65:                                               ; preds = %60
+  %66 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_8, %class.CtorDtorOrderRecorder* %66, i32 8)
+          to label %70 unwind label %landing_pad_12
+
+landing_pad_12:                                   ; preds = %65
+  %67 = landingpad { i8*, i32 }
+          cleanup
+  %68 = extractvalue { i8*, i32 } %67, 0
+  store i8* %68, i8** %_cur_exception_object
+  %69 = extractvalue { i8*, i32 } %67, 1
+  store i32 %69, i32* %_cur_exception_type
+  br label %dtor_tree_8
+
+70:                                               ; preds = %65
+  %71 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_9, %class.CtorDtorOrderRecorder* %71, i32 9)
+          to label %75 unwind label %landing_pad_13
+
+dtor_tree_9:                                      ; preds = %dtor_tree_10, %landing_pad_13
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_8)
+  br label %dtor_tree_8
+
+landing_pad_13:                                   ; preds = %70
+  %72 = landingpad { i8*, i32 }
+          cleanup
+  %73 = extractvalue { i8*, i32 } %72, 0
+  store i8* %73, i8** %_cur_exception_object
+  %74 = extractvalue { i8*, i32 } %72, 1
+  store i32 %74, i32* %_cur_exception_type
+  br label %dtor_tree_9
+
+75:                                               ; preds = %70
+  %76 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %76, i32 1007)
+          to label %80 unwind label %landing_pad_14
+
+dtor_tree_10:                                     ; preds = %dtor_tree_16, %landing_pad_22, %landing_pad_21, %dtor_tree_11
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_9)
+  br label %dtor_tree_9
+
+dtor_tree_11:                                     ; preds = %dtor_tree_12, %landing_pad_15, %landing_pad_14
+  br label %dtor_tree_10
+
+landing_pad_14:                                   ; preds = %75
+  %77 = landingpad { i8*, i32 }
+          cleanup
+  %78 = extractvalue { i8*, i32 } %77, 0
+  store i8* %78, i8** %_cur_exception_object
+  %79 = extractvalue { i8*, i32 } %77, 1
+  store i32 %79, i32* %_cur_exception_type
+  br label %dtor_tree_11
+
+80:                                               ; preds = %75
+  %81 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_10, %class.CtorDtorOrderRecorder* %81, i32 10)
+          to label %85 unwind label %landing_pad_15
+
+landing_pad_15:                                   ; preds = %80
+  %82 = landingpad { i8*, i32 }
+          cleanup
+  %83 = extractvalue { i8*, i32 } %82, 0
+  store i8* %83, i8** %_cur_exception_object
+  %84 = extractvalue { i8*, i32 } %82, 1
+  store i32 %84, i32* %_cur_exception_type
+  br label %dtor_tree_11
+
+85:                                               ; preds = %80
+  %86 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %86, i32 1008)
+          to label %90 unwind label %landing_pad_16
+
+dtor_tree_12:                                     ; preds = %dtor_tree_15, %landing_pad_19, %dtor_tree_13
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_10)
+  br label %dtor_tree_11
+
+dtor_tree_13:                                     ; preds = %dtor_tree_14, %landing_pad_17, %landing_pad_16
+  br label %dtor_tree_12
+
+landing_pad_16:                                   ; preds = %85
+  %87 = landingpad { i8*, i32 }
+          cleanup
+  %88 = extractvalue { i8*, i32 } %87, 0
+  store i8* %88, i8** %_cur_exception_object
+  %89 = extractvalue { i8*, i32 } %87, 1
+  store i32 %89, i32* %_cur_exception_type
+  br label %dtor_tree_13
+
+90:                                               ; preds = %85
+  %91 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_11, %class.CtorDtorOrderRecorder* %91, i32 11)
+          to label %95 unwind label %landing_pad_17
+
+landing_pad_17:                                   ; preds = %90
+  %92 = landingpad { i8*, i32 }
+          cleanup
+  %93 = extractvalue { i8*, i32 } %92, 0
+  store i8* %93, i8** %_cur_exception_object
+  %94 = extractvalue { i8*, i32 } %92, 1
+  store i32 %94, i32* %_cur_exception_type
+  br label %dtor_tree_13
+
+95:                                               ; preds = %90
+  %96 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %96, i32 1009)
+          to label %100 unwind label %landing_pad_18
+
+dtor_tree_14:                                     ; preds = %landing_pad_18
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_11)
+  br label %dtor_tree_13
+
+landing_pad_18:                                   ; preds = %95
+  %97 = landingpad { i8*, i32 }
+          cleanup
+  %98 = extractvalue { i8*, i32 } %97, 0
+  store i8* %98, i8** %_cur_exception_object
+  %99 = extractvalue { i8*, i32 } %97, 1
+  store i32 %99, i32* %_cur_exception_type
+  br label %dtor_tree_14
+
+100:                                              ; preds = %95
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_11)
+  %101 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_12, %class.CtorDtorOrderRecorder* %101, i32 12)
+          to label %105 unwind label %landing_pad_19
+
+landing_pad_19:                                   ; preds = %100
+  %102 = landingpad { i8*, i32 }
+          cleanup
+  %103 = extractvalue { i8*, i32 } %102, 0
+  store i8* %103, i8** %_cur_exception_object
+  %104 = extractvalue { i8*, i32 } %102, 1
+  store i32 %104, i32* %_cur_exception_type
+  br label %dtor_tree_12
+
+105:                                              ; preds = %100
+  %106 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %106, i32 1010)
+          to label %110 unwind label %landing_pad_20
+
+dtor_tree_15:                                     ; preds = %landing_pad_20
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_12)
+  br label %dtor_tree_12
+
+landing_pad_20:                                   ; preds = %105
+  %107 = landingpad { i8*, i32 }
+          cleanup
+  %108 = extractvalue { i8*, i32 } %107, 0
+  store i8* %108, i8** %_cur_exception_object
+  %109 = extractvalue { i8*, i32 } %107, 1
+  store i32 %109, i32* %_cur_exception_type
+  br label %dtor_tree_15
+
+110:                                              ; preds = %105
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_12)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_10)
+  %111 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %111, i32 1011)
+          to label %115 unwind label %landing_pad_21
+
+landing_pad_21:                                   ; preds = %110
+  %112 = landingpad { i8*, i32 }
+          cleanup
+  %113 = extractvalue { i8*, i32 } %112, 0
+  store i8* %113, i8** %_cur_exception_object
+  %114 = extractvalue { i8*, i32 } %112, 1
+  store i32 %114, i32* %_cur_exception_type
+  br label %dtor_tree_10
+
+115:                                              ; preds = %110
+  %116 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_13, %class.CtorDtorOrderRecorder* %116, i32 13)
+          to label %120 unwind label %landing_pad_22
+
+landing_pad_22:                                   ; preds = %115
+  %117 = landingpad { i8*, i32 }
+          cleanup
+  %118 = extractvalue { i8*, i32 } %117, 0
+  store i8* %118, i8** %_cur_exception_object
+  %119 = extractvalue { i8*, i32 } %117, 1
+  store i32 %119, i32* %_cur_exception_type
+  br label %dtor_tree_10
+
+120:                                              ; preds = %115
+  %121 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %121, i32 1012)
+          to label %125 unwind label %landing_pad_23
+
+dtor_tree_16:                                     ; preds = %landing_pad_24, %landing_pad_23
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_13)
+  br label %dtor_tree_10
+
+landing_pad_23:                                   ; preds = %120
+  %122 = landingpad { i8*, i32 }
+          cleanup
+  %123 = extractvalue { i8*, i32 } %122, 0
+  store i8* %123, i8** %_cur_exception_object
+  %124 = extractvalue { i8*, i32 } %122, 1
+  store i32 %124, i32* %_cur_exception_type
+  br label %dtor_tree_16
+
+125:                                              ; preds = %120
+  %126 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %126, i32 1013)
+          to label %130 unwind label %landing_pad_24
+
+landing_pad_24:                                   ; preds = %125
+  %127 = landingpad { i8*, i32 }
+          cleanup
+  %128 = extractvalue { i8*, i32 } %127, 0
+  store i8* %128, i8** %_cur_exception_object
+  %129 = extractvalue { i8*, i32 } %127, 1
+  store i32 %129, i32* %_cur_exception_type
+  br label %dtor_tree_16
+
+130:                                              ; preds = %125
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_13)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_9)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_8)
+  %131 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %131, i32 1014)
+          to label %135 unwind label %landing_pad_25
+
+landing_pad_25:                                   ; preds = %130
+  %132 = landingpad { i8*, i32 }
+          cleanup
+  %133 = extractvalue { i8*, i32 } %132, 0
+  store i8* %133, i8** %_cur_exception_object
+  %134 = extractvalue { i8*, i32 } %132, 1
+  store i32 %134, i32* %_cur_exception_type
+  br label %dtor_tree_7
+
+135:                                              ; preds = %130
+  %136 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_14, %class.CtorDtorOrderRecorder* %136, i32 14)
+          to label %140 unwind label %landing_pad_26
+
+landing_pad_26:                                   ; preds = %135
+  %137 = landingpad { i8*, i32 }
+          cleanup
+  %138 = extractvalue { i8*, i32 } %137, 0
+  store i8* %138, i8** %_cur_exception_object
+  %139 = extractvalue { i8*, i32 } %137, 1
+  store i32 %139, i32* %_cur_exception_type
+  br label %dtor_tree_7
+
+140:                                              ; preds = %135
+  %141 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_0
+  invoke void @_ZN21CtorDtorOrderRecorder14PushMaybeThrowEi(%class.CtorDtorOrderRecorder* %141, i32 1015)
+          to label %145 unwind label %landing_pad_27
+
+dtor_tree_17:                                     ; preds = %landing_pad_27
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_14)
+  br label %dtor_tree_7
+
+landing_pad_27:                                   ; preds = %140
+  %142 = landingpad { i8*, i32 }
+          cleanup
+  %143 = extractvalue { i8*, i32 } %142, 0
+  store i8* %143, i8** %_cur_exception_object
+  %144 = extractvalue { i8*, i32 } %142, 1
+  store i32 %144, i32* %_cur_exception_type
+  br label %dtor_tree_17
+
+145:                                              ; preds = %140
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_14)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_7)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_3)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_2)
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_1)
+  ret void
+}
+
+attributes #0 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nounwind }
+attributes #3 = { noreturn }
+
+!llvm.ident = !{!0, !0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

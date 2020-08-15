@@ -4,10 +4,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 %class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
-%class.CtorDtorOrderRecorder = type { %"class.std::vector" }
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
 %"class.std::vector" = type { %"struct.std::_Vector_base" }
 %"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
 %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+
+@_ZTIi = external dso_local constant i8*
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
@@ -18,106 +20,107 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
   %4 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
   %5 = load i32, i32* %4, align 8, !tbaa !10
   %6 = sub nsw i32 0, %5
-  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 0, i32 0, i32 0, i32 1
-  %8 = load i32*, i32** %7, align 8, !tbaa !11
-  %9 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 0, i32 0, i32 0, i32 2
-  %10 = load i32*, i32** %9, align 8, !tbaa !14
-  %11 = icmp eq i32* %8, %10
-  %12 = ptrtoint i32* %8 to i64
-  br i1 %11, label %15, label %13
+  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1
+  %8 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 1
+  %9 = load i32*, i32** %8, align 8, !tbaa !11
+  %10 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 2
+  %11 = load i32*, i32** %10, align 8, !tbaa !14
+  %12 = icmp eq i32* %9, %11
+  %13 = ptrtoint i32* %9 to i64
+  br i1 %12, label %16, label %14
 
-13:                                               ; preds = %1
-  store i32 %6, i32* %8, align 4, !tbaa !15
-  %14 = getelementptr inbounds i32, i32* %8, i64 1
-  br label %68
+14:                                               ; preds = %1
+  store i32 %6, i32* %9, align 4, !tbaa !15
+  %15 = getelementptr inbounds i32, i32* %9, i64 1
+  br label %69
 
-15:                                               ; preds = %1
-  %16 = bitcast i32** %7 to i64*
-  %17 = bitcast %class.CtorDtorOrderRecorder* %3 to i64*
-  %18 = load i64, i64* %17, align 8, !tbaa !16
-  %19 = sub i64 %12, %18
-  %20 = ashr exact i64 %19, 2
-  %21 = icmp eq i64 %19, 0
-  %22 = select i1 %21, i64 1, i64 %20
-  %23 = add nsw i64 %22, %20
-  %24 = icmp ult i64 %23, %20
-  %25 = icmp ugt i64 %23, 4611686018427387903
-  %26 = or i1 %24, %25
-  %27 = select i1 %26, i64 4611686018427387903, i64 %23
-  %28 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 0, i32 0, i32 0, i32 0
-  %29 = icmp eq i64 %27, 0
-  %30 = inttoptr i64 %18 to i32*
-  br i1 %29, label %37, label %31
+16:                                               ; preds = %1
+  %17 = bitcast i32** %8 to i64*
+  %18 = bitcast %"class.std::vector"* %7 to i64*
+  %19 = load i64, i64* %18, align 8, !tbaa !16
+  %20 = sub i64 %13, %19
+  %21 = ashr exact i64 %20, 2
+  %22 = icmp eq i64 %20, 0
+  %23 = select i1 %22, i64 1, i64 %21
+  %24 = add nsw i64 %23, %21
+  %25 = icmp ult i64 %24, %21
+  %26 = icmp ugt i64 %24, 4611686018427387903
+  %27 = or i1 %25, %26
+  %28 = select i1 %27, i64 4611686018427387903, i64 %24
+  %29 = getelementptr %"class.std::vector", %"class.std::vector"* %7, i64 0, i32 0, i32 0, i32 0
+  %30 = icmp eq i64 %28, 0
+  %31 = inttoptr i64 %19 to i32*
+  br i1 %30, label %38, label %32
 
-31:                                               ; preds = %15
-  %32 = shl nuw i64 %27, 2
-  %33 = invoke i8* @_Znwm(i64 %32)
-          to label %34 unwind label %65
+32:                                               ; preds = %16
+  %33 = shl nuw i64 %28, 2
+  %34 = invoke i8* @_Znwm(i64 %33)
+          to label %35 unwind label %66
 
-34:                                               ; preds = %31
-  %35 = bitcast i8* %33 to i32*
-  %36 = load i32*, i32** %28, align 8, !tbaa !17
-  br label %37
+35:                                               ; preds = %32
+  %36 = bitcast i8* %34 to i32*
+  %37 = load i32*, i32** %29, align 8, !tbaa !17
+  br label %38
 
-37:                                               ; preds = %34, %15
-  %38 = phi i32* [ %36, %34 ], [ %30, %15 ]
-  %39 = phi i32* [ %35, %34 ], [ null, %15 ]
-  %40 = getelementptr inbounds i32, i32* %39, i64 %20
-  store i32 %6, i32* %40, align 4, !tbaa !15
-  %41 = ptrtoint i32* %38 to i64
-  %42 = sub i64 %12, %41
-  %43 = ashr exact i64 %42, 2
-  %44 = icmp eq i64 %42, 0
-  br i1 %44, label %48, label %45
+38:                                               ; preds = %35, %16
+  %39 = phi i32* [ %37, %35 ], [ %31, %16 ]
+  %40 = phi i32* [ %36, %35 ], [ null, %16 ]
+  %41 = getelementptr inbounds i32, i32* %40, i64 %21
+  store i32 %6, i32* %41, align 4, !tbaa !15
+  %42 = ptrtoint i32* %39 to i64
+  %43 = sub i64 %13, %42
+  %44 = ashr exact i64 %43, 2
+  %45 = icmp eq i64 %43, 0
+  br i1 %45, label %49, label %46
 
-45:                                               ; preds = %37
-  %46 = bitcast i32* %39 to i8*
-  %47 = bitcast i32* %38 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %46, i8* align 4 %47, i64 %42, i1 false) #6
-  br label %48
+46:                                               ; preds = %38
+  %47 = bitcast i32* %40 to i8*
+  %48 = bitcast i32* %39 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #6
+  br label %49
 
-48:                                               ; preds = %45, %37
-  %49 = getelementptr inbounds i32, i32* %39, i64 %43
-  %50 = getelementptr inbounds i32, i32* %49, i64 1
-  %51 = load i64, i64* %16, align 8, !tbaa !11
-  %52 = sub i64 %51, %12
-  %53 = ashr exact i64 %52, 2
-  %54 = icmp eq i64 %52, 0
-  br i1 %54, label %58, label %55
+49:                                               ; preds = %46, %38
+  %50 = getelementptr inbounds i32, i32* %40, i64 %44
+  %51 = getelementptr inbounds i32, i32* %50, i64 1
+  %52 = load i64, i64* %17, align 8, !tbaa !11
+  %53 = sub i64 %52, %13
+  %54 = ashr exact i64 %53, 2
+  %55 = icmp eq i64 %53, 0
+  br i1 %55, label %59, label %56
 
-55:                                               ; preds = %48
-  %56 = bitcast i32* %50 to i8*
-  %57 = bitcast i32* %8 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %56, i8* align 4 %57, i64 %52, i1 false) #6
-  br label %58
+56:                                               ; preds = %49
+  %57 = bitcast i32* %51 to i8*
+  %58 = bitcast i32* %9 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #6
+  br label %59
 
-58:                                               ; preds = %55, %48
-  %59 = getelementptr inbounds i32, i32* %50, i64 %53
-  %60 = icmp eq i32* %38, null
-  br i1 %60, label %63, label %61
+59:                                               ; preds = %56, %49
+  %60 = getelementptr inbounds i32, i32* %51, i64 %54
+  %61 = icmp eq i32* %39, null
+  br i1 %61, label %64, label %62
 
-61:                                               ; preds = %58
-  %62 = bitcast i32* %38 to i8*
-  tail call void @_ZdlPv(i8* nonnull %62) #6
-  br label %63
+62:                                               ; preds = %59
+  %63 = bitcast i32* %39 to i8*
+  tail call void @_ZdlPv(i8* nonnull %63) #6
+  br label %64
 
-63:                                               ; preds = %61, %58
-  store i32* %39, i32** %28, align 8, !tbaa !17
-  store i32* %59, i32** %7, align 8, !tbaa !11
-  %64 = getelementptr inbounds i32, i32* %39, i64 %27
-  br label %68
+64:                                               ; preds = %62, %59
+  store i32* %40, i32** %29, align 8, !tbaa !17
+  store i32* %60, i32** %8, align 8, !tbaa !11
+  %65 = getelementptr inbounds i32, i32* %40, i64 %28
+  br label %69
 
-65:                                               ; preds = %31
-  %66 = landingpad { i8*, i32 }
+66:                                               ; preds = %32
+  %67 = landingpad { i8*, i32 }
           catch i8* null
-  %67 = extractvalue { i8*, i32 } %66, 0
-  tail call void @__pochivm_clang_call_terminate(i8* %67) #7
+  %68 = extractvalue { i8*, i32 } %67, 0
+  tail call void @__pochivm_clang_call_terminate(i8* %68) #7
   unreachable
 
-68:                                               ; preds = %63, %13
-  %69 = phi i32** [ %9, %63 ], [ %7, %13 ]
-  %70 = phi i32* [ %64, %63 ], [ %14, %13 ]
-  store i32* %70, i32** %69, align 8, !tbaa !16
+69:                                               ; preds = %64, %14
+  %70 = phi i32** [ %10, %64 ], [ %8, %14 ]
+  %71 = phi i32* [ %65, %64 ], [ %15, %14 ]
+  store i32* %71, i32** %70, align 8, !tbaa !16
   ret void
 }
 
@@ -139,98 +142,116 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
   store %class.CtorDtorOrderRecorder* %1, %class.CtorDtorOrderRecorder** %4, align 8, !tbaa !4
   %5 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
   store i32 %2, i32* %5, align 8, !tbaa !10
-  %6 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 0, i32 0, i32 0, i32 1
-  %7 = load i32*, i32** %6, align 8, !tbaa !11
-  %8 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 0, i32 0, i32 0, i32 2
-  %9 = load i32*, i32** %8, align 8, !tbaa !14
-  %10 = icmp eq i32* %7, %9
-  %11 = ptrtoint i32* %7 to i64
-  br i1 %10, label %14, label %12
+  %6 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1
+  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1, i32 0, i32 0, i32 1
+  %8 = load i32*, i32** %7, align 8, !tbaa !11
+  %9 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1, i32 0, i32 0, i32 2
+  %10 = load i32*, i32** %9, align 8, !tbaa !14
+  %11 = icmp eq i32* %8, %10
+  %12 = ptrtoint i32* %8 to i64
+  br i1 %11, label %15, label %13
 
-12:                                               ; preds = %3
-  store i32 %2, i32* %7, align 4, !tbaa !15
-  %13 = getelementptr inbounds i32, i32* %7, i64 1
-  br label %63
+13:                                               ; preds = %3
+  store i32 %2, i32* %8, align 4, !tbaa !15
+  %14 = getelementptr inbounds i32, i32* %8, i64 1
+  br label %64
 
-14:                                               ; preds = %3
-  %15 = bitcast i32** %6 to i64*
-  %16 = bitcast %class.CtorDtorOrderRecorder* %1 to i64*
-  %17 = load i64, i64* %16, align 8, !tbaa !16
-  %18 = sub i64 %11, %17
-  %19 = ashr exact i64 %18, 2
-  %20 = icmp eq i64 %18, 0
-  %21 = select i1 %20, i64 1, i64 %19
-  %22 = add nsw i64 %21, %19
-  %23 = icmp ult i64 %22, %19
-  %24 = icmp ugt i64 %22, 4611686018427387903
-  %25 = or i1 %23, %24
-  %26 = select i1 %25, i64 4611686018427387903, i64 %22
-  %27 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 0, i32 0, i32 0, i32 0
-  %28 = icmp eq i64 %26, 0
-  %29 = inttoptr i64 %17 to i32*
-  br i1 %28, label %35, label %30
+15:                                               ; preds = %3
+  %16 = bitcast i32** %7 to i64*
+  %17 = bitcast %"class.std::vector"* %6 to i64*
+  %18 = load i64, i64* %17, align 8, !tbaa !16
+  %19 = sub i64 %12, %18
+  %20 = ashr exact i64 %19, 2
+  %21 = icmp eq i64 %19, 0
+  %22 = select i1 %21, i64 1, i64 %20
+  %23 = add nsw i64 %22, %20
+  %24 = icmp ult i64 %23, %20
+  %25 = icmp ugt i64 %23, 4611686018427387903
+  %26 = or i1 %24, %25
+  %27 = select i1 %26, i64 4611686018427387903, i64 %23
+  %28 = getelementptr %"class.std::vector", %"class.std::vector"* %6, i64 0, i32 0, i32 0, i32 0
+  %29 = icmp eq i64 %27, 0
+  %30 = inttoptr i64 %18 to i32*
+  br i1 %29, label %36, label %31
 
-30:                                               ; preds = %14
-  %31 = shl nuw i64 %26, 2
-  %32 = tail call i8* @_Znwm(i64 %31)
-  %33 = bitcast i8* %32 to i32*
-  %34 = load i32*, i32** %27, align 8, !tbaa !17
-  br label %35
+31:                                               ; preds = %15
+  %32 = shl nuw i64 %27, 2
+  %33 = tail call i8* @_Znwm(i64 %32)
+  %34 = bitcast i8* %33 to i32*
+  %35 = load i32*, i32** %28, align 8, !tbaa !17
+  br label %36
 
-35:                                               ; preds = %30, %14
-  %36 = phi i32* [ %34, %30 ], [ %29, %14 ]
-  %37 = phi i32* [ %33, %30 ], [ null, %14 ]
-  %38 = getelementptr inbounds i32, i32* %37, i64 %19
-  store i32 %2, i32* %38, align 4, !tbaa !15
-  %39 = ptrtoint i32* %36 to i64
-  %40 = sub i64 %11, %39
-  %41 = ashr exact i64 %40, 2
-  %42 = icmp eq i64 %40, 0
-  br i1 %42, label %46, label %43
+36:                                               ; preds = %31, %15
+  %37 = phi i32* [ %35, %31 ], [ %30, %15 ]
+  %38 = phi i32* [ %34, %31 ], [ null, %15 ]
+  %39 = getelementptr inbounds i32, i32* %38, i64 %20
+  store i32 %2, i32* %39, align 4, !tbaa !15
+  %40 = ptrtoint i32* %37 to i64
+  %41 = sub i64 %12, %40
+  %42 = ashr exact i64 %41, 2
+  %43 = icmp eq i64 %41, 0
+  br i1 %43, label %47, label %44
 
-43:                                               ; preds = %35
-  %44 = bitcast i32* %37 to i8*
-  %45 = bitcast i32* %36 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %44, i8* align 4 %45, i64 %40, i1 false) #6
-  br label %46
+44:                                               ; preds = %36
+  %45 = bitcast i32* %38 to i8*
+  %46 = bitcast i32* %37 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %45, i8* align 4 %46, i64 %41, i1 false) #6
+  br label %47
 
-46:                                               ; preds = %43, %35
-  %47 = getelementptr inbounds i32, i32* %37, i64 %41
-  %48 = getelementptr inbounds i32, i32* %47, i64 1
-  %49 = load i64, i64* %15, align 8, !tbaa !11
-  %50 = sub i64 %49, %11
-  %51 = ashr exact i64 %50, 2
-  %52 = icmp eq i64 %50, 0
-  br i1 %52, label %56, label %53
+47:                                               ; preds = %44, %36
+  %48 = getelementptr inbounds i32, i32* %38, i64 %42
+  %49 = getelementptr inbounds i32, i32* %48, i64 1
+  %50 = load i64, i64* %16, align 8, !tbaa !11
+  %51 = sub i64 %50, %12
+  %52 = ashr exact i64 %51, 2
+  %53 = icmp eq i64 %51, 0
+  br i1 %53, label %57, label %54
 
-53:                                               ; preds = %46
-  %54 = bitcast i32* %48 to i8*
-  %55 = bitcast i32* %7 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %54, i8* align 4 %55, i64 %50, i1 false) #6
-  br label %56
+54:                                               ; preds = %47
+  %55 = bitcast i32* %49 to i8*
+  %56 = bitcast i32* %8 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %55, i8* align 4 %56, i64 %51, i1 false) #6
+  br label %57
 
-56:                                               ; preds = %53, %46
-  %57 = getelementptr inbounds i32, i32* %48, i64 %51
-  %58 = icmp eq i32* %36, null
-  br i1 %58, label %61, label %59
+57:                                               ; preds = %54, %47
+  %58 = getelementptr inbounds i32, i32* %49, i64 %52
+  %59 = icmp eq i32* %37, null
+  br i1 %59, label %62, label %60
 
-59:                                               ; preds = %56
-  %60 = bitcast i32* %36 to i8*
-  tail call void @_ZdlPv(i8* nonnull %60) #6
-  br label %61
+60:                                               ; preds = %57
+  %61 = bitcast i32* %37 to i8*
+  tail call void @_ZdlPv(i8* nonnull %61) #6
+  br label %62
 
-61:                                               ; preds = %59, %56
-  store i32* %37, i32** %27, align 8, !tbaa !17
-  store i32* %57, i32** %6, align 8, !tbaa !11
-  %62 = getelementptr inbounds i32, i32* %37, i64 %26
-  br label %63
+62:                                               ; preds = %60, %57
+  store i32* %38, i32** %28, align 8, !tbaa !17
+  store i32* %58, i32** %7, align 8, !tbaa !11
+  %63 = getelementptr inbounds i32, i32* %38, i64 %27
+  br label %64
 
-63:                                               ; preds = %61, %12
-  %64 = phi i32** [ %6, %12 ], [ %8, %61 ]
-  %65 = phi i32* [ %13, %12 ], [ %62, %61 ]
-  store i32* %65, i32** %64, align 8, !tbaa !16
+64:                                               ; preds = %62, %13
+  %65 = phi i32** [ %7, %13 ], [ %9, %62 ]
+  %66 = phi i32* [ %14, %13 ], [ %63, %62 ]
+  store i32* %66, i32** %65, align 8, !tbaa !16
+  %67 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 0
+  %68 = load i32, i32* %67, align 8, !tbaa !18
+  %69 = icmp eq i32 %68, %2
+  br i1 %69, label %70, label %73
+
+70:                                               ; preds = %64
+  %71 = tail call i8* @__cxa_allocate_exception(i64 4) #6
+  %72 = bitcast i8* %71 to i32*
+  store i32 %2, i32* %72, align 16, !tbaa !15
+  tail call void @__cxa_throw(i8* %71, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #8
+  unreachable
+
+73:                                               ; preds = %64
   ret void
 }
+
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
 define void @testfn(%class.CtorDtorOrderRecorder* %_param_0) personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -254,6 +275,7 @@ attributes #4 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-s
 attributes #5 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #6 = { nounwind }
 attributes #7 = { noreturn nounwind }
+attributes #8 = { noreturn }
 
 !llvm.ident = !{!0, !0}
 !llvm.module.flags = !{!1, !2, !3}
@@ -276,3 +298,6 @@ attributes #7 = { noreturn nounwind }
 !15 = !{!9, !9, i64 0}
 !16 = !{!6, !6, i64 0}
 !17 = !{!12, !6, i64 0}
+!18 = !{!19, !9, i64 0}
+!19 = !{!"_ZTS21CtorDtorOrderRecorder", !9, i64 0, !20, i64 8}
+!20 = !{!"_ZTSSt6vectorIiSaIiEE"}
