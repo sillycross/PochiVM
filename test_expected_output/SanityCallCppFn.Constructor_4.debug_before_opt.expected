@@ -69,7 +69,7 @@ body:                                             ; preds = %entry
   call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_(%"class.std::vector"* %var_2, %"class.std::vector"* %0)
   %1 = load %"class.std::vector"*, %"class.std::vector"** %param_0
   invoke void @_Z13CopyVectorIntPSt6vectorIiSaIiEES2_(%"class.std::vector"* %1, %"class.std::vector"* %var_2)
-          to label %L unwind label %landing_pad_0
+          to label %9 unwind label %landing_pad_0
 
 resume_exception:                                 ; preds = %dtor_tree_0
   %2 = load i8*, i8** %_cur_exception_object
@@ -91,7 +91,7 @@ landing_pad_0:                                    ; preds = %body
   store i32 %8, i32* %_cur_exception_type
   br label %dtor_tree_0
 
-L:                                                ; preds = %body
+9:                                                ; preds = %body
   call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_(%"class.std::vector"* %var_2)
   ret void
 }

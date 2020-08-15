@@ -407,7 +407,7 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
         BasicBlock* unwindDest = EmitEHLandingPadForCurrentPosition();
         BasicBlock* normalDest = BasicBlock::Create(
                     *thread_llvmContext->m_llvmContext,
-                    Twine("L") /*name*/,
+                    Twine("") /*name*/,
                     thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
         ret = thread_llvmContext->m_builder
                 ->CreateInvoke(callee, normalDest, unwindDest, ArrayRef<Value*>(params, params + callee->arg_size()));
@@ -450,6 +450,9 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     }
     // If it is a CPP class type variable, push it into the variable scope,
     // so the destructor will be called when this variable goes out of scope.
+    //
+    // The order is important: first call constructor, then push it into scope,
+    // since the constructor may throw (and in that case we should not destruct the variable again)
     //
     TestAssert(thread_llvmContext->m_scopeStack.size() > 0);
     if (m_variable->GetTypeId().RemovePointer().IsCppClassType())

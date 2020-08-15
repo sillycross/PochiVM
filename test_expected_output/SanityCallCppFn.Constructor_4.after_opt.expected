@@ -83,7 +83,7 @@ _ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4
   %31 = getelementptr inbounds i32, i32* %16, i64 %26
   store i32* %31, i32** %18, align 8, !tbaa !4
   %32 = invoke dereferenceable(24) %"class.std::vector"* @_ZNSt6vectorIiSaIiEEaSERKS1_(%"class.std::vector"* %_param_0, %"class.std::vector"* nonnull dereferenceable(24) %var_2)
-          to label %L unwind label %landing_pad_0
+          to label %_Z13CopyVectorIntPSt6vectorIiSaIiEES2_.exit unwind label %landing_pad_0
 
 landing_pad_0:                                    ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_.exit
   %33 = landingpad { i8*, i32 }
@@ -100,17 +100,17 @@ landing_pad_0:                                    ; preds = %_ZN7PochiVM16Reflec
 _ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit: ; preds = %landing_pad_0, %36
   resume { i8*, i32 } %33
 
-L:                                                ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_.exit
+_Z13CopyVectorIntPSt6vectorIiSaIiEES2_.exit:      ; preds = %_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperISt6vectorIiSaIiEEJRKS4_EE4callIJPS5_EEEvPS4_DpT_.exit
   %38 = load i32*, i32** %17, align 8, !tbaa !10
   %39 = icmp eq i32* %38, null
   br i1 %39, label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1, label %40
 
-40:                                               ; preds = %L
+40:                                               ; preds = %_Z13CopyVectorIntPSt6vectorIiSaIiEES2_.exit
   %41 = bitcast i32* %38 to i8*
   call void @_ZdlPv(i8* nonnull %41) #5
   br label %_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1
 
-_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1: ; preds = %L, %40
+_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperISt6vectorIiSaIiEEE9wrapperFnEPS4_.exit1: ; preds = %_Z13CopyVectorIntPSt6vectorIiSaIiEES2_.exit, %40
   ret void
 }
 
