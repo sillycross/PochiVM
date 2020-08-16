@@ -1557,6 +1557,19 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     llvmErr.print("update_symbol_matches", errs());
                     abort();
                 }
+
+                // Just for sanity, check that all global varnames exists and has expected types
+                //
+                for (auto it = neededTypeInfoObjects.begin(); it != neededTypeInfoObjects.end(); it++)
+                {
+                    std::string symbolName = it->second;
+                    GlobalVariable* gv = newModule->getGlobalVariable(symbolName);
+                    ReleaseAssert(gv != nullptr);
+                    ReleaseAssert(gv->isConstant());
+                    ReleaseAssert(gv->isDSOLocal());
+                    ReleaseAssert(gv->isDeclaration());
+                    ReleaseAssert(gv->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+                }
             }
 
             // Generate the header file for the typeinfo bitcode
