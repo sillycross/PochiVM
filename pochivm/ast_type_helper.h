@@ -294,6 +294,23 @@ struct TypeId
     const static uint64_t x_invalid_typeid = static_cast<uint64_t>(-1);
 };
 
+}   // namespace PochiVM
+
+// Inject std::hash for TypeId
+//
+namespace std
+{
+    template<> struct hash<PochiVM::TypeId>
+    {
+        std::size_t operator()(const PochiVM::TypeId& typeId) const noexcept
+        {
+            return std::hash<uint64_t>{}(typeId.value);
+        }
+    };
+}   // namespace std
+
+namespace PochiVM {
+
 using InterpCallCppFunctionImpl = void(*)(void* /*ret*/, void** /*params*/);
 
 struct CppFunctionMetadata

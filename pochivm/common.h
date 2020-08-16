@@ -29,6 +29,7 @@
 #include <utility>
 #include <tuple>
 #include <time.h>
+#include <unordered_set>
 #include "function_ref.h"
 
 typedef long long LL;
@@ -206,3 +207,8 @@ protected:
     NonMovable() = default;
     ~NonMovable() = default;
 };
+
+// constexpr-if branch static_assert(false, ...) workaround:
+//     static_assert(type_dependent_false<T>::value, ...)
+//
+template<class T> struct type_dependent_false : std::false_type {};

@@ -1027,6 +1027,12 @@ struct get_raw_fn_typenames_info
 
 }   // namespace ReflectionHelper
 
+}   // namespace PochiVM
+
+template<typename C> void __pochivm_dummy_register_type_helper(C* /*unused*/) {};
+
+namespace PochiVM {
+
 void __pochivm_report_info__(ReflectionHelper::RawFnTypeNamesInfo*);
 
 template<typename C>
@@ -1041,28 +1047,6 @@ void RegisterDestructor()
             ReflectionHelper::get_raw_fn_typenames_info<wrapper_generator_t::wrapperFn>::get_destructor(
                     ReflectionHelper::class_name_helper_internal<C>::get_class_typename());
     __pochivm_report_info__(&info);
-}
-
-template<typename C>
-void RegisterExceptionObjectType()
-{
-    static_assert(!std::is_reference<C>::value, "An exception object must not be a reference type");
-    static_assert(!std::is_rvalue_reference<C>::value, "An exception object must not be a rvalue-reference type");
-    static_assert(!std::is_const<C>::value, "top-level const-qualifier in an exception object has no effect. Please remove it.");
-    static_assert(!std::is_volatile<C>::value, "volatile-qualifier is not supported");
-    const std::type_info& t = typeid(C);
-    void* addr = const_cast<void*>(static_cast<const void*>(&t));
-    ReflectionHelper::RawFnTypeNamesInfo info(
-                ReflectionHelper::FunctionType::TypeInfoObject,
-                0 /*numArgs*/, nullptr /*apiRetAndParams*/, nullptr /*originalRetAndParams*/,
-                ReflectionHelper::class_name_helper_internal<C>::get_class_typename() /*className*/,
-                nullptr /*functionName*/, addr /*functionAddress*/, false /*isConst*/, false /*isNoExcept*/,
-                false /*is_wrapper_fn_required*/, false /*is_sret_transform_required*/, nullptr /*wrapperFn*/);
-    __pochivm_report_info__(&info);
-    if constexpr(!std::is_pointer<C>::value && !ReflectionHelper::is_primitive_type<C>::value)
-    {
-        RegisterDestructor<C>();
-    }
 }
 
 // Internal helper: if the function returns an object, register its destructor.
@@ -1124,6 +1108,32 @@ void RegisterConstructor()
                     wrapper_t::isWrapperFnNoExcept);
     __pochivm_report_info__(&info);
     RegisterDestructor<C>();
+}
+
+template<typename C>
+void RegisterExceptionObjectType()
+{
+    static_assert(!std::is_same<C, void>::value, "Cannot throw void expression");
+    static_assert(!std::is_reference<C>::value, "An exception object must not be a reference type");
+    static_assert(!std::is_rvalue_reference<C>::value, "An exception object must not be a rvalue-reference type");
+    static_assert(!std::is_const<C>::value, "top-level const-qualifier in an exception object has no effect. Please remove it.");
+    static_assert(!std::is_volatile<C>::value, "volatile-qualifier is not supported");
+    const std::type_info& t = typeid(C);
+    void* addr = const_cast<void*>(static_cast<const void*>(&t));
+    ReflectionHelper::RawFnTypeNamesInfo info(
+                ReflectionHelper::FunctionType::TypeInfoObject,
+                0 /*numArgs*/, nullptr /*apiRetAndParams*/, nullptr /*originalRetAndParams*/,
+                ReflectionHelper::class_name_helper_internal<C>::get_class_typename() /*className*/,
+                nullptr /*functionName*/, addr /*functionAddress*/, false /*isConst*/, false /*isNoExcept*/,
+                false /*is_wrapper_fn_required*/, false /*is_sret_transform_required*/, nullptr /*wrapperFn*/);
+    __pochivm_report_info__(&info);
+    if constexpr(!std::is_pointer<C>::value && !ReflectionHelper::is_primitive_type<C>::value)
+    {
+        RegisterDestructor<C>();
+    }
+    // Make sure we have access to the LLVM type of C as well.
+    //
+    RegisterFreeFn<&__pochivm_dummy_register_type_helper<C>>();
 }
 
 }   // namespace PochiVM

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
 
 namespace llvm {
 class BasicBlock;
@@ -30,6 +31,11 @@ namespace PochiVM
 //     _cur_exception_obj_and_type may be overwritten in the logic of handling exception,
 //     if the logic contains a nested try-catch clause
 //
+
+inline bool IsTypeRegisteredForThrownFromGeneratedCode(TypeId typeId)
+{
+     return valid_for_ast_throw_stmt_helper::query(typeId);
+}
 
 // Return true if there is no need to setup a landing pad for potentially-throwing function.
 // This is possible if we are not in a try-catch block and there is no destructor to call.

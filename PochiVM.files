@@ -6,6 +6,7 @@ pochivm/api_lang_constructs.h
 pochivm/api_vt_base.h
 pochivm/arith_expr.cpp
 pochivm/arith_expr.h
+pochivm/ast_catch_throw.h
 pochivm/ast_expr_base.h
 pochivm/ast_expr_base.hpp
 pochivm/ast_misc_helper.h

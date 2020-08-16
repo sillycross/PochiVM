@@ -39,7 +39,8 @@ public:
         AstCallExpr,
         AstReturnStmt,
         AstLogicalAndOrExpr,
-        AstLogicalNotExpr
+        AstLogicalNotExpr,
+        AstThrowStmt
     };
 
     AstNodeType() {}
@@ -76,6 +77,7 @@ public:
         case AstNodeType::AstReturnStmt: return "AstReturnStmt";
         case AstNodeType::AstLogicalAndOrExpr: return "AstLogicalAndOrExpr";
         case AstNodeType::AstLogicalNotExpr: return "AstLogicalNotExpr";
+        case AstNodeType::AstThrowStmt: return "AstThrowStmt";
         }
         __builtin_unreachable();
     }

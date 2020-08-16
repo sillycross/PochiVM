@@ -1755,6 +1755,43 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             fprintf(fp, "> {};\n\n");
         }
 
+        // generate all types valid for thrown for AstThrowStmt
+        //
+        {
+            fprintf(fp, "template<typename T, typename Enable = void>\n");
+            fprintf(fp, "struct valid_for_ast_throw_stmt_insertion_helper {\n");
+            fprintf(fp, "    static void insert(std::unordered_set<TypeId>* /*unused*/) {}\n");
+            fprintf(fp, "};\n");
+            fprintf(fp, "template<typename T> struct valid_for_ast_throw_stmt_insertion_helper<T, typename std::enable_if<(\n");
+            fprintf(fp, "    std::is_same<typename ReflectionHelper::recursive_remove_cv<T>::type, T>::value)>::type>\n");
+            fprintf(fp, "{\n");
+            fprintf(fp, "    static void insert(std::unordered_set<TypeId>* out) { out->insert(TypeId::Get<T>()); }\n");
+            fprintf(fp, "};\n\n");
+            fprintf(fp, "class valid_for_ast_throw_stmt_helper {\n");
+            fprintf(fp, "    static std::unordered_set<TypeId> get_hash_map();\n");
+            fprintf(fp, "    static inline const std::unordered_set<TypeId> whitelist = get_hash_map();\n");
+            fprintf(fp, "public:\n");
+            fprintf(fp, "    static bool query(TypeId typeId) { return whitelist.count(typeId); }\n");
+            fprintf(fp, "};\n");
+            // Similar to when we generate pochivm_runtime_cpp_types.generated.h,
+            // we have to do the work in namespaceless-environment to avoid potential resolve conflict of types
+            //
+            fprintf(fp, "\n} // namespace PochiVM\n\n");
+
+            fprintf(fp, "inline std::unordered_set<PochiVM::TypeId> PochiVM::valid_for_ast_throw_stmt_helper::get_hash_map()\n");
+            fprintf(fp, "{\n");
+            fprintf(fp, "    std::unordered_set<PochiVM::TypeId> ret;\n");
+            for (auto it = neededTypeInfoObjects.begin(); it != neededTypeInfoObjects.end(); it++)
+            {
+                std::string className = it->first;
+                fprintf(fp, "    PochiVM::valid_for_ast_throw_stmt_insertion_helper<%s>::insert(&ret);\n", className.c_str());
+            }
+            fprintf(fp, "    return ret;\n");
+            fprintf(fp, "}\n\n");
+
+            fprintf(fp, "namespace PochiVM {\n\n");
+        }
+
         fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }
