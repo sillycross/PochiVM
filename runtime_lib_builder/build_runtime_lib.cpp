@@ -123,6 +123,10 @@ int main(int argc, char** argv)
 
         fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
 
+        fprintf(fp, "#define INSIDE_POCHIVM_RUNTIME_LIBRARY_BC_CPP_FILE_MACRO_GUARD\n\n");
+
+        fprintf(fp, "#include \"bc.typeinfo_objects.data.h\"\n");
+
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
         for (const std::string& symbolOrSymbolPair : allSymbols)
         {
@@ -182,6 +186,11 @@ int main(int argc, char** argv)
         fprintf(fp, "namespace PochiVM {\n\n");
 
         std::vector<std::string> allVarnames;
+        std::string internal_typeinfo_object_varname = "__pochivm_internal_bc_typeinfo_objects";
+        fprintf(fp, "// Declarations for typeinfo objects\n//\n");
+        fprintf(fp, "extern const BitcodeData %s;\n\n", internal_typeinfo_object_varname.c_str());
+        allVarnames.push_back(internal_typeinfo_object_varname);
+
         std::set<std::string> allSymbols = ReadSymbolListFileOrDie(neededSymbolFile);
         for (const std::string& symbolOrSymbolPair : allSymbols)
         {

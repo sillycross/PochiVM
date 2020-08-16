@@ -16,6 +16,7 @@ static void RegisterRuntimeLibrary()
     //    void RegisterMemberFn<member function pointer>()
     //    void RegisterStaticMemberFn<member function pointer>()
     //    void RegisterConstructor<ClassName, ArgTypeNames...>()
+    //    void RegisterExceptionObjectType<Type>()
     //
     // While you may write any logic you like, keep in mind that you will get a segfault if you try to
     // call functions or access global values which implementations reside in other CPP files.
@@ -143,6 +144,15 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&StringInterningQuirkyBehavior>();
 
     RegisterFreeFn<&TestNoExceptButThrows>();
+
+    RegisterExceptionObjectType<int>();
+    RegisterExceptionObjectType<int*****>();
+    RegisterExceptionObjectType<int*>();
+    RegisterExceptionObjectType<const int*>();
+    RegisterExceptionObjectType<const int* const*>();
+    RegisterExceptionObjectType<std::exception>();
+    RegisterExceptionObjectType<std::bad_alloc>();
+    RegisterExceptionObjectType<std::vector<int>>();
 }
 
 // DO NOT MODIFY

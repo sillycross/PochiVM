@@ -35,6 +35,11 @@ namespace PochiVM
 namespace ReflectionHelper
 {
 
+template<typename T> struct is_primitive_type : std::false_type {};
+#define F(t) template<> struct is_primitive_type<t> : std::true_type {};
+FOR_EACH_PRIMITIVE_TYPE
+#undef F
+
 // remove_param_type_ref<T>::type
 // Transform a C++-type to a primitive type that we support by removing refs (but does not drop cv-qualifier)
 //    Transform reference to pointer (e.g. 'int&' becomes 'int*')
@@ -837,7 +842,8 @@ enum class FunctionType
     StaticMemberFn,
     NonStaticMemberFn,
     Constructor,
-    Destructor
+    Destructor,
+    TypeInfoObject
 };
 
 struct RawFnTypeNamesInfo
@@ -1035,6 +1041,28 @@ void RegisterDestructor()
             ReflectionHelper::get_raw_fn_typenames_info<wrapper_generator_t::wrapperFn>::get_destructor(
                     ReflectionHelper::class_name_helper_internal<C>::get_class_typename());
     __pochivm_report_info__(&info);
+}
+
+template<typename C>
+void RegisterExceptionObjectType()
+{
+    static_assert(!std::is_reference<C>::value, "An exception object must not be a reference type");
+    static_assert(!std::is_rvalue_reference<C>::value, "An exception object must not be a rvalue-reference type");
+    static_assert(!std::is_const<C>::value, "top-level const-qualifier in an exception object has no effect. Please remove it.");
+    static_assert(!std::is_volatile<C>::value, "volatile-qualifier is not supported");
+    const std::type_info& t = typeid(C);
+    void* addr = const_cast<void*>(static_cast<const void*>(&t));
+    ReflectionHelper::RawFnTypeNamesInfo info(
+                ReflectionHelper::FunctionType::TypeInfoObject,
+                0 /*numArgs*/, nullptr /*apiRetAndParams*/, nullptr /*originalRetAndParams*/,
+                ReflectionHelper::class_name_helper_internal<C>::get_class_typename() /*className*/,
+                nullptr /*functionName*/, addr /*functionAddress*/, false /*isConst*/, false /*isNoExcept*/,
+                false /*is_wrapper_fn_required*/, false /*is_sret_transform_required*/, nullptr /*wrapperFn*/);
+    __pochivm_report_info__(&info);
+    if constexpr(!std::is_pointer<C>::value && !ReflectionHelper::is_primitive_type<C>::value)
+    {
+        RegisterDestructor<C>();
+    }
 }
 
 // Internal helper: if the function returns an object, register its destructor.

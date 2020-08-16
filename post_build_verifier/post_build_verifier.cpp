@@ -71,6 +71,7 @@ static void FindAllSymbols(const PochiVM::BitcodeData* bitcode,
         }
     }
 
+    std::string specialBc = "__pochivm_exception_typeinfo_objects_bc_stub__";
     bool found = false;
     for (Function& fn : module->functions())
     {
@@ -89,6 +90,7 @@ static void FindAllSymbols(const PochiVM::BitcodeData* bitcode,
         }
         else
         {
+            ReleaseAssert(specialBc != bitcode->m_symbolName);
             ReleaseAssert(!found);
             found = true;
             ReleaseAssert(!fn.empty());
@@ -101,7 +103,7 @@ static void FindAllSymbols(const PochiVM::BitcodeData* bitcode,
             allSymbols[fnName] = bitcode->m_symbolName;
         }
     }
-    ReleaseAssert(found);
+    ReleaseAssert(found || specialBc == bitcode->m_symbolName);
 }
 
 int main(int argc, char** argv)

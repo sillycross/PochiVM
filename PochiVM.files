@@ -53,6 +53,8 @@ runtime_lib_builder/CMakeLists.txt
 runtime_lib_builder/build_lib_wrapper.cpp
 runtime_lib_builder/build_runtime_lib.cpp
 runtime_lib_builder/dump_symbols.cpp
+runtime_lib_builder/fake_symbol_resolver.cpp
+runtime_lib_builder/fake_symbol_resolver.h
 runtime_lib_builder/sha1.cpp
 runtime_lib_builder/sha1.h
 runtime_lib_builder/symbol_list_util.cpp

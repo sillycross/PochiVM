@@ -803,6 +803,10 @@ static void ExtractFunction(const std::string& generatedFileDir,
             fprintf(fp, "// INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\n");
             fprintf(fp, "//\n\n");
 
+            fprintf(fp, "#ifndef INSIDE_POCHIVM_RUNTIME_LIBRARY_BC_CPP_FILE_MACRO_GUARD\n");
+            fprintf(fp, "static_assert(false, \"INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\");\n");
+            fprintf(fp, "#endif\n\n");
+
             fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
 
             fprintf(fp, "namespace PochiVM {\n\n");

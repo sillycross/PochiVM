@@ -6,6 +6,8 @@
 #include "runtime_lib_builder/symbol_list_util.h"
 #include "pochivm/ir_special_function_patch.h"
 
+#include "fake_symbol_resolver.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -422,11 +424,28 @@ struct ParsedFnTypeNamesInfo
 };
 
 static std::map<void*, ParsedFnTypeNamesInfo> g_symbolAddrToTypeData;
+static std::map<void*, std::string> g_symbolAddrToTypeInfoObjectName;
 
 }   // anonymous namespace
 
 void PochiVM::__pochivm_report_info__(PochiVM::ReflectionHelper::RawFnTypeNamesInfo* info)
 {
+    if (info->m_fnType == PochiVM::ReflectionHelper::FunctionType::TypeInfoObject)
+    {
+        if (!g_symbolAddrToTypeInfoObjectName.count(info->m_fnAddress))
+        {
+            ReleaseAssert(info->m_classTypename != nullptr);
+            g_symbolAddrToTypeInfoObjectName[info->m_fnAddress] = ParsedFnTypeNamesInfo::ParseTypeName(info->m_classTypename);
+        }
+        else
+        {
+            ReleaseAssert(g_symbolAddrToTypeInfoObjectName[info->m_fnAddress] == ParsedFnTypeNamesInfo::ParseTypeName(info->m_classTypename));
+            fprintf(stderr, "[WARNING] Exception object type %s appeared to be registered more than once, "
+                            "ignored multiple occurrance.\n",
+                    info->m_classTypename);
+        }
+        return;
+    }
     if (!g_symbolAddrToTypeData.count(info->m_fnAddress))
     {
         g_symbolAddrToTypeData[info->m_fnAddress] = ParsedFnTypeNamesInfo(info);
@@ -442,90 +461,6 @@ void PochiVM::__pochivm_report_info__(PochiVM::ReflectionHelper::RawFnTypeNamesI
 }
 
 namespace {
-
-// A fake symbol resolver that returns fake (but unique) addresses for each queried symbol
-// Of course the program crashes if the symbols are called, but if they only care about the addresses
-// things should be fine.
-//
-class FakeSymbolResolver : public JITDylib::DefinitionGenerator
-{
-public:
-    FakeSymbolResolver()
-        : m_lock()
-        , m_curAddr(0)
-        , m_addrEnd(0)
-        , m_pastAddrs()
-    { }
-
-    ~FakeSymbolResolver() override
-    {
-        for (uintptr_t addr : m_pastAddrs)
-        {
-            int r = munmap(reinterpret_cast<void*>(addr), x_length + x_overflow_protection_buffer * 2);
-            ReleaseAssert(r == 0);
-        }
-    }
-
-    virtual Error tryToGenerate(LookupKind /*K*/,
-                                JITDylib &JD,
-                                JITDylibLookupFlags /*JDLookupFlags*/,
-                                const SymbolLookupSet &symbols) override
-    {
-        // no idea what the thread safety requirement is... so just to be safe
-        //
-        std::lock_guard<std::mutex> guard(m_lock);
-
-        SymbolMap newSymbols;
-
-        for (auto& kv : symbols)
-        {
-            const SymbolStringPtr& name = kv.first;
-
-            if ((*name).empty())
-                continue;
-
-            uintptr_t addr = GetNextAddress();
-            newSymbols[name] = JITEvaluatedSymbol(
-                    static_cast<JITTargetAddress>(addr),
-                    JITSymbolFlags::Exported);
-            // std::string strname((*name).data(), (*name).size());
-            // fprintf(stderr, "Assigned symbol %s to address %llu\n",
-            //         strname.c_str(), static_cast<unsigned long long>(addr));
-        }
-
-        if (newSymbols.empty())
-            return Error::success();
-
-        return JD.define(absoluteSymbols(std::move(newSymbols)));
-    }
-
-private:
-    uintptr_t GetNextAddress()
-    {
-        if (m_curAddr == 0 || m_curAddr >= m_addrEnd)
-        {
-            void* r = mmap(nullptr, x_length + x_overflow_protection_buffer * 2,
-                           PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1 /*fd*/, 0 /*offset*/);
-            ReleaseAssert(r != reinterpret_cast<void*>(-1));
-            m_curAddr = reinterpret_cast<uintptr_t>(r) + x_overflow_protection_buffer;
-            m_addrEnd = m_curAddr + x_length;
-            m_pastAddrs.push_back(reinterpret_cast<uintptr_t>(r));
-        }
-
-        ReleaseAssert(m_curAddr != 0 && m_curAddr < m_addrEnd);
-        uintptr_t r = m_curAddr;
-        m_curAddr += 32;
-        return r;
-    }
-
-    static const size_t x_length = 1024 * 1024;
-    static const size_t x_overflow_protection_buffer = 1024 * 1024;
-
-    std::mutex m_lock;
-    uintptr_t m_curAddr;
-    uintptr_t m_addrEnd;
-    std::vector<uintptr_t> m_pastAddrs;
-};
 
 static void ReadCppFiltOutput(const std::string& file, std::vector<std::string>& symbols /*out*/)
 {
@@ -911,7 +846,9 @@ static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
 }
 
 static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
-                                         Module* module)
+                                         Module* module,
+                                         const std::vector<std::pair<std::string, std::string>>& neededTypeInfoObjects,
+                                         const std::string& originalBcFileName)
 {
     std::map<std::string /*llvmTypeName*/, std::string /*cppTypeName*/> typeNameMap;
 
@@ -1547,6 +1484,183 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fclose(fp);
     }
 
+    {
+        // Generate the IR stub for typeinfo objects
+        //
+        // Important to create the stub module using the same LLVMContext:
+        // we need to use types from 'module', which are managed at LLVMContext level
+        // (so the Type* pointers are valid if and only if we create our module using the same LLVMContext)
+        //
+        std::unique_ptr<Module> typeinfoStubModule(new Module("__typeinfo_object_stub__", module->getContext()));
+        for (auto it = neededTypeInfoObjects.begin(); it != neededTypeInfoObjects.end(); it++)
+        {
+            std::string className = it->first;
+            std::string symbolName = it->second;
+            GlobalVariable* gv = module->getGlobalVariable(symbolName);
+            ReleaseAssert(gv != nullptr);
+            // The typeinfo object should always be linkonce_odr/external dso_local
+            // It may or may not have a definition, and may have different types
+            // However, in our IR stub it should always be a declaration.
+            //
+            ReleaseAssert(gv->getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+                          gv->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+            ReleaseAssert(gv->isDSOLocal());
+            Type* gvType = gv->getType()->getPointerElementType();
+
+            ReleaseAssert(typeinfoStubModule->getGlobalVariable(symbolName, true /*allowInternal*/) == nullptr);
+            Constant* newGvC = typeinfoStubModule->getOrInsertGlobal(symbolName, gvType);
+            ReleaseAssert(isa<GlobalVariable>(newGvC));
+            GlobalVariable* newGv = dyn_cast<GlobalVariable>(newGvC);
+            // Our new global should be a declaration of constant which has external linkage and dso_local
+            //
+            newGv->setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+            newGv->setInitializer(nullptr);
+            newGv->setDSOLocal(true);
+            newGv->setConstant(true);
+        }
+
+        {
+            // Save the typename info bc
+            //
+            std::string outputFileName = originalBcFileName + ".typeinfo_extracted.bc";
+            {
+                int fd = creat(outputFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                if (fd == -1)
+                {
+                    fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                            outputFileName.c_str(), errno, strerror(errno));
+                    abort();
+                }
+                raw_fd_ostream fdStream(fd, true /*shouldClose*/);
+                WriteBitcodeToFile(*typeinfoStubModule.get(), fdStream);
+                if (fdStream.has_error())
+                {
+                    std::error_code ec = fdStream.error();
+                    fprintf(stderr, "Writing to file '%s' failed with errno = %d (%s)\n",
+                            outputFileName.c_str(), ec.value(), ec.message().c_str());
+                    abort();
+                }
+                /* fd closed when fdStream is destructed here */
+            }
+
+            // Load to make sure it contains no errors, for sanity
+            //
+            {
+                SMDiagnostic llvmErr;
+                std::unique_ptr<LLVMContext> newContext(new LLVMContext);
+                std::unique_ptr<Module> newModule = parseIRFile(outputFileName, llvmErr, *newContext.get());
+
+                if (newModule == nullptr)
+                {
+                    fprintf(stderr, "[INTERNAL ERROR] Generated IR file '%s' contains error. "
+                                    "Please report a bug. Detail:\n", outputFileName.c_str());
+                    llvmErr.print("update_symbol_matches", errs());
+                    abort();
+                }
+            }
+
+            // Generate the header file for the typeinfo bitcode
+            //
+            size_t bitcodeSize;
+            uint8_t* bitcodeRawData = nullptr;
+            {
+                struct stat st;
+                if (stat(outputFileName.c_str(), &st) != 0)
+                {
+                    fprintf(stderr, "Failed to access file '%s' for file size, errno = %d (%s)\n",
+                            outputFileName.c_str(), errno, strerror(errno));
+                    abort();
+                }
+                bitcodeSize = static_cast<size_t>(st.st_size);
+
+                // one more char for the trailing '\0'
+                //
+                bitcodeRawData = new uint8_t[bitcodeSize + 1];
+
+                FILE* fp = fopen(outputFileName.c_str(), "r");
+                if (fp == nullptr)
+                {
+                    fprintf(stderr, "Failed to open file '%s' for read, errno = %d (%s)\n",
+                            outputFileName.c_str(), errno, strerror(errno));
+                    abort();
+                }
+
+                size_t bytesRead = fread(bitcodeRawData, sizeof(uint8_t), bitcodeSize, fp);
+                ReleaseAssert(bytesRead == bitcodeSize);
+                bitcodeRawData[bitcodeSize] = 0;
+
+                {
+                    // just to sanity check we have reached eof
+                    //
+                    uint8_t _c;
+                    ReleaseAssert(fread(&_c, sizeof(uint8_t), 1 /*numElements*/, fp) == 0);
+                    ReleaseAssert(feof(fp));
+                }
+
+                fclose(fp);
+            }
+
+            ReleaseAssert(bitcodeRawData != nullptr);
+            Auto(delete [] bitcodeRawData);
+
+            {
+                std::string headerFileOutput = generatedFileFolder + "/bc.typeinfo_objects.data.h";
+                FILE* fp = fopen(headerFileOutput.c_str(), "w");
+                if (fp == nullptr)
+                {
+                    fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                            headerFileOutput.c_str(), errno, strerror(errno));
+                    abort();
+                }
+
+                fprintf(fp, "// GENERATED FILE, DO NOT EDIT!\n");
+                fprintf(fp, "// INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\n");
+                fprintf(fp, "//\n\n");
+
+                fprintf(fp, "#ifndef INSIDE_POCHIVM_RUNTIME_LIBRARY_BC_CPP_FILE_MACRO_GUARD\n");
+                fprintf(fp, "static_assert(false, \"INTERNAL FILE, DO NOT INCLUDE TO YOUR CPP!\");\n");
+                fprintf(fp, "#endif\n\n");
+
+                fprintf(fp, "#include \"pochivm/bitcode_data.h\"\n\n");
+
+                fprintf(fp, "namespace PochiVM {\n\n");
+
+                std::string resVarname = std::string("__pochivm_internal_bc_typeinfo_objects");
+
+                // 'extern' declaration is required for constants to be able to export elsewhere
+                //
+                fprintf(fp, "extern const BitcodeData %s;\n\n", resVarname.c_str());
+
+                std::string bitcodeDataVarname = resVarname + "_bitcode_data";
+                fprintf(fp, "const uint8_t %s[%d] = {\n    ", bitcodeDataVarname.c_str(), static_cast<int>(bitcodeSize + 1));
+
+                for (size_t i = 0; i <= bitcodeSize; i++)
+                {
+                    uint8_t value = bitcodeRawData[i];
+                    fprintf(fp, "%d", value);
+                    if (i != bitcodeSize)
+                    {
+                        fprintf(fp, ", ");
+                        if (i % 16 == 15)
+                        {
+                            fprintf(fp, "\n    ");
+                        }
+                    }
+                }
+                fprintf(fp, "\n};\n\n");
+
+                fprintf(fp, "const BitcodeData %s = {\n", resVarname.c_str());
+                fprintf(fp, "    \"__pochivm_exception_typeinfo_objects_bc_stub__\",\n");
+                fprintf(fp, "    %s,\n", bitcodeDataVarname.c_str());
+                fprintf(fp, "    %d\n};\n", static_cast<int>(bitcodeSize));
+
+                fprintf(fp, "\n}  // namespace PochiVM\n\n");
+
+                fclose(fp);
+            }
+        }
+    }
+
     // generate typename info (may use AstTypeHelper and other helper classes)
     //
     {
@@ -1668,7 +1782,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             llvmTypeNames.push_back(llvmTypeName);
             cppTypeNames.push_back(cppTypeName);
             fprintf(fp, "template<>\n");
-            fprintf(fp, "struct cpp_type_ordinal<%s> {\n", cppTypeName.c_str());
+            fprintf(fp, "struct cpp_type_ordinal<::%s> {\n", cppTypeName.c_str());
             fprintf(fp, "    static const uint64_t ordinal = %d;\n", ordinal);
             fprintf(fp, "};\n\n");
             ordinal++;
@@ -1695,7 +1809,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             fprintf(fp, "#define FOR_EACH_CPP_CLASS_TYPE \\\n");
             for (size_t i = 0; i < cppTypeNames.size(); i++)
             {
-                fprintf(fp, "    F(%s) ", cppTypeNames[i].c_str());
+                fprintf(fp, "    F(::%s) ", cppTypeNames[i].c_str());
                 if (i == cppTypeNames.size() - 1)
                 {
                     fprintf(fp, "\n\n");
@@ -1738,6 +1852,29 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             fprintf(fp, "template<> struct is_default_ctor_registered<%s> : std::true_type {};\n", className.c_str());
         }
         fprintf(fp, "\n");
+
+        // Generate registered typeinfo object names
+        //
+        fprintf(fp, "template<typename T> struct typeinfo_object_symbol_name { static constexpr const char* value = nullptr; };\n");
+
+        // The exception object types may not be simple C++ classes. It may contain pointers, etc.
+        // So the trick that simply append "::" would not work. Instead, we have to use them in a namespace-less environment.
+        //
+        fprintf(fp, "\n} // namespace AstTypeHelper\n");
+        fprintf(fp, "} // namespace PochiVM\n\n");
+
+        for (auto it = neededTypeInfoObjects.begin(); it != neededTypeInfoObjects.end(); it++)
+        {
+            fprintf(fp, "template<> struct PochiVM::AstTypeHelper::typeinfo_object_symbol_name<%s> {\n", it->first.c_str());
+            fprintf(fp, "    static constexpr const char* value = \"%s\";\n};\n", it->second.c_str());
+        }
+        fprintf(fp, "\n");
+
+        fprintf(fp, "namespace PochiVM {\n");
+        fprintf(fp, "namespace AstTypeHelper {\n\n");
+        fprintf(fp, "template<typename T> struct is_typeinfo_object_registered : std::integral_constant<bool,\n");
+        fprintf(fp, "        (typeinfo_object_symbol_name<T>::value != nullptr)\n");
+        fprintf(fp, "> {};\n\n");
 
         fprintf(fp, "\n} // namespace AstTypeHelper\n\n");
         fprintf(fp, "\n} // namespace PochiVM\n\n");
@@ -1892,6 +2029,20 @@ int main(int argc, char** argv)
         }
     }
 
+    // For global variables, we only care about typeid objects.
+    // They always have linkonce_odr or external linkage. Don't bother with other types.
+    //
+    std::vector<std::string> allExternalOrLinkonceOdrGlobalVars;
+    for (GlobalVariable& gv : module->globals())
+    {
+        if (gv.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+            gv.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage)
+        {
+            std::string name = gv.getGlobalIdentifier();
+            allExternalOrLinkonceOdrGlobalVars.push_back(name);
+        }
+    }
+
     std::string symbolListOutputFilename = std::string(argv[3]);
     std::string symbolListOutputFilenameTmp = symbolListOutputFilename + std::string(".tmp");
     std::string symbolMatchesOutputFile = symbolListOutputFilename + ".matches";
@@ -1944,7 +2095,7 @@ int main(int argc, char** argv)
         // so just resolve it to an unique address using our FakeSymbolResolver.
         //
         J->getMainJITDylib().addGenerator(std::move(R));
-        J->getMainJITDylib().addGenerator(std::unique_ptr<FakeSymbolResolver>(new FakeSymbolResolver()));
+        AddFakeSymbolResolverGenerator(J.get());
 
         exitOnError(J->addIRModule(std::move(tsm)));
 
@@ -1963,6 +2114,11 @@ int main(int argc, char** argv)
 
             std::set<std::string> orig;
             for (const std::string& symbol : allDeclarations)
+            {
+                ReleaseAssert(!orig.count(symbol));
+                orig.insert(symbol);
+            }
+            for (const std::string& symbol : allExternalOrLinkonceOdrGlobalVars)
             {
                 ReleaseAssert(!orig.count(symbol));
                 orig.insert(symbol);
@@ -1990,7 +2146,7 @@ int main(int argc, char** argv)
             {
                 demangledSymbols[v] = demangled[index++];
             }
-            ReleaseAssert(demangledSymbols.size() == allDeclarations.size());
+            ReleaseAssert(demangledSymbols.size() == allDeclarations.size() + allExternalOrLinkonceOdrGlobalVars.size());
         }
 
         // Match the type defintion with the symbol name by symbol address.
@@ -1998,25 +2154,30 @@ int main(int argc, char** argv)
         std::map<uintptr_t, std::pair< std::string /*mangled*/, std::string /*demangled*/> > addrToSymbol;
         std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
 
-        for (std::string& symbol : allDeclarations)
+        auto insertSymbolAddresses = [&](const std::vector<std::string>& symList)
         {
-            auto sym = exitOnError(J->lookup(symbol));
-            uintptr_t addr = sym.getAddress();
-            // Craziness: we cannot assert(!addrToSymbol.count(addr))....
-            // Sometimes two symbols with different names can actually
-            // resolve to the same address. For example, symbol '_ZNSaIcED1Ev'
-            // and symbol '_ZNSaIcED2Ev' (the 3rd character to the right differs)
-            // turns out to have the same demangled name 'std::allocator<char>::~allocator()'
-            // and have the same address pointer in host space. I have no idea why
-            // this could happen, but this should never happen to the functions registered
-            // for the runtime library, so we assert this instead.
-            //
-            if (addrToSymbol.count(addr))
+            for (const std::string& symbol : symList)
             {
-                hasMultipleSymbolsMappingToThisAddress.insert(addr);
+                auto sym = exitOnError(J->lookup(symbol));
+                uintptr_t addr = sym.getAddress();
+                // Craziness: we cannot assert(!addrToSymbol.count(addr))....
+                // Sometimes two symbols with different names can actually
+                // resolve to the same address. For example, symbol '_ZNSaIcED1Ev'
+                // and symbol '_ZNSaIcED2Ev' (the 3rd character to the right differs)
+                // turns out to have the same demangled name 'std::allocator<char>::~allocator()'
+                // and have the same address pointer in host space. I have no idea why
+                // this could happen, but this should never happen to the functions registered
+                // for the runtime library, so we assert this instead.
+                //
+                if (addrToSymbol.count(addr))
+                {
+                    hasMultipleSymbolsMappingToThisAddress.insert(addr);
+                }
+                addrToSymbol[addr] = std::make_pair(symbol, demangledSymbols[symbol]);
             }
-            addrToSymbol[addr] = std::make_pair(symbol, demangledSymbols[symbol]);
-        }
+        };
+        insertSymbolAddresses(allDeclarations);
+        insertSymbolAddresses(allExternalOrLinkonceOdrGlobalVars);
 
         for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
         {
@@ -2054,6 +2215,32 @@ int main(int argc, char** argv)
             {
                 ReleaseAssert(it->second.m_wrapperFnAddress == nullptr);
             }
+        }
+
+        std::vector<std::pair<std::string /*className*/, std::string /*symbolName*/>> neededTypeInfoObjectList;
+        for (auto it = g_symbolAddrToTypeInfoObjectName.begin(); it != g_symbolAddrToTypeInfoObjectName.end(); it++)
+        {
+            uintptr_t addr = reinterpret_cast<uintptr_t>(it->first);
+            std::string className = it->second;
+            if (hasMultipleSymbolsMappingToThisAddress.count(addr))
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Typeinfo object for %s is resolved to an ambiguous address, "
+                                "please report a bug.\n",
+                        className.c_str());
+                abort();
+            }
+            ReleaseAssert(addrToSymbol.count(addr));
+            std::string mangledSymbolName = addrToSymbol[addr].first;
+            std::string demangledSymbolName = addrToSymbol[addr].second;
+            std::string expectStartingWith = "typeinfo for ";
+            if (demangledSymbolName.substr(0, expectStartingWith.length()) != expectStartingWith)
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Typeinfo object for %s is resolved to symbol name %s (%s), "
+                                "which does not seem to be a typeinfo object. Please report a bug.\n",
+                        className.c_str(), mangledSymbolName.c_str(), demangledSymbolName.c_str());
+                abort();
+            }
+            neededTypeInfoObjectList.push_back(std::make_pair(className, mangledSymbolName));
         }
 
         // Write 'needed_symbols_info_output'
@@ -2100,10 +2287,9 @@ int main(int argc, char** argv)
 
         // Generate the C++ header file
         //
-        if (isDumpList)
         {
             std::string generatedFileFolder = std::string(argv[5]);
-            GenerateCppRuntimeHeaderFile(generatedFileFolder, module.get());
+            GenerateCppRuntimeHeaderFile(generatedFileFolder, module.get(), neededTypeInfoObjectList, bcFileName);
         }
     }
 
