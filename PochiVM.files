@@ -24,6 +24,7 @@ pochivm/common_expr.h
 pochivm/constexpr_array_concat_helper.h
 pochivm/destructor_helper.cpp
 pochivm/destructor_helper.h
+pochivm/dummy_hook.cpp
 pochivm/error_context.h
 pochivm/exception_helper.cpp
 pochivm/exception_helper.h
@@ -31,7 +32,6 @@ pochivm/for_each_primitive_type.h
 pochivm/function_proto.cpp
 pochivm/function_proto.h
 pochivm/function_ref.h
-pochivm/global_vars.cpp
 pochivm/ir_special_function_patch.h
 pochivm/lang_constructs.cpp
 pochivm/lang_constructs.h

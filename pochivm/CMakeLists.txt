@@ -1,7 +1,7 @@
 add_library(pochivm 
   arith_expr.cpp  
   common_expr.cpp     
-  global_vars.cpp      
+  dummy_hook.cpp      
   logical_operator.cpp
   cast_expr.cpp   
   function_proto.cpp  

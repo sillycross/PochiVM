@@ -161,7 +161,7 @@ struct LLVMCodegenContext
     llvm::Constant* m_personalityFn;
 };
 
-extern thread_local LLVMCodegenContext* thread_llvmContext;
+inline thread_local LLVMCodegenContext* thread_llvmContext = nullptr;
 
 class AutoThreadLLVMCodegenContext
 {

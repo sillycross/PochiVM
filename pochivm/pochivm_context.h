@@ -38,7 +38,7 @@ struct PochiVMContext
     AstModule* m_curModule;
 };
 
-extern thread_local PochiVMContext* thread_pochiVMContext;
+inline thread_local PochiVMContext* thread_pochiVMContext = nullptr;
 
 class AutoThreadPochiVMContext
 {

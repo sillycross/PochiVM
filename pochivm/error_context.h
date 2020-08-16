@@ -44,7 +44,7 @@ struct ErrorContext
     const char* m_errorFunction;
 };
 
-extern thread_local ErrorContext* thread_errorContext;
+inline thread_local ErrorContext* thread_errorContext = nullptr;
 
 class AutoThreadErrorContext
 {
