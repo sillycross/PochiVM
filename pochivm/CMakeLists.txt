@@ -9,5 +9,6 @@ add_library(pochivm
   ast_variable.cpp
   destructor_helper.cpp
   exception_helper.cpp
+  ast_catch_throw.cpp
 )
 

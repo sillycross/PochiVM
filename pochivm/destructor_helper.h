@@ -26,9 +26,20 @@ inline const CppFunctionMetadata* GetDestructorMetadata(TypeId typeId)
     return x_cppClassDestructorsByOrdinal[ord];
 }
 
+inline void InterpCallDestructorHelper(const CppFunctionMetadata* md, void* addr) noexcept
+{
+    // interp functions take a parameter array of pointers to the actual parameters.
+    // In our case, the actual parameter is 'addr'. So we should populate the array with '&addr'.
+    //
+    void* paramsArray[1];
+    paramsArray[0] = &addr;
+    assert(md->m_returnType.IsVoid() && md->m_numParams == 1 && !md->m_isUsingSret);
+    md->m_interpFn(nullptr /*ret*/, paramsArray);
+}
+
 // Destruct a local variable in interp mode
 //
-inline void InterpDestructLocalVariableHelper(AstVariable* var)
+inline void InterpDestructLocalVariableHelper(AstVariable* var) noexcept
 {
     const CppFunctionMetadata* md = GetDestructorMetadata(var->GetTypeId().RemovePointer());
     // md is nullptr if the destructor for this CPP class type is not registered
@@ -39,13 +50,8 @@ inline void InterpDestructLocalVariableHelper(AstVariable* var)
     //
     void* addr;
     var->Interp(&addr /*out*/);
-    // interp functions take a parameter array of pointers to the actual parameters.
-    // In our case, the actual parameter is 'addr'. So we should populate the array with '&addr'.
-    //
-    void* paramsArray[1];
-    paramsArray[0] = &addr;
-    assert(md->m_returnType.IsVoid() && md->m_numParams == 1 && md->m_paramTypes[0] == var->GetTypeId() && !md->m_isUsingSret);
-    md->m_interpFn(nullptr /*ret*/, paramsArray);
+    assert(md->m_numParams == 1 && md->m_paramTypes[0] == var->GetTypeId());
+    InterpCallDestructorHelper(md, addr);
 }
 
 // Push a new scope into the scope stack when this class is constructed,

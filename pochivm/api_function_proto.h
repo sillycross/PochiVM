@@ -216,17 +216,13 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
     }
 }
 
-// Declare a variable, with constructor initialization
-//
-template<typename T>
-Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorParams)
+namespace internal
 {
-    static_assert(std::is_base_of<ConstructorParamInfo, Constructor<T>>::value,
-                  "Constructor<T> is supposed to be derived from ConstructorParamInfo");
-    const ConstructorParamInfo& ctorParams = constructorParams;
-    static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a cpp class type");
+
+inline AstCallExpr* GetCallExprFromConstructor(AstNodeBase* addr, const ConstructorParamInfo& ctorParams)
+{
     TestAssert(ctorParams.m_constructorMd->m_numParams > 0);
-    TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == TypeId::Get<T>().AddPointer());
+    TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == addr->GetTypeId());
     TestAssert(ctorParams.m_params.size() == ctorParams.m_constructorMd->m_numParams - 1);
 #ifdef TESTBUILD
     for (size_t i = 0; i < ctorParams.m_params.size(); i++)
@@ -236,10 +232,24 @@ Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorPar
 #endif
     std::vector<AstNodeBase*> params;
     params.reserve(ctorParams.m_constructorMd->m_numParams);
-    params.push_back(var.m_varPtr);
+    params.push_back(addr);
     params.insert(params.end(), ctorParams.m_params.begin(), ctorParams.m_params.end());
+    return new AstCallExpr(ctorParams.m_constructorMd, params);
+}
+
+}
+// Declare a variable, with constructor initialization
+//
+template<typename T>
+Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorParams)
+{
+    static_assert(std::is_base_of<ConstructorParamInfo, Constructor<T>>::value,
+                  "Constructor<T> is supposed to be derived from ConstructorParamInfo");
+    const ConstructorParamInfo& ctorParams = constructorParams;
+    static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a cpp class type");
+    TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == TypeId::Get<T>().AddPointer());
     return Value<void>(new AstDeclareVariable(var.m_varPtr,
-                                              new AstCallExpr(ctorParams.m_constructorMd, params),
+                                              internal::GetCallExprFromConstructor(var.m_varPtr, ctorParams),
                                               true /*isCtor*/));
 }
 

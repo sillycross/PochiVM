@@ -80,6 +80,14 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
+    // A hacky method used only by 'throw' statement's interp execution
+    //
+    void ResetPointerValue(void* value)
+    {
+        TestAssert(GetTypeId().IsPointerType());
+        m_as_voidstar = value;
+    }
+
 private:
     // Stores the literal value with a union of all possible primitive types
     //

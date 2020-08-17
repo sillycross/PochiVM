@@ -3,9 +3,11 @@ pochivm/CMakeLists.txt
 pochivm/api_base.h
 pochivm/api_function_proto.h
 pochivm/api_lang_constructs.h
+pochivm/api_throw_catch.h
 pochivm/api_vt_base.h
 pochivm/arith_expr.cpp
 pochivm/arith_expr.h
+pochivm/ast_catch_throw.cpp
 pochivm/ast_catch_throw.h
 pochivm/ast_expr_base.h
 pochivm/ast_expr_base.hpp
@@ -105,6 +107,7 @@ pochivm/api_base.h
 pochivm/pochivm_reflection_helper.h
 pochivm/test_sanity.cpp
 test_call_cpp_func.cpp
+test_catch_throw.cpp
 test_error_cases.cpp
 test_fibonacci.cpp
 test_find_nth_prime.cpp

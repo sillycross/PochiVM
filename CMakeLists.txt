@@ -139,6 +139,7 @@ add_executable(main
   test_sanity_irdump.cpp
   test_sanity_bitcode.cpp
   test_call_cpp_func.cpp
+  test_catch_throw.cpp
 )
 
 # Important to link runtime using '--whole-archive'

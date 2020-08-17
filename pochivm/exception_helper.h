@@ -32,9 +32,69 @@ namespace PochiVM
 //     if the logic contains a nested try-catch clause
 //
 
-inline bool IsTypeRegisteredForThrownFromGeneratedCode(TypeId typeId)
+namespace internal
 {
-     return valid_for_ast_throw_stmt_helper::query(typeId);
+
+template<template<typename> class S, typename T, typename Enable = void>
+struct valid_typeid_insertion_helper
+{
+    static void insert(std::unordered_map<TypeId, void*>& /*unused*/) {}
+};
+template<template<typename> class S, typename T>
+struct valid_typeid_insertion_helper<S, T, typename std::enable_if<(
+    std::is_same<typename ReflectionHelper::recursive_remove_cv<T>::type, T>::value)>::type>
+{
+    static void insert(std::unordered_map<TypeId, void*>& out)
+    {
+        TypeId t = TypeId::Get<T>();
+        TestAssert(!out.count(t));
+        out[t] = S<T>::get();
+    }
+};
+
+}   // namespace internal
+
+// Select a instantiation of a templated function based on exception type. 'S' must provide
+//     static void* S<Type>::get()
+// The function select_impl_based_on_exception_type<S>::get(TypeId typeId)
+// returns S<(typeId's C++ type)>::get() if typeId is an exception type, or nullptr if not.
+//
+template<template<typename> class S>
+class select_impl_based_on_exception_type
+{
+    static std::unordered_map<TypeId, void*> get_hash_map();
+    static inline const std::unordered_map<TypeId, void*> resultMap = get_hash_map();
+
+public:
+    static void* get(TypeId typeId)
+    {
+        auto it = resultMap.find(typeId);
+        if (it == resultMap.end())
+        {
+            return nullptr;
+        }
+        else
+        {
+            return it->second;
+        }
+    }
+};
+
+namespace internal
+{
+
+template<typename T>
+struct is_expection_registered_for_thrown_helper
+{
+    static void* get() { return reinterpret_cast<void*>(1); }
+};
+
+}   // namespace internal
+
+inline bool WARN_UNUSED IsTypeRegisteredForThrownFromGeneratedCode(TypeId typeId)
+{
+     void* r = select_impl_based_on_exception_type<internal::is_expection_registered_for_thrown_helper>::get(typeId);
+     return r != nullptr;
 }
 
 // Return true if there is no need to setup a landing pad for potentially-throwing function.
@@ -49,3 +109,15 @@ bool WARN_UNUSED IsNoLandingPadNeeded();
 llvm::BasicBlock* WARN_UNUSED EmitEHLandingPadForCurrentPosition();
 
 }   // namespace PochiVM
+
+// Expand macro FOR_EACH_EXCEPTION_TYPE in root namespace to prevent potential type resolution conflict
+//
+template<template<typename> class S>
+std::unordered_map<PochiVM::TypeId, void*> PochiVM::select_impl_based_on_exception_type<S>::get_hash_map()
+{
+    std::unordered_map<PochiVM::TypeId, void*> ret;
+#define F(...) PochiVM::internal::valid_typeid_insertion_helper<S, __VA_ARGS__>::insert(ret);
+    FOR_EACH_EXCEPTION_TYPE
+#undef F
+    return ret;
+}

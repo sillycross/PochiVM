@@ -117,6 +117,8 @@ static void RegisterRuntimeLibrary()
     RegisterStaticMemberFn<&TestNonTrivialConstructor::Create>();
     RegisterMemberFn<&TestNonTrivialConstructor::GetValue>();
 
+    RegisterConstructor<TestNonTrivialCopyConstructor, int>();
+    RegisterConstructor<TestNonTrivialCopyConstructor, const TestNonTrivialCopyConstructor&>();
     RegisterStaticMemberFn<&TestNonTrivialCopyConstructor::Fn>();
 
     RegisterConstructor<std::vector<int>>();
@@ -153,6 +155,10 @@ static void RegisterRuntimeLibrary()
     RegisterExceptionObjectType<std::exception>();
     RegisterExceptionObjectType<std::bad_alloc>();
     RegisterExceptionObjectType<std::vector<int>>();
+    RegisterExceptionObjectType<TestNonTrivialCopyConstructor>();
+    RegisterExceptionObjectType<TestNonTrivialConstructor>();
+
+    RegisterConstructor<std::bad_alloc>();
 }
 
 // DO NOT MODIFY

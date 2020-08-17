@@ -4002,4 +4002,3 @@ TEST(SanityCallCppFn, Exception_PropagateThrough_1)
         testFn(jitFn, 14, expectedAns14, true);
     }
 }
-
