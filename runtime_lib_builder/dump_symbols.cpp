@@ -116,6 +116,7 @@ struct ParsedFnTypeNamesInfo
         m_isUsingWrapper = src->m_isUsingWrapper;
         m_isWrapperUsingSret = src->m_isWrapperUsingSret;
         m_wrapperFnAddress = src->m_wrapperFnAddress;
+        m_isCopyCtorOrAssignmentOp = src->m_isCopyCtorOrAssignmentOp;
     }
 
     void RecordMangledSymbolName(const std::string& mangledSymbolName)
@@ -421,6 +422,7 @@ struct ParsedFnTypeNamesInfo
     bool m_isWrapperUsingSret;
     void* m_wrapperFnAddress;
     std::string m_wrapperFnMangledSymbolName;
+    bool m_isCopyCtorOrAssignmentOp;
 };
 
 static std::map<void*, ParsedFnTypeNamesInfo> g_symbolAddrToTypeData;
@@ -523,6 +525,7 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     if (a.m_isUsingWrapper != b.m_isUsingWrapper) { return a.m_isUsingWrapper < b.m_isUsingWrapper; }
     if (a.m_isWrapperUsingSret != b.m_isWrapperUsingSret) { return a.m_isWrapperUsingSret < b.m_isWrapperUsingSret; }
     if (a.m_wrapperFnAddress != b.m_wrapperFnAddress) { return a.m_wrapperFnAddress < b.m_wrapperFnAddress; }
+    if (a.m_isCopyCtorOrAssignmentOp != b.m_isCopyCtorOrAssignmentOp) { return a.m_isCopyCtorOrAssignmentOp < b.m_isCopyCtorOrAssignmentOp; }
     return a.m_wrapperFnMangledSymbolName < b.m_wrapperFnMangledSymbolName;
 }
 
@@ -1036,6 +1039,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
     // generate Ast syntax header
     //
     std::set<std::string> allDefaultConstructibleClasses;
+    std::set<std::string> allCopyConstrutibleClasses;
     {
         std::string filename = generatedFileFolder + "/pochivm_runtime_headers.generated.h";
         FILE* fp = fopen(filename.c_str(), "w");
@@ -1447,6 +1451,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
 
                 bool isDefaultConstructible = false;
+                bool isCopyConstructible = false;
                 fprintf(fp, "template<> class Constructor<%s> : public ConstructorParamInfo\n{\npublic:\n\n", className.c_str());
                 for (size_t k = 0; k < data.size(); k++)
                 {
@@ -1455,6 +1460,10 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     if (info.m_params.size() == 1)
                     {
                         isDefaultConstructible = true;
+                    }
+                    if (info.m_isCopyCtorOrAssignmentOp)
+                    {
+                        isCopyConstructible = true;
                     }
                     fprintf(fp, "// Original parameters:\n");
                     for (const std::string& param : info.m_origParams)
@@ -1476,6 +1485,17 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 {
                     ReleaseAssert(!allDefaultConstructibleClasses.count(className));
                     allDefaultConstructibleClasses.insert(className);
+                }
+                if (isCopyConstructible)
+                {
+                    if (allCopyConstrutibleClasses.count(className))
+                    {
+                        fprintf(stderr, "It seems like you registered both 'C(const C&)' and 'C(C&)' copy constructor for class '%s'."
+                                        "We cannot distinguish between them since we don't have the concept of 'const'."
+                                        "Please only register one.\n", className.c_str());
+                        abort();
+                    }
+                    allCopyConstrutibleClasses.insert(className);
                 }
             }
         }
@@ -1871,12 +1891,23 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "const static int x_num_cpp_class_types = %d;\n\n", ordinal);
         fprintf(fp, "const static int x_num_cpp_functions = %d;\n\n", g_curUniqueFunctionOrdinal);
 
+        // generate default constructible classes information
+        //
         fprintf(fp, "template<typename T> struct is_default_ctor_registered : std::false_type {};\n");
         for (const std::string& className : allDefaultConstructibleClasses)
         {
-            fprintf(fp, "template<> struct is_default_ctor_registered<%s> : std::true_type {};\n", className.c_str());
+            fprintf(fp, "template<> struct is_default_ctor_registered<::%s> : std::true_type {};\n", className.c_str());
         }
         fprintf(fp, "\n");
+
+        // generate copy constructible classes information
+        //
+        fprintf(fp, "template<typename T> struct is_copy_ctor_registered : std::false_type {};\n");
+        for (const std::string& className : allCopyConstrutibleClasses)
+        {
+            fprintf(fp, "template<> struct is_copy_ctor_registered<::%s> : std::true_type {};\n", className.c_str());
+        }
+        fprintf(fp, "\n\n");
 
         // Generate registered typeinfo object names
         //

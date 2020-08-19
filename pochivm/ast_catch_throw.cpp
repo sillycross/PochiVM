@@ -79,15 +79,20 @@ Value* WARN_UNUSED AstThrowStmt::EmitIRImpl()
 
     // Construct exception object
     //
-    if (m_isCtor)
+    if (m_isCtor || m_isLValueObject)
     {
-        // TODO: implement
-        ReleaseAssert(false);
-    }
-    else if (m_isLValueObject)
-    {
-        // TODO: implement
-        ReleaseAssert(false);
+        // The m_operand is the callExpr for constructing the exception object,
+        // with its first parameter be a AstLiteral placeholder (since we don't know the address into
+        // which the exception object should be constructed until we have allocated it now)
+        //
+        TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
+        AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
+        TestAssert(callExpr->GetParams().size() > 0 && callExpr->GetParams()[0]->GetAstNodeType() == AstNodeType::AstLiteralExpr);
+        AstLiteralExpr* placeholder = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
+        placeholder->HijackPointerValueLLVM(exnObject);
+        Value* ret = m_operand->EmitIR();
+        TestAssert(ret == nullptr);
+        std::ignore = ret;
     }
     else
     {

@@ -859,7 +859,8 @@ struct RawFnTypeNamesInfo
                        bool isNoExcept,
                        bool isUsingWrapper,
                        bool isWrapperUsingSret,
-                       void* wrapperFnAddress)
+                       void* wrapperFnAddress,
+                       bool isCopyCtorOrAssignmentOp)
           : m_fnType(fnType)
           , m_numArgs(numArgs)
           , m_apiRetAndArgTypenames(apiRetAndArgTypenames)
@@ -872,6 +873,7 @@ struct RawFnTypeNamesInfo
           , m_isUsingWrapper(isUsingWrapper)
           , m_isWrapperUsingSret(isWrapperUsingSret)
           , m_wrapperFnAddress(wrapperFnAddress)
+          , m_isCopyCtorOrAssignmentOp(isCopyCtorOrAssignmentOp)
     {
         if (!isUsingWrapper) { ReleaseAssert(!isWrapperUsingSret); }
     }
@@ -914,6 +916,9 @@ struct RawFnTypeNamesInfo
     // The address of the wrapper function
     //
     void* m_wrapperFnAddress;
+    // Whether this function is a copy constructor or assignment operator
+    //
+    bool m_isCopyCtorOrAssignmentOp;
 };
 
 // get_raw_fn_typenames_info<t>::get()
@@ -966,14 +971,16 @@ struct get_raw_fn_typenames_info
                                   fnInfo::is_noexcept(),
                                   wrapper::isWrapperFnRequired,
                                   wrapper::isSretTransformed,
-                                  reinterpret_cast<void*>(wrapperFn));
+                                  reinterpret_cast<void*>(wrapperFn),
+                                  false /*isCopyCtorOrAssignmentOp*/);
     }
 
     static RawFnTypeNamesInfo get_constructor(size_t numArgs,
                                               const char* class_typename,
                                               const char* const* orig_ret_and_param_typenames,
                                               const std::pair<const char*, bool>* api_ret_and_param_typenames,
-                                              bool isNoExcept)
+                                              bool isNoExcept,
+                                              bool isCopyConstructor)
     {
         if (!(std::is_pointer<decltype(t)>::value &&
               std::is_function<typename std::remove_pointer<decltype(t)>::type>::value))
@@ -1004,7 +1011,8 @@ struct get_raw_fn_typenames_info
                                   isNoExcept /*is_noexcept*/,
                                   false /*is_wrapper_fn_required*/,
                                   false /*is_sret_transform_required*/,
-                                  nullptr /*wrapperFn*/);
+                                  nullptr /*wrapperFn*/,
+                                  isCopyConstructor);
     }
 
     static RawFnTypeNamesInfo get_destructor(const char* class_typename)
@@ -1021,7 +1029,8 @@ struct get_raw_fn_typenames_info
                                   fnInfo::is_noexcept(),
                                   false /*is_wrapper_fn_required*/,
                                   false /*is_sret_transform_required*/,
-                                  nullptr /*wrapperFn*/);
+                                  nullptr /*wrapperFn*/,
+                                  false /*isCopyCtorOrAssignmentOp*/);
     }
 };
 
@@ -1097,6 +1106,18 @@ void RegisterConstructor()
     // The generated header currently hardcodes the definition of 'wrapper_t'.
     //
     using wrapper_t = ReflectionHelper::constructor_wrapper_helper<C, Args...>;
+    // Check whether this constructor qualifies as copy constructor
+    // A copy constructor is a constructor that takes exactly one parameter of type 'C&' or 'const C&'
+    //
+    bool qualifyForCopyCtor = false;
+    if constexpr(sizeof...(Args) == 1)
+    {
+        using ArgType = typename std::tuple_element<0, std::tuple<Args...>>::type;
+        if constexpr(std::is_same<ArgType, const C&>::value || std::is_same<ArgType, C&>::value)
+        {
+            qualifyForCopyCtor = true;
+        }
+    }
     ReflectionHelper::RawFnTypeNamesInfo info =
             ReflectionHelper::get_raw_fn_typenames_info<wrapper_t::wrapperFn>::get_constructor(
                     sizeof...(Args) + 1 /*numArgs*/,
@@ -1105,7 +1126,8 @@ void RegisterConstructor()
                             void /*ret*/, C* /*firstParam*/, Args...>::get_original_ret_and_param_typenames(),
                     ReflectionHelper::function_typenames_helper_internal<
                             void /*ret*/, C* /*firstParam*/, Args...>::get_api_ret_and_param_typenames(),
-                    wrapper_t::isWrapperFnNoExcept);
+                    wrapper_t::isWrapperFnNoExcept,
+                    qualifyForCopyCtor);
     __pochivm_report_info__(&info);
     RegisterDestructor<C>();
 }
@@ -1118,6 +1140,11 @@ void RegisterExceptionObjectType()
     static_assert(!std::is_rvalue_reference<C>::value, "An exception object must not be a rvalue-reference type");
     static_assert(!std::is_const<C>::value, "top-level const-qualifier in an exception object has no effect. Please remove it.");
     static_assert(!std::is_volatile<C>::value, "volatile-qualifier is not supported");
+
+    // We cannot use an indirection (e.g. a C++ function wrapper) to get the address of the
+    // typeinfo object, since LLVM landingpad instruction must be the first instruction in the block.
+    // So we have to add a special ReflectionHelper::FunctionType and get the symbol name of the object directly.
+    //
     const std::type_info& t = typeid(C);
     void* addr = const_cast<void*>(static_cast<const void*>(&t));
     ReflectionHelper::RawFnTypeNamesInfo info(
@@ -1125,7 +1152,8 @@ void RegisterExceptionObjectType()
                 0 /*numArgs*/, nullptr /*apiRetAndParams*/, nullptr /*originalRetAndParams*/,
                 ReflectionHelper::class_name_helper_internal<C>::get_class_typename() /*className*/,
                 nullptr /*functionName*/, addr /*functionAddress*/, false /*isConst*/, false /*isNoExcept*/,
-                false /*is_wrapper_fn_required*/, false /*is_sret_transform_required*/, nullptr /*wrapperFn*/);
+                false /*is_wrapper_fn_required*/, false /*is_sret_transform_required*/, nullptr /*wrapperFn*/,
+                false /*isCopyCtorOrAssignmentOp*/);
     __pochivm_report_info__(&info);
     if constexpr(!std::is_pointer<C>::value && !ReflectionHelper::is_primitive_type<C>::value)
     {

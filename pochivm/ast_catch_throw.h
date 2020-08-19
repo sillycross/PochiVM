@@ -22,8 +22,9 @@ public:
         TestAssert(!(m_isCtor && m_isLValueObject));
         if (m_isCtor)
         {
+            TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
             TestAssert(m_operand->GetTypeId() == TypeId::Get<void>());
-            // If the operand is a CallExpr for constructor, the TypeId of the
+            // The operand is a CallExpr for constructor, the TypeId of the
             // exception is the first parameter (which is where the value is constructed)'s type without pointer
             //
             AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
@@ -38,9 +39,20 @@ public:
             // We have to distinguish this case with the 'isCtor' case because otherwise,
             // we would have to call copy constructor twice (instead of once as one would expect in C++) in interp mode
             //
-            TestAssert(m_operand->GetTypeId().IsPointerType());
-            m_exceptionTypeId = m_operand->GetTypeId().RemovePointer();
+            // The operand is the CallExpr for the copy constructor.
+            //
+            TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
+            TestAssert(m_operand->GetTypeId() == TypeId::Get<void>());
+            AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
+            // A copy constructor should take exactly two parameters (the address into which copied
+            // object is constructed, and the address of original object), which has same type.
+            //
+            TestAssert(callExpr->GetParams().size() == 2);
+            TestAssert(callExpr->GetParams()[0]->GetTypeId() == callExpr->GetParams()[1]->GetTypeId());
+            TestAssert(callExpr->GetParams()[0]->GetTypeId().IsPointerType());
+            m_exceptionTypeId = callExpr->GetParams()[0]->GetTypeId().RemovePointer();
             TestAssert(m_exceptionTypeId.IsCppClassType());
+            TestAssert(IsCppClassCopyConstructible(m_exceptionTypeId));
         }
         else
         {
@@ -73,7 +85,10 @@ public:
         if (m_isLValueObject)
         {
             T* addr;
-            m_operand->Interp(&addr /*out*/);
+            // The address of the LValue object is the second parameter to the copy-constructor callExpr
+            //
+            AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
+            callExpr->GetParams()[1]->Interp(&addr /*out*/);
             throw *addr;
         }
         else

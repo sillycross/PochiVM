@@ -117,6 +117,20 @@ inline const char* WARN_UNUSED GetStdTypeInfoObjectSymbolName(TypeId typeId)
     return reinterpret_cast<const char*>(r);
 }
 
+inline bool WARN_UNUSED IsCppClassCopyConstructible(TypeId typeId)
+{
+#define F(...) AstTypeHelper::is_copy_ctor_registered<__VA_ARGS__>::value,
+    static constexpr bool x_isCopyCtorRegistered[AstTypeHelper::x_num_cpp_class_types + 1] = {
+        FOR_EACH_CPP_CLASS_TYPE
+        false /*dummy value for bad CPP type */
+    };
+#undef F
+    TestAssert(typeId.IsCppClassType());
+    uint64_t ord = typeId.GetCppClassTypeOrdinal();
+    assert(ord < AstTypeHelper::x_num_cpp_class_types);
+    return x_isCopyCtorRegistered[ord];
+}
+
 // Return true if there is no need to setup a landing pad for potentially-throwing function.
 // This is possible if we are not in a try-catch block and there is no destructor to call.
 //

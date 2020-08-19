@@ -43,6 +43,57 @@ TEST(SanityCatchThrow, ThrowSanity_1)
             ReleaseAssert(std::string(w.what()) == "std::bad_alloc");
         }
     }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        try {
+            jitFn();
+            ReleaseAssert(false);
+        } catch(std::bad_alloc& w) {
+            ReleaseAssert(std::string(w.what()) == "std::bad_alloc");
+        }
+
+        try {
+            jitFn();
+            ReleaseAssert(false);
+        } catch(std::exception& w) {
+            ReleaseAssert(std::string(w.what()) == "std::bad_alloc");
+        }
+    }
 }
 
 TEST(SanityCatchThrow, ThrowSanity_2)
@@ -149,6 +200,52 @@ TEST(SanityCatchThrow, ThrowSanity_3)
         TestNonTrivialCopyConstructor::counter = 0;
         try {
             interpFn(123);
+            ReleaseAssert(false);
+        } catch(TestNonTrivialCopyConstructor& v) {
+            ReleaseAssert(v.value == 123);
+            ReleaseAssert(TestNonTrivialCopyConstructor::counter == 1);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        TestNonTrivialCopyConstructor::counter = 0;
+        try {
+            jitFn(123);
             ReleaseAssert(false);
         } catch(TestNonTrivialCopyConstructor& v) {
             ReleaseAssert(v.value == 123);

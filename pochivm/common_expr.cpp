@@ -14,11 +14,24 @@ Value* WARN_UNUSED AstDereferenceExpr::EmitIRImpl()
     return AstTypeHelper::create_load_helper(GetTypeId(), op);
 }
 
+void AstLiteralExpr::HijackPointerValueLLVM(Value* value)
+{
+    TestAssert(GetTypeId().IsPointerType());
+    TestAssert(value != nullptr && AstTypeHelper::llvm_value_has_type(GetTypeId(), value));
+    TestAssert(!m_useHijackedLLVMValue);
+    m_useHijackedLLVMValue = true;
+    m_hijackedLLVMValue = value;
+}
+
 Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
 {
     Value* inst = nullptr;
     TypeId typeId = GetTypeId();
-    if (typeId.IsPrimitiveIntType())
+    if (m_useHijackedLLVMValue)
+    {
+        inst = m_hijackedLLVMValue;
+    }
+    else if (typeId.IsPrimitiveIntType())
     {
         // Integer type cases: bool needs to be handled specially
         //

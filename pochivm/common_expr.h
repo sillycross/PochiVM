@@ -56,6 +56,8 @@ class AstLiteralExpr : public AstNodeBase
 public:
     AstLiteralExpr(TypeId typeId, void* valuePtr)
         : AstNodeBase(typeId)
+        , m_useHijackedLLVMValue(false)
+        , m_hijackedLLVMValue(nullptr)
     {
         TestAssert(typeId.IsPrimitiveType() || typeId.IsPointerType());
         InitLiteralValue(typeId, valuePtr);
@@ -88,6 +90,10 @@ public:
         m_as_voidstar = value;
     }
 
+    // A hacky method used only by 'throw' statement's LLVM codegen
+    //
+    void HijackPointerValueLLVM(llvm::Value* value);
+
 private:
     // Stores the literal value with a union of all possible primitive types
     //
@@ -99,6 +105,9 @@ private:
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
     };
+
+    bool m_useHijackedLLVMValue;
+    llvm::Value* m_hijackedLLVMValue;
 
     void InitLiteralValue(TypeId typeId, void* valuePtr)
     {
