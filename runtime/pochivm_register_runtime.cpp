@@ -115,6 +115,8 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&TestCornerCases::VoidStarParamTest2>();
 
     RegisterStaticMemberFn<&TestNonTrivialConstructor::Create>();
+    RegisterStaticMemberFn<&TestNonTrivialConstructor::Create2>();
+    RegisterStaticMemberFn<&TestNonTrivialConstructor::Create3>();
     RegisterMemberFn<&TestNonTrivialConstructor::GetValue>();
 
     RegisterConstructor<TestNonTrivialCopyConstructor, int>();
@@ -137,6 +139,8 @@ static void RegisterRuntimeLibrary()
     RegisterConstructor<TestDestructor1, int, int*>();
 
     RegisterConstructor<TestDestructor2, CtorDtorOrderRecorder*, int>();
+    RegisterStaticMemberFn<&TestDestructor2::Create>();
+
     RegisterMemberFn<&CtorDtorOrderRecorder::Push>();
     RegisterMemberFn<&CtorDtorOrderRecorder::PushMaybeThrow>();
 
@@ -157,6 +161,7 @@ static void RegisterRuntimeLibrary()
     RegisterExceptionObjectType<std::vector<int>>();
     RegisterExceptionObjectType<TestNonTrivialCopyConstructor>();
     RegisterExceptionObjectType<TestNonTrivialConstructor>();
+    RegisterExceptionObjectType<TestDestructor2>();
 
     RegisterConstructor<std::bad_alloc>();
 }

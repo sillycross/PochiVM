@@ -107,8 +107,8 @@ static BasicBlock* WARN_UNUSED EmitEHCleanupLogic()
         int allInLevel = static_cast<int>(thread_llvmContext->m_scopeStack[0].second.size());
         for (int i = allInLevel - 1; i >= 0; i--)
         {
-            AstVariable* var = thread_llvmContext->m_scopeStack[0].second[i];
-            var->EmitDestructVariableIR();
+            DestructorIREmitter* e = thread_llvmContext->m_scopeStack[0].second[i];
+            e->EmitDestructorIR();
         }
         thread_llvmContext->m_builder->CreateBr(thread_llvmContext->m_currentEHCatchBlock);
         thread_llvmContext->m_exceptionDtorTree.push_back(std::make_pair(allInLevel, bb));
@@ -128,8 +128,8 @@ static BasicBlock* WARN_UNUSED EmitEHCleanupLogic()
             thread_llvmContext->m_builder->SetInsertPoint(bb);
             for (int i = allInCurLevel - 1; i >= numInCurLevel; i--)
             {
-                AstVariable* var = thread_llvmContext->m_scopeStack[n - 1].second[i];
-                var->EmitDestructVariableIR();
+                DestructorIREmitter* e = thread_llvmContext->m_scopeStack[n - 1].second[i];
+                e->EmitDestructorIR();
             }
             thread_llvmContext->m_builder->CreateBr(thread_llvmContext->m_exceptionDtorTree[n - 1].second);
             thread_llvmContext->m_exceptionDtorTree[n - 1] = std::make_pair(allInCurLevel, bb);
@@ -143,8 +143,8 @@ static BasicBlock* WARN_UNUSED EmitEHCleanupLogic()
         int allInLevel = static_cast<int>(thread_llvmContext->m_scopeStack[n].second.size());
         for (int i = allInLevel - 1; i >= 0; i--)
         {
-            AstVariable* var = thread_llvmContext->m_scopeStack[n].second[i];
-            var->EmitDestructVariableIR();
+            DestructorIREmitter* e = thread_llvmContext->m_scopeStack[n].second[i];
+            e->EmitDestructorIR();
         }
         thread_llvmContext->m_builder->CreateBr(thread_llvmContext->m_exceptionDtorTree[n - 1].second);
         thread_llvmContext->m_exceptionDtorTree.push_back(std::make_pair(allInLevel, bb));

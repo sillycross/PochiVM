@@ -1,6 +1,7 @@
 #include "function_proto.h"
 #include "destructor_helper.h"
 #include "exception_helper.h"
+#include "ast_catch_throw.h"
 #include "pochivm.hpp"
 
 #include "llvm/Support/MemoryBuffer.h"
@@ -224,23 +225,127 @@ void AstModule::EmitIR()
     // link in the bitcodes containing the implementation and necessary types
     //
     {
+        auto getIrModuleFromBitcodeData = [&](const BitcodeData* bitcode) -> std::unique_ptr<Module>
+        {
+            TestAssert(bitcode != nullptr);
+            SMDiagnostic llvmErr;
+            MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bitcode->m_bitcode), bitcode->m_length),
+                               StringRef(bitcode->m_symbolName));
+            std::unique_ptr<Module> bitcodeModule = parseIR(mb, llvmErr, *m_llvmContext);
+            // TODO: handle error
+            //
+            ReleaseAssert(bitcodeModule != nullptr);
+            return bitcodeModule;
+        };
+        // Import necessary function prototypes for exception handler
+        //
+        bool isCXXExceptionHandlerABISymbolsImported = false;
+        auto importSymbolsForExceptionHandler = [&]()
+        {
+            if (!isCXXExceptionHandlerABISymbolsImported)
+            {
+                // Import the following symbols:
+                //     declare dso_local i8* @__cxa_allocate_exception(i64)
+                //     declare dso_local void @__cxa_free_exception(i8*)
+                //     declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+                //
+                if (m_llvmModule->getFunction("__cxa_allocate_exception") == nullptr)
+                {
+                    constexpr size_t numParams = 1;
+                    Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<void*>());
+                    Type* paramTypes[numParams] = { AstTypeHelper::llvm_type_of(TypeId::Get<uint64_t>()) };
+                    FunctionType* funcType = FunctionType::get(returnType,
+                                                               ArrayRef<Type*>(paramTypes, paramTypes + numParams),
+                                                               false /*isVariadic*/);
+                    Function* func = Function::Create(
+                                funcType, Function::ExternalLinkage, "__cxa_allocate_exception", thread_llvmContext->m_module);
+                    func->setDSOLocal(true);
+                }
+                if (m_llvmModule->getFunction("__cxa_free_exception") == nullptr)
+                {
+                    constexpr size_t numParams = 1;
+                    Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<void>());
+                    Type* paramTypes[numParams] = { AstTypeHelper::llvm_type_of(TypeId::Get<void*>()) };
+                    FunctionType* funcType = FunctionType::get(returnType,
+                                                               ArrayRef<Type*>(paramTypes, paramTypes + numParams),
+                                                               false /*isVariadic*/);
+                    Function* func = Function::Create(
+                                funcType, Function::ExternalLinkage, "__cxa_free_exception", thread_llvmContext->m_module);
+                    func->setDSOLocal(true);
+                }
+                if (m_llvmModule->getFunction("__cxa_throw") == nullptr)
+                {
+                    constexpr size_t numParams = 3;
+                    Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<void>());
+                    Type* paramTypes[numParams] = {
+                        AstTypeHelper::llvm_type_of(TypeId::Get<void*>()),
+                        AstTypeHelper::llvm_type_of(TypeId::Get<void*>()),
+                        AstTypeHelper::llvm_type_of(TypeId::Get<void*>())
+                    };
+                    FunctionType* funcType = FunctionType::get(returnType,
+                                                               ArrayRef<Type*>(paramTypes, paramTypes + numParams),
+                                                               false /*isVariadic*/);
+                    Function* func = Function::Create(
+                                funcType, Function::ExternalLinkage, "__cxa_throw", thread_llvmContext->m_module);
+                    func->setDSOLocal(true);
+                }
+                isCXXExceptionHandlerABISymbolsImported = true;
+            }
+        };
+        // Import the std::type_info symbol name for C++ type corresponding to typeId (needed to throw exception)
+        // The C++ type must have been registered with RegisterExceptionObjectType in pochivm_register_runtime.cpp
+        //
+        std::unique_ptr<Module> stdTypeInfoSymbolsModule(nullptr);
+        auto importStdTypeInfoSymbol = [&](TypeId typeId)
+        {
+            TestAssert(IsTypeRegisteredForThrownFromGeneratedCode(typeId));
+            const char* symbolName = GetStdTypeInfoObjectSymbolName(typeId);
+            TestAssert(symbolName != nullptr);
+            {
+                GlobalVariable* tmp = m_llvmModule->getGlobalVariable(symbolName);
+                if (tmp != nullptr)
+                {
+                    TestAssert(tmp->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage);
+                    TestAssert(!tmp->hasInitializer() && tmp->isConstant() && tmp->isDSOLocal());
+                    return;
+                }
+            }
+            TestAssert(m_llvmModule->getGlobalVariable(symbolName, true /*allowInternal*/) == nullptr);
+            if (stdTypeInfoSymbolsModule == nullptr)
+            {
+                const BitcodeData* bitcode = &__pochivm_internal_bc_typeinfo_objects;
+                std::unique_ptr<Module> bitcodeModule = getIrModuleFromBitcodeData(bitcode);
+                stdTypeInfoSymbolsModule.swap(bitcodeModule);
+            }
+            // Insert the global variable into m_llvmModule.
+            // It should be a declaration of constant, which has external linkage and dso_local.
+            // We can directly use gv->getType() since stdTypeInfoModule and m_llvmModule share the same LLVMContext.
+            //
+            GlobalVariable* gv = stdTypeInfoSymbolsModule->getGlobalVariable(symbolName);
+            TestAssert(gv != nullptr);
+            Type* gvType = gv->getType()->getPointerElementType();
+            Constant* newGvC = m_llvmModule->getOrInsertGlobal(symbolName, gvType);
+            TestAssert(isa<GlobalVariable>(newGvC));
+            GlobalVariable* newGv = dyn_cast<GlobalVariable>(newGvC);
+            newGv->setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
+            newGv->setInitializer(nullptr);
+            newGv->setDSOLocal(true);
+            newGv->setConstant(true);
+        };
+        // Link in a CPP function for call from generated code
+        //
         std::vector<bool> alreadyLinkedin;
         alreadyLinkedin.resize(AstTypeHelper::x_num_cpp_functions, false /*value*/);
         Linker linker(*m_llvmModule);
         auto linkinFunctionByMetadata = [&](const CppFunctionMetadata* metadata)
         {
+            TestAssert(metadata != nullptr);
             assert(metadata->m_functionOrdinal < alreadyLinkedin.size());
             if (!alreadyLinkedin[metadata->m_functionOrdinal])
             {
                 alreadyLinkedin[metadata->m_functionOrdinal] = true;
                 const BitcodeData* bitcode = metadata->m_bitcodeData;
-                SMDiagnostic llvmErr;
-                MemoryBufferRef mb(StringRef(reinterpret_cast<const char*>(bitcode->m_bitcode), bitcode->m_length),
-                                   StringRef(bitcode->m_symbolName));
-                std::unique_ptr<Module> bitcodeModule = parseIR(mb, llvmErr, *m_llvmContext);
-                // TODO: handle error
-                //
-                ReleaseAssert(bitcodeModule != nullptr);
+                std::unique_ptr<Module> bitcodeModule = getIrModuleFromBitcodeData(bitcode);
                 // linkInModule returns true on error
                 // TODO: handle error
                 //
@@ -253,11 +358,14 @@ void AstModule::EmitIR()
                 func->setLinkage(GlobalValue::LinkageTypes::AvailableExternallyLinkage);
             }
         };
+        // Link in all bitcode stubs needed by a generated function
+        //
         auto linkinBitcodeFn = [&](AstNodeBase* cur,
                                    AstNodeBase* /*parent*/,
                                    FunctionRef<void(void)> Recurse)
         {
-            if (cur->GetAstNodeType() == AstNodeType::AstCallExpr)
+            AstNodeType nodeType = cur->GetAstNodeType();
+            if (nodeType == AstNodeType::AstCallExpr)
             {
                 AstCallExpr* callExpr = assert_cast<AstCallExpr*>(cur);
                 if (callExpr->IsCppFunction())
@@ -266,13 +374,29 @@ void AstModule::EmitIR()
                     linkinFunctionByMetadata(metadata);
                 }
             }
-            else if (cur->GetAstNodeType() == AstNodeType::AstDeclareVariable)
+            else if (nodeType == AstNodeType::AstDeclareVariable)
             {
                 AstDeclareVariable* declareVar = assert_cast<AstDeclareVariable*>(cur);
                 AstVariable* var = declareVar->m_variable;
                 if (var->GetTypeId().RemovePointer().IsCppClassType())
                 {
                     const CppFunctionMetadata* metadata = GetDestructorMetadata(var->GetTypeId().RemovePointer());
+                    linkinFunctionByMetadata(metadata);
+                }
+            }
+            else if (nodeType == AstNodeType::AstThrowStmt)
+            {
+                // For a 'throw' statement, we need the following information:
+                // (1) CXXABI Exception Handler function prototypes
+                // (2) The 'std::type_info' object symbol for the exception type to be thrown
+                // (3) The destructor, if the exception is a CPP class
+                //
+                AstThrowStmt* throwStmt = assert_cast<AstThrowStmt*>(cur);
+                importSymbolsForExceptionHandler();
+                importStdTypeInfoSymbol(throwStmt->m_exceptionTypeId);
+                if (throwStmt->m_exceptionTypeId.IsCppClassType())
+                {
+                    const CppFunctionMetadata* metadata = GetDestructorMetadata(throwStmt->m_exceptionTypeId);
                     linkinFunctionByMetadata(metadata);
                 }
             }

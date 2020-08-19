@@ -13,7 +13,14 @@ namespace PochiVM
 
 class AstFunction;
 
-class AstVariable : public AstNodeBase
+class DestructorIREmitter
+{
+public:
+    virtual ~DestructorIREmitter() {}
+    virtual void EmitDestructorIR() = 0;
+};
+
+class AstVariable : public AstNodeBase, public DestructorIREmitter
 {
 public:
     AstVariable(TypeId typeId, AstFunction* owner, uint32_t varnameSuffix, const char* name = "var")
@@ -38,7 +45,7 @@ public:
     // Emit the LLVM IR code that calls the destructor for this variable
     // May only be called if the variable is a CPP class type
     //
-    void EmitDestructVariableIR();
+    virtual void EmitDestructorIR() override;
 
     template<typename T>
     void InterpImpl(T* out)

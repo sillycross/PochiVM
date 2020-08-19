@@ -23,6 +23,7 @@
 namespace PochiVM
 {
 
+class DestructorIREmitter;
 class AstNodeBase;
 class AstVariable;
 class AstFunction;
@@ -88,6 +89,17 @@ struct LLVMCodegenContext
         m_module = nullptr;
     }
 
+    void PopVariableScope(AstNodeBase* TESTBUILD_ONLY(expectedScope))
+    {
+        TestAssert(m_scopeStack.size() > 0 && m_scopeStack.back().first == expectedScope);
+        TestAssert(m_exceptionDtorTree.size() <= m_scopeStack.size());
+        m_scopeStack.pop_back();
+        if (m_exceptionDtorTree.size() > m_scopeStack.size())
+        {
+            m_exceptionDtorTree.pop_back();
+        }
+    }
+
     llvm::LLVMContext* m_llvmContext;
     llvm::IRBuilder<>* m_builder;
     llvm::Module* m_module;
@@ -128,7 +140,7 @@ struct LLVMCodegenContext
 
     // Current stack of variable scopes and declared variables in each scope
     //
-    std::vector<std::pair<AstNodeBase* /*scope*/, std::vector<AstVariable*>>> m_scopeStack;
+    std::vector<std::pair<AstNodeBase* /*scope*/, std::vector<DestructorIREmitter*>>> m_scopeStack;
     // Current "stack" of destructor blocks for handling exceptions
     // It is actually a tree, with each node branching to its parent in the end,
     // but it's sufficient to only keep track of the current "dtor position" in each scope stack.

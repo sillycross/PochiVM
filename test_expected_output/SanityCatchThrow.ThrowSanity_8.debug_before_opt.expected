@@ -1,0 +1,81 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+
+@_ZTI15TestDestructor2 = external dso_local constant { i8*, i8* }
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+declare dso_local i8* @__cxa_allocate_exception(i64)
+
+declare dso_local void @__cxa_free_exception(i8*)
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #0 align 2 {
+  %2 = alloca %class.TestDestructor2*, align 8
+  store %class.TestDestructor2* %0, %class.TestDestructor2** %2, align 8
+  %3 = load %class.TestDestructor2*, %class.TestDestructor2** %2, align 8
+  call void @_ZN15TestDestructor2D2Ev(%class.TestDestructor2* %3) #1
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+declare dso_local void @_ZN15TestDestructor2D2Ev(%class.TestDestructor2*) unnamed_addr #0 align 2
+
+; Function Attrs: noinline nounwind optnone uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #0 align 2 {
+  %4 = alloca %class.TestDestructor2*, align 8
+  %5 = alloca %class.CtorDtorOrderRecorder*, align 8
+  %6 = alloca i32, align 4
+  store %class.TestDestructor2* %0, %class.TestDestructor2** %4, align 8
+  store %class.CtorDtorOrderRecorder* %1, %class.CtorDtorOrderRecorder** %5, align 8
+  store i32 %2, i32* %6, align 4
+  %7 = load %class.TestDestructor2*, %class.TestDestructor2** %4, align 8
+  %8 = bitcast %class.TestDestructor2* %7 to i8*
+  %9 = bitcast i8* %8 to %class.TestDestructor2*
+  %10 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %5, align 8
+  %11 = load i32, i32* %6, align 4
+  call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE12call_fn_implIS2_JS4_iEEET_DpT0_(%class.TestDestructor2* sret %9, %class.CtorDtorOrderRecorder* %10, i32 %11) #1
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE12call_fn_implIS2_JS4_iEEET_DpT0_(%class.TestDestructor2* noalias sret, %class.CtorDtorOrderRecorder*, i32) #0 align 2
+
+define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca %class.CtorDtorOrderRecorder*
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store %class.CtorDtorOrderRecorder* %_param_1, %class.CtorDtorOrderRecorder** %param_1
+  %0 = call i8* @__cxa_allocate_exception(i64 16)
+  %1 = bitcast i8* %0 to %class.TestDestructor2*
+  %2 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_1
+  %3 = load i32, i32* %param_0
+  call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %1, %class.CtorDtorOrderRecorder* %2, i32 %3)
+  call void @__cxa_throw(i8* %0, i8* bitcast ({ i8*, i8* }* @_ZTI15TestDestructor2 to i8*), i8* bitcast (void (%class.TestDestructor2*)* @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_ to i8*))
+  unreachable
+}
+
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind }
+
+!llvm.ident = !{!0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}

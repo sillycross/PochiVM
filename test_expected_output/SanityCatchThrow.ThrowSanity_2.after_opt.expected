@@ -1,0 +1,19 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+@_ZTIi = external dso_local constant i8*
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+
+define void @testfn(i32 %_param_0) local_unnamed_addr personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %0 = tail call i8* @__cxa_allocate_exception(i64 4)
+  %1 = bitcast i8* %0 to i32*
+  store i32 %_param_0, i32* %1, align 4
+  tail call void @__cxa_throw(i8* %0, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+  unreachable
+}

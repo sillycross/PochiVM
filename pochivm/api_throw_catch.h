@@ -7,14 +7,12 @@
 namespace PochiVM
 {
 
-// Throw out an exception. This may be a fundamental type, or a CPP type.
-// For CPP types, it must be a value returned by a function call (since it is the only way
-// to get a Value<T> where T is CPP type).
+// Throw out an exception from a RValue expression. This may be a fundamental type, or a CPP type.
 //
 // In interp mode, the return value is always copy-initialized to the exception object,
 // so copy-elision *never* happens. However in LLVM mode, copy-elision *always* happens:
-// we always directly construct the exception object in-place (this is possible since it must be
-// returned by a C++ function call).
+// we always directly construct the exception object in-place (this is possible since the only way
+// to get a Value<T> where T is CPP type is from the return value of a C++ function call).
 //
 // Although the behavior of whether copy-elision happens is different in interp mode and LLVM mode,
 // both behaviors are explicitly allowed by C++ standard, since by standard C++17 guaranteed

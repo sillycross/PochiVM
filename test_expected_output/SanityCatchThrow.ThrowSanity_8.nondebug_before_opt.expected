@@ -1,0 +1,200 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+
+@_ZTI15TestDestructor2 = external dso_local constant { i8*, i8* }
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+declare dso_local i8* @__cxa_allocate_exception(i64)
+
+declare dso_local void @__cxa_free_exception(i8*)
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %2 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 0
+  %3 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %2, align 8, !tbaa !4
+  %4 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
+  %5 = load i32, i32* %4, align 8, !tbaa !10
+  %6 = sub nsw i32 0, %5
+  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1
+  %8 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 1
+  %9 = load i32*, i32** %8, align 8, !tbaa !11
+  %10 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 2
+  %11 = load i32*, i32** %10, align 8, !tbaa !14
+  %12 = icmp eq i32* %9, %11
+  %13 = ptrtoint i32* %9 to i64
+  br i1 %12, label %16, label %14
+
+14:                                               ; preds = %1
+  store i32 %6, i32* %9, align 4, !tbaa !15
+  %15 = getelementptr inbounds i32, i32* %9, i64 1
+  br label %69
+
+16:                                               ; preds = %1
+  %17 = bitcast i32** %8 to i64*
+  %18 = bitcast %"class.std::vector"* %7 to i64*
+  %19 = load i64, i64* %18, align 8, !tbaa !16
+  %20 = sub i64 %13, %19
+  %21 = ashr exact i64 %20, 2
+  %22 = icmp eq i64 %20, 0
+  %23 = select i1 %22, i64 1, i64 %21
+  %24 = add nsw i64 %23, %21
+  %25 = icmp ult i64 %24, %21
+  %26 = icmp ugt i64 %24, 4611686018427387903
+  %27 = or i1 %25, %26
+  %28 = select i1 %27, i64 4611686018427387903, i64 %24
+  %29 = getelementptr %"class.std::vector", %"class.std::vector"* %7, i64 0, i32 0, i32 0, i32 0
+  %30 = icmp eq i64 %28, 0
+  %31 = inttoptr i64 %19 to i32*
+  br i1 %30, label %38, label %32
+
+32:                                               ; preds = %16
+  %33 = shl nuw i64 %28, 2
+  %34 = invoke i8* @_Znwm(i64 %33)
+          to label %35 unwind label %66
+
+35:                                               ; preds = %32
+  %36 = bitcast i8* %34 to i32*
+  %37 = load i32*, i32** %29, align 8, !tbaa !17
+  br label %38
+
+38:                                               ; preds = %35, %16
+  %39 = phi i32* [ %37, %35 ], [ %31, %16 ]
+  %40 = phi i32* [ %36, %35 ], [ null, %16 ]
+  %41 = getelementptr inbounds i32, i32* %40, i64 %21
+  store i32 %6, i32* %41, align 4, !tbaa !15
+  %42 = ptrtoint i32* %39 to i64
+  %43 = sub i64 %13, %42
+  %44 = ashr exact i64 %43, 2
+  %45 = icmp eq i64 %43, 0
+  br i1 %45, label %49, label %46
+
+46:                                               ; preds = %38
+  %47 = bitcast i32* %40 to i8*
+  %48 = bitcast i32* %39 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #5
+  br label %49
+
+49:                                               ; preds = %46, %38
+  %50 = getelementptr inbounds i32, i32* %40, i64 %44
+  %51 = getelementptr inbounds i32, i32* %50, i64 1
+  %52 = load i64, i64* %17, align 8, !tbaa !11
+  %53 = sub i64 %52, %13
+  %54 = ashr exact i64 %53, 2
+  %55 = icmp eq i64 %53, 0
+  br i1 %55, label %59, label %56
+
+56:                                               ; preds = %49
+  %57 = bitcast i32* %51 to i8*
+  %58 = bitcast i32* %9 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #5
+  br label %59
+
+59:                                               ; preds = %56, %49
+  %60 = getelementptr inbounds i32, i32* %51, i64 %54
+  %61 = icmp eq i32* %39, null
+  br i1 %61, label %64, label %62
+
+62:                                               ; preds = %59
+  %63 = bitcast i32* %39 to i8*
+  tail call void @_ZdlPv(i8* nonnull %63) #5
+  br label %64
+
+64:                                               ; preds = %62, %59
+  store i32* %40, i32** %29, align 8, !tbaa !17
+  store i32* %60, i32** %8, align 8, !tbaa !11
+  %65 = getelementptr inbounds i32, i32* %40, i64 %28
+  br label %69
+
+66:                                               ; preds = %32
+  %67 = landingpad { i8*, i32 }
+          catch i8* null
+  %68 = extractvalue { i8*, i32 } %67, 0
+  tail call void @__pochivm_clang_call_terminate(i8* %68) #6
+  unreachable
+
+69:                                               ; preds = %64, %14
+  %70 = phi i32** [ %10, %64 ], [ %8, %14 ]
+  %71 = phi i32* [ %65, %64 ], [ %15, %14 ]
+  store i32* %71, i32** %70, align 8, !tbaa !16
+  ret void
+}
+
+; Function Attrs: nobuiltin nofree
+declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1 immarg) #2
+
+; Function Attrs: nobuiltin nounwind
+declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #3
+
+; Function Attrs: noinline noreturn nounwind uwtable
+declare dso_local void @__pochivm_clang_call_terminate(i8*) #4
+
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #0 align 2 {
+  tail call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* sret %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #5
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* noalias sret, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #0 align 2
+
+define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca %class.CtorDtorOrderRecorder*
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store %class.CtorDtorOrderRecorder* %_param_1, %class.CtorDtorOrderRecorder** %param_1
+  %0 = call i8* @__cxa_allocate_exception(i64 16)
+  %1 = bitcast i8* %0 to %class.TestDestructor2*
+  %2 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_1
+  %3 = load i32, i32* %param_0
+  call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %1, %class.CtorDtorOrderRecorder* %2, i32 %3)
+  call void @__cxa_throw(i8* %0, i8* bitcast ({ i8*, i8* }* @_ZTI15TestDestructor2 to i8*), i8* bitcast (void (%class.TestDestructor2*)* @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_ to i8*))
+  unreachable
+}
+
+attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { argmemonly nounwind willreturn }
+attributes #3 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { nounwind }
+attributes #6 = { noreturn nounwind }
+
+!llvm.ident = !{!0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !6, i64 0}
+!5 = !{!"_ZTS15TestDestructor2", !6, i64 0, !9, i64 8}
+!6 = !{!"any pointer", !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C++ TBAA"}
+!9 = !{!"int", !7, i64 0}
+!10 = !{!5, !9, i64 8}
+!11 = !{!12, !6, i64 8}
+!12 = !{!"_ZTSSt12_Vector_baseIiSaIiEE", !13, i64 0}
+!13 = !{!"_ZTSNSt12_Vector_baseIiSaIiEE12_Vector_implE", !6, i64 0, !6, i64 8, !6, i64 16}
+!14 = !{!12, !6, i64 16}
+!15 = !{!9, !9, i64 0}
+!16 = !{!6, !6, i64 0}
+!17 = !{!12, !6, i64 0}

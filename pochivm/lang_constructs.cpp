@@ -28,7 +28,7 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
 {
     // Push a new layer of variable scope, and codegen the body
     //
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<AstVariable*>()));
+    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
     for (AstNodeBase* stmt : m_contents)
     {
         std::ignore = stmt->EmitIR();
@@ -43,11 +43,7 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
         EmitIRDestructAllVariablesUntilScope(this);
     }
     TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
-    thread_llvmContext->m_scopeStack.pop_back();
-    if (thread_llvmContext->m_exceptionDtorTree.size() > thread_llvmContext->m_scopeStack.size())
-    {
-        thread_llvmContext->m_exceptionDtorTree.pop_back();
-    }
+    thread_llvmContext->PopVariableScope(this);
     return nullptr;
 }
 
@@ -229,7 +225,7 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     BasicBlock* afterLoop = BasicBlock::Create(*thread_llvmContext->m_llvmContext,
                                                Twine("after_forloop").concat(Twine(labelSuffix)));
 
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<AstVariable*>()));
+    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
 
     thread_llvmContext->m_continueStmtTarget.push_back(std::make_pair(loopStep, m_body));
     Auto(thread_llvmContext->m_continueStmtTarget.pop_back());
@@ -297,11 +293,7 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     // Pop off the variable scope
     //
     TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
-    thread_llvmContext->m_scopeStack.pop_back();
-    if (thread_llvmContext->m_exceptionDtorTree.size() > thread_llvmContext->m_scopeStack.size())
-    {
-        thread_llvmContext->m_exceptionDtorTree.pop_back();
-    }
+    thread_llvmContext->PopVariableScope(this);
     return nullptr;
 }
 

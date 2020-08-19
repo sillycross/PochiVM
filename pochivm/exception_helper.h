@@ -89,12 +89,32 @@ struct is_expection_registered_for_thrown_helper
     static void* get() { return reinterpret_cast<void*>(1); }
 };
 
+template<typename T>
+struct get_typeinfo_object_symbol_name_helper
+{
+    static void* get()
+    {
+        // Remove const only for API compatibility (the select_impl_based_on_exception_type API
+        // only accepts void* return value), we will cast it back to const char* later.
+        //
+        return const_cast<char*>(AstTypeHelper::typeinfo_object_symbol_name<T>::value);
+    }
+};
+
 }   // namespace internal
 
 inline bool WARN_UNUSED IsTypeRegisteredForThrownFromGeneratedCode(TypeId typeId)
 {
-     void* r = select_impl_based_on_exception_type<internal::is_expection_registered_for_thrown_helper>::get(typeId);
-     return r != nullptr;
+    void* r = select_impl_based_on_exception_type<internal::is_expection_registered_for_thrown_helper>::get(typeId);
+    return r != nullptr;
+}
+
+inline const char* WARN_UNUSED GetStdTypeInfoObjectSymbolName(TypeId typeId)
+{
+    TestAssert(IsTypeRegisteredForThrownFromGeneratedCode(typeId));
+    void* r = select_impl_based_on_exception_type<internal::get_typeinfo_object_symbol_name_helper>::get(typeId);
+    TestAssert(r != nullptr);
+    return reinterpret_cast<const char*>(r);
 }
 
 // Return true if there is no need to setup a landing pad for potentially-throwing function.

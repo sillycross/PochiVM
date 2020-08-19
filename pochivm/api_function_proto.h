@@ -237,7 +237,8 @@ inline AstCallExpr* GetCallExprFromConstructor(AstNodeBase* addr, const Construc
     return new AstCallExpr(ctorParams.m_constructorMd, params);
 }
 
-}
+}   // namespace internal
+
 // Declare a variable, with constructor initialization
 //
 template<typename T>

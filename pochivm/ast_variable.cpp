@@ -31,7 +31,7 @@ Value* WARN_UNUSED AstVariable::EmitIRImpl()
     return m_llvmValue;
 }
 
-void AstVariable::EmitDestructVariableIR()
+void AstVariable::EmitDestructorIR()
 {
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     TestAssert(GetTypeId().RemovePointer().IsCppClassType());

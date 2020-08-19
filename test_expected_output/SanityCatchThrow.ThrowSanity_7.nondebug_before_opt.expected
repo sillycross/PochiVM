@@ -1,0 +1,387 @@
+; ModuleID = 'test'
+source_filename = "test"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+%class.TestDestructor2 = type <{ %class.CtorDtorOrderRecorder*, i32, [4 x i8] }>
+%class.CtorDtorOrderRecorder = type { i32, %"class.std::vector" }
+%"class.std::vector" = type { %"struct.std::_Vector_base" }
+%"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
+%"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
+%class.TestNonTrivialConstructor = type { i32 }
+%"class.std::bad_function_call" = type { %"class.std::exception" }
+%"class.std::exception" = type { i32 (...)** }
+
+@_ZTIi = external dso_local constant i8*
+@_ZTI25TestNonTrivialConstructor = external dso_local constant { i8*, i8* }
+@_ZTVSt17bad_function_call = external dso_local unnamed_addr constant { [5 x i8*] }, align 8
+@_ZTISt17bad_function_call = external dso_local constant i8*
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %2 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 0
+  %3 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %2, align 8, !tbaa !4
+  %4 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
+  %5 = load i32, i32* %4, align 8, !tbaa !10
+  %6 = sub nsw i32 0, %5
+  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1
+  %8 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 1
+  %9 = load i32*, i32** %8, align 8, !tbaa !11
+  %10 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %3, i64 0, i32 1, i32 0, i32 0, i32 2
+  %11 = load i32*, i32** %10, align 8, !tbaa !14
+  %12 = icmp eq i32* %9, %11
+  %13 = ptrtoint i32* %9 to i64
+  br i1 %12, label %16, label %14
+
+14:                                               ; preds = %1
+  store i32 %6, i32* %9, align 4, !tbaa !15
+  %15 = getelementptr inbounds i32, i32* %9, i64 1
+  br label %69
+
+16:                                               ; preds = %1
+  %17 = bitcast i32** %8 to i64*
+  %18 = bitcast %"class.std::vector"* %7 to i64*
+  %19 = load i64, i64* %18, align 8, !tbaa !16
+  %20 = sub i64 %13, %19
+  %21 = ashr exact i64 %20, 2
+  %22 = icmp eq i64 %20, 0
+  %23 = select i1 %22, i64 1, i64 %21
+  %24 = add nsw i64 %23, %21
+  %25 = icmp ult i64 %24, %21
+  %26 = icmp ugt i64 %24, 4611686018427387903
+  %27 = or i1 %25, %26
+  %28 = select i1 %27, i64 4611686018427387903, i64 %24
+  %29 = getelementptr %"class.std::vector", %"class.std::vector"* %7, i64 0, i32 0, i32 0, i32 0
+  %30 = icmp eq i64 %28, 0
+  %31 = inttoptr i64 %19 to i32*
+  br i1 %30, label %38, label %32
+
+32:                                               ; preds = %16
+  %33 = shl nuw i64 %28, 2
+  %34 = invoke i8* @_Znwm(i64 %33)
+          to label %35 unwind label %66
+
+35:                                               ; preds = %32
+  %36 = bitcast i8* %34 to i32*
+  %37 = load i32*, i32** %29, align 8, !tbaa !17
+  br label %38
+
+38:                                               ; preds = %35, %16
+  %39 = phi i32* [ %37, %35 ], [ %31, %16 ]
+  %40 = phi i32* [ %36, %35 ], [ null, %16 ]
+  %41 = getelementptr inbounds i32, i32* %40, i64 %21
+  store i32 %6, i32* %41, align 4, !tbaa !15
+  %42 = ptrtoint i32* %39 to i64
+  %43 = sub i64 %13, %42
+  %44 = ashr exact i64 %43, 2
+  %45 = icmp eq i64 %43, 0
+  br i1 %45, label %49, label %46
+
+46:                                               ; preds = %38
+  %47 = bitcast i32* %40 to i8*
+  %48 = bitcast i32* %39 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #7
+  br label %49
+
+49:                                               ; preds = %46, %38
+  %50 = getelementptr inbounds i32, i32* %40, i64 %44
+  %51 = getelementptr inbounds i32, i32* %50, i64 1
+  %52 = load i64, i64* %17, align 8, !tbaa !11
+  %53 = sub i64 %52, %13
+  %54 = ashr exact i64 %53, 2
+  %55 = icmp eq i64 %53, 0
+  br i1 %55, label %59, label %56
+
+56:                                               ; preds = %49
+  %57 = bitcast i32* %51 to i8*
+  %58 = bitcast i32* %9 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #7
+  br label %59
+
+59:                                               ; preds = %56, %49
+  %60 = getelementptr inbounds i32, i32* %51, i64 %54
+  %61 = icmp eq i32* %39, null
+  br i1 %61, label %64, label %62
+
+62:                                               ; preds = %59
+  %63 = bitcast i32* %39 to i8*
+  tail call void @_ZdlPv(i8* nonnull %63) #7
+  br label %64
+
+64:                                               ; preds = %62, %59
+  store i32* %40, i32** %29, align 8, !tbaa !17
+  store i32* %60, i32** %8, align 8, !tbaa !11
+  %65 = getelementptr inbounds i32, i32* %40, i64 %28
+  br label %69
+
+66:                                               ; preds = %32
+  %67 = landingpad { i8*, i32 }
+          catch i8* null
+  %68 = extractvalue { i8*, i32 } %67, 0
+  tail call void @__pochivm_clang_call_terminate(i8* %68) #8
+  unreachable
+
+69:                                               ; preds = %64, %14
+  %70 = phi i32** [ %10, %64 ], [ %8, %14 ]
+  %71 = phi i32* [ %65, %64 ], [ %15, %14 ]
+  store i32* %71, i32** %70, align 8, !tbaa !16
+  ret void
+}
+
+; Function Attrs: nobuiltin nofree
+declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1 immarg) #2
+
+; Function Attrs: nobuiltin nounwind
+declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #3
+
+; Function Attrs: noinline noreturn nounwind uwtable
+declare dso_local void @__pochivm_clang_call_terminate(i8*) #4
+
+; Function Attrs: uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #5 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %4 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 0
+  store %class.CtorDtorOrderRecorder* %1, %class.CtorDtorOrderRecorder** %4, align 8, !tbaa !4
+  %5 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
+  store i32 %2, i32* %5, align 8, !tbaa !10
+  %6 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1
+  %7 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1, i32 0, i32 0, i32 1
+  %8 = load i32*, i32** %7, align 8, !tbaa !11
+  %9 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 1, i32 0, i32 0, i32 2
+  %10 = load i32*, i32** %9, align 8, !tbaa !14
+  %11 = icmp eq i32* %8, %10
+  %12 = ptrtoint i32* %8 to i64
+  br i1 %11, label %15, label %13
+
+13:                                               ; preds = %3
+  store i32 %2, i32* %8, align 4, !tbaa !15
+  %14 = getelementptr inbounds i32, i32* %8, i64 1
+  br label %64
+
+15:                                               ; preds = %3
+  %16 = bitcast i32** %7 to i64*
+  %17 = bitcast %"class.std::vector"* %6 to i64*
+  %18 = load i64, i64* %17, align 8, !tbaa !16
+  %19 = sub i64 %12, %18
+  %20 = ashr exact i64 %19, 2
+  %21 = icmp eq i64 %19, 0
+  %22 = select i1 %21, i64 1, i64 %20
+  %23 = add nsw i64 %22, %20
+  %24 = icmp ult i64 %23, %20
+  %25 = icmp ugt i64 %23, 4611686018427387903
+  %26 = or i1 %24, %25
+  %27 = select i1 %26, i64 4611686018427387903, i64 %23
+  %28 = getelementptr %"class.std::vector", %"class.std::vector"* %6, i64 0, i32 0, i32 0, i32 0
+  %29 = icmp eq i64 %27, 0
+  %30 = inttoptr i64 %18 to i32*
+  br i1 %29, label %36, label %31
+
+31:                                               ; preds = %15
+  %32 = shl nuw i64 %27, 2
+  %33 = tail call i8* @_Znwm(i64 %32)
+  %34 = bitcast i8* %33 to i32*
+  %35 = load i32*, i32** %28, align 8, !tbaa !17
+  br label %36
+
+36:                                               ; preds = %31, %15
+  %37 = phi i32* [ %35, %31 ], [ %30, %15 ]
+  %38 = phi i32* [ %34, %31 ], [ null, %15 ]
+  %39 = getelementptr inbounds i32, i32* %38, i64 %20
+  store i32 %2, i32* %39, align 4, !tbaa !15
+  %40 = ptrtoint i32* %37 to i64
+  %41 = sub i64 %12, %40
+  %42 = ashr exact i64 %41, 2
+  %43 = icmp eq i64 %41, 0
+  br i1 %43, label %47, label %44
+
+44:                                               ; preds = %36
+  %45 = bitcast i32* %38 to i8*
+  %46 = bitcast i32* %37 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %45, i8* align 4 %46, i64 %41, i1 false) #7
+  br label %47
+
+47:                                               ; preds = %44, %36
+  %48 = getelementptr inbounds i32, i32* %38, i64 %42
+  %49 = getelementptr inbounds i32, i32* %48, i64 1
+  %50 = load i64, i64* %16, align 8, !tbaa !11
+  %51 = sub i64 %50, %12
+  %52 = ashr exact i64 %51, 2
+  %53 = icmp eq i64 %51, 0
+  br i1 %53, label %57, label %54
+
+54:                                               ; preds = %47
+  %55 = bitcast i32* %49 to i8*
+  %56 = bitcast i32* %8 to i8*
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %55, i8* align 4 %56, i64 %51, i1 false) #7
+  br label %57
+
+57:                                               ; preds = %54, %47
+  %58 = getelementptr inbounds i32, i32* %49, i64 %52
+  %59 = icmp eq i32* %37, null
+  br i1 %59, label %62, label %60
+
+60:                                               ; preds = %57
+  %61 = bitcast i32* %37 to i8*
+  tail call void @_ZdlPv(i8* nonnull %61) #7
+  br label %62
+
+62:                                               ; preds = %60, %57
+  store i32* %38, i32** %28, align 8, !tbaa !17
+  store i32* %58, i32** %7, align 8, !tbaa !11
+  %63 = getelementptr inbounds i32, i32* %38, i64 %27
+  br label %64
+
+64:                                               ; preds = %62, %13
+  %65 = phi i32** [ %7, %13 ], [ %9, %62 ]
+  %66 = phi i32* [ %14, %13 ], [ %63, %62 ]
+  store i32* %66, i32** %65, align 8, !tbaa !16
+  %67 = getelementptr inbounds %class.CtorDtorOrderRecorder, %class.CtorDtorOrderRecorder* %1, i64 0, i32 0
+  %68 = load i32, i32* %67, align 8, !tbaa !18
+  %69 = icmp eq i32 %68, %2
+  br i1 %69, label %70, label %73
+
+70:                                               ; preds = %64
+  %71 = tail call i8* @__cxa_allocate_exception(i64 4) #7
+  %72 = bitcast i8* %71 to i32*
+  store i32 %2, i32* %72, align 16, !tbaa !15
+  tail call void @__cxa_throw(i8* %71, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #9
+  unreachable
+
+73:                                               ; preds = %64
+  ret void
+}
+
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
+
+declare dso_local void @__cxa_free_exception(i8*)
+
+; Function Attrs: nounwind uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI25TestNonTrivialConstructorE9wrapperFnEPS2_(%class.TestNonTrivialConstructor* %0) #0 align 2 {
+  ret void
+}
+
+; Function Attrs: uwtable
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN25TestNonTrivialConstructor7Create2EiEEE15call_fn_wrapperIS2_vE4callIJiEEEvPS2_DpT_(%class.TestNonTrivialConstructor* %0, i32 %1) #5 align 2 personality i32 (...)* @__gxx_personality_v0 {
+  %3 = icmp eq i32 %1, 12345
+  br i1 %3, label %4, label %7
+
+4:                                                ; preds = %2
+  %5 = tail call i8* @__cxa_allocate_exception(i64 8) #7
+  %6 = bitcast i8* %5 to i32 (...)***
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTVSt17bad_function_call, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %6, align 8, !tbaa !21
+  tail call void @__cxa_throw(i8* %5, i8* bitcast (i8** @_ZTISt17bad_function_call to i8*), i8* bitcast (void (%"class.std::bad_function_call"*)* @_ZNSt17bad_function_callD1Ev to i8*)) #9
+  unreachable
+
+7:                                                ; preds = %2
+  %8 = getelementptr inbounds %class.TestNonTrivialConstructor, %class.TestNonTrivialConstructor* %0, i64 0, i32 0
+  store i32 %1, i32* %8, align 4
+  ret void
+}
+
+; Function Attrs: nounwind
+declare dso_local void @_ZNSt17bad_function_callD1Ev(%"class.std::bad_function_call"*) unnamed_addr #6
+
+define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %param_0 = alloca i32
+  %param_1 = alloca %class.CtorDtorOrderRecorder*
+  %var_2 = alloca %class.TestDestructor2
+  %_cur_exception_object = alloca i8*
+  %_cur_exception_type = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  store %class.CtorDtorOrderRecorder* %_param_1, %class.CtorDtorOrderRecorder** %param_1
+  %0 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %param_1
+  call void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %var_2, %class.CtorDtorOrderRecorder* %0, i32 233)
+  %1 = call i8* @__cxa_allocate_exception(i64 4)
+  %2 = bitcast i8* %1 to %class.TestNonTrivialConstructor*
+  %3 = load i32, i32* %param_0
+  invoke void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN25TestNonTrivialConstructor7Create2EiEEE15call_fn_wrapperIS2_vE4callIJiEEEvPS2_DpT_(%class.TestNonTrivialConstructor* %2, i32 %3)
+          to label %11 unwind label %landing_pad_0
+
+resume_exception:                                 ; preds = %dtor_tree_0
+  %4 = load i8*, i8** %_cur_exception_object
+  %5 = load i32, i32* %_cur_exception_type
+  %6 = insertvalue { i8*, i32 } undef, i8* %4, 0
+  %7 = insertvalue { i8*, i32 } %6, i32 %5, 1
+  resume { i8*, i32 } %7
+
+dtor_tree_0:                                      ; preds = %landing_pad_1, %dtor_tree_1
+  call void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %var_2)
+  br label %resume_exception
+
+dtor_tree_1:                                      ; preds = %landing_pad_0
+  call void @__cxa_free_exception(i8* %1)
+  br label %dtor_tree_0
+
+landing_pad_0:                                    ; preds = %body
+  %8 = landingpad { i8*, i32 }
+          cleanup
+  %9 = extractvalue { i8*, i32 } %8, 0
+  store i8* %9, i8** %_cur_exception_object
+  %10 = extractvalue { i8*, i32 } %8, 1
+  store i32 %10, i32* %_cur_exception_type
+  br label %dtor_tree_1
+
+11:                                               ; preds = %body
+  invoke void @__cxa_throw(i8* %1, i8* bitcast ({ i8*, i8* }* @_ZTI25TestNonTrivialConstructor to i8*), i8* bitcast (void (%class.TestNonTrivialConstructor*)* @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI25TestNonTrivialConstructorE9wrapperFnEPS2_ to i8*))
+          to label %15 unwind label %landing_pad_1
+
+landing_pad_1:                                    ; preds = %11
+  %12 = landingpad { i8*, i32 }
+          cleanup
+  %13 = extractvalue { i8*, i32 } %12, 0
+  store i8* %13, i8** %_cur_exception_object
+  %14 = extractvalue { i8*, i32 } %12, 1
+  store i32 %14, i32* %_cur_exception_type
+  br label %dtor_tree_0
+
+15:                                               ; preds = %11
+  unreachable
+}
+
+attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { argmemonly nounwind willreturn }
+attributes #3 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #6 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #7 = { nounwind }
+attributes #8 = { noreturn nounwind }
+attributes #9 = { noreturn }
+
+!llvm.ident = !{!0, !0, !0, !0}
+!llvm.module.flags = !{!1, !2, !3}
+
+!0 = !{!"clang version 10.0.0 "}
+!1 = !{i32 7, !"Dwarf Version", i32 4}
+!2 = !{i32 2, !"Debug Info Version", i32 3}
+!3 = !{i32 1, !"wchar_size", i32 4}
+!4 = !{!5, !6, i64 0}
+!5 = !{!"_ZTS15TestDestructor2", !6, i64 0, !9, i64 8}
+!6 = !{!"any pointer", !7, i64 0}
+!7 = !{!"omnipotent char", !8, i64 0}
+!8 = !{!"Simple C++ TBAA"}
+!9 = !{!"int", !7, i64 0}
+!10 = !{!5, !9, i64 8}
+!11 = !{!12, !6, i64 8}
+!12 = !{!"_ZTSSt12_Vector_baseIiSaIiEE", !13, i64 0}
+!13 = !{!"_ZTSNSt12_Vector_baseIiSaIiEE12_Vector_implE", !6, i64 0, !6, i64 8, !6, i64 16}
+!14 = !{!12, !6, i64 16}
+!15 = !{!9, !9, i64 0}
+!16 = !{!6, !6, i64 0}
+!17 = !{!12, !6, i64 0}
+!18 = !{!19, !9, i64 0}
+!19 = !{!"_ZTS21CtorDtorOrderRecorder", !9, i64 0, !20, i64 8}
+!20 = !{!"_ZTSSt6vectorIiSaIiEE"}
+!21 = !{!22, !22, i64 0}
+!22 = !{!"vtable pointer", !8, i64 0}

@@ -287,6 +287,20 @@ public:
         return TestNonTrivialConstructor(v);
     }
 
+    static TestNonTrivialConstructor Create2(int v)
+    {
+        if (v == 12345)
+        {
+            throw std::bad_function_call();
+        }
+        return TestNonTrivialConstructor(v);
+    }
+
+    static TestNonTrivialConstructor Create3(int v) noexcept
+    {
+        return TestNonTrivialConstructor(v);
+    }
+
     int GetValue() { return m_value; }
 
     int m_value;
@@ -396,9 +410,21 @@ public:
         }
     }
 
+    TestDestructor2(const TestDestructor2& other)
+    {
+        m_recorder = other.m_recorder;
+        m_value = other.m_value;
+        m_recorder->Push(m_value);
+    }
+
     ~TestDestructor2()
     {
         m_recorder->Push(-m_value);
+    }
+
+    static TestDestructor2 Create(CtorDtorOrderRecorder* recorder, int value) noexcept
+    {
+        return TestDestructor2(recorder, value);
     }
 
     CtorDtorOrderRecorder* m_recorder;
