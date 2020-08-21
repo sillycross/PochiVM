@@ -22,7 +22,7 @@ template<typename T>
 inline Value<void> Throw(const Value<T>& expr)
 {
     static_assert(!std::is_same<T, void>::value, "Cannot throw void expression");
-    return Value<void>(new AstThrowStmt(expr.m_ptr, false /*isCtor*/, false /*isLValueObject*/));
+    return Value<void>(new AstThrowStmt(expr.__pochivm_value_ptr, false /*isCtor*/, false /*isLValueObject*/));
 }
 
 // Throw out an exception by calling a constructor to construct the exception object.

@@ -71,7 +71,8 @@ struct ParsedFnTypeNamesInfo
             m_isParamsApiVar.push_back(src->m_apiRetAndArgTypenames[i].second);
         }
         m_fnType = src->m_fnType;
-        if (m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
+        if (m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn ||
+            m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
         {
             std::string fnName = ParseValueName(src->m_fnName);
             std::string className = ParseTypeName(src->m_classTypename);
@@ -409,6 +410,7 @@ struct ParsedFnTypeNamesInfo
     //
     std::string m_prefix;
     // name of function
+    // for member object, this is the name of the member object
     //
     std::string m_functionName;
     // If the function is a templated function, the template parameters
@@ -566,7 +568,8 @@ static int g_curUniqueFunctionOrdinal = 0;
 static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 {
     ReleaseAssert(info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
-                  info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor);
+                  info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
+                  info.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject);
     fprintf(fp, "{\n");
     int numParams = static_cast<int>(info.m_params.size());
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
@@ -712,7 +715,7 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     fprintf(fp, "            std::vector<AstNodeBase*>{");
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
     {
-        fprintf(fp, "\n                m_refPtr");
+        fprintf(fp, "\n                __pochivm_ref_ptr");
         if (info.m_params.size() > 0)
         {
             fprintf(fp, ",");
@@ -725,7 +728,7 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
         fprintf(fp, "\n                __pochivm_%d.%s",
-                static_cast<int>(i), (info.m_isParamsApiVar[i] ? "m_refPtr" : "m_ptr"));
+                static_cast<int>(i), (info.m_isParamsApiVar[i] ? "__pochivm_ref_ptr" : "__pochivm_value_ptr"));
         if (i != info.m_params.size() - 1)
         {
             fprintf(fp, ",");
@@ -814,7 +817,7 @@ static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& in
     for (size_t i = 0; i < static_cast<size_t>(numCtorParams); i++)
     {
         fprintf(fp, "\n        __pochivm_%d.%s",
-                static_cast<int>(i), (info.m_isParamsApiVar[i + 1] ? "m_refPtr" : "m_ptr"));
+                static_cast<int>(i), (info.m_isParamsApiVar[i + 1] ? "__pochivm_ref_ptr" : "__pochivm_value_ptr"));
         if (i != static_cast<size_t>(numCtorParams) - 1)
         {
             fprintf(fp, ",");
@@ -831,20 +834,20 @@ static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& in
 static void PrintBoilerplateMethods(FILE* fp, const std::string& className)
 {
     fprintf(fp, "public:\n");
-    fprintf(fp, "Reference<%s>(AstNodeBase* refPtr) : m_refPtr(refPtr) {\n", className.c_str());
+    fprintf(fp, "Reference<%s>(AstNodeBase* __pochivm_ref_ptr_) : __pochivm_ref_ptr(__pochivm_ref_ptr_) {\n", className.c_str());
     // The 'ReleaseAssert' actually evaluates to constant expression.
     // Ideally we want to delete the constructor in that case, but for now go simple.
     //
     fprintf(fp, "    ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", className.c_str());
-    fprintf(fp, "    TestAssert((m_refPtr->GetTypeId() == TypeId::Get<%s>().AddPointer()));\n", className.c_str());
+    fprintf(fp, "    TestAssert((__pochivm_ref_ptr->GetTypeId() == TypeId::Get<%s>().AddPointer()));\n", className.c_str());
     fprintf(fp, "}\n");
     fprintf(fp, "protected:\n");
     fprintf(fp, "// Used by Variable<> class\n");
     fprintf(fp, "Reference<%s>(AstNodeBase* refPtr, bool /*unused*/) : Reference<%s>(refPtr) {} \n", className.c_str(), className.c_str());
     fprintf(fp, "public:\n");
-    fprintf(fp, "AstNodeBase* m_refPtr;\n\n");
+    fprintf(fp, "AstNodeBase* __pochivm_ref_ptr;\n\n");
     fprintf(fp, "Value<%s*> Addr() const {\n", className.c_str());
-    fprintf(fp, "    return Value<%s*>(m_refPtr);\n", className.c_str());
+    fprintf(fp, "    return Value<%s*>(__pochivm_ref_ptr);\n", className.c_str());
     fprintf(fp, "}\n\n");
 }
 
@@ -1083,11 +1086,11 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             {
                 const std::string& cppTypeName = it->second;
                 fprintf(fp, "template<> class Value<%s>\n{\npublic:\n", cppTypeName.c_str());
-                fprintf(fp, "    Value<%s>(AstNodeBase* ptr) : m_ptr(ptr) {\n", cppTypeName.c_str());
+                fprintf(fp, "    Value<%s>(AstNodeBase* __pochivm_value_ptr_) : __pochivm_value_ptr(__pochivm_value_ptr_) {\n", cppTypeName.c_str());
                 fprintf(fp, "        ReleaseAssert((AstTypeHelper::is_cpp_class_type<%s>::value));\n", cppTypeName.c_str());
-                fprintf(fp, "        TestAssert((m_ptr->GetTypeId() == TypeId::Get<%s>()));\n", cppTypeName.c_str());
+                fprintf(fp, "        TestAssert((__pochivm_value_ptr->GetTypeId() == TypeId::Get<%s>()));\n", cppTypeName.c_str());
                 fprintf(fp, "    }\n");
-                fprintf(fp, "    AstNodeBase* m_ptr;\n};\n\n");
+                fprintf(fp, "    AstNodeBase* __pochivm_value_ptr;\n};\n\n");
                 unprinted.insert(cppTypeName);
             }
             fprintf(fp, "\n");
@@ -1115,8 +1118,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 std::vector<ParsedFnTypeNamesInfo>& data = it->second;
                 std::sort(data.begin(), data.end(), CmpParsedFnTypeNamesInfo);
 
-                fprintf(fp, "template<> class Reference<%s>\n{\n", className.c_str());
-                PrintBoilerplateMethods(fp, className);
+                fprintf(fp, "template<> class Reference<%s>\n{\npublic:\n", className.c_str());
 
                 if (unprinted.count(className))
                 {
@@ -1138,81 +1140,117 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     {
                         end++;
                     }
-                    if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
+                    if (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
                     {
-                        fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
-                                        "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
-                                data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
-                                static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
-                        abort();
-                    }
-                    size_t tplSize = data[start].m_templateParams.size();
-                    if (tplSize == 0)
-                    {
-                        for (size_t k = start; k < end; k++)
-                        {
-                            ParsedFnTypeNamesInfo& info = data[k];
-                            fprintf(fp, "// Original parameter and return types:\n");
-                            for (const std::string& param : info.m_origParams)
-                            {
-                                fprintf(fp, "//          %s\n", param.c_str());
-                            }
-                            fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
-                            fprintf(fp, "//\n");
-                            fprintf(fp, "%s%s<%s> %s",
-                                    (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                    (info.m_isRetApiVar ? "Reference" : "Value"),
-                                    info.m_ret.c_str(), info.m_functionName.c_str());
-                            PrintFnParams(fp, info);
-                            fprintf(fp, ";\n");
-                        }
+                        ReleaseAssert(start + 1 == end);
+                        ParsedFnTypeNamesInfo& info = data[start];
+                        ReleaseAssert(info.m_isRetApiVar && !info.m_isUsingWrapper);
+                        ReleaseAssert(info.m_params.size() == 1 && !info.m_isParamsApiVar[0]);
+                        fprintf(fp, "    Reference<%s> %s() { \n", info.m_ret.c_str(), info.m_functionName.c_str());
+                        fprintf(fp, "        using __pochivm_classname = %s;\n", className.c_str());
+                        fprintf(fp, "        static constexpr TypeId __pochivm_cpp_fn_params[1] = { TypeId::Get<%s>() };\n",
+                                info.m_params[0].c_str());
+                        fprintf(fp, "        static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<typename std::add_pointer<%s>::type>();\n",
+                                info.m_ret.c_str());
+                        fprintf(fp, "        static_assert(__pochivm_cpp_fn_params[0] == TypeId::Get<__pochivm_classname>().AddPointer(), \"unexpected param type\");\n");
+                        fprintf(fp, "        using __pochivm_wrapper_t = ReflectionHelper::member_object_accessor_wrapper<&__pochivm_classname::%s>;\n",
+                                info.m_functionName.c_str());
+                        fprintf(fp, "        using __pochivm_wrapper_wrapper_t = ReflectionHelper::function_wrapper_helper<__pochivm_wrapper_t::wrapperFn>;\n");
+                        fprintf(fp, "        static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
+                        std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
+                        fprintf(fp, "            &%s,\n", varname.c_str());
+                        fprintf(fp, "            __pochivm_cpp_fn_params,\n");
+                        fprintf(fp, "            1 /*numParams*/,\n");
+                        fprintf(fp, "            __pochivm_cpp_fn_ret /*returnType*/,\n");
+                        fprintf(fp, "            false /*isUsingSret*/,\n");
+                        fprintf(fp, "            AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+                        fprintf(fp, "            %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
+                        g_curUniqueFunctionOrdinal++;
+                        fprintf(fp, "        };\n");
+                        fprintf(fp, "        return Reference<%s>(new AstCallExpr(&__pochivm_cpp_fn_metadata, std::vector<AstNodeBase*>{ __pochivm_ref_ptr }));\n",
+                                info.m_ret.c_str());
+                        fprintf(fp, "    }\n\n");
                     }
                     else
                     {
-                        fprintf(fp, "// Template declaration header for templated function %s\n",
-                                data[start].m_functionName.c_str());
-                        fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
-                        fprintf(fp, "// Parameter types and return type:\n");
-                        for (const std::string& param : data[start].m_params)
+                        if (data[start].m_templateParams.size() > MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN)
                         {
-                            fprintf(fp, "//          %s\n", param.c_str());
+                            fprintf(stderr, "[Soft Lockdown] Function %s::%s contains more than %d template parameters. "
+                                            "Adjust MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN in dump_symbols.cpp if necessary.",
+                                    data[start].m_prefix.c_str(), data[start].m_functionName.c_str(),
+                                    static_cast<int>(MAX_TEMPLATE_PARAMS_FOR_TEMPLATED_FN));
+                            abort();
                         }
-                        fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
-                        fprintf(fp, "//\n");
-
-                        for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
+                        size_t tplSize = data[start].m_templateParams.size();
+                        if (tplSize == 0)
                         {
-                            fprintf(fp, "template<");
-                            for (size_t i = 0; i < tplSize; i++)
+                            for (size_t k = start; k < end; k++)
                             {
-                                if (bitmask & (static_cast<size_t>(1) << i))
+                                ParsedFnTypeNamesInfo& info = data[k];
+                                fprintf(fp, "// Original parameter and return types:\n");
+                                for (const std::string& param : info.m_origParams)
                                 {
-                                    fprintf(fp, "typename");
+                                    fprintf(fp, "//          %s\n", param.c_str());
                                 }
-                                else
-                                {
-                                    fprintf(fp, "auto");
-                                }
-                                if (i != tplSize - 1)
-                                {
-                                    fprintf(fp, ", ");
-                                }
-                                else
-                                {
-                                    fprintf(fp, ">\n");
-                                }
+                                fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
+                                fprintf(fp, "//\n");
+                                fprintf(fp, "%s%s<%s> %s",
+                                        (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                        (info.m_isRetApiVar ? "Reference" : "Value"),
+                                        info.m_ret.c_str(), info.m_functionName.c_str());
+                                PrintFnParams(fp, info);
+                                fprintf(fp, ";\n");
                             }
-                            fprintf(fp, "%s%s<%s> %s",
-                                    (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
-                                    (data[start].m_isRetApiVar ? "Reference" : "Value"),
-                                    data[start].m_ret.c_str(), data[start].m_functionName.c_str());
-                            PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
-                            fprintf(fp, " = delete;\n");
                         }
-                        fprintf(fp, "\n");
+                        else
+                        {
+                            fprintf(fp, "// Template declaration header for templated function %s\n",
+                                    data[start].m_functionName.c_str());
+                            fprintf(fp, "// # of template parameters: %d\n", static_cast<int>(tplSize));
+                            fprintf(fp, "// Parameter types and return type:\n");
+                            for (const std::string& param : data[start].m_params)
+                            {
+                                fprintf(fp, "//          %s\n", param.c_str());
+                            }
+                            fprintf(fp, "// Returns: %s\n", data[start].m_ret.c_str());
+                            fprintf(fp, "//\n");
+
+                            for (size_t bitmask = 0; bitmask < (static_cast<size_t>(1) << tplSize); bitmask++)
+                            {
+                                fprintf(fp, "template<");
+                                for (size_t i = 0; i < tplSize; i++)
+                                {
+                                    if (bitmask & (static_cast<size_t>(1) << i))
+                                    {
+                                        fprintf(fp, "typename");
+                                    }
+                                    else
+                                    {
+                                        fprintf(fp, "auto");
+                                    }
+                                    if (i != tplSize - 1)
+                                    {
+                                        fprintf(fp, ", ");
+                                    }
+                                    else
+                                    {
+                                        fprintf(fp, ">\n");
+                                    }
+                                }
+                                fprintf(fp, "%s%s<%s> %s",
+                                        (data[start].m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ? "static " : ""),
+                                        (data[start].m_isRetApiVar ? "Reference" : "Value"),
+                                        data[start].m_ret.c_str(), data[start].m_functionName.c_str());
+                                PrintFnParams(fp, data[start], true /*doNotPrintVarName*/);
+                                fprintf(fp, " = delete;\n");
+                            }
+                            fprintf(fp, "\n");
+                        }
                     }
                     start = end;
                 }
+
+                PrintBoilerplateMethods(fp, className);
 
                 fprintf(fp, "}; // class Reference<%s>\n\n", className.c_str());
             }
@@ -1380,7 +1418,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 ParsedFnTypeNamesInfo& info = it->second;
                 if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
                     info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
-                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -2249,7 +2288,8 @@ int main(int argc, char** argv)
             ReleaseAssert(addrToSymbol.count(addr));
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
             if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
-                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
             {
                 // For constructors, the symbol is a generated wrapper function, not the original prototype
                 // The original prototype must have no template parameters since our API dit not support
@@ -2260,7 +2300,8 @@ int main(int argc, char** argv)
             }
             it->second.RecordMangledSymbolName(symbolPair.first /*mangled*/);
             if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
-                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
             {
                 uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
                 ReleaseAssert(addrToSymbol.count(wrapperAddr));

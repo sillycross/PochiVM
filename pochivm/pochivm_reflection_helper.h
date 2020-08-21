@@ -794,6 +794,33 @@ struct destructor_wrapper_helper
     }
 };
 
+template<typename T>
+struct member_object_pointer_traits
+{
+    static_assert(sizeof(T) == 0, "T is not a pointer to non-static member object!");
+};
+
+template<typename R, typename C>
+struct member_object_pointer_traits<R C::*>
+{
+    using DataMemberType = R;
+    using ClassName = C;
+};
+
+template<auto p>
+struct member_object_accessor_wrapper
+{
+    using PType = decltype(p);
+    using R = typename member_object_pointer_traits<PType>::DataMemberType;
+    using C = typename member_object_pointer_traits<PType>::ClassName;
+
+    using WrapperFnPtrType = R&(*)(C*);
+    static R& wrapperFn(C* c) noexcept
+    {
+        return (c->*p);
+    }
+};
+
 template <typename MethPtr>
 void* GetClassMethodPtrHelper(MethPtr p)
 {
@@ -843,7 +870,8 @@ enum class FunctionType
     NonStaticMemberFn,
     Constructor,
     Destructor,
-    TypeInfoObject
+    TypeInfoObject,
+    NonStaticMemberObject
 };
 
 struct RawFnTypeNamesInfo
@@ -982,22 +1010,13 @@ struct get_raw_fn_typenames_info
                                               bool isNoExcept,
                                               bool isCopyConstructor)
     {
-        if (!(std::is_pointer<decltype(t)>::value &&
-              std::is_function<typename std::remove_pointer<decltype(t)>::type>::value))
-        {
-            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor is not a function pointer!\n");
-            abort();
-        }
-        if (wrapper::isWrapperFnRequired)
-        {
-            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor should not require another wrapper!\n");
-            abort();
-        }
-        if (wrapper::isSretTransformed)
-        {
-            fprintf(stderr, "[INTERNAL ERROR] The wrapped constructor should not require sret transform!\n");
-            abort();
-        }
+        static_assert(std::is_pointer<decltype(t)>::value &&
+                      std::is_function<typename std::remove_pointer<decltype(t)>::type>::value,
+                      "[INTERNAL ERROR] The wrapped constructor is not a function pointer!");
+        static_assert(!wrapper::isWrapperFnRequired,
+                      "[INTERNAL ERROR] The wrapped constructor should not require another wrapper!");
+        static_assert(!wrapper::isSretTransformed,
+                      "[INTERNAL ERROR] The wrapped constructor should not require sret transform!");
 
         ReleaseAssert(numArgs == fnInfo::numArgs);
         return RawFnTypeNamesInfo(FunctionType::Constructor,
@@ -1024,6 +1043,29 @@ struct get_raw_fn_typenames_info
                                   fnInfo::get_original_ret_and_param_typenames(),
                                   class_typename,
                                   get_function_name(),
+                                  get_function_pointer_address(t),
+                                  fnInfo::is_const(),
+                                  fnInfo::is_noexcept(),
+                                  false /*is_wrapper_fn_required*/,
+                                  false /*is_sret_transform_required*/,
+                                  nullptr /*wrapperFn*/,
+                                  false /*isCopyCtorOrAssignmentOp*/);
+    }
+
+    static RawFnTypeNamesInfo get_member_object(const char* class_typename,
+                                                const char* member_object_name)
+    {
+        static_assert(fnInfo::is_noexcept(), "[INTERNAL ERROR] Member object accessor should be noexcept!");
+        static_assert(!wrapper::isWrapperFnRequired,
+                      "[INTERNAL ERROR] The wrapped constructor should not require another wrapper!");
+        static_assert(!wrapper::isSretTransformed,
+                      "[INTERNAL ERROR] The wrapped constructor should not require sret transform!");
+        return RawFnTypeNamesInfo(FunctionType::NonStaticMemberObject,
+                                  fnInfo::numArgs,
+                                  fnInfo::get_api_ret_and_param_typenames(),
+                                  fnInfo::get_original_ret_and_param_typenames(),
+                                  class_typename,
+                                  member_object_name,
                                   get_function_pointer_address(t),
                                   fnInfo::is_const(),
                                   fnInfo::is_noexcept(),
@@ -1096,6 +1138,17 @@ void RegisterStaticMemberFn()
             ReflectionHelper::get_raw_fn_typenames_info<t>::get(ReflectionHelper::FunctionType::StaticMemberFn);
     __pochivm_report_info__(&info);
     RegisterDestructorIfNeeded<t>();
+}
+
+template<auto t>
+void RegisterMemberObject()
+{
+    using wrapper_generator_t = ReflectionHelper::member_object_accessor_wrapper<t>;
+    ReflectionHelper::RawFnTypeNamesInfo info =
+            ReflectionHelper::get_raw_fn_typenames_info<wrapper_generator_t::wrapperFn>::get_member_object(
+                    ReflectionHelper::class_name_helper_internal<typename wrapper_generator_t::C>::get_class_typename(),
+                    __pochivm_stringify_value__<t>());
+    __pochivm_report_info__(&info);
 }
 
 template<typename C, typename... Args>

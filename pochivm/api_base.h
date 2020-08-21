@@ -30,9 +30,9 @@ public:
     // Constructor: trivially take a pointer and wraps it.
     //
     Value(AstNodeBase* ptr)
-        : m_ptr(ptr)
+        : __pochivm_value_ptr(ptr)
     {
-        TestAssert(m_ptr->GetTypeId().IsType<T>());
+        TestAssert(__pochivm_value_ptr->GetTypeId().IsType<T>());
     }
 
     // Implicit type conversion: an integer to a wider integer
@@ -50,7 +50,7 @@ public:
     Value<U> StaticCast() const
     {
         static_assert(AstTypeHelper::may_static_cast<T, U>::value, "cannot static_cast T to U");
-        return Value<U>(new AstStaticCastExpr(m_ptr, TypeId::Get<U>()));
+        return Value<U>(new AstStaticCastExpr(__pochivm_value_ptr, TypeId::Get<U>()));
     }
 
     // reinterpret_cast conversion between pointers, or between pointer and uint64_t
@@ -59,7 +59,7 @@ public:
     Value<U> ReinterpretCast() const
     {
         static_assert(AstTypeHelper::may_reinterpret_cast<T, U>::value, "cannot reinterpret_cast T to U");
-        return Value<U>(new AstReinterpretCastExpr(m_ptr, TypeId::Get<U>()));
+        return Value<U>(new AstReinterpretCastExpr(__pochivm_value_ptr, TypeId::Get<U>()));
     }
 
     // Deref(): possible for T* where T is not void*.
@@ -73,10 +73,10 @@ public:
     )>* = nullptr >
     Reference<typename std::remove_pointer<T>::type> Deref() const;
 
-    // Immutable. There is no reason to modify m_ptr after construction, and
+    // Immutable. There is no reason to modify __pochivm_value_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
-    AstNodeBase* const m_ptr;
+    AstNodeBase* const __pochivm_value_ptr;
 };
 
 // Arithmetic ops convenience operator overloading
@@ -85,35 +85,35 @@ template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
 Value<T> operator+(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('+' /*op*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<T>(new AstArithmeticExpr('+' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::SUB>::value> >
 Value<T> operator-(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('-' /*op*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<T>(new AstArithmeticExpr('-' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MUL>::value> >
 Value<T> operator*(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('*' /*op*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<T>(new AstArithmeticExpr('*' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::DIV>::value> >
 Value<T> operator/(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('/' /*op*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<T>(new AstArithmeticExpr('/' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MODULO>::value> >
 Value<T> operator%(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('%' /*op*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<T>(new AstArithmeticExpr('%' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 // Comparison ops convenience operator overloading
@@ -122,28 +122,28 @@ template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
 Value<bool> operator==(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("==", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr("==", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
 Value<bool> operator!=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("!=", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr("!=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
 Value<bool> operator<(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("<", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr("<", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
 Value<bool> operator>(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr(">", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr(">", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
@@ -151,7 +151,7 @@ template<typename T, typename = std::enable_if_t<
           && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
 Value<bool> operator<=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("<=", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr("<=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
@@ -159,22 +159,22 @@ template<typename T, typename = std::enable_if_t<
           && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
 Value<bool> operator>=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr(">=", lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstComparisonExpr(">=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 inline Value<bool> operator&&(const Value<bool>& lhs, const Value<bool>& rhs)
 {
-    return Value<bool>(new AstLogicalAndOrExpr(true /*isAnd*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstLogicalAndOrExpr(true /*isAnd*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 inline Value<bool> operator||(const Value<bool>& lhs, const Value<bool>& rhs)
 {
-    return Value<bool>(new AstLogicalAndOrExpr(false /*isAnd*/, lhs.m_ptr, rhs.m_ptr));
+    return Value<bool>(new AstLogicalAndOrExpr(false /*isAnd*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 inline Value<bool> operator!(const Value<bool>& op)
 {
-    return Value<bool>(new AstLogicalNotExpr(op.m_ptr));
+    return Value<bool>(new AstLogicalNotExpr(op.__pochivm_value_ptr));
 }
 
 // Language utility: construct a literal
@@ -223,9 +223,9 @@ public:
 
     Reference(AstNodeBase* ptr)
         : Value<T>(new AstDereferenceExpr(ptr))
-        , m_refPtr(ptr)
+        , __pochivm_ref_ptr(ptr)
     {
-        TestAssert(m_refPtr->GetTypeId().IsType<T*>());
+        TestAssert(__pochivm_ref_ptr->GetTypeId().IsType<T*>());
     }
 
 protected:
@@ -237,9 +237,9 @@ protected:
     //
     Reference(AstVariable* ptr, bool /*unused*/)
         : Value<T>(new AstDereferenceVariableExpr(ptr))
-        , m_refPtr(ptr)
+        , __pochivm_ref_ptr(ptr)
     {
-        TestAssert(m_refPtr->GetTypeId().IsType<T*>());
+        TestAssert(__pochivm_ref_ptr->GetTypeId().IsType<T*>());
     }
 
 public:
@@ -248,13 +248,13 @@ public:
     //
     Value<T*> Addr() const
     {
-        return Value<T*>(m_refPtr);
+        return Value<T*>(__pochivm_ref_ptr);
     }
 
-    // Immutable. There is no reason to modify m_varPtr after construction, and
+    // Immutable. There is no reason to modify __pochivm_var_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
-    AstNodeBase* const m_refPtr;
+    AstNodeBase* const __pochivm_ref_ptr;
 };
 
 // A local variable of type T.
@@ -267,15 +267,15 @@ class Variable : public Reference<T>
 public:
     Variable(AstVariable* ptr)
         : Reference<T>(ptr, true)
-        , m_varPtr(ptr)
+        , __pochivm_var_ptr(ptr)
     {
-        TestAssert(m_varPtr->GetTypeId().IsType<T*>());
+        TestAssert(__pochivm_var_ptr->GetTypeId().IsType<T*>());
     }
 
-    // Immutable. There is no reason to modify m_varPtr after construction, and
+    // Immutable. There is no reason to modify __pochivm_var_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
-    AstVariable* const m_varPtr;
+    AstVariable* const __pochivm_var_ptr;
 };
 
 template<typename T>
@@ -289,7 +289,7 @@ Reference<typename std::remove_pointer<T>::type> Value<T>::Deref() const
                   "must be a non void* pointer to deref");
 
     using _PointerElementType = typename std::remove_pointer<T>::type;
-    return Reference<_PointerElementType>(m_ptr);
+    return Reference<_PointerElementType>(__pochivm_value_ptr);
 }
 
 // Language utility: Assign a value to a variable
@@ -297,7 +297,7 @@ Reference<typename std::remove_pointer<T>::type> Value<T>::Deref() const
 template<typename T>
 Value<void> Assign(const Reference<T>& lhs, const Value<T>& rhs)
 {
-    return Value<void>(new AstAssignExpr(lhs.m_refPtr, rhs.m_ptr));
+    return Value<void>(new AstAssignExpr(lhs.__pochivm_ref_ptr, rhs.__pochivm_value_ptr));
 }
 
 // Language utility: increment an integer

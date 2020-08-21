@@ -31,7 +31,7 @@ public:
 
     void Append(const Value<void>& stmt)
     {
-        m_ptr->Append(stmt.m_ptr);
+        m_ptr->Append(stmt.__pochivm_value_ptr);
     }
 
 private:
@@ -41,7 +41,7 @@ private:
     template<typename... T>
     void InitScope(Value<void> stmt, T... args)
     {
-        m_ptr->Append(stmt.m_ptr);
+        m_ptr->Append(stmt.__pochivm_value_ptr);
         InitScope(args...);
     }
 
@@ -69,7 +69,7 @@ public:
 
     void Append(const Value<void>& stmt)
     {
-        m_ptr->Append(stmt.m_ptr);
+        m_ptr->Append(stmt.__pochivm_value_ptr);
     }
 
 private:
@@ -79,7 +79,7 @@ private:
     template<typename... T>
     void InitBlock(Value<void> stmt, T... args)
     {
-        m_ptr->Append(stmt.m_ptr);
+        m_ptr->Append(stmt.__pochivm_value_ptr);
         InitBlock(args...);
     }
 
@@ -93,7 +93,7 @@ struct SmartWrapWithScopeHelper
 {
     static AstScope* handle_one(Value<void> stmt)
     {
-        AstNodeBase* p = stmt.m_ptr;
+        AstNodeBase* p = stmt.__pochivm_value_ptr;
         if (p->GetAstNodeType() == AstNodeType::AstScope)
         {
             // If there is only one statement and it is already a scope,
@@ -117,7 +117,7 @@ struct SmartWrapWithScopeHelper
     template<typename... T>
     static void insert(AstScope* scope, Value<void> stmt, T... args)
     {
-        scope->Append(stmt.m_ptr);
+        scope->Append(stmt.__pochivm_value_ptr);
         insert(scope, args...);
     }
 };
@@ -205,7 +205,7 @@ private:
 
 inline IfWithoutThen If(const Value<bool>& cond)
 {
-    return IfWithoutThen(cond.m_ptr);
+    return IfWithoutThen(cond.__pochivm_value_ptr);
 }
 
 // Syntax:
@@ -256,7 +256,7 @@ inline ForLoopWithoutBody For(const Value<void>& start,
                               const Value<bool>& cond,
                               const Value<void>& step)
 {
-    return ForLoopWithoutBody(start.m_ptr, cond.m_ptr, step.m_ptr);
+    return ForLoopWithoutBody(start.__pochivm_value_ptr, cond.__pochivm_value_ptr, step.__pochivm_value_ptr);
 }
 
 // Syntax:
@@ -295,7 +295,7 @@ private:
 
 inline WhileLoopWithoutBody While(const Value<bool>& cond)
 {
-    return WhileLoopWithoutBody(cond.m_ptr);
+    return WhileLoopWithoutBody(cond.__pochivm_value_ptr);
 }
 
 inline Value<void> Break()

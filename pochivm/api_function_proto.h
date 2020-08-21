@@ -201,8 +201,8 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
     if constexpr(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value)
     {
         return Value<void>(new AstDeclareVariable(
-                               var.m_varPtr,
-                               new AstAssignExpr(var.m_varPtr, value.m_ptr)));
+                               var.__pochivm_var_ptr,
+                               new AstAssignExpr(var.__pochivm_var_ptr, value.__pochivm_value_ptr)));
     }
     else
     {
@@ -211,8 +211,8 @@ Value<void> Declare(const Variable<T>& var, const Value<T>& value)
         //
         static_assert(AstTypeHelper::is_cpp_class_type<T>::value,
                       "T must be a CPP class type registered in pochivm_register_runtime.cpp");
-        AstCallExpr* callExpr = assert_cast<AstCallExpr*>(value.m_ptr);
-        return Value<void>(new AstDeclareVariable(var.m_varPtr, callExpr, false /*isCtor*/));
+        AstCallExpr* callExpr = assert_cast<AstCallExpr*>(value.__pochivm_value_ptr);
+        return Value<void>(new AstDeclareVariable(var.__pochivm_var_ptr, callExpr, false /*isCtor*/));
     }
 }
 
@@ -249,8 +249,8 @@ Value<void> Declare(const Variable<T>& var, const Constructor<T>& constructorPar
     const ConstructorParamInfo& ctorParams = constructorParams;
     static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a cpp class type");
     TestAssert(ctorParams.m_constructorMd->m_paramTypes[0] == TypeId::Get<T>().AddPointer());
-    return Value<void>(new AstDeclareVariable(var.m_varPtr,
-                                              internal::GetCallExprFromConstructor(var.m_varPtr, ctorParams),
+    return Value<void>(new AstDeclareVariable(var.__pochivm_var_ptr,
+                                              internal::GetCallExprFromConstructor(var.__pochivm_var_ptr, ctorParams),
                                               true /*isCtor*/));
 }
 
@@ -261,7 +261,7 @@ Value<void> Declare(const Variable<T>& var)
 {
     if constexpr(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value)
     {
-        return Value<void>(new AstDeclareVariable(var.m_varPtr));
+        return Value<void>(new AstDeclareVariable(var.__pochivm_var_ptr));
     }
     else
     {
@@ -281,8 +281,8 @@ Value<void> Declare(const Variable<T>& var, T value)
     static_assert(AstTypeHelper::is_primitive_type<T>::value,
                   "may only constant-initialize primitive type variable");
     return Value<void>(new AstDeclareVariable(
-                           var.m_varPtr,
-                           new AstAssignExpr(var.m_varPtr, Literal<T>(value).m_ptr)));
+                           var.__pochivm_var_ptr,
+                           new AstAssignExpr(var.__pochivm_var_ptr, Literal<T>(value).__pochivm_value_ptr)));
 }
 
 namespace internal
@@ -310,7 +310,7 @@ struct typesafe_populate_parameters_helper
                            Targs... args)
     {
         static_assert(sizeof...(Targs) == n - 1, "wrong number of arguments supplied to call expression");
-        out.push_back(first.m_ptr);
+        out.push_back(first.__pochivm_value_ptr);
         populate_internal<n-1>(out, args...);
     }
 
@@ -345,7 +345,7 @@ struct call_expr_construct_helper<T, typename std::enable_if<
     template<typename F, typename... Targs>
     static void populate_helper(std::vector<AstNodeBase*>& out, Value<F> first, Targs... args)
     {
-        out.push_back(first.m_ptr);
+        out.push_back(first.__pochivm_value_ptr);
         populate_helper(out, args...);
     }
 
@@ -406,7 +406,7 @@ template<typename T>
 Value<void> Return(const Value<T>& val)
 {
     static_assert(!std::is_same<T, void>::value, "Cannot return a void expression. Use Return() instead.");
-    return Value<void>(new AstReturnStmt(val.m_ptr));
+    return Value<void>(new AstReturnStmt(val.__pochivm_value_ptr));
 }
 
 // CallDestructor<T>(T* ptr): manually call the destructor to destruct the object at 'ptr'
@@ -415,7 +415,7 @@ template<typename T>
 Value<void> CallDestructor(const Value<T*>& val)
 {
     static_assert(is_destructor_registered<T>::value, "Destructor for T is not registered. Register in pochivm_register_runtime.cpp?");
-    return Value<void>(new AstCallExpr(DestructorCppFnMetadata<T>::value, { val.m_ptr }));
+    return Value<void>(new AstCallExpr(DestructorCppFnMetadata<T>::value, { val.__pochivm_value_ptr }));
 }
 
 }   // namespace PochiVM

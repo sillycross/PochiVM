@@ -15,6 +15,7 @@ static void RegisterRuntimeLibrary()
     //    void RegisterFreeFn<function pointer>()
     //    void RegisterMemberFn<member function pointer>()
     //    void RegisterStaticMemberFn<member function pointer>()
+    //    void RegisterMemberObject<member object pointer>()
     //    void RegisterConstructor<ClassName, ArgTypeNames...>()
     //    void RegisterExceptionObjectType<Type>()
     //
@@ -164,6 +165,9 @@ static void RegisterRuntimeLibrary()
     RegisterExceptionObjectType<TestDestructor2>();
 
     RegisterConstructor<std::bad_alloc>();
+
+    RegisterMemberObject<&std::pair<int, double>::first>();
+    RegisterMemberObject<&std::pair<int, double>::second>();
 }
 
 // DO NOT MODIFY
