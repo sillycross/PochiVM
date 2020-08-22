@@ -171,6 +171,8 @@ static void RegisterRuntimeLibrary()
 
     RegisterFreeFn<&TestMismatchedLLVMTypeName>();
     RegisterFreeFn<&TestMismatchedLLVMTypeName2>();
+    RegisterFreeFn<&TestMismatchedLLVMTypeName3>();
+    RegisterFreeFn<&TestMismatchedLLVMTypeName4>();
 }
 
 // DO NOT MODIFY

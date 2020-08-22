@@ -511,3 +511,6 @@ inline void TestNoExceptButThrows(int value) noexcept(true)
 double TestMismatchedLLVMTypeName(std::pair<double, float>* v);
 double TestMismatchedLLVMTypeName2(std::pair<double, uint64_t>* v);
 
+uint64_t TestMismatchedLLVMTypeName3(std::pair<uint32_t, uint16_t>* v);
+uint64_t TestMismatchedLLVMTypeName4(std::pair<uint16_t, uint32_t>* v);
+

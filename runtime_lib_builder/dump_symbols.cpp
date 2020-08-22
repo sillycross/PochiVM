@@ -957,11 +957,13 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 while (head < tail && isWhitespace(rawType[tail])) { tail--; }
                 rawType = rawType.substr(head, tail - head + 1);
             }
-            // TODO: generate static_assert to assert all CppName are equivalent for the same llvmTypeName?
-            //
             if (!typeNameMap.count(structName))
             {
                 typeNameMap[structName] = rawType;
+            }
+            else
+            {
+                ReleaseAssert(rawType == typeNameMap[structName]);
             }
         }
     };
@@ -2113,7 +2115,7 @@ int main(int argc, char** argv)
         std::unique_ptr<Module> declarationModule(new Module(std::string(module->getModuleIdentifier()) + "_patched", *context.get()));
         {
             // Step 3: Load pochivm_register_runtime module
-            // For each public function prototype declaration that is defined in our bitcode,
+            // For each public function prototype declaration that is declared in our bitcode,
             // export a declaration to a new module.
             // Important that everything is done in the same LLVMContext as our bitcode.
             //
@@ -2139,7 +2141,7 @@ int main(int argc, char** argv)
                 {
                     std::string name = f.getName();
                     Function* our_f = module->getFunction(name);
-                    if (our_f != nullptr && !our_f->empty())
+                    if (our_f != nullptr)
                     {
                         if (our_f->getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
                             our_f->getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
@@ -2161,7 +2163,7 @@ int main(int argc, char** argv)
 
         {
             // Step 4: Link our module into declarationModule
-            // The link direction is important: when types are isomorphic, types in source module are kept.
+            // The link direction is important: when types are isomorphic, types in destination module are kept.
             // This makes sure that all our definitions match exactly the declarations in pochivm_register_runtime bitcode
             //
             Linker linker(*declarationModule.get());
