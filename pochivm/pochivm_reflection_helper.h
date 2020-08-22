@@ -4,6 +4,7 @@
 
 #include "constexpr_array_concat_helper.h"
 #include "for_each_primitive_type.h"
+#include "get_mem_fn_address_helper.h"
 
 // Returns something like
 //    const char *__pochivm_stringify_type__() [T = ###### ]
@@ -821,13 +822,6 @@ struct member_object_accessor_wrapper
     }
 };
 
-template <typename MethPtr>
-void* GetClassMethodPtrHelper(MethPtr p)
-{
-    union U { MethPtr meth; void* ptr; };
-    return (reinterpret_cast<U*>(&p))->ptr;
-}
-
 // get_function_pointer_address(t)
 // Returns the void* address of t, where t must be a pointer to a free function or a static or non-static class method
 //
@@ -843,7 +837,7 @@ struct function_pointer_address_helper<T, typename std::enable_if<
 {
     static void* get(T t)
     {
-        return GetClassMethodPtrHelper(t);
+        return AstTypeHelper::GetClassMethodPtr(t, true /*fireReleaseAssert*/);
     }
 };
 

@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %"class.std::vector" = type { %"struct.std::_Vector_base" }
 %"struct.std::_Vector_base" = type { %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" }
 %"struct.std::_Vector_base<int, std::allocator<int> >::_Vector_impl" = type { i32*, i32*, i32* }
-%"struct.PochiVM::ReflectionHelper::tpl_sequence.28" = type { i8 }
+%"struct.PochiVM::ReflectionHelper::tpl_sequence.18" = type { i8 }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
@@ -29,7 +29,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
   %4 = alloca %class.TestDestructor2*, align 8
   %5 = alloca %class.CtorDtorOrderRecorder*, align 8
   %6 = alloca i32, align 4
-  %7 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.28", align 1
+  %7 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.18", align 1
   store %class.TestDestructor2* %0, %class.TestDestructor2** %4, align 8
   store %class.CtorDtorOrderRecorder* %1, %class.CtorDtorOrderRecorder** %5, align 8
   store i32 %2, i32* %6, align 4

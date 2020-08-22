@@ -7,6 +7,7 @@
 
 #include "for_each_primitive_type.h"
 #include "constexpr_array_concat_helper.h"
+#include "get_mem_fn_address_helper.h"
 
 namespace PochiVM
 {
@@ -590,17 +591,6 @@ struct static_cast_offset<T*, U*, typename std::enable_if<
             static_cast<uintptr_t>(0x1000));
     }
 };
-
-// Get the function address for a class method.
-// From: How Facebook's HHVM Uses Modern C++
-//       https://github.com/CppCon/CppCon2014/tree/master/Presentations
-//
-template <typename MethPtr>
-void* GetClassMethodPtr(MethPtr p)
-{
-    union U { MethPtr meth; void* ptr; };
-    return (reinterpret_cast<U*>(&p))->ptr;
-}
 
 // void* SelectTemplatedFnImplGeneric<F, Cond>(TypeId... typeIds)
 //   Taking templated class F and Cond, and a list of TypeId values as parameters,

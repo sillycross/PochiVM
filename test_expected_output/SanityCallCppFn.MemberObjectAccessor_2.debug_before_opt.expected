@@ -3,33 +3,33 @@ source_filename = "test"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%"struct.std::pair.184" = type { i32, double }
+%"struct.std::pair.150" = type { i32, double }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define available_externally dso_local dereferenceable(8) double* @_ZN7PochiVM16ReflectionHelper30member_object_accessor_wrapperIXadL_ZNSt4pairIidE6secondEEEE9wrapperFnEPS3_(%"struct.std::pair.184"* %0) #0 align 2 {
-  %2 = alloca %"struct.std::pair.184"*, align 8
-  store %"struct.std::pair.184"* %0, %"struct.std::pair.184"** %2, align 8
-  %3 = load %"struct.std::pair.184"*, %"struct.std::pair.184"** %2, align 8
-  %4 = bitcast %"struct.std::pair.184"* %3 to i8*
+define available_externally dso_local dereferenceable(8) double* @_ZN7PochiVM16ReflectionHelper30member_object_accessor_wrapperIXadL_ZNSt4pairIidE6secondEEEE9wrapperFnEPS3_(%"struct.std::pair.150"* %0) #0 align 2 {
+  %2 = alloca %"struct.std::pair.150"*, align 8
+  store %"struct.std::pair.150"* %0, %"struct.std::pair.150"** %2, align 8
+  %3 = load %"struct.std::pair.150"*, %"struct.std::pair.150"** %2, align 8
+  %4 = bitcast %"struct.std::pair.150"* %3 to i8*
   %5 = getelementptr inbounds i8, i8* %4, i64 8
   %6 = bitcast i8* %5 to double*
   ret double* %6
 }
 
-define void @testfn(%"struct.std::pair.184"* %_param_0, double %_param_1) personality i32 (...)* @__gxx_personality_v0 {
+define void @testfn(%"struct.std::pair.150"* %_param_0, double %_param_1) personality i32 (...)* @__gxx_personality_v0 {
 entry:
-  %param_0 = alloca %"struct.std::pair.184"*
+  %param_0 = alloca %"struct.std::pair.150"*
   %param_1 = alloca double
   br label %body
 
 body:                                             ; preds = %entry
-  store %"struct.std::pair.184"* %_param_0, %"struct.std::pair.184"** %param_0
+  store %"struct.std::pair.150"* %_param_0, %"struct.std::pair.150"** %param_0
   store double %_param_1, double* %param_1
   %0 = load double, double* %param_1
-  %1 = load %"struct.std::pair.184"*, %"struct.std::pair.184"** %param_0
-  %2 = call double* @_ZN7PochiVM16ReflectionHelper30member_object_accessor_wrapperIXadL_ZNSt4pairIidE6secondEEEE9wrapperFnEPS3_(%"struct.std::pair.184"* %1)
+  %1 = load %"struct.std::pair.150"*, %"struct.std::pair.150"** %param_0
+  %2 = call double* @_ZN7PochiVM16ReflectionHelper30member_object_accessor_wrapperIXadL_ZNSt4pairIidE6secondEEEE9wrapperFnEPS3_(%"struct.std::pair.150"* %1)
   store double %0, double* %2
   ret void
 }

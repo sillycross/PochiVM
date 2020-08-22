@@ -265,9 +265,9 @@ template<typename T>
 class Variable : public Reference<T>
 {
 public:
-    Variable(AstVariable* ptr)
-        : Reference<T>(ptr, true)
-        , __pochivm_var_ptr(ptr)
+    Variable(AstVariable* __pochivm_var_ptr_)
+        : Reference<T>(__pochivm_var_ptr_, true)
+        , __pochivm_var_ptr(__pochivm_var_ptr_)
     {
         TestAssert(__pochivm_var_ptr->GetTypeId().IsType<T*>());
     }
