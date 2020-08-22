@@ -503,3 +503,11 @@ inline void TestNoExceptButThrows(int value) noexcept(true)
 }
 #pragma clang diagnostic pop
 
+// Important that the below two functions are defined outlined,
+// and their definitions reside in two different translational units,
+// since the purpose is to test that our IR processor correctly unifies the struct
+// names in different translational units to match the ones in pochivm_register_runtime.cpp.
+//
+double TestMismatchedLLVMTypeName(std::pair<double, float>* v);
+double TestMismatchedLLVMTypeName2(std::pair<double, uint64_t>* v);
+

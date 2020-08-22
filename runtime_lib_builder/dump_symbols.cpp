@@ -28,6 +28,9 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/TypeFinder.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Linker/Linker.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -2005,7 +2008,7 @@ int main(int argc, char** argv)
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
 
-    // --dump [bc_file] [symbol_list_output]
+    // --dump [bc_file] [symbol_list_output] [pochivm_register_runtime_bc]
     //    Used on a bc file. Dumps all the global symbols it defined to symbol_list_output
     //
 
@@ -2020,7 +2023,7 @@ int main(int argc, char** argv)
     std::string param1 = argv[1];
     ReleaseAssert(param1 == "--dump" || param1 == "--dump-list");
 
-    if (param1 == "--dump") { ReleaseAssert(argc == 4); } else { ReleaseAssert(argc == 6); }
+    if (param1 == "--dump") { ReleaseAssert(argc == 5); } else { ReleaseAssert(argc == 6); }
 
     bool isDumpList = (param1 == "--dump-list");
 
@@ -2048,6 +2051,125 @@ int main(int argc, char** argv)
     }
 
     PatchCallsToSpecialIrFunctions(module.get());
+
+    if (!isDumpList)
+    {
+        // We need to make sure that for each function prototypes in 'module' that also exists in 'canonicalModule'
+        // the parameter struct names are the same. And other than those, all other struct names in 'module'
+        // does not collide with any struct name in 'canonicalModule'. This makes sure that when we link in
+        // any function from 'module' to 'canonicalModule', all struct names that are supposed to match matches,
+        // and no struct names in 'canonicalModule' will be changed due to collision.
+        //
+        {
+            // Step 1: remove all struct names in our module
+            //
+            llvm::TypeFinder typeFinder;
+            typeFinder.run(*module, true /*onlyNamed*/);
+            for (StructType* stype : typeFinder)
+            {
+                ReleaseAssert(stype->hasName());
+                stype->setName("");
+            }
+        }
+
+        {
+            // Step 2: Execute a save/load, so the new LLVMContext is not polluted with struct names
+            //
+            {
+                int fd = creat(strippedBcFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                if (fd == -1)
+                {
+                    fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                            strippedBcFileName.c_str(), errno, strerror(errno));
+                    abort();
+                }
+                raw_fd_ostream fdStream(fd, true /*shouldClose*/);
+                WriteBitcodeToFile(*module.get(), fdStream);
+                if (fdStream.has_error())
+                {
+                    std::error_code ec = fdStream.error();
+                    fprintf(stderr, "Writing to file '%s' failed with errno = %d (%s)\n",
+                            strippedBcFileName.c_str(), ec.value(), ec.message().c_str());
+                    abort();
+                }
+                /* fd closed when fdStream is destructed here */
+            }
+
+            {
+                std::unique_ptr<LLVMContext> newContext(new LLVMContext);
+                std::unique_ptr<Module> newModule = parseIRFile(strippedBcFileName, llvmErr, *newContext.get());
+
+                if (newModule == nullptr)
+                {
+                    fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", strippedBcFileName.c_str());
+                    llvmErr.print(argv[0], errs());
+                    abort();
+                }
+                module = std::move(newModule);
+                context = std::move(newContext);
+            }
+        }
+
+        std::unique_ptr<Module> declarationModule(new Module(std::string(module->getModuleIdentifier()) + "_patched", *context.get()));
+        {
+            // Step 3: Load pochivm_register_runtime module
+            // For each public function prototype declaration that is defined in our bitcode,
+            // export a declaration to a new module.
+            // Important that everything is done in the same LLVMContext as our bitcode.
+            //
+            std::string pochiVmStrippedBcFileName = argv[4];
+            pochiVmStrippedBcFileName = pochiVmStrippedBcFileName + ".stripped.bc";
+
+            std::unique_ptr<Module> canonicalModule = parseIRFile(pochiVmStrippedBcFileName, llvmErr, *context.get());
+
+            if (canonicalModule == nullptr)
+            {
+                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", pochiVmStrippedBcFileName.c_str());
+                llvmErr.print(argv[0], errs());
+                abort();
+            }
+
+            for (Function& f : canonicalModule->functions())
+            {
+                if (f.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+                {
+                    std::string name = f.getName();
+                    Function* our_f = module->getFunction(name);
+                    if (our_f != nullptr && !our_f->empty())
+                    {
+                        if (our_f->getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+                            our_f->getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
+                            our_f->getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
+                            our_f->getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
+                            our_f->getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+                        {
+                            Function* newFn = Function::Create(f.getFunctionType(),
+                                                               GlobalValue::LinkageTypes::ExternalLinkage,
+                                                               name,
+                                                               declarationModule.get());
+                            newFn->setDSOLocal(f.isDSOLocal());
+                            newFn->setAttributes(f.getAttributes());
+                        }
+                    }
+                }
+            }
+        }
+
+        {
+            // Step 4: Link our module into declarationModule
+            // The link direction is important: when types are isomorphic, types in source module are kept.
+            // This makes sure that all our definitions match exactly the declarations in pochivm_register_runtime bitcode
+            //
+            Linker linker(*declarationModule.get());
+            ReleaseAssert(linker.linkInModule(std::move(module)) == false);
+        }
+
+        module = std::move(declarationModule);
+    }
 
     {
         int fd = creat(strippedBcFileName.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);

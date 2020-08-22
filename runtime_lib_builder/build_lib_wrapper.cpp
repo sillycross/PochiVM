@@ -174,9 +174,22 @@ int main(int argc, char** argv)
     bool isDumpSymbolChanged = !CheckMd5Match(dump_symbols);
 
     // for each modified object file, call dump_symbols to update '.sym' and '.sym.matches'
+    // The order is a bit tricky:
+    //    For dump_symbols, there is a dependency on pochivm_register_runtime.cpp for every other bitcode,
+    //    (to canonicalize the other bitcodes' type names), so we need to process pochivm_register_runtime.cpp first.
+    //    But for update_symbol_matches, pochivm_register_runtime.cpp depends on every other bitcode
+    //    (to get the wrapped functions' implementation), so we need to process pochivm_register_runtime.cpp last.
     //
+    // We pushed pochivmBcFile at the end of allBitcodefiles vector. Here we special-case to process pochivmBcFile first.
+    //
+    std::vector<size_t> processOrder;
+    processOrder.push_back(allBitcodefiles.size() - 1);
+    for (size_t i = 0; i < allBitcodefiles.size() - 1; i++)
+    {
+        processOrder.push_back(i);
+    }
     bool shouldRebuildLibrary = false;
-    for (size_t i = 0; i < allBitcodefiles.size(); i++)
+    for (size_t i : processOrder)
     {
         std::string bcfile = allBitcodefiles[i];
         std::string symfile = allSymfiles[i];
@@ -195,7 +208,7 @@ int main(int argc, char** argv)
             std::string cmd;
             if (!isPochiVMObj)
             {
-                cmd = dump_symbols + " --dump " + bcfile + " " + symfile;
+                cmd = dump_symbols + " --dump " + bcfile + " " + symfile + " " + pochivmBcFile;
             }
             else
             {

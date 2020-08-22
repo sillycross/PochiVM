@@ -4140,3 +4140,82 @@ TEST(SanityCallCppFn, MemberObjectAccessor_2)
         ReleaseAssert(fabs(v.second - 543.21) < 1e-12);
     }
 }
+
+// For functions which definition resides in different translational units,
+// the parameters may have different struct names. For example, struct name 'struct.std::pair.xxx' is given
+// for each std::pair in a translational unit where xxx is a label, so the label may differ in different
+// translational units for the same type. This test tests that our IR processor correctly
+// renames all the struct names in other translational units so they match the name used in
+// pochivm_register_runtime.cpp (which is the one we used to generate AstCppTypeLLVMTypeName array).
+//
+TEST(SanityCallCppFn, LLVMTypeMismatchRenaming)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = std::function<double(std::pair<double, float>*, std::pair<double, uint64_t>*)>;
+    {
+        auto [fn, a, b] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(CallFreeFn::TestMismatchedLLVMTypeName(a) + CallFreeFn::TestMismatchedLLVMTypeName2(b))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
+                GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+
+        std::pair<double, float> a = std::make_pair(123.45, 456.789);
+        std::pair<double, uint64_t> b = std::make_pair(876.54, 321);
+        double r = interpFn(&a, &b);
+        ReleaseAssert(fabs(r - (123.45 + 456.789 + 876.54 + 321)) < 1e-5);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        std::pair<double, float> a = std::make_pair(123.45, 456.789);
+        std::pair<double, uint64_t> b = std::make_pair(876.54, 321);
+        double r = jitFn(&a, &b);
+        ReleaseAssert(fabs(r - (123.45 + 456.789 + 876.54 + 321)) < 1e-5);
+    }
+}

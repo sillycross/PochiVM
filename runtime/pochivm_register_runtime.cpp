@@ -168,6 +168,9 @@ static void RegisterRuntimeLibrary()
 
     RegisterMemberObject<&std::pair<int, double>::first>();
     RegisterMemberObject<&std::pair<int, double>::second>();
+
+    RegisterFreeFn<&TestMismatchedLLVMTypeName>();
+    RegisterFreeFn<&TestMismatchedLLVMTypeName2>();
 }
 
 // DO NOT MODIFY

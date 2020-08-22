@@ -56,3 +56,8 @@ TestLargeClass& FreeFnTestLargeClass4(TestLargeClass a, TestLargeClass& b, TestL
 }
 
 int TestNonTrivialCopyConstructor::counter = 0;
+
+double TestMismatchedLLVMTypeName(std::pair<double, float>* v)
+{
+    return v->first + static_cast<double>(v->second);
+}
