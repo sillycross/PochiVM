@@ -44,6 +44,7 @@ pochivm/pochivm.h
 pochivm/pochivm.hpp
 pochivm/pochivm_context.h
 pochivm/pochivm_reflection_helper.h
+post_build_verifier/fn_proto_validator.h
 post_build_verifier/post_build_verifier.cpp
 runtime/pochivm_register_runtime.cpp
 runtime/pochivm_runtime_headers.h

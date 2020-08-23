@@ -568,7 +568,20 @@ static void PrintFnTemplateParams(FILE* fp, const ParsedFnTypeNamesInfo& info)
 
 static int g_curUniqueFunctionOrdinal = 0;
 
-static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
+static void PrintValidateFnPrototype(FILE* fp,
+                                     const std::vector<std::string>& params,
+                                     const std::string& ret,
+                                     const std::string& varname)
+{
+    fprintf(fp, "validate_bc_code<\n    %s\n", ret.c_str());
+    for (const std::string& s : params)
+    {
+        fprintf(fp, "  , %s\n", s.c_str());
+    }
+    fprintf(fp, ">::Check(&%s);\n", varname.c_str());
+}
+
+static void PrintFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& info)
 {
     ReleaseAssert(info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
                   info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
@@ -579,10 +592,14 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     {
         numParams++;
     }
+    std::vector<std::string> cppParams;
+    std::string cppRet;
     fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_params[%d] = {", numParams);
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
     {
-        fprintf(fp, "\n        TypeId::Get<typename std::add_pointer<%s>::type>()", info.m_prefix.c_str());
+        std::string s = std::string("typename std::add_pointer<") + info.m_prefix + ">::type";
+        cppParams.push_back(s);
+        fprintf(fp, "\n        TypeId::Get<%s>()", s.c_str());
         if (info.m_params.size() > 0)
         {
             fprintf(fp, ",");
@@ -594,10 +611,17 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     }
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "\n        TypeId::Get<%s%s%s>()",
-                (info.m_isParamsApiVar[i] ? "typename std::add_pointer<" : ""),
-                info.m_params[i].c_str(),
-                (info.m_isParamsApiVar[i] ? ">::type" : ""));
+        std::string s;
+        if (info.m_isParamsApiVar[i])
+        {
+            s = std::string("typename std::add_pointer<") + info.m_params[i] + ">::type";
+        }
+        else
+        {
+            s = info.m_params[i];
+        }
+        cppParams.push_back(s);
+        fprintf(fp, "\n        TypeId::Get<%s>()", s.c_str());
         if (i != info.m_params.size() - 1)
         {
             fprintf(fp, ",");
@@ -608,10 +632,19 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
         }
     }
     fprintf(fp, "};\n");
-    fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<%s%s%s>();\n",
-            (info.m_isRetApiVar ? "typename std::add_pointer<" : ""),
-            info.m_ret.c_str(),
-            (info.m_isRetApiVar ? ">::type" : ""));
+    {
+        std::string s;
+        if (info.m_isRetApiVar)
+        {
+            s = std::string("typename std::add_pointer<") + info.m_ret + ">::type";
+        }
+        else
+        {
+            s = info.m_ret;
+        }
+        fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<%s>();\n", s.c_str());
+        cppRet = s;
+    }
 
     if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn)
     {
@@ -661,6 +694,9 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
 
     if (isUsingSret)
     {
+        cppRet = std::string("typename std::add_pointer<") + cppRet + ">::type";
+        cppParams.insert(cppParams.begin(), cppRet);
+        cppRet = "void";
         ReleaseAssert(!info.m_isRetApiVar);
         fprintf(fp, "    static_assert(TypeId::Get<typename ReflectionHelper::recursive_remove_cv<typename __pochivm_wrapper_fn_typeinfo::ReturnType>::type>() ==\n");
         fprintf(fp, "                  TypeId::Get<void>(), \"unexpected return type\");\n");
@@ -712,6 +748,8 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     g_curUniqueFunctionOrdinal++;
     fprintf(fp, "    };\n");
 
+    PrintValidateFnPrototype(gp, cppParams, cppRet, varname);
+
     fprintf(fp, "    return %s<%s>(new AstCallExpr(\n",
             (info.m_isRetApiVar ? "Reference" : "Value"), info.m_ret.c_str());
     fprintf(fp, "            &__pochivm_cpp_fn_metadata,\n");
@@ -746,19 +784,28 @@ static void PrintFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
     fprintf(fp, "}\n\n");
 }
 
-static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& info)
+static void PrintConstructorFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& info)
 {
     ReleaseAssert(info.m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor);
     fprintf(fp, "{\n");
     ReleaseAssert(info.m_params.size() > 0);
     int numCtorParams = static_cast<int>(info.m_params.size()) - 1;
+    std::vector<std::string> cppParams;
+    std::string cppRet = "void";
     fprintf(fp, "    static constexpr TypeId __pochivm_cpp_fn_params[%d] = {", static_cast<int>(info.m_params.size()));
     for (size_t i = 0; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "\n        TypeId::Get<%s%s%s>()",
-                (info.m_isParamsApiVar[i] ? "typename std::add_pointer<" : ""),
-                info.m_params[i].c_str(),
-                (info.m_isParamsApiVar[i] ? ">::type" : ""));
+        std::string s;
+        if (info.m_isParamsApiVar[i])
+        {
+            s = std::string("typename std::add_pointer<") + info.m_params[i] + ">::type";
+        }
+        else
+        {
+            s = info.m_params[i];
+        }
+        cppParams.push_back(s);
+        fprintf(fp, "\n        TypeId::Get<%s>()", s.c_str());
         if (i != info.m_params.size() - 1)
         {
             fprintf(fp, ",");
@@ -814,6 +861,8 @@ static void PrintConstructorFnCallBody(FILE* fp, const ParsedFnTypeNamesInfo& in
     fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
     g_curUniqueFunctionOrdinal++;
     fprintf(fp, "    };\n");
+
+    PrintValidateFnPrototype(gp, cppParams, cppRet, varname);
 
     fprintf(fp, "    m_constructorMd = &__pochivm_cpp_fn_metadata;\n");
     fprintf(fp, "    m_params = std::vector<AstNodeBase*>{");
@@ -1044,6 +1093,19 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         return ss.str();
     };
 
+    std::string validatorFilename = generatedFileFolder + "/pochivm_runtime_library_validator.generated.cpp";
+    FILE* gp = fopen(validatorFilename.c_str(), "w");
+    if (gp == nullptr)
+    {
+        fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                validatorFilename.c_str(), errno, strerror(errno));
+        abort();
+    }
+    fprintf(gp, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+    fprintf(gp, "#include \"post_build_verifier/fn_proto_validator.h\"\n\n");
+    fprintf(gp, "namespace PochiVM {\n\n");
+    fprintf(gp, "void ValidateAllBitcodeFnPrototypes() {\n");
+
     // generate Ast syntax header
     //
     std::set<std::string> allDefaultConstructibleClasses;
@@ -1155,8 +1217,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         fprintf(fp, "        using __pochivm_classname = %s;\n", className.c_str());
                         fprintf(fp, "        static constexpr TypeId __pochivm_cpp_fn_params[1] = { TypeId::Get<%s>() };\n",
                                 info.m_params[0].c_str());
-                        fprintf(fp, "        static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<typename std::add_pointer<%s>::type>();\n",
-                                info.m_ret.c_str());
+                        std::string cppRet = std::string("typename std::add_pointer<") + info.m_ret + ">::type";
+                        fprintf(fp, "        static constexpr TypeId __pochivm_cpp_fn_ret = TypeId::Get<%s>();\n", cppRet.c_str());
                         fprintf(fp, "        static_assert(__pochivm_cpp_fn_params[0] == TypeId::Get<__pochivm_classname>().AddPointer(), \"unexpected param type\");\n");
                         fprintf(fp, "        using __pochivm_wrapper_t = ReflectionHelper::member_object_accessor_wrapper<&__pochivm_classname::%s>;\n",
                                 info.m_functionName.c_str());
@@ -1175,6 +1237,9 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         fprintf(fp, "        return Reference<%s>(new AstCallExpr(&__pochivm_cpp_fn_metadata, std::vector<AstNodeBase*>{ __pochivm_ref_ptr }));\n",
                                 info.m_ret.c_str());
                         fprintf(fp, "    }\n\n");
+                        std::vector<std::string> cppParams;
+                        cppParams.push_back(info.m_params[0]);
+                        PrintValidateFnPrototype(gp, cppParams, cppRet, varname);
                     }
                     else
                     {
@@ -1338,7 +1403,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                                     info.m_ret.c_str(), info.m_functionName.c_str());
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info);
+                            PrintFnCallBody(fp, gp, info);
                         }
                     }
                     else
@@ -1399,7 +1464,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                             PrintFnTemplateParams(fp, info);
                             PrintFnParams(fp, info);
                             fprintf(fp, "\n");
-                            PrintFnCallBody(fp, info);
+                            PrintFnCallBody(fp, gp, info);
                         }
                     }
                     start = end;
@@ -1461,7 +1526,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     }
                     PrintFnParams(fp, info);
                     fprintf(fp, "\n");
-                    PrintFnCallBody(fp, info);
+                    PrintFnCallBody(fp, gp, info);
                 }
             }
         }
@@ -1521,7 +1586,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                     //
                     PrintFnParams(fp, info, false /*doNotPrintVarName*/, 1 /*firstParam*/);
                     fprintf(fp, "\n");
-                    PrintConstructorFnCallBody(fp, info);
+                    PrintConstructorFnCallBody(fp, gp, info);
                 }
                 fprintf(fp, "};\n\n");
 
@@ -1811,6 +1876,10 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 fprintf(fp, "public:\n");
                 fprintf(fp, "    static constexpr const CppFunctionMetadata* value = &__pochivm_cpp_fn_metadata;\n");
                 fprintf(fp, "};\n\n");
+                std::vector<std::string> cppParams;
+                cppParams.push_back(info.m_params[0]);
+                std::string cppRet = "void";
+                PrintValidateFnPrototype(gp, cppParams, cppRet, varname);
             }
 
             fprintf(fp, "template<typename T>\n");
@@ -1980,6 +2049,10 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         fprintf(fp, "\n} // namespace PochiVM\n\n");
         fclose(fp);
     }
+
+    fprintf(gp, "\n}\n");
+    fprintf(gp, "\n} // namespace PochiVM\n\n");
+    fclose(gp);
 }
 
 // Replace calls to special IR functions to our own version.

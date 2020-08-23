@@ -8,6 +8,8 @@
 #include "pochivm/common.h"
 #include "generated/pochivm_runtime_library_bitcodes.generated.h"
 
+#include "post_build_verifier/fn_proto_validator.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -235,6 +237,8 @@ int main(int argc, char** argv)
     {
         abort();
     }
+
+    PochiVM::ValidateAllBitcodeFnPrototypes();
 
     return 0;
 }

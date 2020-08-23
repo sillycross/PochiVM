@@ -26,6 +26,10 @@ add_library(runtime_bc
   ${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp
 )
 
+add_library(runtime_bc_validator
+  ${GENERATED_FILES_DIR}/pochivm_runtime_library_validator.generated.cpp
+)
+
 SET(RUNTIME_LIB_FILE "${CMAKE_CURRENT_BINARY_DIR}/libruntime.a")
 
 add_custom_target(libruntime_target DEPENDS ${RUNTIME_LIB_FILE})
@@ -39,6 +43,7 @@ set_target_properties(runtime
 
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library_bitcodes.generated.h PROPERTIES GENERATED true)
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library.generated.cpp PROPERTIES GENERATED true)
+set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_library_validator.generated.cpp PROPERTIES GENERATED true)
 
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h PROPERTIES GENERATED true)
 set_source_files_properties(${GENERATED_FILES_DIR}/pochivm_runtime_cpp_types.generated.h PROPERTIES GENERATED true)
@@ -57,6 +62,7 @@ add_custom_command(
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_headers.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_cpp_types.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_cpp_typeinfo.generated.h
+  OUTPUT ${GENERATED_FILES_DIR}/pochivm_runtime_library_validator.generated.cpp
   COMMAND ${PROJECT_BINARY_DIR}/runtime_lib_builder/build_lib_wrapper "${PROJECT_BINARY_DIR}/runtime_lib_builder/dump_symbols" "${PROJECT_BINARY_DIR}/runtime_lib_builder/update_symbol_matches" "${PROJECT_BINARY_DIR}/runtime_lib_builder/build_runtime_lib" "${GENERATED_FILES_DIR}" "${PROJECT_BINARY_DIR}" "${LLC_OPT_LEVEL}" "${RUNTIME_LIB_FILE}" '$<TARGET_OBJECTS:runtime_internal1>' '$<TARGET_OBJECTS:runtime_internal2>'
   DEPENDS $<TARGET_OBJECTS:runtime_internal1> $<TARGET_OBJECTS:runtime_internal2> dump_symbols build_runtime_lib update_symbol_matches build_lib_wrapper
 )
