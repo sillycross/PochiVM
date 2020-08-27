@@ -514,3 +514,4 @@ double TestMismatchedLLVMTypeName2(std::pair<double, uint64_t>* v);
 uint64_t TestMismatchedLLVMTypeName3(std::pair<uint32_t, uint16_t>* v);
 uint64_t TestMismatchedLLVMTypeName4(std::pair<uint16_t, uint32_t>* v);
 
+extern int g_testGlobalVariable1;

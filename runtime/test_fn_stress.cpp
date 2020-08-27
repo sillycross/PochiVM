@@ -71,3 +71,5 @@ uint64_t TestMismatchedLLVMTypeName3(std::pair<uint32_t, uint16_t>* v)
     std::pair<uint16_t, uint32_t> x = std::make_pair(v->second - 1, v->first - 1);
     return TestMismatchedLLVMTypeName4(&x) + 2;
 }
+
+int g_testGlobalVariable1 = 12345;

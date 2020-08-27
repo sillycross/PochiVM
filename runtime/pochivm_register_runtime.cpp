@@ -4,7 +4,7 @@
 #include "pochivm_runtime_headers.h"
 #include "pochivm/pochivm_reflection_helper.h"
 
-__attribute__((__optnone__))    // make sure link-time optimization won't optimize these out as dead code
+__attribute__((__optnone__))
 static void RegisterRuntimeLibrary()
 {
     using namespace PochiVM;
@@ -173,6 +173,12 @@ static void RegisterRuntimeLibrary()
     RegisterFreeFn<&TestMismatchedLLVMTypeName2>();
     RegisterFreeFn<&TestMismatchedLLVMTypeName3>();
     RegisterFreeFn<&TestMismatchedLLVMTypeName4>();
+
+    RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::*)()>(&std::vector<int>::begin)>();
+    RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::*)()>(&std::vector<int>::end)>();
+    RegisterMemberFn<&std::vector<int>::iterator::operator*>();
+    // RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::iterator::*)(int)>(&std::vector<int>::iterator::operator++)>();
+    // RegisterMemberFn<static_cast<std::vector<int>::iterator&(std::vector<int>::iterator::*)()>(&std::vector<int>::iterator::operator++)>();
 }
 
 // DO NOT MODIFY

@@ -85,6 +85,12 @@ struct ParsedFnTypeNamesInfo
             ReleaseAssert(fnName[className.length() + 1] == ':');
             m_prefix = className;
             m_functionName = fnName.substr(className.length() + 2);
+            m_functionName = StripLeadingAndTrailingWhitespaces(m_functionName);
+            if (m_functionName == "operator&" && m_numArgs == 0)
+            {
+                fprintf(stderr, "[ERROR] Registering overloaded address-of operator '&a' is not supported!\n");
+                abort();
+            }
         }
         else if (m_fnType == PochiVM::ReflectionHelper::FunctionType::Constructor ||
                  m_fnType == PochiVM::ReflectionHelper::FunctionType::Destructor)
@@ -95,6 +101,8 @@ struct ParsedFnTypeNamesInfo
         }
         else
         {
+            ReleaseAssert(m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ||
+                          m_fnType == PochiVM::ReflectionHelper::FunctionType::FreeFn);
             std::string fnName = ParseValueName(src->m_fnName);
             int k = static_cast<int>(fnName.length()) - 1;
             while (k >= 0 && fnName[static_cast<size_t>(k)] != ':')
@@ -121,6 +129,23 @@ struct ParsedFnTypeNamesInfo
         m_isWrapperUsingSret = src->m_isWrapperUsingSret;
         m_wrapperFnAddress = src->m_wrapperFnAddress;
         m_isCopyCtorOrAssignmentOp = src->m_isCopyCtorOrAssignmentOp;
+
+        if (m_prefix != "")
+        {
+            m_prefix = StripLeadingAndTrailingWhitespaces(m_prefix);
+        }
+    }
+
+    static std::string StripLeadingAndTrailingWhitespaces(const std::string& s)
+    {
+        ReleaseAssert(s.length() > 0);
+        size_t head = 0;
+        while (head < s.length() && isWhitespace(s[head])) { head++; }
+        ReleaseAssert(head < s.length() && !isWhitespace(s[head]));
+        size_t tail = s.length() - 1;
+        while (tail > head && isWhitespace(s[tail])) { tail--; }
+        ReleaseAssert(head <= tail && !isWhitespace(s[tail]));
+        return s.substr(head, tail - head + 1);
     }
 
     void RecordMangledSymbolName(const std::string& mangledSymbolName)
@@ -255,97 +280,9 @@ struct ParsedFnTypeNamesInfo
             //
             for (size_t k = 0; k < m_templateParams.size(); k++)
             {
-                std::string& s = m_templateParams[k];
-                size_t head = 0;
-                while (head < s.length() && isWhitespace(s[head])) { head++; }
-                ReleaseAssert(head < s.length() && !isWhitespace(s[head]));
-                size_t tail = s.length() - 1;
-                while (tail > head && isWhitespace(s[tail])) { tail--; }
-                ReleaseAssert(head <= tail && !isWhitespace(s[tail]));
-                m_templateParams[k] = s.substr(head, tail - head + 1);
+                m_templateParams[k] = StripLeadingAndTrailingWhitespaces(m_templateParams[k]);
             }
         }
-    }
-
-    // Find out the class name from m_prefix
-    //
-    std::string FindClassName()
-    {
-        ReleaseAssert(m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ||
-                      m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn);
-        ReleaseAssert(m_prefix.length() > 0);
-        size_t i = m_prefix.length() - 1;
-        while (i > 0 && isWhitespace(m_prefix[i])) { i--; }
-        ReleaseAssert(i > 0);
-        size_t rightBoundary = i;
-        if (m_prefix[i] == '>')
-        {
-            // find out the matching '<', logic similar to FindTemplateParameters
-            //
-            int bracketDepth = 1;
-            i--;
-            while (i > 0)
-            {
-                if (m_prefix[i] == ')')
-                {
-                    // We hit a right parenthesis, temporarily switch to parenthesis matching mode.
-                    // Find the left parenthesis, ignore anything (including brackets) in between.
-                    //
-                    int parenthesisDepth = 0;
-                    while (i > 0)
-                    {
-                        if (m_prefix[i] == ')')
-                        {
-                            parenthesisDepth++;
-                        }
-                        else if (m_prefix[i] == '(')
-                        {
-                            parenthesisDepth--;
-                            if (parenthesisDepth == 0)
-                            {
-                                break;
-                            }
-                        }
-                        i--;
-                    }
-                    ReleaseAssert(parenthesisDepth == 0);
-                    ReleaseAssert(m_prefix[i] == '(');
-                    ReleaseAssert(i > 0);
-                }
-                else if (m_prefix[i] == '>')
-                {
-                    bracketDepth++;
-                }
-                else if (m_prefix[i] == '<')
-                {
-                    bracketDepth--;
-                    if (bracketDepth == 0)
-                    {
-                        break;
-                    }
-                }
-                i--;
-            }
-            ReleaseAssert(bracketDepth == 0);
-            ReleaseAssert(m_prefix[i] == '<');
-            ReleaseAssert(i > 0);
-            i--;
-        }
-        // Now we are at the class name (without template part),
-        // scan left to find the '::' or a whitespace
-        //
-        while (i > 0 && m_prefix[i] != ':' && !isWhitespace(m_prefix[i])) { i--; }
-        if (m_prefix[i] == ':' || isWhitespace(m_prefix[i]))
-        {
-            if (m_prefix[i] == ':')
-            {
-                ReleaseAssert(i > 0 && m_prefix[i-1] == ':');
-            }
-            i++;
-        }
-        // The class name is [i, rightBoundary]
-        //
-        return m_prefix.substr(i, rightBoundary - i + 1);
     }
 
     static std::string ParseNameInternal(const char* data)
@@ -1071,7 +1008,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
             ReleaseAssert(fnType->getNumParams() > firstArgOrd);
             Type* thisPtr = fnType->getParamType(firstArgOrd);
             ReleaseAssert(thisPtr->isPointerTy());
-            std::string className = info.FindClassName();
+            std::string className = info.m_prefix;
             matchTypes(fn, thisPtr, className, true /*isVar*/);
             firstArgOrd += 1;
         }
