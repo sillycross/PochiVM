@@ -837,7 +837,9 @@ struct function_pointer_address_helper<T, typename std::enable_if<
 {
     static void* get(T t)
     {
-        return AstTypeHelper::GetClassMethodPtr(t, true /*fireReleaseAssert*/);
+        AstTypeHelper::ItaniumMemFnPointer fp(t);
+        ReleaseAssert(fp.MayConvertToPlainPointer());
+        return fp.GetRawFunctionPointer();
     }
 };
 
