@@ -69,10 +69,11 @@ This is an operation hidden behind the scene.
 We want our generated program to have straight-forward behavior, 
 so we disallow such conversions. Therefore for :term:`C++ type<C++ Type>` ``C``, ``Reference<C>`` **does not** inherit ``Value<C>``.
 
-``Reference<C>`` is also specialized to provide APIs for all member functions and objects registered in ``pochivm_register_runtime.cpp``.
-E.g., if member func ``void std::vector<int>::push_back(const int&)`` is registered, 
-class ``Reference<C>`` would be specialized to have a member function with prototype ``Value<void> push_back(Value<int>)``,
-so given a variable ``a`` of type ``Reference<std::vector<int>>``,
+``Reference<C>`` is also specialized to provide APIs to access any member functions and objects of class ``C`` 
+that are registered in ``pochivm_register_runtime.cpp``.
+E.g., suppose the member function ``void std::vector<int>::push_back(const int&)`` is registered, 
+class ``Reference<std::vector<int>>`` would be specialized to have a member function ``Value<void> push_back(Value<int>)``.
+Then, given a variable ``a`` of type ``Reference<std::vector<int>>``,
 one can write ``a.push_back(Literal<int>(1))`` to call the ``push_back`` member function and push a ``1`` to the end of the vector.
 For more information, see :doc:`Interacting with C++ Runtime</cpp_interact>`.
 

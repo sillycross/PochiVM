@@ -6,6 +6,10 @@
 PochiVM Reference Manual
 ===================================
 
+.. note::
+
+  Both PochiVM and its documentation are under active development. Cheers!
+  
 .. toctree::
    :maxdepth: 2
    
@@ -18,5 +22,5 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
+
