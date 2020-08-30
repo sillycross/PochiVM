@@ -6,11 +6,14 @@ SET(SOURCES
   test_fn_stress.cpp
 )
 
+# !!! DO NOT MODIFY BELOW !!! 
+
 add_library(runtime_internal1 OBJECT
   ${SOURCES}
 )
 
 add_library(runtime_internal2 OBJECT
+  # DO NOT PUT ANYTHING ELSE HERE!
   pochivm_register_runtime.cpp
 )
 

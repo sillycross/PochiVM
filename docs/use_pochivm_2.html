@@ -1,0 +1,341 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Integration Into Existing Project &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Language Construction API" href="lang_construct.html" />
+    <link rel="prev" title="A New Project Using PochiVM" href="use_pochivm.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="intro.html">Getting Started</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="what_is_pochivm.html">What is PochiVM?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_and_test.html">Build and Run Unit Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_1.html">PochiVM Tutorial 101</a></li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm.html">A New Project Using PochiVM</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Integration Into Existing Project</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#build-process-behind-the-scene">Build Process Behind the Scene</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-llvm-ir-of-runtime-library">Get LLVM IR of Runtime Library</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#extract-information-from-ir">Extract Information from IR</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#build-the-rest-of-the-project">Build the Rest of the Project</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#final-linking-step">Final Linking Step</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#post-build-validation-pass">Post-Build Validation Pass</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#why-pochivm-is-built-in-docker">Why PochiVM is Built in Docker</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="intro.html">Getting Started</a> &raquo;</li>
+        
+      <li>Integration Into Existing Project</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/use_pochivm_2.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="integration-into-existing-project">
+<h1>Integration Into Existing Project<a class="headerlink" href="#integration-into-existing-project" title="Permalink to this headline">¶</a></h1>
+<p>PochiVM’s intuitive syntax and powerful inlining features is
+at the cost of a somewhat complicated build process.
+Further complicated by the nature of LLVM’s sensitive version requirements,
+it is impossible that PochiVM could be provided as a plug-and-use library.</p>
+<p>So unfortunately, integrating PochiVM into an existing project with an existing build system is more complicated,
+and requires understanding of PochiVM’s internal build process and requirements.
+In the rest of the section, we will go through the internals of PochiVM’s build system,
+so one can figure out how to best integrate PochiVM into an existing project.</p>
+<div class="section" id="build-process-behind-the-scene">
+<h2>Build Process Behind the Scene<a class="headerlink" href="#build-process-behind-the-scene" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="get-llvm-ir-of-runtime-library">
+<h3>Get LLVM IR of Runtime Library<a class="headerlink" href="#get-llvm-ir-of-runtime-library" title="Permalink to this headline">¶</a></h3>
+<p>We start with the <code class="docutils literal notranslate"><span class="pre">.cpp</span></code> files in the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> folder.
+The first step of the build process is to let <code class="docutils literal notranslate"><span class="pre">clang++</span></code> emit the LLVM IR for those source files.
+This is done using the clang-specific compiler flag <code class="docutils literal notranslate"><span class="pre">-emit-llvm</span></code>.
+After this step we get a bunch of <code class="docutils literal notranslate"><span class="pre">.bc</span></code> files (though CMake still names them with the extension of <code class="docutils literal notranslate"><span class="pre">.o</span></code>),
+which are the LLVM IR bitcode for the C++ sources.</p>
+</div>
+<div class="section" id="extract-information-from-ir">
+<h3>Extract Information from IR<a class="headerlink" href="#extract-information-from-ir" title="Permalink to this headline">¶</a></h3>
+<p>The runtime library builder (which source code resides in <code class="docutils literal notranslate"><span class="pre">runtime_lib_builder</span></code> folder) is
+responsible for a list of things (these are skippable technical details):</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Figure out which C++ entities (functions, member functions, member objects, etc) are registered
+in <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code> by JIT-executing the entry-point function <code class="docutils literal notranslate"><span class="pre">__pochivm_register_runtime_library__</span></code> in a sandbox.</p></li>
+<li><p>Extract LLVM metadata and IR information of the runtime library for all registered entities,
+generate the extracted IR into data files, which will be linked into the main binary,
+so PochiVM can access them at runtime.</p></li>
+<li><p>Generate C++ header files, so users can express the use of the registered C++ entities in an intuitive syntax
+(that header file is what allows static type-checking of function paramaters,
+and allows one to write calls in generated code just as if writing in C++).</p></li>
+<li><p>Generate <code class="docutils literal notranslate"><span class="pre">libruntime.a</span></code> by invoking <code class="docutils literal notranslate"><span class="pre">llc</span></code> to lower the LLVM IR bitcode to <code class="docutils literal notranslate"><span class="pre">.o</span></code> object files,
+and invoking <code class="docutils literal notranslate"><span class="pre">ar</span></code> to archive the <code class="docutils literal notranslate"><span class="pre">.o</span></code> object files into a library.
+It is important that we use <code class="docutils literal notranslate"><span class="pre">llc</span></code> to convert the <code class="docutils literal notranslate"><span class="pre">.bc</span></code> files to object file,
+not <code class="docutils literal notranslate"><span class="pre">clang++</span></code> to re-compile the source file, otherwise we could get inconsistent inlining
+decisions which result in missing symbols.</p></li>
+</ul>
+</div></blockquote>
+<p>In short, the runtime library <code class="docutils literal notranslate"><span class="pre">libruntime.a</span></code> must be built using a special build process,
+which as a side-product, also generates certain C++ header and source files needed to build the PochiVM library.
+When integrating PochiVM into your own project’s build system, you have to keep this build step unchanged.</p>
+</div>
+<div class="section" id="build-the-rest-of-the-project">
+<h3>Build the Rest of the Project<a class="headerlink" href="#build-the-rest-of-the-project" title="Permalink to this headline">¶</a></h3>
+<p>Once the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> library is built, the <code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> library may be built.
+Then, the rest of the project which depends on <code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> may be built.
+It is important that you keep the build dependency that</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">runtime</span></code> library depends on <code class="docutils literal notranslate"><span class="pre">runtime_lib_builder</span></code> utility.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> library depends on <code class="docutils literal notranslate"><span class="pre">runtime</span></code> library.</p></li>
+<li><p>All code using PochiVM depends on <code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> library.</p></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="final-linking-step">
+<h3>Final Linking Step<a class="headerlink" href="#final-linking-step" title="Permalink to this headline">¶</a></h3>
+<p>The following CMake link libraries are needed for any binary file that uses PochiVM:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">[your_target_name]</span> <span class="s">PUBLIC</span>
+  <span class="s2">&quot;-Wl,--whole-archive&quot;</span> <span class="s">runtime</span> <span class="s2">&quot;-Wl,--no-whole-archive&quot;</span>
+  <span class="s">runtime_bc</span>
+  <span class="s">pochivm</span>
+  <span class="o">${</span><span class="nv">LLVM_EXTRA_LINK_LIBRARIES</span><span class="o">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">-Wl,--whole-archive</span></code> linker flag is important: any function in <code class="docutils literal notranslate"><span class="pre">runtime</span></code> library,
+even if not referenced directly by the rest of the codebase, may be called at runtime by generated code,
+so we must tell the linker to keep all symbols.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>PochiVM does not work with <code class="docutils literal notranslate"><span class="pre">-flto</span></code> (clang’s link-time-optimization feature),
+since there is a known bug that clang LTO does not respect <code class="docutils literal notranslate"><span class="pre">-Wl,--whole-archive</span></code> linker flag.</p>
+</div>
+</div>
+<div class="section" id="post-build-validation-pass">
+<h3>Post-Build Validation Pass<a class="headerlink" href="#post-build-validation-pass" title="Permalink to this headline">¶</a></h3>
+<p>PochiVM also provides a post-build validation utility to validate that nothing has gone wrong on the PochiVM side.
+While this is optional, it is recommended that you run the pass just in case you hit a bug in PochiVM.
+The utility for this validation is in folder <code class="docutils literal notranslate"><span class="pre">post_build_verifier</span></code>,
+and the validator program takes a single argument, the built binary file to validate.
+You can duplicate the CMake logic by looking at how the post-build-pass is implemented in the project root’s <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">post_build_verifier</span></code> returns an error and you have not modified the build process,
+it is most likely a bug in PochiVM itself. Please report a bug.</p>
+</div>
+</div>
+</div>
+<div class="section" id="why-pochivm-is-built-in-docker">
+<h2>Why PochiVM is Built in Docker<a class="headerlink" href="#why-pochivm-is-built-in-docker" title="Permalink to this headline">¶</a></h2>
+<p>As you can see, the build steps involve a reflective step:
+the C++ source file is compiled by <code class="docutils literal notranslate"><span class="pre">clang++</span></code> to LLVM IR,
+then the LLVM IR is parsed by the <code class="docutils literal notranslate"><span class="pre">LLVM</span></code> library and linked back into our application.</p>
+<p>By design of LLVM, each version of <code class="docutils literal notranslate"><span class="pre">LLVM</span></code> is <strong>explicitly version-locked with</strong> the <code class="docutils literal notranslate"><span class="pre">clang++</span></code> having the same version number.
+This implies that LLVM of version <code class="docutils literal notranslate"><span class="pre">A.B.C</span></code> can only understand the LLVM IR output of clang++ of <strong>exactly the same</strong> version number <code class="docutils literal notranslate"><span class="pre">A.B.C</span></code>.
+Furthermore, LLVM library has no backward or forward API compatibility.
+This means that PochiVM (which is currently using LLVM 10.0.0) may or may not work with another LLVM version.</p>
+<p>So in short, the <code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> library and the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> library must be built using precisely <code class="docutils literal notranslate"><span class="pre">LLVM</span> <span class="pre">10.0.0</span></code> and <code class="docutils literal notranslate"><span class="pre">clang++</span> <span class="pre">10.0.0</span></code>.
+Of course it is impractical to ask one to install a specific version of clang++ and LLVM in order to build PochiVM.
+This is why we used <code class="docutils literal notranslate"><span class="pre">docker</span></code> to provide a virtualized build environment in which we have precise control over the version of the toolchain.</p>
+<p>Fortunately, you don’t have to switch your whole project to use <code class="docutils literal notranslate"><span class="pre">docker</span></code>, or getting locked on a specific compiler version.
+Only the source code in <code class="docutils literal notranslate"><span class="pre">runtime</span></code> folder must be compiled by that specific version of clang++.
+The rest of your project (including the ones using <code class="docutils literal notranslate"><span class="pre">pochivm.h</span></code>) is free to use whatever compiler that supports C++17 (since <code class="docutils literal notranslate"><span class="pre">pochivm.h</span></code> employed many C++17 features), and does not need access to any LLVM headers, and may or may not use docker in the build system.
+Of course the final binary still needs to be linked against LLVM 10.0.0, but one can just store the LLVM libraries statically somewhere in the project by copying them out from docker.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="lang_construct.html" class="btn btn-neutral float-right" title="Language Construction API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="use_pochivm.html" class="btn btn-neutral float-left" title="A New Project Using PochiVM" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, lemon
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

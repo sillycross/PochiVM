@@ -1,0 +1,241 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>A New Project Using PochiVM &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Integration Into Existing Project" href="use_pochivm_2.html" />
+    <link rel="prev" title="PochiVM Tutorial 101" href="tutorial_1.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="intro.html">Getting Started</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="what_is_pochivm.html">What is PochiVM?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_and_test.html">Build and Run Unit Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_1.html">PochiVM Tutorial 101</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">A New Project Using PochiVM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm_2.html">Integration Into Existing Project</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="intro.html">Getting Started</a> &raquo;</li>
+        
+      <li>A New Project Using PochiVM</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/use_pochivm.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="a-new-project-using-pochivm">
+<h1>A New Project Using PochiVM<a class="headerlink" href="#a-new-project-using-pochivm" title="Permalink to this headline">¶</a></h1>
+<p>It is easy to start a new project from scratch using the existing PochiVM’s build infrastructure.
+You may download an empty project template from the Github Release pages (UNDONE).</p>
+<p>Alternatively, you may begin with the unit test repository,
+and remove all the <code class="docutils literal notranslate"><span class="pre">test_*.h/cpp</span></code> files in the project root folder and <code class="docutils literal notranslate"><span class="pre">runtime</span></code> folder,
+and purge relavent code in <code class="docutils literal notranslate"><span class="pre">pochivm_runtime_headers.h</span></code>, <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>.</p>
+<p>The repository provides 3 build modes by default:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code> build is a testing build for debugging purpose. The code is compiled with <code class="docutils literal notranslate"><span class="pre">-O0</span> <span class="pre">-g</span></code> for best debugging experience, and all assertions are enabled. The emitted IR for generated code is not optimized either, for best readability.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">release</span></code> build is a <strong>testing build</strong> compiled with optimizations enabled (<code class="docutils literal notranslate"><span class="pre">-O3</span> <span class="pre">-g</span></code>), to catch bugs that only show up when compiler optimization takes place.
+<code class="docutils literal notranslate"><span class="pre">assert()</span></code> are disabled, but <code class="docutils literal notranslate"><span class="pre">TestAssert()</span></code> are enabled.
+Notably, by default LLVM optimization for generated code is only enabled in <code class="docutils literal notranslate"><span class="pre">release</span></code> or <code class="docutils literal notranslate"><span class="pre">production</span></code> build. The feature of inlining C++ function calls from generated code can also only happen in <code class="docutils literal notranslate"><span class="pre">release</span></code> or <code class="docutils literal notranslate"><span class="pre">production</span></code> build.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">production</span></code> build is for production use, with optimizations enabled and no debug symbols (<code class="docutils literal notranslate"><span class="pre">-O3</span></code>).
+Both <code class="docutils literal notranslate"><span class="pre">assert()</span></code> and <code class="docutils literal notranslate"><span class="pre">TestAssert()</span></code> are disabled.</p></li>
+</ul>
+</div></blockquote>
+<p>Also keep in mind that once you added a header file to folder <code class="docutils literal notranslate"><span class="pre">runtime</span></code>, you need to update <code class="docutils literal notranslate"><span class="pre">pochivm_runtime_headers.h</span></code> to include it (check <a class="reference internal" href="tutorial_1.html#ref-after-adding-files-to-runtime"><span class="std std-ref">Call C++ Fn from Generated Code</span></a> in tutorial).</p>
+<p>With the above in mind, you should be able to develop your project in the PochiVM template just like any other project.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="use_pochivm_2.html" class="btn btn-neutral float-right" title="Integration Into Existing Project" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial_1.html" class="btn btn-neutral float-left" title="PochiVM Tutorial 101" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, lemon
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

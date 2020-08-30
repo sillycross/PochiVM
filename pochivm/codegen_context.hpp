@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#include "codegen_context.h"
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
@@ -172,30 +174,5 @@ struct LLVMCodegenContext
     //
     llvm::Constant* m_personalityFn;
 };
-
-inline thread_local LLVMCodegenContext* thread_llvmContext = nullptr;
-
-class AutoThreadLLVMCodegenContext
-{
-public:
-    AutoThreadLLVMCodegenContext()
-    {
-        TestAssert(thread_llvmContext == nullptr);
-        m_contextPtr = new LLVMCodegenContext();
-        ReleaseAssert(m_contextPtr != nullptr);
-        thread_llvmContext = m_contextPtr;
-    }
-
-    ~AutoThreadLLVMCodegenContext()
-    {
-        TestAssert(thread_llvmContext == m_contextPtr);
-        delete m_contextPtr;
-        thread_llvmContext = nullptr;
-    }
-
-private:
-    LLVMCodegenContext* m_contextPtr;
-};
-#define AutoLLVMCodegenContext(...) static_assert(false, "Wrong use of 'auto'-pattern!");
 
 }   // namespace PochiVM

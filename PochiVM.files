@@ -19,6 +19,8 @@ pochivm/ast_variable.h
 pochivm/bitcode_data.h
 pochivm/cast_expr.cpp
 pochivm/cast_expr.h
+pochivm/codegen_context.cpp
+pochivm/codegen_context.h
 pochivm/codegen_context.hpp
 pochivm/common.h
 pochivm/common_expr.cpp

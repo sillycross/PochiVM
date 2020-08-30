@@ -147,7 +147,7 @@ add_executable(main
 # may be used at runtime and must not be dropped.
 #
 target_link_libraries(main PUBLIC 
-  "-Wl,--whole-archive" runtime runtime_bc "-Wl,--no-whole-archive"
+  "-Wl,--whole-archive" runtime "-Wl,--no-whole-archive" runtime_bc
 )
 
 target_link_libraries(main PUBLIC

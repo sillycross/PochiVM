@@ -1,0 +1,462 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>PochiVM Tutorial 101 &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="A New Project Using PochiVM" href="use_pochivm.html" />
+    <link rel="prev" title="Build and Run Unit Test" href="build_and_test.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="intro.html">Getting Started</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="what_is_pochivm.html">What is PochiVM?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_and_test.html">Build and Run Unit Test</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">PochiVM Tutorial 101</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#fibonacci-sequence">Fibonacci Sequence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#call-c-fn-from-generated-code">Call C++ Fn from Generated Code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm.html">A New Project Using PochiVM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm_2.html">Integration Into Existing Project</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="intro.html">Getting Started</a> &raquo;</li>
+        
+      <li>PochiVM Tutorial 101</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tutorial_1.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pochivm-tutorial-101">
+<h1>PochiVM Tutorial 101<a class="headerlink" href="#pochivm-tutorial-101" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This section assumes you have completed the steps in <a class="reference internal" href="build_and_test.html"><span class="doc">Build and Run Unit Test</span></a> section.</p>
+</div>
+<p>We are now ready to write our first generated function using PochiVM!</p>
+<div class="section" id="fibonacci-sequence">
+<h2>Fibonacci Sequence<a class="headerlink" href="#fibonacci-sequence" title="Permalink to this headline">¶</a></h2>
+<p>As our first task, we will dynamically create a function with signature <code class="docutils literal notranslate"><span class="pre">uint64_t</span> <span class="pre">fib(int</span> <span class="pre">n)</span></code>: and yes, it computes the n-th term of the Fibonacci sequence.</p>
+<p>Of course, there is not much value in generating this function dynamically:
+we already know all of its logic, so we could have directly implemented it in C++,
+and have it compiled by the C++ compiler at build time. However, it is a good demonstration of the basic usages of PochiVM and the overall structure of the project.</p>
+<p>First of all, let’s create a new C++ source file named <code class="docutils literal notranslate"><span class="pre">learn_pochivm.cpp</span></code> in the project root directory.
+PochiVM uses CMake build system. To add our new file to the project, we need to put it into the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> file, also in the project root directory. For simplicity, we will just piggy-back on the existing GoogleTest infrastructure. Open <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>, search for <code class="docutils literal notranslate"><span class="pre">add_executable(main</span></code>, and put our source file <code class="docutils literal notranslate"><span class="pre">learn_pochivm.cpp</span></code> at the end of the list.</p>
+<p>Now open <code class="docutils literal notranslate"><span class="pre">learn_pochivm.cpp</span></code>. To use PochiVM, we just need to include <code class="docutils literal notranslate"><span class="pre">pochivm.h</span></code>. PochiVM uses a thread-local model: in a multi-thread environment, each thread is supposed to build its own module, not interfering with each other. Each thread holds its global contexts in <code class="docutils literal notranslate"><span class="pre">thread_local</span></code> global variables. Before we use PochiVM, the thread needs to initialize its global contexts.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Currently there are 3 different global contexts, but clean-up work is in progress to merge all those contexts into one.</p>
+</div>
+<p>So the initial (boilerplate) code would look like this:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;gtest/gtest.h&quot;          // For GoogleTest infrastructure</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;pochivm.h&quot;              // For all PochiVM APIs</span><span class="cp"></span>
+<span class="cp">#include</span> <span class="cpf">&quot;test_util_helper.h&quot;</span><span class="cp"></span>
+
+<span class="k">using</span> <span class="k">namespace</span> <span class="n">PochiVM</span><span class="p">;</span>          <span class="c1">// All PochiVM APIs live in this namespace</span>
+
+<span class="n">TEST</span><span class="p">(</span><span class="n">Tutorial</span><span class="p">,</span> <span class="n">Fibonacci</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="c1">// Initialize PochiVM global contexts for this thread</span>
+    <span class="c1">// The contexts are automatically destructed on destruction of these variables</span>
+    <span class="n">AutoThreadPochiVMContext</span> <span class="n">apv</span><span class="p">;</span>
+    <span class="n">AutoThreadErrorContext</span> <span class="n">arc</span><span class="p">;</span>
+    <span class="n">AutoThreadLLVMCodegenContext</span> <span class="n">alc</span><span class="p">;</span>
+
+    <span class="c1">// code in snippets below are inserted here</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>We will now create a new module, and create our function:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">NewModule</span><span class="p">(</span><span class="s">&quot;test&quot;</span> <span class="cm">/*name*/</span><span class="p">);</span>
+<span class="k">using</span> <span class="n">FnPrototype</span> <span class="o">=</span> <span class="kt">uint64_t</span><span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">int</span><span class="p">);</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">fn</span><span class="p">,</span> <span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">NewFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;fib&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>There is implicitly one module being built by each thread,
+so we just use <code class="docutils literal notranslate"><span class="pre">NewModule</span></code> to create a new module, and <code class="docutils literal notranslate"><span class="pre">NewFunction</span></code> to create a new function in that module.
+Now <code class="docutils literal notranslate"><span class="pre">fn</span></code> refers to our function with the given prototype and its name is <code class="docutils literal notranslate"><span class="pre">&quot;fib&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">n</span></code> refers to its first parameter,
+which is a variable of type <code class="docutils literal notranslate"><span class="pre">int</span></code>: these are automatically deduced from the function signature.</p>
+<p>We will now give a body to this function, which is the traditional (brute-force) recursive logic to compute the fibonacci sequence:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">fn</span><span class="p">.</span><span class="n">SetBody</span><span class="p">(</span>
+  <span class="n">If</span><span class="p">(</span><span class="n">n</span> <span class="o">&lt;=</span> <span class="n">Literal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">2</span><span class="p">)).</span><span class="n">Then</span><span class="p">(</span>
+    <span class="n">Return</span><span class="p">(</span><span class="n">Literal</span><span class="o">&lt;</span><span class="kt">uint64_t</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+  <span class="p">).</span><span class="n">Else</span><span class="p">(</span>
+    <span class="n">Return</span><span class="p">(</span><span class="n">Call</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;fib&quot;</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="n">Literal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+           <span class="o">+</span> <span class="n">Call</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;fib&quot;</span><span class="p">,</span> <span class="n">n</span> <span class="o">-</span> <span class="n">Literal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+  <span class="p">)</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+<p>I hope there’s not much need to explain what each line of the above code does – any one who knows C/C++ should be fairly easy to understand using the intuition.
+This is one of the core design philosophies of PochiVM:
+the syntax should look intuitive to any one who knows C/C++, and its behavior should match that intuition as well.</p>
+<p>Now we are ready to JIT compile the function to native binary code:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="c1">// Validate that the module does not contain errors.</span>
+<span class="c1">// We require doing this in test build before JIT&#39;ing the module</span>
+<span class="n">TestAssert</span><span class="p">(</span><span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">Validate</span><span class="p">());</span>
+
+<span class="c1">// Unfortunately the API for JIT part is not done yet, so we still need some ugly code</span>
+<span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">EmitIR</span><span class="p">();</span>
+<span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">OptimizeIR</span><span class="p">();</span>
+<span class="n">SimpleJIT</span> <span class="n">jit</span><span class="p">;</span>
+<span class="n">jit</span><span class="p">.</span><span class="n">SetModule</span><span class="p">(</span><span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="p">);</span>
+
+<span class="c1">// Retrive the built function, and execute it.</span>
+<span class="n">FnPrototype</span> <span class="n">jitFn</span> <span class="o">=</span> <span class="n">jit</span><span class="p">.</span><span class="n">GetFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;fib&quot;</span><span class="p">);</span>
+<span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">&quot;The 20th number in fibonacci sequence is &quot;</span> <span class="o">&lt;&lt;</span> <span class="n">jitFn</span><span class="p">(</span><span class="mi">20</span><span class="p">)</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>PochiVM catches most of the static type errors by <code class="docutils literal notranslate"><span class="pre">static_assert</span></code>,
+so if you made a static type error in your program (e.g. dereference an integer),
+your project will fail to build, and you can immediately know the issue.
+However, not all errors can be caught by <code class="docutils literal notranslate"><span class="pre">static_assert</span></code> (e.g. use of an undeclared variable),
+so we require <code class="docutils literal notranslate"><span class="pre">Validate()</span></code> the program, at least in test builds.
+If an error is detected, human-readable error message will be stored in <code class="docutils literal notranslate"><span class="pre">thread_errorContext-&gt;m_errorMsg</span></code>.</p>
+<p>Now we are ready to run our first generated function:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 pochivm-build make debug
+./main --gtest_filter<span class="o">=</span>Tutorial.Fibonacci
+</pre></div>
+</div>
+<p>and you shoud see the output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>The 20th number in fibonacci sequence is 6765
+</pre></div>
+</div>
+</div>
+<div class="section" id="call-c-fn-from-generated-code">
+<span id="ref-after-adding-files-to-runtime"></span><h2>Call C++ Fn from Generated Code<a class="headerlink" href="#call-c-fn-from-generated-code" title="Permalink to this headline">¶</a></h2>
+<p>Doing everything in generated code is hard.
+Almost every project involving JIT has a runtime library which is statically compiled,
+and generated code may call functions provided by the runtime library to use its functionalities.</p>
+<p>Fortunately, one of the main strengths of PochiVM is its seamless and efficient integration
+with the C++ codebase. Generated code can access almost any C++ functions and classes using an intuitive syntax,
+even if they are templated, overloaded, virtual, or have non-primitive parameter/return types.
+Furthermore, calls to C++ functions <strong>can be inlined</strong> into generated code,
+so you don’t even have to pay the cost of a function call, and the optimizer could also work better.</p>
+<p>We will now demonstrate how to use a C++ class inside the generated code.</p>
+<p>In PochiVM, the folder <code class="docutils literal notranslate"><span class="pre">runtime</span></code> holds all the headers and implementations of the runtime library
+which is accessible to the generated code. Let’s create a new C++ header file <code class="docutils literal notranslate"><span class="pre">tutorial101.h</span></code>
+and a new C++ source file <code class="docutils literal notranslate"><span class="pre">tutorial101.cpp</span></code> in that directory.</p>
+<p>There are two steps that we have to do after adding files to <code class="docutils literal notranslate"><span class="pre">runtime</span></code> folder:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>First, we must add the CPP file to the <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code> in that folder, so it could be built.
+Open <code class="docutils literal notranslate"><span class="pre">CMakeList.txt</span></code>, look for <code class="docutils literal notranslate"><span class="pre">SET(SOURCES</span></code>, add <code class="docutils literal notranslate"><span class="pre">tutorial101.cpp</span></code> to the end of that list, and you are all set.</p></li>
+<li><p>Second, we must add the header file to <code class="docutils literal notranslate"><span class="pre">pochivm_runtime_headers.h</span></code>.
+This is required by the build infrastructure, so it can have access to all the declarations of the classes.
+In our case, we should add <code class="docutils literal notranslate"><span class="pre">#include</span> <span class="pre">&quot;tutorial101.h&quot;</span></code> to the end of <code class="docutils literal notranslate"><span class="pre">pochivm_runtime_headers.h</span></code>.</p></li>
+</ul>
+</div></blockquote>
+<p>Now we are ready to implement our C++ class. Inside <code class="docutils literal notranslate"><span class="pre">tutorial101.h</span></code>, write:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="cp">#pragma once</span>
+<span class="cp">#include</span> <span class="cpf">&lt;cstdio&gt;</span><span class="cp"></span>
+
+<span class="k">class</span> <span class="nc">Tutorial101</span>
+<span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+    <span class="n">Tutorial101</span><span class="p">()</span> <span class="o">:</span> <span class="n">m_x</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span> <span class="p">{}</span>
+    <span class="o">~</span><span class="n">Tutorial101</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;The class is destructed!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kt">void</span> <span class="n">Increment</span><span class="p">(</span><span class="kt">int</span> <span class="n">value</span><span class="p">);</span>
+    <span class="kt">void</span> <span class="nf">Print</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;m_x has value %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">m_x</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="kt">int</span> <span class="n">m_x</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>And inside <code class="docutils literal notranslate"><span class="pre">tutorial101.cpp</span></code>, write:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;tutorial101.h&quot;</span><span class="cp"></span>
+
+<span class="n">Tutorial101</span><span class="o">::</span><span class="n">Increment</span><span class="p">(</span><span class="kt">int</span> <span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">m_x</span> <span class="o">+=</span> <span class="n">value</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Well, it’s not doing much useful things, all for demonstration purposes.
+There is one last important step to make the class accessible to generated code.
+For every constructor, member function, member object, or whatever that we want to access from generated code,
+we need to <strong>register</strong> it inside <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code>.
+To register it, in general, we just need its function pointer, or member function pointer,
+or member object pointer (these are just C++ terminologies for different kinds of pointers,
+check <a href="https://en.cppreference.com/w/cpp/language/pointer" target="_blank">here</a> if you are unfamiliar). So open <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code>,
+and inside the function body of <code class="docutils literal notranslate"><span class="pre">RegisterRuntimeLibrary</span></code> (anywhere is fine), add:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="c1">// Register the constructor, which takes no additional parameters</span>
+<span class="n">RegisterConstructor</span><span class="o">&lt;</span><span class="n">Tutorial101</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="c1">// Register member function Increment(int value)</span>
+<span class="n">RegisterMemberFn</span><span class="o">&lt;&amp;</span><span class="n">Tutorial101</span><span class="o">::</span><span class="n">Increment</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="c1">// Register member function Print()</span>
+<span class="n">RegisterMemberFn</span><span class="o">&lt;&amp;</span><span class="n">Tutorial101</span><span class="o">::</span><span class="n">Print</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="c1">// Register member object &#39;m_x&#39;</span>
+<span class="n">RegisterMemberObject</span><span class="o">&lt;&amp;</span><span class="n">Tutorial101</span><span class="o">::</span><span class="n">m_x</span><span class="o">&gt;</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>You don’t have to register the destructor manually, it is automatically registered as needed.
+You also do not have to register everything in the class.
+If something is not registered, it is just not accessible to generated code. Now build the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 pochivm-build make debug
+</pre></div>
+</div>
+<p>It is recommended that you build the repository after adding in new runtime
+library classes and before you write generated code that uses them, since that would allow your IDE to give
+you auto-completion hints when you write your generated code (if your IDE is good enough, of course).
+Now move back to <code class="docutils literal notranslate"><span class="pre">learn_pochivm.cpp</span></code> in the project root, and add a new test:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">TEST</span><span class="p">(</span><span class="n">Tutorial</span><span class="p">,</span> <span class="n">CallCppFunction</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">AutoThreadPochiVMContext</span> <span class="n">apv</span><span class="p">;</span>
+    <span class="n">AutoThreadErrorContext</span> <span class="n">arc</span><span class="p">;</span>
+    <span class="n">AutoThreadLLVMCodegenContext</span> <span class="n">alc</span><span class="p">;</span>
+
+    <span class="n">NewModule</span><span class="p">(</span><span class="s">&quot;test&quot;</span> <span class="cm">/*name*/</span><span class="p">);</span>
+    <span class="k">using</span> <span class="n">FnPrototype</span> <span class="o">=</span> <span class="kt">void</span><span class="p">(</span><span class="o">*</span><span class="p">)();</span>
+    <span class="k">auto</span> <span class="p">[</span><span class="n">fn</span><span class="p">]</span> <span class="o">=</span> <span class="n">NewFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;call_cpp_fn&quot;</span><span class="p">);</span>
+    <span class="c1">// Create a new local variable of type &#39;Tutorial101&#39; for use in the function.</span>
+    <span class="c1">// The variable is not constructed here. It is constructed by &#39;Declare&#39;.</span>
+    <span class="k">auto</span> <span class="n">v</span> <span class="o">=</span> <span class="n">fn</span><span class="p">.</span><span class="n">NewVariable</span><span class="o">&lt;</span><span class="n">Tutorial101</span><span class="o">&gt;</span><span class="p">();</span>
+
+    <span class="n">fn</span><span class="p">.</span><span class="n">SetBody</span><span class="p">(</span>
+      <span class="n">Declare</span><span class="p">(</span><span class="n">v</span><span class="p">),</span>
+      <span class="n">v</span><span class="p">.</span><span class="n">Print</span><span class="p">(),</span>
+      <span class="n">v</span><span class="p">.</span><span class="n">Increment</span><span class="p">(</span><span class="n">Literal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span>
+      <span class="n">v</span><span class="p">.</span><span class="n">Print</span><span class="p">(),</span>
+      <span class="n">Assign</span><span class="p">(</span><span class="n">v</span><span class="p">.</span><span class="n">m_x</span><span class="p">(),</span> <span class="n">v</span><span class="p">.</span><span class="n">m_x</span><span class="p">()</span> <span class="o">+</span> <span class="n">Literal</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span>
+      <span class="n">v</span><span class="p">.</span><span class="n">Print</span><span class="p">()</span>
+    <span class="p">);</span>
+
+    <span class="n">TestAssert</span><span class="p">(</span><span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">Validate</span><span class="p">());</span>
+
+    <span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">EmitIR</span><span class="p">();</span>
+    <span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="o">-&gt;</span><span class="n">OptimizeIR</span><span class="p">();</span>
+    <span class="n">SimpleJIT</span> <span class="n">jit</span><span class="p">;</span>
+    <span class="n">jit</span><span class="p">.</span><span class="n">SetModule</span><span class="p">(</span><span class="n">thread_pochiVMContext</span><span class="o">-&gt;</span><span class="n">m_curModule</span><span class="p">);</span>
+
+    <span class="n">FnPrototype</span> <span class="n">jitFn</span> <span class="o">=</span> <span class="n">jit</span><span class="p">.</span><span class="n">GetFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;call_cpp_fn&quot;</span><span class="p">);</span>
+    <span class="n">jitFn</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>It should still be fairly straightforward what the code is doing.
+we constructed a local variable <code class="docutils literal notranslate"><span class="pre">v</span></code> of type <code class="docutils literal notranslate"><span class="pre">Tutorial101</span></code> in the function using the default constructor,
+then called its <code class="docutils literal notranslate"><span class="pre">Print()</span></code> member method, and then called its <code class="docutils literal notranslate"><span class="pre">Increment()</span></code> member method, etc.
+It is just as if you were writing the same logic in C++. Now build and run the test:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 pochivm-build make debug
+./main --gtest_filter<span class="o">=</span>Tutorial.CallCppFunction
+</pre></div>
+</div>
+<p>and you should see the following:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>m_x has value 123
+m_x has value 124
+m_x has value 126
+The class is destructed!
+</pre></div>
+</div>
+<p>Yes, when the local variable goes out of the scope (at the end of the function),
+the destructor is automatically called, printing out the last line.
+Furthermore, if you investigate the generated LLVM IR  in <code class="docutils literal notranslate"><span class="pre">release</span></code> or <code class="docutils literal notranslate"><span class="pre">production</span></code> build mode,
+you would notice that there are no calls to the C++ functions at all. There are only 4 calls to <code class="docutils literal notranslate"><span class="pre">printf</span></code>,
+printing out the lines. Everything else, including the local variable <code class="docutils literal notranslate"><span class="pre">v</span></code> and the class <code class="docutils literal notranslate"><span class="pre">Tutorial101</span></code>, is optimized out.
+This is because we are able to inline all the calls to the C++ functions (including the <code class="docutils literal notranslate"><span class="pre">Increment</span></code> which implementation resides
+in a CPP file), and after they are inlined, the optimizer will be able to further figure out that the values passed to <code class="docutils literal notranslate"><span class="pre">printf</span></code>
+are constants as well, and optimize out everything except <code class="docutils literal notranslate"><span class="pre">printf</span></code>.</p>
+<p>Now you should be familiar with the basic usages of PochiVM as well as its project directory structure.
+You can find the full list of language construction APIs documentation <a class="reference internal" href="lang_construct.html"><span class="doc">here</span></a>
+and the full documentation on interacting with C++ code <a class="reference internal" href="cpp_interact.html"><span class="doc">here</span></a>.</p>
+<p>The next and final part of this tutorial will be a more detailed explanation of PochiVM’s internals,
+as well as a guide on how to use PochiVM in your own project.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="use_pochivm.html" class="btn btn-neutral float-right" title="A New Project Using PochiVM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="build_and_test.html" class="btn btn-neutral float-left" title="Build and Run Unit Test" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, lemon
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

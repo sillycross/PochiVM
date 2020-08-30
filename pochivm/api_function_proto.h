@@ -418,4 +418,9 @@ Value<void> CallDestructor(const Value<T*>& val)
     return Value<void>(new AstCallExpr(DestructorCppFnMetadata<T>::value, { val.__pochivm_value_ptr }));
 }
 
+inline void NewModule(const std::string& name)
+{
+    thread_pochiVMContext->m_curModule = new AstModule(name);
+}
+
 }   // namespace PochiVM

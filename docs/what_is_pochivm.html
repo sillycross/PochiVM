@@ -1,0 +1,235 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>What is PochiVM? &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Build and Run Unit Test" href="build_and_test.html" />
+    <link rel="prev" title="Getting Started" href="intro.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="intro.html">Getting Started</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">What is PochiVM?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="build_and_test.html">Build and Run Unit Test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_1.html">PochiVM Tutorial 101</a></li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm.html">A New Project Using PochiVM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="use_pochivm_2.html">Integration Into Existing Project</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="intro.html">Getting Started</a> &raquo;</li>
+        
+      <li>What is PochiVM?</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/what_is_pochivm.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="what-is-pochivm">
+<h1>What is PochiVM?<a class="headerlink" href="#what-is-pochivm" title="Permalink to this headline">¶</a></h1>
+<p>PochiVM is a JIT (just-in-time) code-generation framework backed by LLVM C++ API.</p>
+<p>JIT code-generation, the technique of compiling user logic (e.g. a SQL query, or a Javascript snippet) into native binary code on-the-fly, offers drastically improved performance compared with traditional interpretative approach, and is widely used in applications from SQL servers to web browsers. However, the steep learning curve of LLVM, and the large gap between “<em>what the low-level LLVM APIs provide</em>” and “<em>what a high-level application needs</em>” might have prevented many developers from trying it.</p>
+<p>The goal of PochiVM is to enable any ordinary C++ user with no prior knowledge of LLVM or code-generation to enjoy the benefits of code-generation technology. It provides:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>Intuitive C-like language interface</strong> to describe the logic of the generated code. Most of the core C language constructs, and certain C++ features including constructor, destructor, scoped variable and exceptions are supported. You write generated code just like you write the same logic in C/C++.</p></li>
+<li><p><strong>Seamless and efficient interaction</strong> with your C++ codebase. The generated program can access any C++ classes and functions using an intuitive syntax, even if they are templated, overloaded, virtual, or have non-primitive parameter/return types. Moreover, calls to C++ functions <strong>can be inlined</strong> into generated code, allowing the mix of C++ infrastructure and generated code with minimal overhead.</p></li>
+<li><p>You write everything in completely valid C++ code. No fragile external text-preprocessor magic or C macro magic involved. Even IDE code hinting works.</p></li>
+<li><p><strong>User-friendly error handling</strong>. Almost all static type errors will be caught by <code class="docutils literal notranslate"><span class="pre">static_assert</span></code>. Like C, all programming errors are caught when you compile the generated-code, never at execution phase.</p></li>
+</ul>
+</div></blockquote>
+<p>In the rest of this tutorial, we will go through the basic usages of PochiVM. For a full documentation of the APIs, check <a class="reference internal" href="lang_construct.html"><span class="doc">Language Construction API</span></a> and <a class="reference internal" href="cpp_interact.html"><span class="doc">Interacting with C++ Code</span></a>.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="build_and_test.html" class="btn btn-neutral float-right" title="Build and Run Unit Test" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="intro.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, lemon
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
