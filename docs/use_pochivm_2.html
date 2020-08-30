@@ -103,7 +103,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
 </ul>
 
             
@@ -158,8 +158,6 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/use_pochivm_2.rst.txt" rel="nofollow"> View page source</a>
-          
         
       </li>
     
@@ -231,8 +229,11 @@ It is important that you keep the build dependency that</p>
 </div>
 <div class="section" id="final-linking-step">
 <h3>Final Linking Step<a class="headerlink" href="#final-linking-step" title="Permalink to this headline">¶</a></h3>
-<p>The following CMake link libraries are needed for any binary file that uses PochiVM:</p>
-<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">[your_target_name]</span> <span class="s">PUBLIC</span>
+<p>The following CMake link flags and libraries are needed for any binary file that uses PochiVM:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">SET</span><span class="p">(</span><span class="s">CMAKE_EXE_LINKER_FLAGS</span>  <span class="s2">&quot;${CMAKE_EXE_LINKER_FLAGS} -rdynamic &quot;</span><span class="p">)</span>
+<span class="nb">SET</span><span class="p">(</span><span class="s">CMAKE_EXE_LINKER_FLAGS</span>  <span class="s2">&quot;${CMAKE_EXE_LINKER_FLAGS} ${LLVM_EXTRA_LINK_FLAGS} &quot;</span><span class="p">)</span>
+
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">[your_target_name]</span> <span class="s">PUBLIC</span>
   <span class="s2">&quot;-Wl,--whole-archive&quot;</span> <span class="s">runtime</span> <span class="s2">&quot;-Wl,--no-whole-archive&quot;</span>
   <span class="s">runtime_bc</span>
   <span class="s">pochivm</span>
@@ -275,7 +276,8 @@ This means that PochiVM (which is currently using LLVM 10.0.0) may or may not wo
 <p>So in short, the <code class="docutils literal notranslate"><span class="pre">PochiVM</span></code> library and the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> library must be built using precisely <code class="docutils literal notranslate"><span class="pre">LLVM</span> <span class="pre">10.0.0</span></code> and <code class="docutils literal notranslate"><span class="pre">clang++</span> <span class="pre">10.0.0</span></code>.
 Of course it is impractical to ask one to install a specific version of clang++ and LLVM in order to build PochiVM.
 This is why we used <code class="docutils literal notranslate"><span class="pre">docker</span></code> to provide a virtualized build environment in which we have precise control over the version of the toolchain.</p>
-<p>Fortunately, you don’t have to switch your whole project to use <code class="docutils literal notranslate"><span class="pre">docker</span></code>, or getting locked on a specific compiler version.
+<p>Nonetheless, you don’t have to switch your whole project to use <code class="docutils literal notranslate"><span class="pre">docker</span></code>, or getting locked on a specific compiler version
+(although it would be easier to integrate if you are fine with it).
 Only the source code in <code class="docutils literal notranslate"><span class="pre">runtime</span></code> folder must be compiled by that specific version of clang++.
 The rest of your project (including the ones using <code class="docutils literal notranslate"><span class="pre">pochivm.h</span></code>) is free to use whatever compiler that supports C++17 (since <code class="docutils literal notranslate"><span class="pre">pochivm.h</span></code> employed many C++17 features), and does not need access to any LLVM headers, and may or may not use docker in the build system.
 Of course the final binary still needs to be linked against LLVM 10.0.0, but one can just store the LLVM libraries statically somewhere in the project by copying them out from docker.</p>
@@ -302,8 +304,6 @@ Of course the final binary still needs to be linked against LLVM 10.0.0, but one
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, lemon
 
     </p>
   </div>

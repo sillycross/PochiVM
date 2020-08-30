@@ -1,0 +1,352 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The Typesystem &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Basic Class - Value" href="basic_class_value.html" />
+    <link rel="prev" title="Language Construction API" href="lang_construct.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="lang_construct.html">Language Construction API</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">The Typesystem</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#supported-types">Supported Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#terminology">Terminology</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value-reference-and-variable">Value, Reference and Variable</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="lang_construct.html">Language Construction API</a> &raquo;</li>
+        
+      <li>The Typesystem</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="the-typesystem">
+<h1>The Typesystem<a class="headerlink" href="#the-typesystem" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="supported-types">
+<h2>Supported Types<a class="headerlink" href="#supported-types" title="Permalink to this headline">¶</a></h2>
+<p>Like C++, PochiVM is static-typed. All type information must be known at the time a generated program is compiled into native binary.</p>
+<p>PochiVM currently supports the following types:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Most of the C++ fundamental types, specifically <code class="docutils literal notranslate"><span class="pre">void</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">uint8_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int8_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint16_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int16_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint32_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int32_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint64_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int64_t</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code></p></li>
+<li><p>Any <code class="docutils literal notranslate"><span class="pre">C++</span> <span class="pre">class</span></code> type registered in <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code></p></li>
+<li><p>Pointers to all above types, and pointers to pointers</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Support for remaining C++ fundamental types (the most important being <code class="docutils literal notranslate"><span class="pre">char</span></code>) is a TODO.</p>
+</div>
+<p>Notable valid C++ types that do not fall into the above category include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">const</span></code>-qualified or <code class="docutils literal notranslate"><span class="pre">volatile</span></code>-qualified types.</p></li>
+<li><p>C-style function-pointer, member-function-pointer, or member-object-pointer types.</p></li>
+</ul>
+</div></blockquote>
+<p>Note that the template-parameter part in a C++ class is never subject to the above restriction.
+For example, <code class="docutils literal notranslate"><span class="pre">std::function&lt;void(int)&gt;</span></code> is just a C++ class type (as a whole).
+PochiVM does not care and is unaware of whatever is in the template parameter.</p>
+</div>
+<div class="section" id="terminology">
+<h2>Terminology<a class="headerlink" href="#terminology" title="Permalink to this headline">¶</a></h2>
+<p>Throughout the documentation, we will use the following terminology for types.</p>
+<dl class="glossary simple">
+<dt id="term-C-Type">C++ Type</dt><dd><p>A <code class="docutils literal notranslate"><span class="pre">C++</span> <span class="pre">class</span></code> type registered in <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code> thus accessible to generated code,
+typically denoted by <code class="docutils literal notranslate"><span class="pre">C</span></code> in relavent contexts.
+For example, <code class="docutils literal notranslate"><span class="pre">std::set&lt;int&gt;</span></code> is a C++ type.</p>
+</dd>
+<dt id="term-Primitive-Type">Primitive Type</dt><dd><p>A type that is not a <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a>.
+For example, <code class="docutils literal notranslate"><span class="pre">int**</span></code>, <code class="docutils literal notranslate"><span class="pre">std::set&lt;int&gt;*</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code> are primitive types.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="value-reference-and-variable">
+<h2>Value, Reference and Variable<a class="headerlink" href="#value-reference-and-variable" title="Permalink to this headline">¶</a></h2>
+<dl class="cpp class">
+<dt id="_CPPv4I0E5Value">
+<span id="_CPPv3I0E5Value"></span><span id="_CPPv2I0E5Value"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><em class="property">class </em><code class="sig-name descname">Value</code><a class="headerlink" href="#_CPPv4I0E5Value" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> is probably the most important class in PochiVM.
+It is analogous to a RValue of type <code class="docutils literal notranslate"><span class="pre">T</span></code> in C++, which resulted from some computation.
+for example, the result of expression <code class="docutils literal notranslate"><span class="pre">a+b+c</span></code>.
+The APIs of this class are documented in a <a class="reference internal" href="basic_class_value.html"><span class="doc">standalone section</span></a>.
+For now, it’s sufficient to understand that it represents a RValue of type <code class="docutils literal notranslate"><span class="pre">T</span></code>.</p>
+<dl class="cpp class">
+<dt id="_CPPv4I0E9Reference">
+<span id="_CPPv3I0E9Reference"></span><span id="_CPPv2I0E9Reference"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><em class="property">class </em><code class="sig-name descname">Reference</code><a class="headerlink" href="#_CPPv4I0E9Reference" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Similarily, a <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> represents a LValue-reference of type <code class="docutils literal notranslate"><span class="pre">T</span></code>.
+It is analogous to a RValue of type <code class="docutils literal notranslate"><span class="pre">T&amp;</span></code> in C++.</p>
+<p>For a <a class="reference internal" href="#term-Primitive-Type"><span class="xref std std-term">primitive type</span></a> <code class="docutils literal notranslate"><span class="pre">T</span></code>, <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> inherits <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code>,
+which implies that a <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> can be implicitly converted to a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> and passed
+to any API that accepts a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> parameter.
+The resulted <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> contains the value stored in the reference at the time the dereference is done in program execution.</p>
+<p>However, for a <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a> <code class="docutils literal notranslate"><span class="pre">C</span></code>,
+dereferencing a LValue-reference to obtain a RValue involves a call to the copy constructor of class <code class="docutils literal notranslate"><span class="pre">C</span></code>,
+This is an operation hidden behind the scene.
+We want our generated program to have straight-forward behavior,
+so we disallow such conversions. Therefore for <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a> <code class="docutils literal notranslate"><span class="pre">C</span></code>, <code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code> <strong>does not</strong> inherit <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code> is also specialized to provide APIs for all member functions and objects registered in <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code>.
+E.g., if member func <code class="docutils literal notranslate"><span class="pre">void</span> <span class="pre">std::vector&lt;int&gt;::push_back(const</span> <span class="pre">int&amp;)</span></code> is registered,
+class <code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code> would be specialized to have a member function with prototype <code class="docutils literal notranslate"><span class="pre">Value&lt;void&gt;</span> <span class="pre">push_back(Value&lt;int&gt;)</span></code>,
+so given a variable <code class="docutils literal notranslate"><span class="pre">a</span></code> of type <code class="docutils literal notranslate"><span class="pre">Reference&lt;std::vector&lt;int&gt;&gt;</span></code>,
+one can write <code class="docutils literal notranslate"><span class="pre">a.push_back(Literal&lt;int&gt;(1))</span></code> to call the <code class="docutils literal notranslate"><span class="pre">push_back</span></code> member function and push a <code class="docutils literal notranslate"><span class="pre">1</span></code> to the end of the vector.
+For more information, see <a class="reference internal" href="cpp_interact.html"><span class="doc">Interacting with C++ Runtime</span></a>.</p>
+<p>The “operation hidden behind the scene” issue also applies for <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> itself.
+A RValue of a C++ class <code class="docutils literal notranslate"><span class="pre">C</span></code> (aka a temporary object) has to be destructed when the <a href="https://en.cppreference.com/w/cpp/language/lifetime" target="_blank">full-expression is evaluated</a> –
+an undesirable hidden operation behind the scene,
+not even considering the additional trickiness to define “full expression” in PochiVM in a precise and intuitive way.
+Therefore, we do not in general support <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code>.
+There is only one way you can get an instance of <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code>:
+from the return value of a C++ function. And this <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> has only one usage:
+either being move-assigned or being in-place-constructed (C++17 guaranteed copy-elision applies here) into a <code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code>.
+In this sense, <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> is analogous to a <a href="https://en.cppreference.com/w/cpp/language/value_category" target="_blank">prvalue</a> of type <code class="docutils literal notranslate"><span class="pre">C</span></code> under C++17 definition.</p>
+<dl class="cpp class">
+<dt id="_CPPv4I0E8Variable">
+<span id="_CPPv3I0E8Variable"></span><span id="_CPPv2I0E8Variable"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><em class="property">class </em><code class="sig-name descname">Variable</code><a class="headerlink" href="#_CPPv4I0E8Variable" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>The last important class in PochiVM is <code class="docutils literal notranslate"><span class="pre">Variable&lt;T&gt;</span></code>. It is analogous to a local variable of type <code class="docutils literal notranslate"><span class="pre">T</span></code> in C++.
+As one would expect, it must be declared (and initialized by a constructor if it has a <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a>) before it can be used,
+and when the declaration goes out of scope, its destructor will be called.</p>
+<p>This class inherits <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code>, so it may be passed to any API that takes a <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code>
+(or <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code>, if T is not a <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a>). The semantics is clear: a local variable is obviously a reference.</p>
+<p>Finally, C++11 rvalue-reference type (<code class="docutils literal notranslate"><span class="pre">T&amp;&amp;</span></code>) is not supported in PochiVM, thus does not have an analogy in the typesystem.</p>
+<p>The table below summarizes the PochiVM typesystem:</p>
+<table class="colwidths-given docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>PochiVM Type</p></th>
+<th class="head"><p>C++ Analogy</p></th>
+<th class="head"><p>Inheritance</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> for primitive type <code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p>rvalue of type <code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p>None</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> for primitive type <code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p>rvalue of type <code class="docutils literal notranslate"><span class="pre">T&amp;</span></code></p></td>
+<td><p>Inherits <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> for C++ type <code class="docutils literal notranslate"><span class="pre">C</span></code></p></td>
+<td><p><a href="https://en.cppreference.com/w/cpp/language/value_category" target="_blank">prvalue</a> of type <code class="docutils literal notranslate"><span class="pre">C</span></code></p></td>
+<td><p>None</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code> for C++ type <code class="docutils literal notranslate"><span class="pre">C</span></code></p></td>
+<td><p>rvalue of type <code class="docutils literal notranslate"><span class="pre">C&amp;</span></code></p></td>
+<td><p><strong>None</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Variable&lt;T&gt;</span></code> for any type <code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p>local variable of type <code class="docutils literal notranslate"><span class="pre">T</span></code></p></td>
+<td><p>Inherits <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="basic_class_value.html" class="btn btn-neutral float-right" title="Basic Class - Value" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="lang_construct.html" class="btn btn-neutral float-left" title="Language Construction API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

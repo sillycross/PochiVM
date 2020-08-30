@@ -45,6 +45,10 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+html_show_copyright = False
+html_copy_source = False
+html_show_sourcelink = False
+show_authors = False
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

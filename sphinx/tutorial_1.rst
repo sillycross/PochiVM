@@ -198,8 +198,8 @@ If something is not registered, it is just not accessible to generated code. Now
 
 .. highlight:: c++
 
-It is recommended that you build the repository after adding in new runtime 
-library classes and before you write generated code that uses them, since that would allow your IDE to give
+It is recommended that you rebuild the repository after adding in new runtime 
+library classes but before you write generated code that uses them, since that would allow your IDE to give
 you auto-completion hints when you write your generated code (if your IDE is good enough, of course).
 Now move back to ``learn_pochivm.cpp`` in the project root, and add a new test::
 
@@ -239,7 +239,7 @@ Now move back to ``learn_pochivm.cpp`` in the project root, and add a new test::
 .. highlight:: bash
 
 It should still be fairly straightforward what the code is doing. 
-we constructed a local variable ``v`` of type ``Tutorial101`` in the function using the default constructor,
+We constructed a local variable ``v`` of type ``Tutorial101`` in the function using the default constructor,
 then called its ``Print()`` member method, and then called its ``Increment()`` member method, etc. 
 It is just as if you were writing the same logic in C++. Now build and run the test::
 

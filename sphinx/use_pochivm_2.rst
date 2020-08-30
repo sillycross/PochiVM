@@ -64,8 +64,11 @@ Final Linking Step
 
 .. highlight:: cmake
 
-The following CMake link libraries are needed for any binary file that uses PochiVM::
-
+The following CMake link flags and libraries are needed for any binary file that uses PochiVM::
+  
+  SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -rdynamic ")
+  SET(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${LLVM_EXTRA_LINK_FLAGS} ")
+  
   target_link_libraries([your_target_name] PUBLIC
     "-Wl,--whole-archive" runtime "-Wl,--no-whole-archive" 
     runtime_bc  
@@ -112,7 +115,8 @@ So in short, the ``PochiVM`` library and the ``runtime`` library must be built u
 Of course it is impractical to ask one to install a specific version of clang++ and LLVM in order to build PochiVM. 
 This is why we used ``docker`` to provide a virtualized build environment in which we have precise control over the version of the toolchain.
 
-Fortunately, you don't have to switch your whole project to use ``docker``, or getting locked on a specific compiler version. 
+Nonetheless, you don't have to switch your whole project to use ``docker``, or getting locked on a specific compiler version 
+(although it would be easier to integrate if you are fine with it). 
 Only the source code in ``runtime`` folder must be compiled by that specific version of clang++.
 The rest of your project (including the ones using ``pochivm.h``) is free to use whatever compiler that supports C++17 (since ``pochivm.h`` employed many C++17 features), and does not need access to any LLVM headers, and may or may not use docker in the build system. 
 Of course the final binary still needs to be linked against LLVM 10.0.0, but one can just store the LLVM libraries statically somewhere in the project by copying them out from docker.

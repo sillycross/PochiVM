@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Interacting with C++ Code" href="cpp_interact.html" />
+    <link rel="next" title="The Typesystem" href="typesystem.html" />
     <link rel="prev" title="Integration Into Existing Project" href="use_pochivm_2.html" /> 
 </head>
 
@@ -84,8 +84,13 @@
             
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Language Construction API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Language Construction API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
 </ul>
 
             
@@ -138,8 +143,6 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/lang_construct.rst.txt" rel="nofollow"> View page source</a>
-          
         
       </li>
     
@@ -153,19 +156,13 @@
             
   <div class="section" id="language-construction-api">
 <h1>Language Construction API<a class="headerlink" href="#language-construction-api" title="Permalink to this headline">¶</a></h1>
-<p>TODO</p>
-<dl class="cpp class">
-<dt id="_CPPv4I0E5Value">
-<span id="_CPPv3I0E5Value"></span><span id="_CPPv2I0E5Value"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><em class="property">class </em><code class="sig-name descname">Value</code><a class="headerlink" href="#_CPPv4I0E5Value" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
-
-<p>AA</p>
-<dl class="cpp class">
-<dt id="_CPPv4I0E9Reference">
-<span id="_CPPv3I0E9Reference"></span><span id="_CPPv2I0E9Reference"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><em class="property">class </em><code class="sig-name descname">Reference</code> : <em class="property">public</em> <a class="reference internal" href="#_CPPv4I0E5Value" title="Value">Value</a>&lt;<a class="reference internal" href="#_CPPv4I0E9Reference" title="Reference::T">T</a>&gt;<a class="headerlink" href="#_CPPv4I0E9Reference" title="Permalink to this definition">¶</a><br /></dt>
-<dd></dd></dl>
-
-<p>BB</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+</ul>
+</div>
 </div>
 
 
@@ -176,7 +173,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="cpp_interact.html" class="btn btn-neutral float-right" title="Interacting with C++ Code" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="typesystem.html" class="btn btn-neutral float-right" title="The Typesystem" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="use_pochivm_2.html" class="btn btn-neutral float-left" title="Integration Into Existing Project" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -188,8 +185,6 @@
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, lemon
 
     </p>
   </div>

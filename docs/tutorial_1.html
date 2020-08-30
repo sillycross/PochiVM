@@ -96,7 +96,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
 </ul>
 
             
@@ -151,8 +151,6 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/tutorial_1.rst.txt" rel="nofollow"> View page source</a>
-          
         
       </li>
     
@@ -334,8 +332,8 @@ If something is not registered, it is just not accessible to generated code. Now
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 pochivm-build make debug
 </pre></div>
 </div>
-<p>It is recommended that you build the repository after adding in new runtime
-library classes and before you write generated code that uses them, since that would allow your IDE to give
+<p>It is recommended that you rebuild the repository after adding in new runtime
+library classes but before you write generated code that uses them, since that would allow your IDE to give
 you auto-completion hints when you write your generated code (if your IDE is good enough, of course).
 Now move back to <code class="docutils literal notranslate"><span class="pre">learn_pochivm.cpp</span></code> in the project root, and add a new test:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">TEST</span><span class="p">(</span><span class="n">Tutorial</span><span class="p">,</span> <span class="n">CallCppFunction</span><span class="p">)</span>
@@ -373,7 +371,7 @@ Now move back to <code class="docutils literal notranslate"><span class="pre">le
 </pre></div>
 </div>
 <p>It should still be fairly straightforward what the code is doing.
-we constructed a local variable <code class="docutils literal notranslate"><span class="pre">v</span></code> of type <code class="docutils literal notranslate"><span class="pre">Tutorial101</span></code> in the function using the default constructor,
+We constructed a local variable <code class="docutils literal notranslate"><span class="pre">v</span></code> of type <code class="docutils literal notranslate"><span class="pre">Tutorial101</span></code> in the function using the default constructor,
 then called its <code class="docutils literal notranslate"><span class="pre">Print()</span></code> member method, and then called its <code class="docutils literal notranslate"><span class="pre">Increment()</span></code> member method, etc.
 It is just as if you were writing the same logic in C++. Now build and run the test:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 pochivm-build make debug
@@ -423,8 +421,6 @@ as well as a guide on how to use PochiVM in your own project.</p>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, lemon
 
     </p>
   </div>

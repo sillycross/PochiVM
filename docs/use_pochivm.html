@@ -92,7 +92,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
 </ul>
 
             
@@ -147,8 +147,6 @@
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/use_pochivm.rst.txt" rel="nofollow"> View page source</a>
-          
         
       </li>
     
@@ -171,10 +169,10 @@ and purge relavent code in <code class="docutils literal notranslate"><span clas
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">debug</span></code> build is a testing build for debugging purpose. The code is compiled with <code class="docutils literal notranslate"><span class="pre">-O0</span> <span class="pre">-g</span></code> for best debugging experience, and all assertions are enabled. The emitted IR for generated code is not optimized either, for best readability.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">release</span></code> build is a <strong>testing build</strong> compiled with optimizations enabled (<code class="docutils literal notranslate"><span class="pre">-O3</span> <span class="pre">-g</span></code>), to catch bugs that only show up when compiler optimization takes place.
+<li><p><code class="docutils literal notranslate"><span class="pre">release</span></code> build is a <strong>testing build</strong> compiled with optimizations enabled (<code class="docutils literal notranslate"><span class="pre">-O3</span> <span class="pre">-g</span> <span class="pre">-DNDEBUG</span></code>), to catch bugs that only show up when compiler optimization takes place.
 <code class="docutils literal notranslate"><span class="pre">assert()</span></code> are disabled, but <code class="docutils literal notranslate"><span class="pre">TestAssert()</span></code> are enabled.
 Notably, by default LLVM optimization for generated code is only enabled in <code class="docutils literal notranslate"><span class="pre">release</span></code> or <code class="docutils literal notranslate"><span class="pre">production</span></code> build. The feature of inlining C++ function calls from generated code can also only happen in <code class="docutils literal notranslate"><span class="pre">release</span></code> or <code class="docutils literal notranslate"><span class="pre">production</span></code> build.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">production</span></code> build is for production use, with optimizations enabled and no debug symbols (<code class="docutils literal notranslate"><span class="pre">-O3</span></code>).
+<li><p><code class="docutils literal notranslate"><span class="pre">production</span></code> build is for production use, with optimizations enabled and no debug symbols (<code class="docutils literal notranslate"><span class="pre">-O3</span> <span class="pre">-DNDEBUG</span></code>).
 Both <code class="docutils literal notranslate"><span class="pre">assert()</span></code> and <code class="docutils literal notranslate"><span class="pre">TestAssert()</span></code> are disabled.</p></li>
 </ul>
 </div></blockquote>
@@ -202,8 +200,6 @@ Both <code class="docutils literal notranslate"><span class="pre">assert()</span
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, lemon
 
     </p>
   </div>

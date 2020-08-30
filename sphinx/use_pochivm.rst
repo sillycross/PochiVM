@@ -13,10 +13,10 @@ and purge relavent code in ``pochivm_runtime_headers.h``, ``pochivm_register_run
 The repository provides 3 build modes by default:
 
  - ``debug`` build is a testing build for debugging purpose. The code is compiled with ``-O0 -g`` for best debugging experience, and all assertions are enabled. The emitted IR for generated code is not optimized either, for best readability.
- - ``release`` build is a **testing build** compiled with optimizations enabled (``-O3 -g``), to catch bugs that only show up when compiler optimization takes place. 
+ - ``release`` build is a **testing build** compiled with optimizations enabled (``-O3 -g -DNDEBUG``), to catch bugs that only show up when compiler optimization takes place. 
    ``assert()`` are disabled, but ``TestAssert()`` are enabled.
    Notably, by default LLVM optimization for generated code is only enabled in ``release`` or ``production`` build. The feature of inlining C++ function calls from generated code can also only happen in ``release`` or ``production`` build.
- - ``production`` build is for production use, with optimizations enabled and no debug symbols (``-O3``). 
+ - ``production`` build is for production use, with optimizations enabled and no debug symbols (``-O3 -DNDEBUG``). 
    Both ``assert()`` and ``TestAssert()`` are disabled. 
 
 Also keep in mind that once you added a header file to folder ``runtime``, you need to update ``pochivm_runtime_headers.h`` to include it (check :ref:`ref_after_adding_files_to_runtime` in tutorial).  
