@@ -93,9 +93,20 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="statement_expression.html">Expressions and Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="block_scope.html">Blocks and Scopes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="declare_var.html">Declaring Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="assignment.html">Assignments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control_statements.html">Flow Control Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="call_expr.html">Call Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exception_handling.html">Exception Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocation.html">Memory Allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="placement_new.html">Placement New</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
 </ul>
 
             
@@ -171,7 +182,7 @@
 <div><ul class="simple">
 <li><p>Most of the C++ fundamental types, specifically <code class="docutils literal notranslate"><span class="pre">void</span></code>, <code class="docutils literal notranslate"><span class="pre">bool</span></code>, <code class="docutils literal notranslate"><span class="pre">uint8_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int8_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint16_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int16_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint32_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int32_t</span></code>, <code class="docutils literal notranslate"><span class="pre">uint64_t</span></code>, <code class="docutils literal notranslate"><span class="pre">int64_t</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">double</span></code></p></li>
 <li><p>Any <code class="docutils literal notranslate"><span class="pre">C++</span> <span class="pre">class</span></code> type registered in <code class="docutils literal notranslate"><span class="pre">pochivm_register_runtime.cpp</span></code></p></li>
-<li><p>Pointers to all above types, and pointers to pointers</p></li>
+<li><p>Types obtained by adding one or multiple layers of pointers to all above types</p></li>
 </ul>
 </div></blockquote>
 <div class="admonition note">
@@ -186,8 +197,8 @@
 </ul>
 </div></blockquote>
 <p>Note that the template-parameter part in a C++ class is never subject to the above restriction.
-For example, <code class="docutils literal notranslate"><span class="pre">std::function&lt;void(int)&gt;</span></code> is just a C++ class type (as a whole).
-PochiVM does not care and is unaware of whatever is in the template parameter.</p>
+For example, <code class="docutils literal notranslate"><span class="pre">std::function&lt;void(int)&gt;</span></code> (as a whole) is just a C++ class type.
+The typesystem does not care and is unaware of whatever is in the template parameter.</p>
 </div>
 <div class="section" id="terminology">
 <h2>Terminology<a class="headerlink" href="#terminology" title="Permalink to this headline">¶</a></h2>
@@ -210,7 +221,7 @@ For example, <code class="docutils literal notranslate"><span class="pre">int**<
 <dd></dd></dl>
 
 <p><code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> is probably the most important class in PochiVM.
-It is analogous to a RValue of type <code class="docutils literal notranslate"><span class="pre">T</span></code> in C++, which resulted from some computation.
+It is analogous to a RValue of type <code class="docutils literal notranslate"><span class="pre">T</span></code> in C++, which resulted from some computation,
 for example, the result of expression <code class="docutils literal notranslate"><span class="pre">a+b+c</span></code>.
 The APIs of this class are documented in a <a class="reference internal" href="basic_class_value.html"><span class="doc">standalone section</span></a>.
 For now, it’s sufficient to understand that it represents a RValue of type <code class="docutils literal notranslate"><span class="pre">T</span></code>.</p>
@@ -223,8 +234,9 @@ For now, it’s sufficient to understand that it represents a RValue of type <co
 It is analogous to a RValue of type <code class="docutils literal notranslate"><span class="pre">T&amp;</span></code> in C++.</p>
 <p>For a <a class="reference internal" href="#term-Primitive-Type"><span class="xref std std-term">primitive type</span></a> <code class="docutils literal notranslate"><span class="pre">T</span></code>, <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> inherits <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code>,
 which implies that a <code class="docutils literal notranslate"><span class="pre">Reference&lt;T&gt;</span></code> can be implicitly converted to a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> and passed
-to any API that accepts a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> parameter.
-The resulted <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> contains the value stored in the reference at the time the dereference is done in program execution.</p>
+to any API that accepts a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> parameter, just like a lvalue-reference can be implicitly converted to a rvalue in C++.
+The resulted <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> will contain the value stored in the reference
+at the time the dereference operation is executed in the generated program, just like in C++.</p>
 <p>However, for a <a class="reference internal" href="#term-C-Type"><span class="xref std std-term">C++ type</span></a> <code class="docutils literal notranslate"><span class="pre">C</span></code>,
 dereferencing a LValue-reference to obtain a RValue involves a call to the copy constructor of class <code class="docutils literal notranslate"><span class="pre">C</span></code>,
 This is an operation hidden behind the scene.
@@ -244,7 +256,8 @@ not even considering the additional trickiness to define “full expression” i
 Therefore, we do not in general support <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code>.
 There is only one way you can get an instance of <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code>:
 from the return value of a C++ function. And this <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> has only one usage:
-either being move-assigned or being in-place-constructed (C++17 guaranteed copy-elision applies here) into a <code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code>.
+either being move-assigned into a <code class="docutils literal notranslate"><span class="pre">Reference&lt;C&gt;</span></code>,
+or being in-place-constructed (C++17 guaranteed copy-elision applies here) into a <code class="docutils literal notranslate"><span class="pre">Variable&lt;C&gt;</span></code>.
 In this sense, <code class="docutils literal notranslate"><span class="pre">Value&lt;C&gt;</span></code> is analogous to a <a href="https://en.cppreference.com/w/cpp/language/value_category" target="_blank">prvalue</a> of type <code class="docutils literal notranslate"><span class="pre">C</span></code> under C++17 definition.</p>
 <dl class="cpp class">
 <dt id="_CPPv4I0E8Variable">

@@ -92,7 +92,7 @@ PochiVM also provides a post-build validation utility to validate that nothing h
 While this is optional, it is recommended that you run the pass just in case you hit a bug in PochiVM. 
 The utility for this validation is in folder ``post_build_verifier``, 
 and the validator program takes a single argument, the built binary file to validate. 
-You can duplicate the CMake logic by looking at how the post-build-pass is implemented in the project root's ``CMakeLists.txt``.
+You can replicate the CMake logic by looking at how the post-build-pass is implemented in the project root's ``CMakeLists.txt``.
 
 .. note::
 

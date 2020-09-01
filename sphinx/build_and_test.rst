@@ -6,7 +6,7 @@
 .. highlight:: bash
 .. warning::
 
-  Only Linux is supported at the moment.
+  Only Linux is supported at the moment. 
   
 PochiVM uses ``docker`` to create a distribution-independent build environment. 
 All build dependencies are managed by ``docker`` in its virtualized build environment,

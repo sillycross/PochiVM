@@ -104,6 +104,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
 </ul>
 
             
@@ -256,7 +257,7 @@ since there is a known bug that clang LTO does not respect <code class="docutils
 While this is optional, it is recommended that you run the pass just in case you hit a bug in PochiVM.
 The utility for this validation is in folder <code class="docutils literal notranslate"><span class="pre">post_build_verifier</span></code>,
 and the validator program takes a single argument, the built binary file to validate.
-You can duplicate the CMake logic by looking at how the post-build-pass is implemented in the project root’s <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>.</p>
+You can replicate the CMake logic by looking at how the post-build-pass is implemented in the project root’s <code class="docutils literal notranslate"><span class="pre">CMakeLists.txt</span></code>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If <code class="docutils literal notranslate"><span class="pre">post_build_verifier</span></code> returns an error and you have not modified the build process,

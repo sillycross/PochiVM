@@ -97,6 +97,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="lang_construct.html">Language Construction API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
 </ul>
 
             
@@ -261,7 +262,7 @@ If an error is detected, human-readable error message will be stored in <code cl
 <span id="ref-after-adding-files-to-runtime"></span><h2>Call C++ Fn from Generated Code<a class="headerlink" href="#call-c-fn-from-generated-code" title="Permalink to this headline">¶</a></h2>
 <p>Doing everything in generated code is hard.
 Almost every project involving JIT has a runtime library which is statically compiled,
-and generated code may call functions provided by the runtime library to use its functionalities.</p>
+and generated code may call functions provided by the runtime library at runtime to use its functionalities.</p>
 <p>Fortunately, one of the main strengths of PochiVM is its seamless and efficient integration
 with the C++ codebase. Generated code can access almost any C++ functions and classes using an intuitive syntax,
 even if they are templated, overloaded, virtual, or have non-primitive parameter/return types.

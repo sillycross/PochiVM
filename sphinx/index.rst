@@ -16,7 +16,7 @@ PochiVM Reference Manual
    intro
    lang_construct
    cpp_interact
-   
+   jit_compile
    
 Indices and tables
 ==================

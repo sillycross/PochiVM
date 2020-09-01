@@ -12,7 +12,7 @@ PochiVM currently supports the following types:
 
  - Most of the C++ fundamental types, specifically ``void``, ``bool``, ``uint8_t``, ``int8_t``, ``uint16_t``, ``int16_t``, ``uint32_t``, ``int32_t``, ``uint64_t``, ``int64_t``, ``float``, ``double``
  - Any ``C++ class`` type registered in ``pochivm_register_runtime.cpp``
- - Pointers to all above types, and pointers to pointers
+ - Types obtained by adding one or multiple layers of pointers to all above types
  
 .. note::
   Support for remaining C++ fundamental types (the most important being ``char``) is a TODO.
@@ -23,8 +23,8 @@ Notable valid C++ types that do not fall into the above category include:
  - C-style function-pointer, member-function-pointer, or member-object-pointer types.
 
 Note that the template-parameter part in a C++ class is never subject to the above restriction. 
-For example, ``std::function<void(int)>`` is just a C++ class type (as a whole). 
-PochiVM does not care and is unaware of whatever is in the template parameter. 
+For example, ``std::function<void(int)>`` (as a whole) is just a C++ class type. 
+The typesystem does not care and is unaware of whatever is in the template parameter. 
 
 Terminology
 ============
@@ -48,7 +48,7 @@ Value, Reference and Variable
 .. cpp:class:: template<typename T> Value
 
 ``Value<T>`` is probably the most important class in PochiVM. 
-It is analogous to a RValue of type ``T`` in C++, which resulted from some computation. 
+It is analogous to a RValue of type ``T`` in C++, which resulted from some computation, 
 for example, the result of expression ``a+b+c``.
 The APIs of this class are documented in a :doc:`standalone section<basic_class_value>`.
 For now, it's sufficient to understand that it represents a RValue of type ``T``.
@@ -60,8 +60,9 @@ It is analogous to a RValue of type ``T&`` in C++.
 
 For a :term:`primitive type<Primitive Type>` ``T``, ``Reference<T>`` inherits ``Value<T>``, 
 which implies that a ``Reference<T>`` can be implicitly converted to a ``Value<T>`` and passed 
-to any API that accepts a ``Value<T>`` parameter.
-The resulted ``Value<T>`` contains the value stored in the reference at the time the dereference is done in program execution. 
+to any API that accepts a ``Value<T>`` parameter, just like a lvalue-reference can be implicitly converted to a rvalue in C++.
+The resulted ``Value<T>`` will contain the value stored in the reference 
+at the time the dereference operation is executed in the generated program, just like in C++. 
 
 However, for a :term:`C++ type<C++ Type>` ``C``, 
 dereferencing a LValue-reference to obtain a RValue involves a call to the copy constructor of class ``C``,
@@ -84,7 +85,8 @@ not even considering the additional trickiness to define "full expression" in Po
 Therefore, we do not in general support ``Value<C>``. 
 There is only one way you can get an instance of ``Value<C>``: 
 from the return value of a C++ function. And this ``Value<C>`` has only one usage:
-either being move-assigned or being in-place-constructed (C++17 guaranteed copy-elision applies here) into a ``Reference<C>``. 
+either being move-assigned into a ``Reference<C>``, 
+or being in-place-constructed (C++17 guaranteed copy-elision applies here) into a ``Variable<C>``. 
 In this sense, ``Value<C>`` is analogous to a |cppref_prvalue_link| of type ``C`` under C++17 definition.
 
 .. |cppref_temp_lifetime_link| raw:: html

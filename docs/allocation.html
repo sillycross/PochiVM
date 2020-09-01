@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Basic Classes &mdash; PochiVM  documentation</title>
+  <title>Memory Allocation &mdash; PochiVM  documentation</title>
   
 
   
@@ -36,8 +36,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Interacting with C++ Code" href="cpp_interact.html" />
-    <link rel="prev" title="The Typesystem" href="typesystem.html" /> 
+    <link rel="next" title="Placement New" href="placement_new.html" />
+    <link rel="prev" title="Exception Handling" href="exception_handling.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -86,10 +86,22 @@
 <li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="lang_construct.html">Language Construction API</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Basic Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="statement_expression.html">Expressions and Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="block_scope.html">Blocks and Scopes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="declare_var.html">Declaring Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="assignment.html">Assignments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control_statements.html">Flow Control Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="call_expr.html">Call Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exception_handling.html">Exception Handling</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Memory Allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="placement_new.html">Placement New</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
 </ul>
 
             
@@ -138,7 +150,7 @@
         
           <li><a href="lang_construct.html">Language Construction API</a> &raquo;</li>
         
-      <li>Basic Classes</li>
+      <li>Memory Allocation</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -155,9 +167,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="basic-classes">
-<h1>Basic Classes<a class="headerlink" href="#basic-classes" title="Permalink to this headline">¶</a></h1>
-<p>There are currently 3</p>
+  <div class="section" id="memory-allocation">
+<h1>Memory Allocation<a class="headerlink" href="#memory-allocation" title="Permalink to this headline">¶</a></h1>
 </div>
 
 
@@ -168,10 +179,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="cpp_interact.html" class="btn btn-neutral float-right" title="Interacting with C++ Code" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="placement_new.html" class="btn btn-neutral float-right" title="Placement New" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="typesystem.html" class="btn btn-neutral float-left" title="The Typesystem" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="exception_handling.html" class="btn btn-neutral float-left" title="Exception Handling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

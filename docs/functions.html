@@ -1,0 +1,333 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Functions &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Blocks and Scopes" href="block_scope.html" />
+    <link rel="prev" title="Expressions and Statements" href="statement_expression.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="lang_construct.html">Language Construction API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="statement_expression.html">Expressions and Statements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#synopsis">Synopsis</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#function-signature">Function Signature</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#function-body">Function Body</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#apis">APIs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#create-a-new-function">Create a New Function</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#create-local-variables">Create Local Variables</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#set-function-body">Set Function Body</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="block_scope.html">Blocks and Scopes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="declare_var.html">Declaring Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="assignment.html">Assignments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control_statements.html">Flow Control Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="call_expr.html">Call Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exception_handling.html">Exception Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocation.html">Memory Allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="placement_new.html">Placement New</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="lang_construct.html">Language Construction API</a> &raquo;</li>
+        
+      <li>Functions</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="functions">
+<h1>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="synopsis">
+<h2>Synopsis<a class="headerlink" href="#synopsis" title="Permalink to this headline">¶</a></h2>
+<p>A generated <code class="docutils literal notranslate"><span class="pre">Function</span></code> is a the primary interface between generated code and host program.
+You define functions in generated code, which may execute logics, call each other, call C++ functions in host program,
+or get called by the host program.
+Same as in C++, each <code class="docutils literal notranslate"><span class="pre">Function</span></code> has a <strong>function signature</strong> and a <strong>function body</strong>.</p>
+<p>Like all API classes in PochiVM, the <code class="docutils literal notranslate"><span class="pre">Function</span></code> class is a trivially copyable proxy class that may be passed around by value.
+It is just the reference handler to the underlying function object.</p>
+<div class="section" id="function-signature">
+<h3>Function Signature<a class="headerlink" href="#function-signature" title="Permalink to this headline">¶</a></h3>
+<p>The signature of a generated function is represented by either a C-style function pointer type
+(e.g. <code class="docutils literal notranslate"><span class="pre">int(*)(double,</span> <span class="pre">std::vector&lt;int&gt;*)</span></code>),
+or a <code class="docutils literal notranslate"><span class="pre">std::function</span></code> type (e.g. <code class="docutils literal notranslate"><span class="pre">std::function&lt;void(int)&gt;</span></code>).
+Most of the APIs support both interface.</p>
+<p>Inherently limited by the PochiVM typesystem,
+a generated function can only take parameters and return values of types <a class="reference internal" href="typesystem.html"><span class="doc">supported by the typesystem</span></a>,
+with the additional exclusion of <a class="reference internal" href="typesystem.html#term-C-Type"><span class="xref std std-term">C++ types</span></a> that is passed or returned by value.
+Additionally, they currently cannot be reference types, although this limitation may be removed in future.</p>
+</div>
+<div class="section" id="function-body">
+<h3>Function Body<a class="headerlink" href="#function-body" title="Permalink to this headline">¶</a></h3>
+<p>The function body is the definition of the function.
+It contains a sequence of <a class="reference internal" href="statement_expression.html#term-Statement"><span class="xref std std-term">statements</span></a>.</p>
+</div>
+</div>
+<div class="section" id="apis">
+<h2>APIs<a class="headerlink" href="#apis" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="create-a-new-function">
+<h3>Create a New Function<a class="headerlink" href="#create-a-new-function" title="Permalink to this headline">¶</a></h3>
+<dl class="cpp function">
+<dt id="_CPPv4I0E11NewFunctionNSt5tupleI8FunctionDp8VariableI10ParamTypesEEERKNSt6stringE">
+<span id="_CPPv3I0E11NewFunctionRKNSt6stringE"></span><span id="_CPPv2I0E11NewFunctionRKNSt6stringE"></span>template&lt;typename <code class="sig-name descname">FnPrototype</code>&gt;<br />std::tuple&lt;Function, <a class="reference internal" href="typesystem.html#_CPPv4I0E8Variable" title="Variable">Variable</a>&lt;ParamTypes&gt;...&gt; <code class="sig-name descname">NewFunction</code><span class="sig-paren">(</span><em class="property">const</em> std::string &amp;<em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0E11NewFunctionNSt5tupleI8FunctionDp8VariableI10ParamTypesEEERKNSt6stringE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Create a generated function with the given function prototype and function name.
+Returns a <code class="docutils literal notranslate"><span class="pre">Function</span></code>, and a list of <code class="docutils literal notranslate"><span class="pre">Variable&lt;ParamType&gt;</span></code> references to its parameters,
+which types are automatically deduced from the function prototype.</p>
+<p>The recommended usage is to leverage the C++17 structured-binding syntax:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">FnPrototype</span> <span class="o">=</span> <span class="kt">int</span><span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">double</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">set</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;*</span><span class="p">,</span> <span class="kt">double</span><span class="o">***</span><span class="p">);</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">fn</span><span class="p">,</span> <span class="n">param1</span><span class="p">,</span> <span class="n">param2</span><span class="p">,</span> <span class="n">param3</span><span class="p">]</span> <span class="o">=</span> <span class="n">NewFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;my_generated_function&quot;</span><span class="p">);</span>
+<span class="c1">// &#39;fn&#39; is of type &#39;Function&#39;</span>
+<span class="c1">// &#39;param1&#39; is of type &#39;Variable&lt;double&gt;&#39;</span>
+<span class="c1">// &#39;param2&#39; is of type &#39;Variable&lt;std::set&lt;int&gt;*&gt;&#39;</span>
+<span class="c1">// &#39;param3&#39; is of type &#39;Variable&lt;double***&gt;&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="create-local-variables">
+<h3>Create Local Variables<a class="headerlink" href="#create-local-variables" title="Permalink to this headline">¶</a></h3>
+<dl class="cpp function">
+<dt id="_CPPv4I0EN8Function11NewVariableE8VariableI1TEv">
+<span id="_CPPv3I0EN8Function11NewVariableEv"></span><span id="_CPPv2I0EN8Function11NewVariableEv"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><a class="reference internal" href="typesystem.html#_CPPv4I0E8Variable" title="Variable">Variable</a>&lt;<a class="reference internal" href="#_CPPv4I0EN8Function11NewVariableE8VariableI1TEv" title="Function::NewVariable::T">T</a>&gt; <code class="sig-prename descclassname">Function<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">NewVariable</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN8Function11NewVariableE8VariableI1TEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Create a local variable of type <code class="docutils literal notranslate"><span class="pre">T</span></code>.
+This give you a <code class="docutils literal notranslate"><span class="pre">Variable&lt;T&gt;</span></code> handler so you can cite the variable later in the function body to declare and use it.
+See also <a class="reference internal" href="declare_var.html"><span class="doc">Declaring Variables</span></a>.</p>
+</div>
+<div class="section" id="set-function-body">
+<h3>Set Function Body<a class="headerlink" href="#set-function-body" title="Permalink to this headline">¶</a></h3>
+<dl class="cpp function">
+<dt id="_CPPv4N8Function7SetBodyEDp5ValueIvE">
+<span id="_CPPv3N8Function7SetBodyEDp5ValueIvE"></span><span id="_CPPv2N8Function7SetBodyEDp5ValueIvE"></span><span id="Function::SetBody__Value:void:Dp"></span>void <code class="sig-prename descclassname">Function<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">SetBody</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt;... <em>statements</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8Function7SetBodyEDp5ValueIvE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Set the function body to consist of a list of statements.</p>
+<dl class="cpp function">
+<dt id="_CPPv4N8Function7GetBodyEv">
+<span id="_CPPv3N8Function7GetBodyEv"></span><span id="_CPPv2N8Function7GetBodyEv"></span><span id="Function::GetBody"></span>Scope <code class="sig-prename descclassname">Function<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">GetBody</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N8Function7GetBodyEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Get the function body. The function body is always a <a class="reference internal" href="block_scope.html"><span class="doc">Scope</span></a>.</p>
+</div>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>Below is a minimal example to create a generated function that given integer <code class="docutils literal notranslate"><span class="pre">a,</span> <span class="pre">b</span></code>, returns <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">+</span> <span class="pre">b</span></code>.</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="c1">// create a function of prototype &#39;int(*)(int, int)&#39;</span>
+<span class="k">using</span> <span class="n">FnPrototype</span> <span class="o">=</span> <span class="kt">int</span><span class="p">(</span><span class="o">*</span><span class="p">)(</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="p">);</span>
+<span class="k">auto</span> <span class="p">[</span><span class="n">fn</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">NewFunction</span><span class="o">&lt;</span><span class="n">FnPrototype</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;a_plus_b&quot;</span><span class="p">);</span>
+<span class="c1">// create a local variable of type &#39;int&#39;, just for demonstration purpose</span>
+<span class="k">auto</span> <span class="n">c</span> <span class="o">=</span> <span class="n">fn</span><span class="p">.</span><span class="n">NewVariable</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="c1">// set function body</span>
+<span class="c1">// could also just write &#39;Return(a + b)&#39;</span>
+<span class="n">fn</span><span class="p">.</span><span class="n">SetBody</span><span class="p">(</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="p">),</span>
+  <span class="n">Return</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="block_scope.html" class="btn btn-neutral float-right" title="Blocks and Scopes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="statement_expression.html" class="btn btn-neutral float-left" title="Expressions and Statements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

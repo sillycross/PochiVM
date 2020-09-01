@@ -117,7 +117,7 @@ Call C++ Fn from Generated Code
 
 Doing everything in generated code is hard. 
 Almost every project involving JIT has a runtime library which is statically compiled, 
-and generated code may call functions provided by the runtime library to use its functionalities. 
+and generated code may call functions provided by the runtime library at runtime to use its functionalities. 
 
 Fortunately, one of the main strengths of PochiVM is its seamless and efficient integration 
 with the C++ codebase. Generated code can access almost any C++ functions and classes using an intuitive syntax, 

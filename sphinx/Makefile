@@ -19,7 +19,7 @@ help:
 %: Makefile
 	@rm -rf ../sphinx_build
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	rm -rf docs/*
+	rm -rf ../docs/*
 	cp -r ../sphinx_build/html/* ../docs
 	touch ../docs/.nojekyll
 	rm -rf ../sphinx_build

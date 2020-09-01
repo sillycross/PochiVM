@@ -1,0 +1,329 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Blocks and Scopes &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Declaring Variables" href="declare_var.html" />
+    <link rel="prev" title="Functions" href="functions.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="lang_construct.html">Language Construction API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="statement_expression.html">Expressions and Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Blocks and Scopes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#block">Block</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#public-methods">Public Methods</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#scope">Scope</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">Public Methods</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id2">Examples</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="declare_var.html">Declaring Variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="assignment.html">Assignments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control_statements.html">Flow Control Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="call_expr.html">Call Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exception_handling.html">Exception Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocation.html">Memory Allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="placement_new.html">Placement New</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="lang_construct.html">Language Construction API</a> &raquo;</li>
+        
+      <li>Blocks and Scopes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="blocks-and-scopes">
+<h1>Blocks and Scopes<a class="headerlink" href="#blocks-and-scopes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="block">
+<h2>Block<a class="headerlink" href="#block" title="Permalink to this headline">¶</a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">Block</span></code> is a syntax-sugar construct capable of holding a sequence of <a class="reference internal" href="statement_expression.html#term-Statement"><span class="xref std std-term">statements</span></a> (potentially zero).
+It has no effect on program execution.
+A <code class="docutils literal notranslate"><span class="pre">Block</span></code> itself is also a <a class="reference internal" href="statement_expression.html#term-Statement"><span class="xref std std-term">statement</span></a>, thus it may be implicited converted to a <code class="docutils literal notranslate"><span class="pre">Value&lt;void&gt;</span></code>.</p>
+<p>Like all API classes in PochiVM, the <code class="docutils literal notranslate"><span class="pre">Block</span></code> class is a trivially copyable proxy class that may be passed around by value.
+It is just the reference handler to the underlying object.
+Copying a <code class="docutils literal notranslate"><span class="pre">Block</span></code> class does not create a new copy the logic stored in the block.</p>
+<div class="section" id="public-methods">
+<h3>Public Methods<a class="headerlink" href="#public-methods" title="Permalink to this headline">¶</a></h3>
+<dl class="cpp function">
+<dt id="_CPPv4N5Block5BlockEDp5ValueIvE">
+<span id="_CPPv3N5Block5BlockEDp5ValueIvE"></span><span id="_CPPv2N5Block5BlockEDp5ValueIvE"></span><span id="Block::Block__Value:void:Dp"></span><code class="sig-prename descclassname"><a class="reference internal" href="#_CPPv4N5Block5BlockEDp5ValueIvE" title="Block::Block">Block</a><code class="sig-prename descclassname">::</code></code><code class="sig-name descname">Block</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt;... <em>statements</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N5Block5BlockEDp5ValueIvE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Constructor. Create a <code class="docutils literal notranslate"><span class="pre">Block</span></code> consisting of zero, one or more statements.</p>
+<dl class="cpp function">
+<dt id="_CPPv4N5Block6AppendE5ValueIvE">
+<span id="_CPPv3N5Block6AppendE5ValueIvE"></span><span id="_CPPv2N5Block6AppendE5ValueIvE"></span><span id="Block::Append__Value:void:"></span>void <code class="sig-prename descclassname">Block<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">Append</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt; <em>statement</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N5Block6AppendE5ValueIvE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Append a new statement to the end of the block.</p>
+<dl class="cpp function">
+<dt id="_CPPv4NK5Blockcv5ValueIvEEv">
+<span id="_CPPv3NK5Blockcv5ValueIvEEv"></span><span id="_CPPv2NK5Blockcv5ValueIvEEv"></span><span id="Block::castto-Value:void:-operatorC"></span><code class="sig-prename descclassname">Block<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">operator Value&lt;void&gt;</code><span class="sig-paren">(</span><span class="sig-paren">)</span> <em class="property">const</em><a class="headerlink" href="#_CPPv4NK5Blockcv5ValueIvEEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>A <code class="docutils literal notranslate"><span class="pre">Block</span></code> itself is also a statement. Implicit conversion of <code class="docutils literal notranslate"><span class="pre">Block</span></code> to a <code class="docutils literal notranslate"><span class="pre">Value&lt;void&gt;</span></code>.</p>
+</div>
+<div class="section" id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="c1">// append some code to the end of function &#39;fn&#39;</span>
+<span class="k">auto</span> <span class="n">block</span> <span class="o">=</span> <span class="n">Block</span><span class="p">(</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+  <span class="n">Assign</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">+</span> <span class="n">c</span><span class="p">)</span>
+<span class="p">);</span>
+<span class="n">fn</span><span class="p">.</span><span class="n">GetBody</span><span class="p">().</span><span class="n">Append</span><span class="p">(</span><span class="n">block</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="scope">
+<h2>Scope<a class="headerlink" href="#scope" title="Permalink to this headline">¶</a></h2>
+<p>A <code class="docutils literal notranslate"><span class="pre">Scope</span></code> in PochiVM is analogous to a <a href="https://en.cppreference.com/w/cpp/language/scope" target="_blank">scope in C++</a>.
+It holds a sequence of <a class="reference internal" href="statement_expression.html#term-Statement"><span class="xref std std-term">statements</span></a> (potentially zero).
+The lifetime of all variables declared in the scope ends when control flow leaves the scope.
+Destructors of such variables are called in reverse order of declaration.
+A <code class="docutils literal notranslate"><span class="pre">Scope</span></code> itself is also a <a class="reference internal" href="statement_expression.html#term-Statement"><span class="xref std std-term">statement</span></a>, thus it may be implicited converted to a <code class="docutils literal notranslate"><span class="pre">Value&lt;void&gt;</span></code>.</p>
+<p>Like all API classes in PochiVM, the <code class="docutils literal notranslate"><span class="pre">Scope</span></code> class is a trivially copyable proxy class that may be passed around by value.
+It is just the reference handler to the underlying object.
+Copying a <code class="docutils literal notranslate"><span class="pre">Scope</span></code> class does not create a new copy the logic stored in the scope.</p>
+<div class="section" id="id1">
+<h3>Public Methods<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<dl class="cpp function">
+<dt id="_CPPv4N5Scope5ScopeEDp5ValueIvE">
+<span id="_CPPv3N5Scope5ScopeEDp5ValueIvE"></span><span id="_CPPv2N5Scope5ScopeEDp5ValueIvE"></span><span id="Scope::Scope__Value:void:Dp"></span><code class="sig-prename descclassname"><a class="reference internal" href="#_CPPv4N5Scope5ScopeEDp5ValueIvE" title="Scope::Scope">Scope</a><code class="sig-prename descclassname">::</code></code><code class="sig-name descname">Scope</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt;... <em>statements</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N5Scope5ScopeEDp5ValueIvE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Constructor. Create a <code class="docutils literal notranslate"><span class="pre">Scope</span></code> consisting of zero, one or more statements.</p>
+<dl class="cpp function">
+<dt id="_CPPv4N5Scope6AppendE5ValueIvE">
+<span id="_CPPv3N5Scope6AppendE5ValueIvE"></span><span id="_CPPv2N5Scope6AppendE5ValueIvE"></span><span id="Scope::Append__Value:void:"></span>void <code class="sig-prename descclassname">Scope<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">Append</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt; <em>statement</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N5Scope6AppendE5ValueIvE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Append a new statement to the end of the scope.</p>
+<dl class="cpp function">
+<dt id="_CPPv4NK5Scopecv5ValueIvEEv">
+<span id="_CPPv3NK5Scopecv5ValueIvEEv"></span><span id="_CPPv2NK5Scopecv5ValueIvEEv"></span><span id="Scope::castto-Value:void:-operatorC"></span><code class="sig-prename descclassname">Scope<code class="sig-prename descclassname">::</code></code><code class="sig-name descname">operator Value&lt;void&gt;</code><span class="sig-paren">(</span><span class="sig-paren">)</span> <em class="property">const</em><a class="headerlink" href="#_CPPv4NK5Scopecv5ValueIvEEv" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>A <code class="docutils literal notranslate"><span class="pre">Scope</span></code> itself is also a statement. Implicit conversion of <code class="docutils literal notranslate"><span class="pre">Scope</span></code> to a <code class="docutils literal notranslate"><span class="pre">Value&lt;void&gt;</span></code>.</p>
+</div>
+<div class="section" id="id2">
+<h3>Examples<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="c1">// The order of calls to constructors/destructors will be:</span>
+<span class="c1">// A(), B(), ~B(), C(), ~C(), ~A()</span>
+<span class="n">fn</span><span class="p">.</span><span class="n">SetBody</span><span class="p">(</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">A</span><span class="p">),</span>
+  <span class="n">Scope</span><span class="p">(</span>
+    <span class="n">Declare</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+  <span class="p">),</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">C</span><span class="p">)</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="declare_var.html" class="btn btn-neutral float-right" title="Declaring Variables" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="functions.html" class="btn btn-neutral float-left" title="Functions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

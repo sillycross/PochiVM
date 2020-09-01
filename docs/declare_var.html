@@ -1,0 +1,293 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Declaring Variables &mdash; PochiVM  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Assignments" href="assignment.html" />
+    <link rel="prev" title="Blocks and Scopes" href="block_scope.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PochiVM
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="lang_construct.html">Language Construction API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="typesystem.html">The Typesystem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_value.html">Basic Class - Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_class_ref_var.html">Basic Class - Reference, Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="statement_expression.html">Expressions and Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="block_scope.html">Blocks and Scopes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Declaring Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#default-initialization">Default Initialization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#value-prvalue-initialization">Value / PRValue Initialization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#constructor-initialization">Constructor Initialization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="assignment.html">Assignments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="flow_control_statements.html">Flow Control Statements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="call_expr.html">Call Expressions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exception_handling.html">Exception Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="allocation.html">Memory Allocation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="placement_new.html">Placement New</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cpp_interact.html">Interacting with C++ Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_compile.html">JIT Compilation API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PochiVM</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="lang_construct.html">Language Construction API</a> &raquo;</li>
+        
+      <li>Declaring Variables</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="declaring-variables">
+<h1>Declaring Variables<a class="headerlink" href="#declaring-variables" title="Permalink to this headline">¶</a></h1>
+<p>Same as in C++, a local variable must be <code class="docutils literal notranslate"><span class="pre">declared</span></code> before it could be used.
+When the declaration goes <a class="reference internal" href="block_scope.html"><span class="doc">out of scope</span></a>, the lifetime of the variable ends and its destructor is called.</p>
+<p>Use of an undeclared or out-of-scope variable is a programming error and will be caught when you <code class="docutils literal notranslate"><span class="pre">Validate()</span></code> the generated program.</p>
+<div class="section" id="default-initialization">
+<h2>Default Initialization<a class="headerlink" href="#default-initialization" title="Permalink to this headline">¶</a></h2>
+<dl class="cpp function">
+<dt id="_CPPv4I0E7Declare5ValueIvE8VariableI1TE">
+<span id="_CPPv3I0E7Declare8VariableI1TE"></span><span id="_CPPv2I0E7Declare8VariableI1TE"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt; <code class="sig-name descname">Declare</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E8Variable" title="Variable">Variable</a>&lt;<a class="reference internal" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1TE" title="Declare::T">T</a>&gt; <em>var</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1TE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>Declare the variable <code class="docutils literal notranslate"><span class="pre">var</span></code> with default initialization.
+Same as you would expect in C++,
+if <code class="docutils literal notranslate"><span class="pre">T</span></code> is a <a class="reference internal" href="typesystem.html#term-Primitive-Type"><span class="xref std std-term">primitive type</span></a>, its initial value is not defined;
+if <code class="docutils literal notranslate"><span class="pre">T</span></code> is a <a class="reference internal" href="typesystem.html#term-C-Type"><span class="xref std std-term">C++ type</span></a>, the default constructor of <code class="docutils literal notranslate"><span class="pre">T</span></code> will be called.
+If the default constructor is not registered in the runtime, a <code class="docutils literal notranslate"><span class="pre">static_assert</span></code> is triggered.</p>
+</div>
+<div class="section" id="value-prvalue-initialization">
+<h2>Value / PRValue Initialization<a class="headerlink" href="#value-prvalue-initialization" title="Permalink to this headline">¶</a></h2>
+<dl class="cpp function">
+<dt id="_CPPv4I0E7Declare5ValueIvE8VariableI1TE5ValueI1TE">
+<span id="_CPPv3I0E7Declare8VariableI1TE5ValueI1TE"></span><span id="_CPPv2I0E7Declare8VariableI1TE5ValueI1TE"></span>template&lt;typename <code class="sig-name descname">T</code>&gt;<br /><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt; <code class="sig-name descname">Declare</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E8Variable" title="Variable">Variable</a>&lt;<a class="reference internal" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1TE5ValueI1TE" title="Declare::T">T</a>&gt; <em>var</em>, <a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;<a class="reference internal" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1TE5ValueI1TE" title="Declare::T">T</a>&gt; <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1TE5ValueI1TE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p>If <code class="docutils literal notranslate"><span class="pre">T</span></code> is a <a class="reference internal" href="typesystem.html#term-Primitive-Type"><span class="xref std std-term">primitive type</span></a>, declare and initialize <code class="docutils literal notranslate"><span class="pre">var</span></code> with <code class="docutils literal notranslate"><span class="pre">value</span></code>.
+if <code class="docutils literal notranslate"><span class="pre">T</span></code> is a <a class="reference internal" href="typesystem.html#term-C-Type"><span class="xref std std-term">C++ type</span></a>,
+since the only way to get such a <code class="docutils literal notranslate"><span class="pre">Value&lt;T&gt;</span></code> is from the return value of a C++ function
+(check <a class="reference internal" href="typesystem.html"><span class="doc">PochiVM typesystem documentation</span></a> for more information),
+the return value is always <em>constructed-into</em> the variable. In other words,
+C++17 guaranteed-copy-elision will take place, it is guaranteed that no copy or move constructors will be called.
+The behavior is equivalent to C++:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">new</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">var</span><span class="p">)</span> <span class="n">T</span><span class="p">(</span><span class="n">fn</span><span class="p">(....));</span>
+</pre></div>
+</div>
+<p>where <code class="docutils literal notranslate"><span class="pre">fn(....)</span></code> is the C++ function call that returns type <code class="docutils literal notranslate"><span class="pre">T</span></code>.</p>
+</div>
+<div class="section" id="constructor-initialization">
+<h2>Constructor Initialization<a class="headerlink" href="#constructor-initialization" title="Permalink to this headline">¶</a></h2>
+<dl class="cpp function">
+<dt id="_CPPv4I0E7Declare5ValueIvE8VariableI1CE11ConstructorI1CE">
+<span id="_CPPv3I0E7Declare8VariableI1CE11ConstructorI1CE"></span><span id="_CPPv2I0E7Declare8VariableI1CE11ConstructorI1CE"></span>template&lt;typename <code class="sig-name descname">C</code>&gt;<br /><a class="reference internal" href="typesystem.html#_CPPv4I0E5Value" title="Value">Value</a>&lt;void&gt; <code class="sig-name descname">Declare</code><span class="sig-paren">(</span><a class="reference internal" href="typesystem.html#_CPPv4I0E8Variable" title="Variable">Variable</a>&lt;<a class="reference internal" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1CE11ConstructorI1CE" title="Declare::C">C</a>&gt; <em>var</em>, Constructor&lt;<a class="reference internal" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1CE11ConstructorI1CE" title="Declare::C">C</a>&gt; <em>constructorParams</em><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0E7Declare5ValueIvE8VariableI1CE11ConstructorI1CE" title="Permalink to this definition">¶</a><br /></dt>
+<dd></dd></dl>
+
+<p><code class="docutils literal notranslate"><span class="pre">C</span></code> must be a <a class="reference internal" href="typesystem.html#term-C-Type"><span class="xref std std-term">C++ type</span></a>.
+Initialize <code class="docutils literal notranslate"><span class="pre">var</span></code> using constructor of <code class="docutils literal notranslate"><span class="pre">C</span></code>, with constructor parameters specified in <code class="docutils literal notranslate"><span class="pre">constructorParams</span></code>.
+The constructor must be registered, otherwise a <code class="docutils literal notranslate"><span class="pre">static_assert</span></code> is triggered.
+The below example demonstrates calling the constructors of <code class="docutils literal notranslate"><span class="pre">std::vector&lt;int&gt;</span></code>:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span> <span class="p">[</span><span class="n">fn</span><span class="p">]</span> <span class="o">=</span> <span class="n">NewFunction</span><span class="o">&lt;</span><span class="kt">size_t</span><span class="p">(</span><span class="o">*</span><span class="p">)()</span><span class="o">&gt;</span><span class="p">(</span><span class="s">&quot;fn&quot;</span><span class="p">);</span>
+<span class="k">auto</span> <span class="n">v1</span> <span class="o">=</span> <span class="n">fn</span><span class="p">.</span><span class="n">NewVariable</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="k">auto</span> <span class="n">v2</span> <span class="o">=</span> <span class="n">fn</span><span class="p">.</span><span class="n">NewVariable</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span><span class="p">();</span>
+<span class="n">fn</span><span class="p">.</span><span class="n">SetBody</span><span class="p">(</span>
+  <span class="c1">// call constructor std::vector&lt;int&gt;(size_t count)</span>
+  <span class="c1">// which initializes &#39;v&#39; to be a vector of length 100, filled with 0.</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">v1</span><span class="p">,</span> <span class="n">Constructor</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">Literal</span><span class="o">&lt;</span><span class="kt">size_t</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">100</span><span class="p">))),</span>
+  <span class="c1">// call copy constructor std::vector&lt;int&gt;(const std::vector&lt;int&gt;&amp; other)</span>
+  <span class="n">Declare</span><span class="p">(</span><span class="n">v2</span><span class="p">,</span> <span class="n">Constructor</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span><span class="p">(</span><span class="n">v1</span><span class="p">)),</span>
+  <span class="n">Return</span><span class="p">(</span><span class="n">v2</span><span class="p">.</span><span class="n">size</span><span class="p">())</span>   <span class="c1">// returns 100</span>
+<span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="assignment.html" class="btn btn-neutral float-right" title="Assignments" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="block_scope.html" class="btn btn-neutral float-left" title="Blocks and Scopes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
