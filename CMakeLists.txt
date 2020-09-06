@@ -117,6 +117,9 @@ add_subdirectory(runtime_lib_builder)
 #
 add_subdirectory(runtime)
 
+# Build fastinterp library
+add_subdirectory(fastinterp)
+
 # Build PochiVM library
 #
 add_subdirectory(pochivm)
