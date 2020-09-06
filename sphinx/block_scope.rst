@@ -13,7 +13,7 @@ A ``Block`` itself is also a :term:`statement<Statement>`, thus it may be implic
 
 Like all API classes in PochiVM, the ``Block`` class is a trivially copyable proxy class that may be passed around by value. 
 It is just the reference handler to the underlying object. 
-Copying a ``Block`` class does not create a new copy the logic stored in the block.
+Copying a ``Block`` class does not create a new copy of the logic stored in the block.
 
 Public Methods
 ---------------
@@ -55,7 +55,7 @@ A ``Scope`` itself is also a :term:`statement<Statement>`, thus it may be implic
 
 Like all API classes in PochiVM, the ``Scope`` class is a trivially copyable proxy class that may be passed around by value. 
 It is just the reference handler to the underlying object. 
-Copying a ``Scope`` class does not create a new copy the logic stored in the scope.
+Copying a ``Scope`` class does not create a new copy of the logic stored in the scope.
 
 .. |cppref_scope_link| raw:: html
 

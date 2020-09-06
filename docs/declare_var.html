@@ -207,7 +207,8 @@ The behavior is equivalent to C++:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="k">new</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">var</span><span class="p">)</span> <span class="n">T</span><span class="p">(</span><span class="n">fn</span><span class="p">(....));</span>
 </pre></div>
 </div>
-<p>where <code class="docutils literal notranslate"><span class="pre">fn(....)</span></code> is the C++ function call that returns type <code class="docutils literal notranslate"><span class="pre">T</span></code>.</p>
+<p>where <code class="docutils literal notranslate"><span class="pre">fn(....)</span></code> is the C++ function call that returns type <code class="docutils literal notranslate"><span class="pre">T</span></code>, and <code class="docutils literal notranslate"><span class="pre">var</span></code> is an uninitialized variable of type <code class="docutils literal notranslate"><span class="pre">T</span></code>,
+into which the return value is directly placement-constructed.</p>
 </div>
 <div class="section" id="constructor-initialization">
 <h2>Constructor Initialization<a class="headerlink" href="#constructor-initialization" title="Permalink to this headline">¶</a></h2>

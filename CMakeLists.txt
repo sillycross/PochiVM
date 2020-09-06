@@ -140,6 +140,7 @@ add_executable(main
   test_sanity_bitcode.cpp
   test_call_cpp_func.cpp
   test_catch_throw.cpp
+  test_metavar_framework.cpp
 )
 
 # Important to link runtime using '--whole-archive'

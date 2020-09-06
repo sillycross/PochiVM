@@ -291,6 +291,10 @@ struct TypeId
     }
 
     const static uint64_t x_generated_composite_type = 1000000000ULL * 1000000000ULL;
+    // Craziness: if you want to change this constant for some reason,
+    // make sure you make the same change in the definition in fastinterp/metavar.h as well.
+    // Unfortunately due to build dependency that header file cannot include this one.
+    //
     const static uint64_t x_pointer_typeid_inc = 1000000000;
     const static uint64_t x_invalid_typeid = static_cast<uint64_t>(-1);
 };

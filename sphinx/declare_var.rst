@@ -35,7 +35,8 @@ The behavior is equivalent to C++::
 
   new (&var) T(fn(....));
   
-where ``fn(....)`` is the C++ function call that returns type ``T``.
+where ``fn(....)`` is the C++ function call that returns type ``T``, and ``var`` is an uninitialized variable of type ``T``, 
+into which the return value is directly placement-constructed.
 
 Constructor Initialization
 ===========================
