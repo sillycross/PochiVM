@@ -1,4 +1,5 @@
 #include "metavar.h"
+#include "dynamic_specialization_utils.h"
 #include "pochivm/ast_enums.h"
 
 // fastinterp_tpl.cpp
@@ -38,40 +39,6 @@
 //
 void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType, PochiVM::MetaVarMaterializedList*);
 
-// DEFINE_PLACEHOLDER_N(type):
-//   Define a 'placeholder' value of specified type, which will be "dynamically specialized" at runtime.
-//   After declaration, one can use to the placeholder by PLACEHOLDER_N
-//   'type' must be either uint64_t, or a pointer or function pointer type.
-//
-// Example:
-//   DEFINE_PLACEHOLDER_1(uint64_t);
-//   *out = PLACEHOLDER_1;      // suppose 'out' is a uint64_t*
-//
-
-// These are just dummy declarations, the prototype does not matter, and no implementations need to exist
-// (the implementation must not exist actually, to make sure all accesses to them become relocation records)
-// Make more of them if necessary. 'extern "C"' is to allow easy distinguish of those symbols in object file.
-//
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_1();
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_2();
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_3();
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_4();
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_5();
-extern "C" void __pochivm_fast_interp_dynamic_specialization_placeholder_6();
-
-#define DEFINE_PLACEHOLDER_INTERNAL(ordinal, ...)                                 \
-    using _PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                            \
-    const _PLACEHOLDER_TYPE_ ## ordinal PLACEHOLDER_ ## ordinal =                 \
-        reinterpret_cast<_PLACEHOLDER_TYPE_ ## ordinal>(                          \
-            __pochivm_fast_interp_dynamic_specialization_placeholder_ ## ordinal)
-
-#define DEFINE_PLACEHOLDER_1(...) DEFINE_PLACEHOLDER_INTERNAL(1, __VA_ARGS__)
-#define DEFINE_PLACEHOLDER_2(...) DEFINE_PLACEHOLDER_INTERNAL(2, __VA_ARGS__)
-#define DEFINE_PLACEHOLDER_3(...) DEFINE_PLACEHOLDER_INTERNAL(3, __VA_ARGS__)
-#define DEFINE_PLACEHOLDER_4(...) DEFINE_PLACEHOLDER_INTERNAL(4, __VA_ARGS__)
-#define DEFINE_PLACEHOLDER_5(...) DEFINE_PLACEHOLDER_INTERNAL(5, __VA_ARGS__)
-#define DEFINE_PLACEHOLDER_6(...) DEFINE_PLACEHOLDER_INTERNAL(6, __VA_ARGS__)
-
 namespace PochiVM
 {
 
@@ -89,12 +56,12 @@ struct AstArithmeticExprImpl
     template<typename OperandType, AstArithmeticExprType arithType>
     static void f(OperandType* out) noexcept
     {
-        DEFINE_PLACEHOLDER_1(void(*)(OperandType*) noexcept);    // lhs
-        DEFINE_PLACEHOLDER_2(void(*)(OperandType*) noexcept);    // rhs
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(OperandType*) noexcept);    // lhs
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_2(void(*)(OperandType*) noexcept);    // rhs
         OperandType lhs;
-        PLACEHOLDER_1(&lhs /*out*/);
+        BOILERPLATE_FNPTR_PLACEHOLDER_1(&lhs /*out*/);
         OperandType rhs;
-        PLACEHOLDER_2(&rhs /*out*/);
+        BOILERPLATE_FNPTR_PLACEHOLDER_2(&rhs /*out*/);
         if constexpr(arithType == AstArithmeticExprType::ADD) {
             *out = lhs + rhs;
         }

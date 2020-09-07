@@ -32,11 +32,24 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Linker/Linker.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
 
 using namespace llvm;
 using namespace llvm::orc;
+using namespace llvm::object;
 
 namespace {
+
+struct RelocationInfo
+{
+    uint64_t offset;
+    uint64_t type;
+    std::string typeHumanReadableName;
+    std::string symbol;
+    int64_t addend;
+};
 
 struct BoilerplateParam
 {
@@ -50,6 +63,8 @@ struct BoilerplateInstance
     std::vector<uint64_t> m_paramValues;
     void* m_ptr;
     std::string m_symbolName;
+    SectionRef m_llvmSectionRef;
+    std::vector<RelocationInfo> m_relocationInfo;
 };
 
 struct BoilerplatePack
@@ -97,6 +112,125 @@ void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType nodeType,
 
     g_allBoilerplatePacks.push_back(std::make_pair(nodeType, p));
 }
+
+namespace {
+
+bool IsRelocAddressLess(RelocationRef A, RelocationRef B) {
+  return A.getOffset() < B.getOffset();
+}
+
+// Logic stolen from llvm/tools/llvm-objdump/llvm-objdump.cpp
+// Get a map from section to all its relocations
+// tbh I have no idea why we have to call the 'getRelocatedSection'..
+//
+std::map<SectionRef, std::vector<RelocationRef>> GetRelocationMap(ObjectFile const &Obj)
+{
+    std::map<SectionRef, std::vector<RelocationRef>> Ret;
+    for (SectionRef Sec : Obj.sections())
+    {
+        Expected<section_iterator> RelocatedOrErr = Sec.getRelocatedSection();
+        if (!RelocatedOrErr)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Failed to get a relocated section. Please report a bug.\n");
+            abort();
+        }
+
+        section_iterator Relocated = *RelocatedOrErr;
+        if (Relocated == Obj.section_end()) continue;
+        std::vector<RelocationRef> &V = Ret[*Relocated];
+        for (const RelocationRef &R : Sec.relocations())
+        {
+            V.push_back(R);
+        }
+        // Sort relocations by address.
+        //
+        llvm::stable_sort(V, IsRelocAddressLess);
+    }
+    return Ret;
+}
+
+// Logic stolen from llvm/tools/llvm-objdump/ELFDump.cpp, slightly modified
+//
+template <class ELFT>
+static RelocationInfo GetRelocationInfoImpl(const ELFObjectFile<ELFT>* Obj,
+                                            const RelocationRef& RelRef)
+{
+    RelocationInfo ret;
+    ret.offset = RelRef.getOffset();
+    ret.type = RelRef.getType();
+    SmallString<16> tmp;
+    RelRef.getTypeName(tmp);
+    ret.typeHumanReadableName = std::string(tmp.c_str());
+
+    const ELFFile<ELFT> &EF = *Obj->getELFFile();
+    DataRefImpl Rel = RelRef.getRawDataRefImpl();
+    auto SecOrErr = EF.getSection(Rel.d.a);
+    if (!SecOrErr)
+    {
+        fprintf(stderr, "[INTERNAL ERROR] Fail to get section from a relocation. Please report a bug.\n");
+        abort();
+    }
+
+    if ((*SecOrErr)->sh_type != ELF::SHT_RELA)
+    {
+        fprintf(stderr, "[INTERNAL ERROR] Unexpected ELF SH_TYPE. Please report a bug.\n");
+        abort();
+    }
+
+    {
+        const typename ELFT::Rela *ERela = Obj->getRela(Rel);
+        if (ERela->getSymbol(false /*isMips64EL*/) == 0)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Encountered a relocation record not associated with a symbol. Please report a bug.\n");
+            abort();
+        }
+        ret.addend = ERela->r_addend;
+    }
+
+    symbol_iterator SI = RelRef.getSymbol();
+    const typename ELFT::Sym *Sym = Obj->getSymbol(SI->getRawDataRefImpl());
+    if (Sym->getType() == ELF::STT_SECTION)
+    {
+        // In our use case, we should never have relocations that shall be populated by section address
+        //
+        fprintf(stderr, "[INTERNAL ERROR] Unexpected relocation: a relocation associated with a section. Please report a bug.\n");
+        abort();
+    }
+
+    {
+        Expected<StringRef> SymName = SI->getName();
+        if (!SymName)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Unable to get name of symbol associated with a relocation. Please report a bug.\n");
+            abort();
+        }
+        ret.symbol = SymName.get().str();
+    }
+
+    return ret;
+}
+
+RelocationInfo GetRelocationInfo(const ELFObjectFileBase* Obj,
+                                 const RelocationRef& Rel)
+{
+    if (auto* ELF32LE = dyn_cast<ELF32LEObjectFile>(Obj))
+    {
+        return GetRelocationInfoImpl(ELF32LE, Rel);
+    }
+    if (auto* ELF64LE = dyn_cast<ELF64LEObjectFile>(Obj))
+    {
+        return GetRelocationInfoImpl(ELF64LE, Rel);
+    }
+    if (auto* ELF32BE = dyn_cast<ELF32BEObjectFile>(Obj))
+    {
+        return GetRelocationInfoImpl(ELF32BE, Rel);
+    }
+    auto* ELF64BE = dyn_cast<ELF64BEObjectFile>(Obj);
+    ReleaseAssert(ELF64BE != nullptr);
+    return GetRelocationInfoImpl(ELF64BE, Rel);
+}
+
+}   // anonymous namespace
 
 int main(int argc, char** argv)
 {
@@ -216,13 +350,114 @@ int main(int argc, char** argv)
         }
     }
 
+    Expected<OwningBinary<Binary>> expectedBinary = createBinary(obj_file);
+    if (!expectedBinary)
+    {
+        fprintf(stderr, "[INTERNAL ERROR] Failed to parse object file %s. Please report a bug.\n",
+                obj_file.c_str());
+        abort();
+    }
+    Binary* binary = expectedBinary.get().getBinary();
+
+    if (!isa<ObjectFile>(binary))
+    {
+        fprintf(stderr, "[INTERNAL ERROR] Object file %s does not seem to be an object file. Please report a bug.\n",
+                obj_file.c_str());
+        abort();
+    }
+    ObjectFile* obj = dyn_cast<ObjectFile>(binary);
+    ReleaseAssert(obj != nullptr);
+
+    ELFObjectFileBase* elf = dyn_cast<ELFObjectFileBase>(obj);
+    if (elf == nullptr)
+    {
+        fprintf(stderr, "[INTERNAL ERROR] Object file %s is not an ELF object file. Currently only ELF is supported.\n",
+                obj_file.c_str());
+        abort();
+    }
+
+    std::map<SectionRef, std::vector<RelocationRef>> relocMap = GetRelocationMap(*obj);
+
+    {
+        std::map<std::string, BoilerplateInstance*> symbolToInstance;
+        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        {
+            BoilerplatePack& bp = it->second;
+            for (BoilerplateInstance& inst : bp.m_instances)
+            {
+                ReleaseAssert(!symbolToInstance.count(inst.m_symbolName));
+                symbolToInstance[inst.m_symbolName] = &inst;
+            }
+        }
+
+        for (auto it = relocMap.begin(); it != relocMap.end(); it++)
+        {
+            SectionRef sec = it->first;
+            if (sec.isText())
+            {
+                Expected<StringRef> expectedName = sec.getName();
+                if (!expectedName)
+                {
+                    fprintf(stderr, "[INTERNAL ERROR] Failed to get a name for a section. Please report a bug.\n");
+                    abort();
+                }
+                std::string name = expectedName.get().str();
+                std::string pref = ".text.";
+                if (name.length() >= pref.length() && name.substr(0, pref.length()) == pref)
+                {
+                    std::string symbol = name.substr(pref.length());
+                    if (symbolToInstance.count(symbol))
+                    {
+                        BoilerplateInstance* inst = symbolToInstance[symbol];
+                        if (inst == nullptr)
+                        {
+                            fprintf(stderr, "[INTERNAL ERROR] Unexpected: encountered two sections with same symbol name %s. "
+                                            "Please report a bug.\n", name.c_str());
+                            abort();
+                        }
+                        symbolToInstance[symbol] = nullptr;
+                        inst->m_llvmSectionRef = sec;
+                    }
+                }
+            }
+        }
+
+        for (auto it = symbolToInstance.begin(); it != symbolToInstance.end(); it++)
+        {
+            if (it->second != nullptr)
+            {
+                fprintf(stderr, "[INTERNAL ERROR] Unable to locate text section for symbol %s in object file. "
+                                "Please report a bug.\n", it->first.c_str());
+                abort();
+            }
+        }
+    }
+
     for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
     {
-        printf("%s:\n", it->first.ToString());
         BoilerplatePack& bp = it->second;
         for (BoilerplateInstance& inst : bp.m_instances)
         {
-            printf("    %s\n", inst.m_symbolName.c_str());
+            SectionRef sec = inst.m_llvmSectionRef;
+            std::vector<RelocationRef>& relocs = relocMap[sec];
+            for (const RelocationRef& rel : relocs)
+            {
+                RelocationInfo info = GetRelocationInfo(elf, rel);
+                inst.m_relocationInfo.push_back(info);
+            }
+        }
+    }
+
+    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+    {
+        BoilerplatePack& bp = it->second;
+        for (BoilerplateInstance& inst : bp.m_instances)
+        {
+            printf("%s\n", inst.m_symbolName.c_str());
+            for (const RelocationInfo& rinfo : inst.m_relocationInfo)
+            {
+                printf("    %s %s %lld\n", rinfo.typeHumanReadableName.c_str(), rinfo.symbol.c_str(), static_cast<long long>(rinfo.addend));
+            }
         }
     }
 

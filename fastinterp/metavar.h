@@ -167,6 +167,9 @@ struct PartialMetaVarValueInstance
     }
 };
 
+template<typename T> struct is_noexcept_fn_helper : std::false_type {};
+template<typename R, typename... Args> struct is_noexcept_fn_helper<R(Args...) noexcept> : std::true_type {};
+
 template<typename Materializer, auto... metaVarTypes>
 struct metavar_materialize_helper
 {
@@ -201,6 +204,9 @@ struct metavar_materialize_helper
                         ReleaseAssert(instance.value.size() == result->m_metavars.size());
                         MetaVarMaterializedInstance inst;
                         inst.m_values = instance.value;
+                        using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
+                        static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
+                                      "'f' is not a noexcept function");
                         inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
                         result->m_instances.push_back(inst);
                     }
