@@ -7,13 +7,20 @@
 // Usage:
 // (1) DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_[n](noexcept-function-pointer-type)
 //         Define BOILERPLATE_FNPTR_PLACEHOLDER_[n] to hold a function pointer that will point to a boilerplate function of type 'type'.
+//         WARNING: It is not allowed to hold a null function pointer, or a function pointer pointing to a C++ function.
 //
-// (2) DEFINE_UINT64_PLACEHOLDER_[n]
-//         Define UINT64_PLACEHOLDER_[n] to hold a 64-bit raw value.
-//         WARNING: It is illegal to later cast it to a function pointer and invoke it!
+// (2) DEFINE_CONSTANT_PLACEHOLDER_[n]
+//         Define CONSTANT_PLACEHOLDER_[n] to hold a value of a primitive type.
+//         WARNING: It is illegal to later cast it to a function pointer and invoke it.
+//         WARNING: If the type is 8-byte long, the value must not be zero.
+//                  This implies that to represent a nullable-pointer, or any 8-byte data type that may be zero,
+//                  you must use a constant placeholder TOGETHER WITH a boolean to special case if the data is 0.
+//                  For simplicity, it is recommended that you unconditionally always pair
+//                  a CONSTANT_PLACEHOLDER with a is-zero boolean template parameter.
 //
 // (3) DEFINE_CPP_FNTPR_PLACEHOLDER_[n](noexcept-function-pointer-type)
 //         Define CPP_FNPTR_PLACEHOLDER_[n] to hold a function pointer that will point to a C++ function in host process of type 'type'.
+//         WARNING: It is not allowed to hold a null function pointer.
 //
 // This definition is scoped (since the macro just expands to a normal C++ variable declaration).
 // However, it is ok to simply re-define it in another scope.
@@ -70,8 +77,9 @@
     extern char __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal [1048576] __attribute__ ((__aligned__(1))); \
     extern uint64_t __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal;
 
-// Make more of them if necessary
+// Make more of them if necessary, up to 63
 //
+INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(0)
 INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(1)
 INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(2)
 INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(3)
@@ -92,9 +100,20 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         reinterpret_cast<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
             __pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_ ## ordinal)
 
-#define INTERNAL_DEFINE_UINT64_PLACEHOLDER(ordinal)                                    \
-    const uint64_t UINT64_PLACEHOLDER_ ## ordinal = reinterpret_cast<uint64_t>(        \
-            __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal)
+#define INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(ordinal, ...)                                                      \
+    using _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                 \
+    static_assert(sizeof(_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal) <= 8 &&                                        \
+        (std::is_fundamental<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal>::value ||                                  \
+        std::is_pointer<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal>::value) &&                                      \
+        !std::is_function<typename std::remove_pointer<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal>::type>::value,   \
+        "must be a primitive data type");                                                                       \
+    union _UNION_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal {                                                        \
+        uint64_t __pochivm_dummy; _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal __pochivm_actual_value; };             \
+    const uint64_t _DONOTUSE_INTERNAL_CONSTANT_PLACEHOLDER_ ## ordinal = reinterpret_cast<uint64_t>(            \
+        __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal);                             \
+    const _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal CONSTANT_PLACEHOLDER_ ## ordinal =                             \
+        reinterpret_cast<const _UNION_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal *>(                                 \
+            &_DONOTUSE_INTERNAL_CONSTANT_PLACEHOLDER_ ## ordinal)->__pochivm_actual_value
 
 #define INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(ordinal, ...)                                                     \
     using _CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
@@ -106,6 +125,7 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         reinterpret_cast<_CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
             __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal)
 
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(1, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_2(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(2, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_3(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(3, __VA_ARGS__)
@@ -113,13 +133,15 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_5(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(5, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_6(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(6, __VA_ARGS__)
 
-#define DEFINE_UINT64_PLACEHOLDER_1 INTERNAL_DEFINE_UINT64_PLACEHOLDER(1)
-#define DEFINE_UINT64_PLACEHOLDER_2 INTERNAL_DEFINE_UINT64_PLACEHOLDER(2)
-#define DEFINE_UINT64_PLACEHOLDER_3 INTERNAL_DEFINE_UINT64_PLACEHOLDER(3)
-#define DEFINE_UINT64_PLACEHOLDER_4 INTERNAL_DEFINE_UINT64_PLACEHOLDER(4)
-#define DEFINE_UINT64_PLACEHOLDER_5 INTERNAL_DEFINE_UINT64_PLACEHOLDER(5)
-#define DEFINE_UINT64_PLACEHOLDER_6 INTERNAL_DEFINE_UINT64_PLACEHOLDER(6)
+#define DEFINE_CONSTANT_PLACEHOLDER_0(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(0, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_1(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(1, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_2(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(2, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_3(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(3, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_4(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(4, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_5(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(5, __VA_ARGS__)
+#define DEFINE_CONSTANT_PLACEHOLDER_6(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(6, __VA_ARGS__)
 
+#define DEFINE_CPP_FNTPR_PLACEHOLDER_0(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(0, __VA_ARGS__)
 #define DEFINE_CPP_FNTPR_PLACEHOLDER_1(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(1, __VA_ARGS__)
 #define DEFINE_CPP_FNTPR_PLACEHOLDER_2(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(2, __VA_ARGS__)
 #define DEFINE_CPP_FNTPR_PLACEHOLDER_3(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(3, __VA_ARGS__)

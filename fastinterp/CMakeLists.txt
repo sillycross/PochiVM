@@ -29,9 +29,20 @@ target_link_libraries(build_fast_interp_lib PUBLIC
   ${LLVM_EXTRA_LINK_LIBRARIES}
 )
 
+set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_fwd_declarations.generated.h PROPERTIES GENERATED true)
+set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_library.generated.h PROPERTIES GENERATED true)
+set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp PROPERTIES GENERATED true)
+
+add_library(fastinterp OBJECT
+  fast_interp_helper.cpp
+  ${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp
+)
+
 add_custom_command(
-  OUTPUT "x.txt"  # FIXME
-  COMMAND ${PROJECT_BINARY_DIR}/fastinterp/build_fast_interp_lib '$<TARGET_OBJECTS:fastinterp_tpl_ir>' '$<TARGET_OBJECTS:fastinterp_tpl_obj>'
+  OUTPUT ${GENERATED_FILES_DIR}/fastinterp_fwd_declarations.generated.h
+  OUTPUT ${GENERATED_FILES_DIR}/fastinterp_library.generated.h
+  OUTPUT ${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp
+  COMMAND ${PROJECT_BINARY_DIR}/fastinterp/build_fast_interp_lib '$<TARGET_OBJECTS:fastinterp_tpl_ir>' '$<TARGET_OBJECTS:fastinterp_tpl_obj>' "${GENERATED_FILES_DIR}"
   DEPENDS $<TARGET_OBJECTS:fastinterp_tpl_ir> $<TARGET_OBJECTS:fastinterp_tpl_obj> build_fast_interp_lib 
 )
 

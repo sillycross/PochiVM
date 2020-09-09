@@ -118,13 +118,12 @@ add_subdirectory(runtime_lib_builder)
 add_subdirectory(runtime)
 
 # Build fastinterp library
+#
 add_subdirectory(fastinterp)
 
 # Build PochiVM library
 #
 add_subdirectory(pochivm)
-
-add_dependencies(pochivm runtime)
 
 # add the executable
 #
@@ -144,6 +143,7 @@ add_executable(main
   test_call_cpp_func.cpp
   test_catch_throw.cpp
   test_metavar_framework.cpp
+  test_fast_interp_internals.cpp
 )
 
 # Important to link runtime using '--whole-archive'

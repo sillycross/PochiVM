@@ -44,7 +44,7 @@ namespace PochiVM
 
 struct AstArithmeticExprImpl
 {
-    template<typename OperandType, AstArithmeticExprType arithType>
+    template<typename OperandType, AstArithmeticExprType arithType, LiteralCategory lhsLiteralCategory, LiteralCategory rhsLiteralCategory>
     static constexpr bool cond()
     {
         if (std::is_same<OperandType, void>::value) { return false; }
@@ -53,15 +53,43 @@ struct AstArithmeticExprImpl
         return true;
     }
 
-    template<typename OperandType, AstArithmeticExprType arithType>
+    template<typename OperandType, AstArithmeticExprType arithType, LiteralCategory lhsLiteralCategory, LiteralCategory rhsLiteralCategory>
     static void f(OperandType* out) noexcept
     {
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(OperandType*) noexcept);    // lhs
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_2(void(*)(OperandType*) noexcept);    // rhs
         OperandType lhs;
-        BOILERPLATE_FNPTR_PLACEHOLDER_1(&lhs /*out*/);
+        if constexpr(lhsLiteralCategory == LiteralCategory::NOT_LITERAL)
+        {
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(OperandType*) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(&lhs /*out*/);
+        }
+        else if constexpr(lhsLiteralCategory == LiteralCategory::LITERAL_NONZERO)
+        {
+            DEFINE_CONSTANT_PLACEHOLDER_0(OperandType);
+            lhs = CONSTANT_PLACEHOLDER_0;
+        }
+        else
+        {
+            static_assert(lhsLiteralCategory == LiteralCategory::ZERO, "unexpected literal category");
+            lhs = 0;
+        }
+
         OperandType rhs;
-        BOILERPLATE_FNPTR_PLACEHOLDER_2(&rhs /*out*/);
+        if constexpr(rhsLiteralCategory == LiteralCategory::NOT_LITERAL)
+        {
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(OperandType*) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_1(&rhs /*out*/);
+        }
+        else if constexpr(rhsLiteralCategory == LiteralCategory::LITERAL_NONZERO)
+        {
+            DEFINE_CONSTANT_PLACEHOLDER_1(OperandType);
+            rhs = CONSTANT_PLACEHOLDER_1;
+        }
+        else
+        {
+            static_assert(rhsLiteralCategory == LiteralCategory::ZERO, "unexpected literal category");
+            rhs = 0;
+        }
+
         if constexpr(arithType == AstArithmeticExprType::ADD) {
             *out = lhs + rhs;
         }
@@ -86,7 +114,9 @@ struct AstArithmeticExprImpl
     {
         MetaVarMaterializedList list = CreateMetaVarList(
                     CreateTypeMetaVar("operandType"),
-                    CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType")
+                    CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType"),
+                    CreateEnumMetaVar<LiteralCategory::X_END_OF_ENUM>("lhsLiteralCategory"),
+                    CreateEnumMetaVar<LiteralCategory::X_END_OF_ENUM>("rhsLiteralCategory")
         ).Materialize<AstArithmeticExprImpl>();
         __pochivm_register_fast_interp_boilerplate__(AstNodeType::AstArithmeticExpr, &list);
     }

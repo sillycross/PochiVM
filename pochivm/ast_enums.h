@@ -81,6 +81,14 @@ private:
     _EnumType m_value;
 };
 
+enum class LiteralCategory
+{
+    NOT_LITERAL,
+    LITERAL_NONZERO,
+    ZERO,
+    X_END_OF_ENUM
+};
+
 enum class AstArithmeticExprType
 {
     ADD,
