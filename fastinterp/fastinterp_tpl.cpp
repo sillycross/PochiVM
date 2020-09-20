@@ -1,6 +1,9 @@
+#define INSIDE_FASTINTERP_TPL_CPP
+
 #include "metavar.h"
 #include "dynamic_specialization_utils.h"
 #include "pochivm/ast_enums.h"
+#include "fastinterp_context.h"
 
 // fastinterp_tpl.cpp
 //
@@ -122,9 +125,38 @@ struct AstArithmeticExprImpl
     }
 };
 
+struct AstVariableImpl
+{
+    template<typename VarTypePtr>
+    static constexpr bool cond()
+    {
+        if (!std::is_pointer<VarTypePtr>::value) { return false; }
+        return true;
+    }
+
+    template<typename VarTypePtr>
+    static void f(VarTypePtr* out) noexcept
+    {
+        // Must not use uint64_t, since it may be zero
+        //
+        DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+        uint32_t offset = CONSTANT_PLACEHOLDER_0;
+        *out = reinterpret_cast<VarTypePtr>(__pochivm_thread_fastinterp_context.m_stackFrame + offset);
+    }
+
+    static void Register()
+    {
+        MetaVarMaterializedList list = CreateMetaVarList(
+                    CreateTypeMetaVar("varTypePtr")
+        ).Materialize<AstVariableImpl>();
+        __pochivm_register_fast_interp_boilerplate__(AstNodeType::AstVariable, &list);
+    }
+};
+
 static void RegisterFastInterpImplBoilerplates()
 {
     AstArithmeticExprImpl::Register();
+    AstVariableImpl::Register();
 }
 
 }   // namespace PochiVM

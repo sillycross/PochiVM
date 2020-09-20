@@ -35,6 +35,7 @@ set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_library.generated.
 
 add_library(fastinterp OBJECT
   fast_interp_helper.cpp
+  get_fs_base_helper.cpp
   ${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp
 )
 

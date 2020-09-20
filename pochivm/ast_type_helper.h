@@ -87,6 +87,8 @@ enum AstValueType
     RValue
 };
 
+class FastInterpTypeId;
+
 // Unique TypeId for each type possible in codegen
 //
 struct TypeId
@@ -267,6 +269,13 @@ struct TypeId
             }
         }
     }
+
+    // Default conversion to FastInterpTypeId:
+    // >=2 level of pointer => void**
+    // CPP-type* => void*
+    // CPP-type => locked down
+    //
+    FastInterpTypeId GetDefaultFastInterpTypeId();
 
     // TypeId::Get<T>() return TypeId for T
     //
@@ -1225,6 +1234,55 @@ bool WARN_UNUSED is_all_underlying_bits_zero(T t)
         return cxx2a_bit_cast<uint64_t>(t) == 0;
     }
     return true;
+}
+
+// In interp mode, we only know a limited set of types (fundamental types, pointer to fundamental types, and void**)
+// This is a wrapper over typeId so that only such types are allowed.
+//
+class FastInterpTypeId
+{
+public:
+    FastInterpTypeId() : m_typeId() {}
+    explicit FastInterpTypeId(TypeId typeId)
+    {
+        TestAssert(typeId.NumLayersOfPointers() <= 2);
+        TestAssertImp(typeId.NumLayersOfPointers() == 2, typeId == TypeId::Get<void**>());
+        TestAssertImp(typeId.NumLayersOfPointers() == 1, typeId.RemovePointer().IsVoid() || typeId.RemovePointer().IsPrimitiveType());
+        TestAssertImp(typeId.NumLayersOfPointers() == 0, typeId.IsVoid() || typeId.IsPrimitiveType());
+        m_typeId = typeId;
+    }
+
+    TypeId GetTypeId() const
+    {
+        return m_typeId;
+    }
+
+private:
+    TypeId m_typeId;
+};
+
+inline FastInterpTypeId TypeId::GetDefaultFastInterpTypeId()
+{
+    if (NumLayersOfPointers() >= 2)
+    {
+        return FastInterpTypeId(TypeId::Get<void**>());
+    }
+    else if (NumLayersOfPointers() == 1)
+    {
+        if (!RemovePointer().IsVoid() && !RemovePointer().IsPrimitiveType())
+        {
+            return FastInterpTypeId(TypeId::Get<void*>());
+        }
+        else
+        {
+            return FastInterpTypeId(*this);
+        }
+    }
+    else
+    {
+        TestAssert(IsVoid() || IsPrimitiveType());
+        return FastInterpTypeId(*this);
+    }
 }
 
 }   // namespace PochiVM

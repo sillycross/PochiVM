@@ -96,7 +96,7 @@ void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType nodeType,
         else
         {
             ReleaseAssert(bvar.m_type == PochiVM::MetaVarType::PRIMITIVE_TYPE);
-            bvar.m_typename = "TypeId";
+            bvar.m_typename = "FastInterpTypeId";
         }
         p.m_params.push_back(bvar);
     }
@@ -857,7 +857,7 @@ int main(int argc, char** argv)
                 // TODO: support more types as we see them.
                 // Reference: https://refspecs.linuxbase.org/elf/x86_64-abi-0.98.pdf Page 69
                 //
-                if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32))
+                if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_TPOFF32))
                 {
                     fprintf(stderr, "[INTERNAL] Unhandled relocation type %s(%d) in symbol %s. "
                                     "We haven't taken care of this case. Please report a bug.\n",
@@ -873,6 +873,15 @@ int main(int argc, char** argv)
                 {
                     ReleaseAssert(UnalignedRead<uint64_t>(data + rinfo.offset) == 0);
                 }
+                else if (rinfo.type == ELF::R_X86_64_TPOFF32)
+                {
+                    if (rinfo.symbol != "__pochivm_thread_fastinterp_context")
+                    {
+                        fprintf(stderr, "Unknown use of thread-local variable in symbol %s, "
+                                        "thread-local variable symbol name = %s\n", inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                        abort();
+                    }
+                }
                 else
                 {
                     ReleaseAssert(false);
@@ -880,7 +889,7 @@ int main(int argc, char** argv)
             }
 
             std::vector<uint32_t> minusAddrOffsets32;
-            std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64;
+            std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64, tpoff32List;
             uint32_t highestBPFPOrdinal = 0;
             uint32_t highestCFPOrdinal = 0;
             uint32_t highestU64Ordinal = 0;
@@ -904,6 +913,11 @@ int main(int argc, char** argv)
                     ReleaseAssert(rinfo.offset + 8 <= size);
                     uint64_t addend = static_cast<uint64_t>(rinfo.addend);
                     UnalignedAddAndWriteback<uint64_t>(data + rinfo.offset, addend);
+                }
+                else if (rinfo.type == ELF::R_X86_64_TPOFF32)
+                {
+                    tpoff32List.push_back(std::make_pair(rinfo.offset, 0 /*ordinal*/));
+                    continue;
                 }
                 else
                 {
@@ -948,6 +962,7 @@ int main(int argc, char** argv)
                 else
                 {
                     // TODO: handle external symbols
+                    fprintf(stderr, "%s %s\n", rinfo.typeHumanReadableName.c_str(), rinfo.symbol.c_str());
                     ReleaseAssert(false);
                 }
             }
@@ -1019,6 +1034,32 @@ int main(int argc, char** argv)
             ReleaseAssert(size < (1ULL << 31));
             fprintf(fp3, "constexpr uint32_t %s%d_contentLength = %d;\n",
                     blueprint_varname_prefix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
+
+            // Do startup-time fixup of external symbols
+            // In the same translational unit, global initializers are executed in the same order they are declared.
+            // (across translational unit there is no guarantee in initialization order)
+            // So it is important to put this initializer in the same CPP file as the "contents" array, and after the array,
+            // so at the time this global initializer is executed, the array is already initialized.
+            //
+            if (tpoff32List.size() > 0)
+            {
+                fprintf(fp3, "static FastInterpInitFixupThreadLocalHelper __pochivm_fastinterp_internal_fixup_thread_local_%d(\n", blueprint_varname_suffix);
+                fprintf(fp3, "    %s%d_contents /*contentArray*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
+                fprintf(fp3, "    %s%d_contentLength /*contentArrayLength*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
+                fprintf(fp3, "    std::array<size_t, %d>{\n", static_cast<int>(tpoff32List.size()));
+                fprintf(fp3, "        ");
+                for (size_t i = 0; i < tpoff32List.size(); i++)
+                {
+                    fprintf(fp3, "%d", static_cast<int>(tpoff32List[i].first));
+                    if (i + 1 < tpoff32List.size()) {
+                        fprintf(fp3, ", ");
+                        if (i % 8 == 0) {
+                            fprintf(fp3, "\n        ");
+                        }
+                    }
+                }
+                fprintf(fp3, "\n    } /*fixupSites*/);\n");
+            }
 
             fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d> %s%d(\n",
                     static_cast<int>(minusAddrOffsets32.size()),
@@ -1193,7 +1234,7 @@ int main(int argc, char** argv)
                 BoilerplateParam param = bp.m_params[i];
                 if (param.m_type == PochiVM::MetaVarType::PRIMITIVE_TYPE)
                 {
-                    fprintf(fp2, "            %s.value", param.m_name.c_str());
+                    fprintf(fp2, "            %s.GetTypeId().value", param.m_name.c_str());
                 }
                 else
                 {

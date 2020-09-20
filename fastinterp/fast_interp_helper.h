@@ -29,7 +29,7 @@ namespace PochiVM
 //
 //    instance->PopulateBoilerplateFnPtrPlaceholder(...)
 //    instance->PopulateCppFnPtrPlaceholder(...)
-//    instance->PopulateUInt64FnPtrPlaceholder(...)
+//    instance->PopulateConstantPlaceholder(...)
 //        Populate the placeholders in the boilerplate instantiation with concrete values.
 //
 //    std::unique_ptr<FastInterpGeneratedProgram> generatedProgram;
@@ -60,6 +60,29 @@ struct FastInterpSymbolFixupRecord
     uint32_t m_offset;
     uint32_t m_ordinalIntoPlaceholderArray;
 };
+
+// Safe unaligned memory read/write.
+//
+template<typename T>
+T WARN_UNUSED UnalignedRead(uint8_t* src)
+{
+    T ret;
+    memcpy(&ret, src, sizeof(T));
+    return ret;
+}
+
+template<typename T>
+void UnalignedWrite(uint8_t* dst, T value)
+{
+    memcpy(dst, &value, sizeof(T));
+}
+
+template<typename T>
+void UnalignedAddAndWriteback(uint8_t* addr, T value)
+{
+    T old = UnalignedRead<T>(addr);
+    UnalignedWrite<T>(addr, old + value);
+}
 
 class FastInterpBoilerplateBluePrint : NonCopyable, NonMovable
 {
@@ -127,29 +150,6 @@ protected:
     { }
 
 private:
-    // Currently we only support x86-64. Don't bother with big-endian.
-    //
-    template<typename T>
-    static T WARN_UNUSED UnalignedRead(uint8_t* src)
-    {
-        T ret;
-        memcpy(&ret, src, sizeof(T));
-        return ret;
-    }
-
-    template<typename T>
-    static void UnalignedWrite(uint8_t* dst, T value)
-    {
-        memcpy(dst, &value, sizeof(T));
-    }
-
-    template<typename T>
-    static void UnalignedAddAndWriteback(uint8_t* addr, T value)
-    {
-        T old = UnalignedRead<T>(addr);
-        UnalignedWrite<T>(addr, old + value);
-    }
-
     void MaterializeCodeSection(uint8_t* destAddr, uint64_t* fixupValues) const
     {
         TestAssert(reinterpret_cast<uint64_t>(destAddr) % x_fastinterp_function_alignment == 0);

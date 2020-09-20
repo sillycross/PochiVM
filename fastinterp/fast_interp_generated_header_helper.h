@@ -1,6 +1,8 @@
 #pragma once
 
 #include "fast_interp_helper.h"
+#include "get_fs_base_helper.h"
+#include "fastinterp_context.h"
 
 namespace PochiVM
 {
@@ -134,7 +136,9 @@ public:
         }
         internal::constexpr_copy_helper(m_hashFnsData, hashFns);
         internal::constexpr_copy_helper(m_hashtableData, hashtable);
+#ifdef TESTBUILD
         internal::constexpr_copy_helper(m_trueEntriesData, trueEntries);
+#endif
     }
 
 private:
@@ -145,6 +149,41 @@ private:
 #ifdef TESTBUILD
     uint64_t m_trueEntriesData[M * N];
 #endif
+};
+
+class FastInterpInitFixupThreadLocalHelper
+{
+public:
+    template<size_t N>
+    FastInterpInitFixupThreadLocalHelper(uint8_t* content,
+                                         uint64_t contentLength,
+                                         const std::array<size_t, N>& fixupSites)
+    {
+        // This function currently only handles R_X86_64_TPOFF32
+        //
+        uint32_t u32Pv = static_cast<uint32_t>(GetPatchValue());
+        for (size_t i = 0; i < N; i++)
+        {
+            TestAssert(fixupSites[i] + sizeof(uint32_t) <= contentLength);
+            UnalignedAddAndWriteback<uint32_t>(content + fixupSites[i], u32Pv);
+        }
+    }
+
+private:
+    static uint64_t GetPatchValue()
+    {
+        if (!m_patchValueInitialized)
+        {
+            m_patchValueInitialized = true;
+            uint64_t fs_base = x86_64_get_fs_segmentation_register_base();
+            uint64_t addr = reinterpret_cast<uint64_t>(&__pochivm_thread_fastinterp_context);
+            m_patchValue = addr - fs_base;
+        }
+        return m_patchValue;
+    }
+
+    static inline uint64_t m_patchValue;
+    static inline bool m_patchValueInitialized = false;
 };
 
 }   // namespace PochiVM
