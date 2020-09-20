@@ -40,12 +40,12 @@
 // Communication interface with build_fast_interp_lib.cpp
 // This is used to obtain the symbol names of all the boilerplates, similar to the trick we used in dump_symbols.cpp
 //
-void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType, PochiVM::MetaVarMaterializedList*);
+void __pochivm_register_fast_interp_boilerplate__(const char* /*stringified_name*/, PochiVM::MetaVarMaterializedList* /*list*/);
 
 namespace PochiVM
 {
 
-struct AstArithmeticExprImpl
+struct FastInterpArithmeticExprImpl
 {
     template<typename OperandType, AstArithmeticExprType arithType, LiteralCategory lhsLiteralCategory, LiteralCategory rhsLiteralCategory>
     static constexpr bool cond()
@@ -113,19 +113,18 @@ struct AstArithmeticExprImpl
         }
     }
 
-    static void Register()
+    static auto metavars()
     {
-        MetaVarMaterializedList list = CreateMetaVarList(
+        return CreateMetaVarList(
                     CreateTypeMetaVar("operandType"),
                     CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType"),
                     CreateEnumMetaVar<LiteralCategory::X_END_OF_ENUM>("lhsLiteralCategory"),
                     CreateEnumMetaVar<LiteralCategory::X_END_OF_ENUM>("rhsLiteralCategory")
-        ).Materialize<AstArithmeticExprImpl>();
-        __pochivm_register_fast_interp_boilerplate__(AstNodeType::AstArithmeticExpr, &list);
+        );
     }
 };
 
-struct AstVariableImpl
+struct FastInterpVariableImpl
 {
     template<typename VarTypePtr>
     static constexpr bool cond()
@@ -144,19 +143,25 @@ struct AstVariableImpl
         *out = reinterpret_cast<VarTypePtr>(__pochivm_thread_fastinterp_context.m_stackFrame + offset);
     }
 
-    static void Register()
+    static auto metavars()
     {
-        MetaVarMaterializedList list = CreateMetaVarList(
+        return CreateMetaVarList(
                     CreateTypeMetaVar("varTypePtr")
-        ).Materialize<AstVariableImpl>();
-        __pochivm_register_fast_interp_boilerplate__(AstNodeType::AstVariable, &list);
+        );
     }
 };
 
+template<typename T>
+static void RegisterBoilerplate()
+{
+    MetaVarMaterializedList list = T::metavars().template Materialize<T>();
+    __pochivm_register_fast_interp_boilerplate__(__pochivm_stringify_type__<T>(), &list);
+}
+
 static void RegisterFastInterpImplBoilerplates()
 {
-    AstArithmeticExprImpl::Register();
-    AstVariableImpl::Register();
+    RegisterBoilerplate<FastInterpArithmeticExprImpl>();
+    RegisterBoilerplate<FastInterpVariableImpl>();
 }
 
 }   // namespace PochiVM

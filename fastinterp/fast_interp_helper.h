@@ -511,8 +511,8 @@ struct FastInterpBoilerplateSelectionHashTableEntry
 class FastInterpBoilerplateSelectionHashTableHelper : NonCopyable, NonMovable
 {
 public:
-    template<AstNodeType::_EnumType astNodeType>
-    friend struct FastInterpBoilerplateLibaray;
+    template<typename T>
+    friend struct FastInterpBoilerplateLibrary;
 
 protected:
     constexpr FastInterpBoilerplateSelectionHashTableHelper(
@@ -589,8 +589,8 @@ private:
 #endif
 };
 
-// const FastInterpBoilerplateBluePrint* FastInterpBoilerplateLibaray<AstNodeType>::SelectBoilerplateBluePrint(...)
-//    select a boilerplate for AstNodeType based on compile-time specialization parameters of AstNodeType
+// const FastInterpBoilerplateBluePrint* FastInterpBoilerplateLibrary<T>::SelectBoilerplateBluePrint(...)
+//    select a boilerplate for AstNodeType based on compile-time specialization parameters
 //
 // This class is defined in generated header
 //

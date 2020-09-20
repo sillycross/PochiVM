@@ -8,18 +8,18 @@ TEST(TestFastInterpInternal, SanitySymbolNames)
 {
     // Sanity check 'SelectBoilerplateBluePrint' indeed selected the boilerplate we expected by checking its symbol name
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                AstArithmeticExprType::ADD,
                                                                LiteralCategory::LITERAL_NONZERO,
                                                                LiteralCategory::LITERAL_NONZERO);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM21AstArithmeticExprImpl1fIiLNS_21AstArithmeticExprTypeE0ELNS_15LiteralCategoryE1ELS3_1EEEvPT_"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIiLNS_21AstArithmeticExprTypeE0ELNS_15LiteralCategoryE1ELS3_1EEEvPT_"));
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                                                                AstArithmeticExprType::MUL,
                                                                LiteralCategory::NOT_LITERAL,
                                                                LiteralCategory::ZERO);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM21AstArithmeticExprImpl1fIdLNS_21AstArithmeticExprTypeE2ELNS_15LiteralCategoryE0ELS3_2EEEvPT_"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIdLNS_21AstArithmeticExprTypeE2ELNS_15LiteralCategoryE0ELS3_2EEEvPT_"));
     std::ignore = blueprint;
 }
 
@@ -27,7 +27,7 @@ TEST(TestFastInterpInternal, Sanity_1)
 {
     // Test the simplest case: add two zeros.. no placeholders shall be needed
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                AstArithmeticExprType::ADD,
@@ -50,7 +50,7 @@ TEST(TestFastInterpInternal, Sanity_2)
 {
     // Test arith operation on two literal values
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                 AstArithmeticExprType::MUL,
@@ -75,7 +75,7 @@ TEST(TestFastInterpInternal, Sanity_3)
 {
     // Test arith operation on two literal values, type is double to test that bitcasting works as expected.
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                 AstArithmeticExprType::MUL,
@@ -100,7 +100,7 @@ TEST(TestFastInterpInternal, Sanity_4)
 {
     // Test a expression tree '(a + b) * (c - d)'
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
@@ -140,7 +140,7 @@ TEST(TestFastInterpInternal, Sanity_5)
 {
     // Test a expression tree '(a + b) / (c - d)', double type
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstArithmeticExpr>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
@@ -179,7 +179,7 @@ TEST(TestFastInterpInternal, Sanity_5)
 
 TEST(TestFastInterpInternal, SanityThreadLocal_1)
 {
-    using BoilerplateLibrary = FastInterpBoilerplateLibaray<AstNodeType::AstVariable>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpVariableImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(

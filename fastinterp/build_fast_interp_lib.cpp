@@ -73,11 +73,11 @@ struct BoilerplatePack
     std::vector<BoilerplateInstance> m_instances;
 };
 
-static std::vector<std::pair<PochiVM::AstNodeType, BoilerplatePack>> g_allBoilerplatePacks;
+static std::vector<std::pair<std::string, BoilerplatePack>> g_allBoilerplatePacks;
 
 }   // anonymous namespace
 
-void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType nodeType, PochiVM::MetaVarMaterializedList* list)
+void __pochivm_register_fast_interp_boilerplate__(const char* stringified_typename, PochiVM::MetaVarMaterializedList* list)
 {
     BoilerplatePack p;
     for (const PochiVM::MetaVar& var : list->m_metavars)
@@ -110,7 +110,11 @@ void __pochivm_register_fast_interp_boilerplate__(PochiVM::AstNodeType nodeType,
         p.m_instances.push_back(binst);
     }
 
-    g_allBoilerplatePacks.push_back(std::make_pair(nodeType, p));
+    std::string indexType = ReflectiveStringifyParser::ParseTypeName(stringified_typename);
+    std::string pref = "PochiVM::";
+    ReleaseAssert(indexType.length() > pref.length() && indexType.substr(0, pref.length()) == pref);
+    indexType = indexType.substr(pref.length());
+    g_allBoilerplatePacks.push_back(std::make_pair(indexType, p));
 }
 
 namespace {
@@ -675,7 +679,7 @@ int main(int argc, char** argv)
                 {
                     fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
                                     "in boilerplate for %s. Please report a bug.\n",
-                            it->first.ToString());
+                            it->first.c_str());
                     abort();
                 }
                 ReleaseAssert(addrToSymbol.count(addr));
@@ -818,8 +822,8 @@ int main(int argc, char** argv)
     fprintf(fp2, "#include \"fastinterp_fwd_declarations.generated.h\"\n\n");
     fprintf(fp2, "namespace PochiVM {\n\n");
 
-    fprintf(fp2, "template<AstNodeType::_EnumType astNodeType>\n");
-    fprintf(fp2, "struct FastInterpBoilerplateLibaray;    // unspecialized class intentionally undefined\n\n");
+    fprintf(fp2, "template<typename T>\n");
+    fprintf(fp2, "struct FastInterpBoilerplateLibrary;    // unspecialized class intentionally undefined\n\n");
 
     fprintf(fp3, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
     fprintf(fp3, "#include \"fastinterp_library.generated.h\"\n\n");
@@ -830,6 +834,12 @@ int main(int argc, char** argv)
     int blueprint_varname_suffix = 0;
     int lib_varname_suffix = 0;
 
+    fprintf(fp2, "// Declarations of the library index types. We only need the typename as an index into the library, no definitions needed\n//\n");
+    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+    {
+        fprintf(fp2, "struct %s;\n", it->first.c_str());
+    }
+    fprintf(fp2, "\n");
     for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
     {
         BoilerplatePack& bp = it->second;
@@ -1209,8 +1219,8 @@ int main(int argc, char** argv)
             fprintf(fp3, "#endif\n");
             fprintf(fp3, ");\n\n");
 
-            fprintf(fp2, "template<>\nstruct FastInterpBoilerplateLibaray<AstNodeType::%s>\n{\n",
-                    it->first.ToString());
+            fprintf(fp2, "template<>\nstruct FastInterpBoilerplateLibrary<%s>\n{\n",
+                    it->first.c_str());
             fprintf(fp2, "    static const FastInterpBoilerplateBluePrint* SelectBoilerplateBluePrint(\n");
             for (size_t i = 0; i < bp.m_params.size(); i++)
             {
