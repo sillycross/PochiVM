@@ -6,6 +6,7 @@
 #include "runtime_lib_builder/fake_symbol_resolver.h"
 #include "runtime_lib_builder/reflective_stringify_parser.h"
 #include "runtime_lib_builder/symbol_list_util.h"
+#include "runtime_lib_builder/check_file_md5.h"
 
 #include "pochivm/ast_enums.h"
 #include "metavar.h"
@@ -576,6 +577,7 @@ public:
     {
         obj_file = obj_file_;
         bc_file = bc_file_;
+        should_work_on = false;
 
         // Figure out generated file names
         //
@@ -1276,6 +1278,7 @@ public:
     std::string fwd_h_part_path;
     std::string lib_h_part_path;
     std::string lib_cpp_path;
+    bool should_work_on;
 };
 
 void AppendFileContent(FILE* fpOut, const std::string& path)
@@ -1346,6 +1349,35 @@ std::vector<std::string> ProcessFileList(std::string fileList)
     return out;
 }
 
+class simple_mt_queue
+{
+public:
+    std::pair<bool, std::function<void()> > get()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (queue.empty())
+        {
+            return std::make_pair(false, std::function<void()>(nullptr));
+        }
+        else
+        {
+            std::function<void()> fn = queue.front();
+            queue.pop();
+            return std::make_pair(true, fn);
+        }
+    }
+
+    void push(std::function<void()> fn)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        queue.push(fn);
+    }
+
+private:
+    std::mutex mutex;
+    std::queue<std::function<void()>> queue;
+};
+
 }   // anonymous namespace
 
 int main(int argc, char** argv)
@@ -1358,9 +1390,16 @@ int main(int argc, char** argv)
     // params: [bc_files] [obj_files] [generated_header_dir]
 
     ReleaseAssert(argc == 4);
+    std::string self_binary = argv[0];
     std::string bc_files = argv[1];
     std::string obj_files = argv[2];
     std::string output_dir = argv[3];
+
+    bool selfBinaryChanged = false;
+    if (!PochiVMHelper::CheckMd5Match(self_binary))
+    {
+        selfBinaryChanged = true;
+    }
 
     std::vector<std::string> allBcFiles = ProcessFileList(bc_files);
     std::vector<std::string> allObjFiles = ProcessFileList(obj_files);
@@ -1373,12 +1412,72 @@ int main(int argc, char** argv)
         SourceFileInfo* sfi = new SourceFileInfo;
         sfi->Setup(allBcFiles[i], allObjFiles[i], output_dir);
         sfiList.push_back(sfi);
+        bool isUnchanged = PochiVMHelper::CheckMd5Match(sfi->obj_file);
+        if (selfBinaryChanged || !isUnchanged)
+        {
+            sfi->should_work_on = true;
+        }
+    }
+
+    // 'jit.lookup' is the most time-consuming step. Do it parallel on all object files
+    //
+    {
+        size_t parallelism;
+        unsigned int numCPUs = std::thread::hardware_concurrency();
+        if (numCPUs == 0)
+        {
+            fprintf(stderr, "[WARNING] Failed to detect # of CPUs on the build platform. Setting build parallelism to 4.\n");
+            parallelism = 4;
+        }
+        else if (numCPUs <= 4)
+        {
+            parallelism = 3;
+        }
+        else
+        {
+            parallelism = numCPUs - 2;
+        }
+
+        simple_mt_queue taskQueue;
+        for (SourceFileInfo* sfi : sfiList)
+        {
+            if (sfi->should_work_on)
+            {
+                taskQueue.push([sfi]() {
+                    sfi->MTSafePrepare();
+                });
+            }
+        }
+
+        auto threadFn = [](simple_mt_queue* q)
+        {
+            while (true)
+            {
+                std::pair<bool, std::function<void()>> r = q->get();
+                if (!r.first) { break; }
+                r.second();
+            }
+        };
+
+        std::vector<std::thread*> workers;
+        for (size_t i = 0; i < parallelism; i++)
+        {
+            workers.push_back(new std::thread(threadFn, &taskQueue));
+        }
+
+        for (size_t i = 0; i < parallelism; i++)
+        {
+            workers[i]->join();
+        }
     }
 
     for (SourceFileInfo* sfi : sfiList)
     {
-        sfi->MTSafePrepare();
-        sfi->PostProcess();
+        if (sfi->should_work_on)
+        {
+            sfi->PostProcess();
+            PochiVMHelper::UpdateMd5Checksum(sfi->obj_file);
+        }
     }
 
     std::string output1_name = output_dir + "/fastinterp_fwd_declarations.generated.h";
@@ -1446,6 +1545,11 @@ int main(int argc, char** argv)
                     output2_tmp_name.c_str(), output2_name.c_str(), errno, strerror(errno));
             abort();
         }
+    }
+
+    if (selfBinaryChanged)
+    {
+        PochiVMHelper::UpdateMd5Checksum(self_binary);
     }
 
     return 0;
