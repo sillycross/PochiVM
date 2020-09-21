@@ -22,8 +22,8 @@
 //         Define CPP_FNPTR_PLACEHOLDER_[n] to hold a function pointer that will point to a C++ function in host process of type 'type'.
 //         WARNING: It is not allowed to hold a null function pointer.
 //
-// Finally, since placeholders are internally just external symbols, it is illegal to compare for equality
-// of two placeholders, if the placehoder is 64bit.
+// Finally, since placeholders are internally just external symbols, it is illegal to compare for equality, >=, <=
+// of two placeholders, if the placehoder is 64bit since the compiler may assume that the equality case never holds.
 //
 // This definition is scoped (since the macro just expands to a normal C++ variable declaration).
 // However, it is ok to simply re-define it in another scope.

@@ -170,6 +170,58 @@ struct PartialMetaVarValueInstance
 template<typename T> struct is_noexcept_fn_helper : std::false_type {};
 template<typename R, typename... Args> struct is_noexcept_fn_helper<R(Args...) noexcept> : std::true_type {};
 
+// metavar_has_cond_fn<T, TArgs...>::impl<VArgs...>::value
+//     true if either
+//     (1) T does NOT have cond<TArgs..., VArgs>
+//     (2) T has cond<TArgs..., VArgs...> and T::cond<TArgs..., VArgs...>() returned true
+// Note: a non-templated 'cond' cannot be detected
+//
+// Member function existence SFINAE is modified from
+//     https://stackoverflow.com/questions/257288/templated-check-for-the-existence-of-a-class-member-function
+//
+template<typename T, typename... TArgs>
+struct metavar_prefix_cond_fn_checker
+{
+    template<auto... VArgs>
+    struct impl3
+    {
+        // Member function existence SFINAE
+        //
+        struct has_cond
+        {
+            typedef char one;
+            struct two { char x[2]; };
+
+            template <typename C> static one test( decltype(&C::template cond<TArgs..., VArgs...>) );
+            template <typename C> static two test(...);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+            constexpr static bool value = (sizeof(test<T>(0)) == sizeof(char));
+#pragma clang diagnostic pop
+        };
+
+        template<typename Dummy, typename Enable = void>
+        struct impl4
+        {
+            // the case that the 'cond' function does not exist
+            //
+            struct impl5 : std::true_type {};
+        };
+
+        template<typename Dummy>
+        struct impl4<Dummy, typename std::enable_if<(std::is_same<Dummy, void>::value && has_cond::value)>::type>
+        {
+            // the case that 'cond' function exists
+            //
+            struct impl5 : std::integral_constant<bool, (T::template cond<TArgs..., VArgs...>())> {};
+        };
+    };
+
+    template<auto... VArgs>
+    using impl = typename impl3<VArgs...>::template impl4<void>::impl5;
+};
+
 template<typename Materializer, auto... metaVarTypes>
 struct metavar_materialize_helper
 {
@@ -187,44 +239,51 @@ struct metavar_materialize_helper
             template<auto... VArgs>
             struct impl3
             {
-                template<typename Dummy, typename Enable = void>
+                template<typename Dummy2>
                 struct impl4
                 {
-                    static void insert(MetaVarMaterializedList* /*result*/, const PartialMetaVarValueInstance& /*instance*/)
-                    { }
-                };
-
-                template<typename Dummy>
-                struct impl4<Dummy, typename std::enable_if<(
-                    std::is_same<Dummy, void>::value &&
-                    std::integral_constant<bool, (Materializer::template cond<TArgs..., VArgs...>())>::value)>::type>
-                {
-                    static void insert(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
+                    template<typename Dummy, typename Enable = void>
+                    struct impl5
                     {
-                        ReleaseAssert(instance.value.size() == result->m_metavars.size());
-                        MetaVarMaterializedInstance inst;
-                        inst.m_values = instance.value;
-                        using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
-                        static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
-                                      "'f' is not a noexcept function");
-                        inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
-                        result->m_instances.push_back(inst);
+                        static void insert(MetaVarMaterializedList* /*result*/, const PartialMetaVarValueInstance& /*instance*/)
+                        { }
+                    };
+
+                    template<typename Dummy>
+                    struct impl5<Dummy, typename std::enable_if<(
+                        std::is_same<Dummy, void>::value &&
+                        std::integral_constant<bool, (Materializer::template cond<TArgs..., VArgs...>())>::value)>::type>
+                    {
+                        // This function is not performance-sensitive, but compile-time sensitive (we are going to compile
+                        // tens of thousands of these but they are only executed once and at build phase), tell compiler to not optimize
+                        //
+                        static void __attribute__((__optnone__, __noinline__)) insert(MetaVarMaterializedList* result,
+                                                                                      const PartialMetaVarValueInstance& instance)
+                        {
+                            ReleaseAssert(instance.value.size() == result->m_metavars.size());
+                            MetaVarMaterializedInstance inst;
+                            inst.m_values = instance.value;
+                            using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
+                            static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
+                                          "'f' is not a noexcept function");
+                            inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
+                            result->m_instances.push_back(inst);
+                        }
+                    };
+
+                    static void invoke(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
+                    {
+                        impl5<void>::insert(result, instance);
                     }
                 };
             };
-
-            template<auto... VArgs>
-            static void invoke(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
-            {
-                impl3<VArgs...>::template impl4<void>::insert(result, instance);
-            }
         };
     };
 
     static void materialize(MetaVarMaterializedList* result)
     {
         PartialMetaVarValueInstance inst;
-        impl<metaVarTypes...>::template impl2<>::template invoke<>(result, inst);
+        impl<metaVarTypes...>::template impl2<>::template impl3<>::template impl4<void>::invoke(result, inst);
     }
 };
 
@@ -245,63 +304,89 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
     template<typename... TArgs>
     struct impl2
     {
-        template<typename T, int cur, int ub, auto... VArgs>
-        static void invoke_enum(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
-        {
-            if constexpr(cur < ub)
-            {
-                constexpr T value = static_cast<T>(cur);
-                impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template invoke<VArgs..., value>(
-                            result, instance.Push(static_cast<uint64_t>(cur)));
-                invoke_enum<T, cur + 1, ub, VArgs...>(result, instance);
-            }
-        }
-
         template<auto... VArgs>
-        static void invoke(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
+        struct impl3
         {
-            using T = decltype(first);
-            if constexpr(std::is_same<T, MetaVarType>::value)
+            template<typename Dummy, typename Enable = void>
+            struct impl4
             {
-                if constexpr(first == MetaVarType::BOOL)
+                // Enable case (prefix 'cond' does not exist, or 'cond' returned true')
+                //
+
+                template<typename T, int cur, int ub>
+                static void invoke_enum(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
                 {
-                    impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template invoke<VArgs..., false>(
-                                result, instance.Push(false));
-                    impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template invoke<VArgs..., true>(
-                                result, instance.Push(true));
+                    if constexpr(cur < ub)
+                    {
+                        constexpr T value = static_cast<T>(cur);
+                        impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
+                                    result, instance.Push(static_cast<uint64_t>(cur)));
+                        invoke_enum<T, cur + 1, ub>(result, instance);
+                    }
                 }
-                else if constexpr(first == MetaVarType::PRIMITIVE_TYPE)
+
+                // This function is not performance-sensitive, but compile-time sensitive (we are going to compile
+                // tens of thousands of these but they are only executed once and at build phase), tell compiler to not optimize
+                //
+                static void  __attribute__((__optnone__, __noinline__)) invoke(MetaVarMaterializedList* result,
+                                                                               const PartialMetaVarValueInstance& instance)
                 {
-                    // DEVNOTE: hardcoded from ast_type_helper.h! Make sure to keep in sync!
-                    //
-                    constexpr uint64_t x_typeid_pointer_typeid_inc = 1000000000;
-#define F(type)                                                                                   \
-    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type>::template invoke<VArgs...>(    \
-        result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type)));
-                    F(void)
-                    FOR_EACH_PRIMITIVE_TYPE
+                    using T = decltype(first);
+                    if constexpr(std::is_same<T, MetaVarType>::value)
+                    {
+                        if constexpr(first == MetaVarType::BOOL)
+                        {
+                            impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., false>::template impl4<void>::invoke(
+                                        result, instance.Push(false));
+                            impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., true>::template impl4<void>::invoke(
+                                        result, instance.Push(true));
+                        }
+                        else if constexpr(first == MetaVarType::PRIMITIVE_TYPE)
+                        {
+                            // DEVNOTE: hardcoded from ast_type_helper.h! Make sure to keep in sync!
+                            //
+                            constexpr uint64_t x_typeid_pointer_typeid_inc = 1000000000;
+#define F(type)                                                                                                                \
+    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type>::template impl3<VArgs...>::template impl4<void>::invoke(    \
+            result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type)));
+                            F(void)
+                            FOR_EACH_PRIMITIVE_TYPE
 #undef F
-#define F(type)                                                                                    \
-    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type*>::template invoke<VArgs...>(    \
-        result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type) + x_typeid_pointer_typeid_inc));
-                    F(void)
-                    FOR_EACH_PRIMITIVE_TYPE
+#define F(type)                                                                                                                 \
+    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type*>::template impl3<VArgs...>::template impl4<void>::invoke(    \
+            result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type) + x_typeid_pointer_typeid_inc));
+                             F(void)
+                             FOR_EACH_PRIMITIVE_TYPE
 #undef F
-                    impl<remainingMetaVarTypes...>::template impl2<TArgs..., void**>::template invoke<VArgs...>(
-                        result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_void) + 2 * x_typeid_pointer_typeid_inc));
+                             impl<remainingMetaVarTypes...>::template impl2<TArgs..., void**>::template impl3<VArgs...>::template impl4<void>::invoke(
+                                result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_void) + 2 * x_typeid_pointer_typeid_inc));
+                        }
+                        else
+                        {
+                            static_assert(type_dependent_false<Materializer>::value, "Unexpected MetaVarType");
+                        }
+                    }
+                    else
+                    {
+                        static_assert(std::is_enum<T>::value, "Unexpected MetaVarType");
+                        constexpr int ub = static_cast<int>(first);
+                        invoke_enum<T, 0, ub>(result, instance);
+                    }
                 }
-                else
-                {
-                    static_assert(type_dependent_false<Materializer>::value, "Unexpected MetaVarType");
-                }
-            }
-            else
+            };
+
+            template<typename Dummy>
+            struct impl4<Dummy, typename std::enable_if<(
+                    std::is_same<Dummy, void>::value &&
+                    !metavar_prefix_cond_fn_checker<Materializer, TArgs...>::template impl<VArgs...>::value)>::type>
             {
-                static_assert(std::is_enum<T>::value, "Unexpected MetaVarType");
-                constexpr int ub = static_cast<int>(first);
-                invoke_enum<T, 0, ub, VArgs...>(result, instance);
-            }
-        }
+                // Disabled case: prefix 'cond' exists and returned false
+                // Do nothing.
+                //
+                static void invoke(MetaVarMaterializedList* /*result*/, const PartialMetaVarValueInstance& /*instance*/)
+                { }
+            };
+        };
     };
 };
 

@@ -1,6 +1,13 @@
+# remove -O0 -g flag, and add -O3 flag
+# 
+string(REPLACE " -O0 " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+string(REPLACE " -g " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 ")
+
 add_library(fastinterp_tpl_obj OBJECT
   fastinterp_tpl.cpp
 )
+
 # important compiler flags for the object file, must not be changed. see comments in dynamic_specialization_utils.h
 # TODO: clang++ currently does not support -mlarge-data-threshold which would hurt a bit of performance
 #

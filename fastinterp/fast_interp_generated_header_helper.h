@@ -167,6 +167,7 @@ public:
             TestAssert(fixupSites[i] + sizeof(uint32_t) <= contentLength);
             UnalignedAddAndWriteback<uint32_t>(content + fixupSites[i], u32Pv);
         }
+        std::ignore = contentLength;
     }
 
 private:

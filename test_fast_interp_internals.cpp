@@ -11,15 +11,19 @@ TEST(TestFastInterpInternal, SanitySymbolNames)
     using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                                                               AstArithmeticExprType::ADD,
-                                                               LiteralCategory::LITERAL_NONZERO,
-                                                               LiteralCategory::LITERAL_NONZERO);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIiLNS_21AstArithmeticExprTypeE0ELNS_15LiteralCategoryE1ELS3_1EEEvPT_"));
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               OperandShapeCategory::LITERAL_NONZERO,
+                                                               OperandShapeCategory::LITERAL_NONZERO,
+                                                               AstArithmeticExprType::ADD);
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIiiiLNS_20OperandShapeCategoryE4ELS2_4ELNS_21AstArithmeticExprTypeE0EEEvPT_"));
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<double>().GetDefaultFastInterpTypeId(),
-                                                               AstArithmeticExprType::MUL,
-                                                               LiteralCategory::NOT_LITERAL,
-                                                               LiteralCategory::ZERO);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIdLNS_21AstArithmeticExprTypeE2ELNS_15LiteralCategoryE0ELS3_2EEEvPT_"));
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               OperandShapeCategory::COMPLEX,
+                                                               OperandShapeCategory::ZERO,
+                                                               AstArithmeticExprType::MUL);
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIdiiLNS_20OperandShapeCategoryE6ELS2_5ELNS_21AstArithmeticExprTypeE2EEEvPT_"));
     std::ignore = blueprint;
 }
 
@@ -30,9 +34,11 @@ TEST(TestFastInterpInternal, Sanity_1)
     using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                                                               AstArithmeticExprType::ADD,
-                                                               LiteralCategory::ZERO,
-                                                               LiteralCategory::ZERO);
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                                                               OperandShapeCategory::ZERO,
+                                                               OperandShapeCategory::ZERO,
+                                                               AstArithmeticExprType::ADD);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
@@ -53,14 +59,16 @@ TEST(TestFastInterpInternal, Sanity_2)
     using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                AstArithmeticExprType::MUL,
-                LiteralCategory::LITERAL_NONZERO,
-                LiteralCategory::LITERAL_NONZERO);
+                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                OperandShapeCategory::LITERAL_NONZERO,
+                OperandShapeCategory::LITERAL_NONZERO,
+                AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
     inst->PopulateConstantPlaceholder<int>(0, 123);
-    inst->PopulateConstantPlaceholder<int>(1, 45678);
+    inst->PopulateConstantPlaceholder<int>(2, 45678);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -78,14 +86,16 @@ TEST(TestFastInterpInternal, Sanity_3)
     using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<double>().GetDefaultFastInterpTypeId(),
-                AstArithmeticExprType::MUL,
-                LiteralCategory::LITERAL_NONZERO,
-                LiteralCategory::LITERAL_NONZERO);
+                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                OperandShapeCategory::LITERAL_NONZERO,
+                OperandShapeCategory::LITERAL_NONZERO,
+                AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
     inst->PopulateConstantPlaceholder<double>(0, 123.456);
-    inst->PopulateConstantPlaceholder<double>(1, 789.012);
+    inst->PopulateConstantPlaceholder<double>(2, 789.012);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -105,28 +115,34 @@ TEST(TestFastInterpInternal, Sanity_4)
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::ADD,
-                    LiteralCategory::LITERAL_NONZERO,
-                    LiteralCategory::LITERAL_NONZERO));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::ADD));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::SUB,
-                    LiteralCategory::LITERAL_NONZERO,
-                    LiteralCategory::LITERAL_NONZERO));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::SUB));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::MUL,
-                    LiteralCategory::NOT_LITERAL,
-                    LiteralCategory::NOT_LITERAL));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::COMPLEX,
+                    OperandShapeCategory::COMPLEX,
+                    AstArithmeticExprType::MUL));
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
     inst1->PopulateConstantPlaceholder<int>(0, 321);
-    inst1->PopulateConstantPlaceholder<int>(1, 567);
+    inst1->PopulateConstantPlaceholder<int>(2, 567);
     inst2->PopulateConstantPlaceholder<int>(0, -123);
-    inst2->PopulateConstantPlaceholder<int>(1, -89);
+    inst2->PopulateConstantPlaceholder<int>(2, -89);
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
-    inst3->PopulateBoilerplateFnPtrPlaceholder(1, inst2);
+    inst3->PopulateBoilerplateFnPtrPlaceholder(2, inst2);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     using FnType = void(*)(int*);
     FnType fnPtr = reinterpret_cast<FnType>(gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233)));
@@ -145,28 +161,34 @@ TEST(TestFastInterpInternal, Sanity_5)
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::ADD,
-                    LiteralCategory::LITERAL_NONZERO,
-                    LiteralCategory::LITERAL_NONZERO));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::ADD));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::SUB,
-                    LiteralCategory::LITERAL_NONZERO,
-                    LiteralCategory::LITERAL_NONZERO));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    OperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::SUB));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
-                    AstArithmeticExprType::DIV,
-                    LiteralCategory::NOT_LITERAL,
-                    LiteralCategory::NOT_LITERAL));
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    OperandShapeCategory::COMPLEX,
+                    OperandShapeCategory::COMPLEX,
+                    AstArithmeticExprType::DIV));
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
     inst1->PopulateConstantPlaceholder<double>(0, 321);
-    inst1->PopulateConstantPlaceholder<double>(1, 567);
+    inst1->PopulateConstantPlaceholder<double>(2, 567);
     inst2->PopulateConstantPlaceholder<double>(0, -123);
-    inst2->PopulateConstantPlaceholder<double>(1, -89);
+    inst2->PopulateConstantPlaceholder<double>(2, -89);
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
-    inst3->PopulateBoilerplateFnPtrPlaceholder(1, inst2);
+    inst3->PopulateBoilerplateFnPtrPlaceholder(2, inst2);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
