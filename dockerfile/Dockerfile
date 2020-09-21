@@ -2,7 +2,7 @@ FROM ubuntu:18.04
 
 # install misc dependency
 #
-RUN apt update && apt install -y git wget tar xz-utils sudo cmake make ninja-build python
+RUN apt update && apt install -y git wget tar xz-utils sudo cmake make ninja-build python ccache
 
 RUN apt update && apt-get install -y g++ libtinfo-dev 
 
@@ -19,6 +19,8 @@ RUN rm -f llvm.tar.xz
 RUN useradd -ms /bin/bash u
 RUN usermod -aG sudo u
 RUN echo 'u ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+COPY ccache.conf /etc/ccache.conf
 
 USER u
 WORKDIR /home/u

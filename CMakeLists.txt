@@ -9,6 +9,13 @@ project(PochiVM)
 SET(CMAKE_C_COMPILER clang)
 SET(CMAKE_CXX_COMPILER clang++)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
+else()
+  message( FATAL_ERROR "ccache not found!" )
+endif()
+
 # specify the C++ standard
 #
 set(CMAKE_CXX_STANDARD 17)

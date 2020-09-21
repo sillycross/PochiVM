@@ -3,6 +3,7 @@
 import os
 import sys
 import shutil
+import multiprocessing
 
 path = os.path.realpath(__file__)
 base_dir = os.path.dirname(path)
@@ -21,6 +22,9 @@ def PrintUsageMakeAndDie():
 
 def GetBuildDir():
     return os.path.join(base_dir, 'build')
+
+def GetCCacheDir():
+    return os.path.join(GetBuildDir(), 'ccache')
 
 def GetBuildDirFlavor(flavor):
     assert(flavor == 'debug' or flavor == 'release' or flavor == 'production')
@@ -47,10 +51,11 @@ if (op != 'update-docker-image' and op != 'cmake' and op != 'make'):
     PrintUsageGeneralAndDie()
 
 def BuildOrUpdateDockerImage():
-    if not os.path.exists(os.path.join(base_dir, 'Dockerfile')):
+    docker_dir = os.path.join(base_dir, 'dockerfile')
+    if not os.path.exists(os.path.join(docker_dir, 'Dockerfile')):
         print('[ERROR] Dockerfile not found!')
         sys.exit(1)
-    cmd = 'docker build --tag pochivm-build:latest %s' % base_dir
+    cmd = 'docker build --tag pochivm-build:latest %s' % docker_dir
     r = os.system(cmd)
     if (r != 0):
         print('[ERROR] Failed to build docker image, exit code = %d' % r)
@@ -100,6 +105,7 @@ if (op == 'cmake'):
         sys.exit(0)
     
     CreateDirIfNotExist(GetBuildDir())
+    CreateDirIfNotExist(GetCCacheDir())
     CreateDirIfNotExist(GetBuildDirFlavor(target))
     CreateDirIfNotExist(GetGeneratedDir())
     CreateDirIfNotExist(GetGeneratedDirFlavor(target))
@@ -132,7 +138,14 @@ if (op == 'make'):
     if (isClean):
         option = "clean"
     else:
-        option = "-j6"  # hardcode parallelism=6 for now
+        parallelism = 1
+        num_cpus = multiprocessing.cpu_count()
+        if (2 <= num_cpus and num_cpus <= 4):
+            parallelism = num_cpus - 1
+        else:
+            if (num_cpus > 4):
+                parallelism = num_cpus - 2
+        option = ("-j%s" % str(parallelism))
     cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && ninja %s'" % (base_dir, target, option)
     r = os.system(cmd)
     if (r != 0):
