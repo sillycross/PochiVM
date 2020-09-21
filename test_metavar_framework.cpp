@@ -35,10 +35,10 @@ struct Materializer1
     }
 
     template<typename T1, typename T2, TestEnum1 v1, TestEnum2 v2, bool v3>
-    static uint64_t f(T1 a, T2 b) noexcept
+    static void f(std::pair<T1, std::pair<T2, uint64_t>>* a) noexcept
     {
-        return static_cast<uint64_t>(*a) + static_cast<uint64_t>(b) + static_cast<uint64_t>(v1)
-                + static_cast<uint64_t>(v2) + static_cast<uint64_t>(v3);
+        a->second.second = static_cast<uint64_t>(*a->first) + static_cast<uint64_t>(a->second.first) +
+                static_cast<uint64_t>(v1) + static_cast<uint64_t>(v2) + static_cast<uint64_t>(v3);
     }
 };
 

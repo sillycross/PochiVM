@@ -171,8 +171,11 @@ struct PartialMetaVarValueInstance
     }
 };
 
-template<typename T> struct is_noexcept_fn_helper : std::false_type {};
-template<typename R, typename... Args> struct is_noexcept_fn_helper<R(Args...) noexcept> : std::true_type {};
+template<typename T>
+struct is_fastinterp_fn_prototype : std::false_type {};
+
+template<typename T>
+struct is_fastinterp_fn_prototype<void(T*) noexcept> : std::true_type {};
 
 // metavar_has_cond_fn<T, TArgs...>::impl<VArgs...>::value
 //     true if either
@@ -265,8 +268,8 @@ struct metavar_materialize_helper
                         MetaVarMaterializedInstance inst;
                         inst.m_values = instance.value;
                         using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
-                        static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
-                                "'f' is not a noexcept function");
+                        static_assert(is_fastinterp_fn_prototype<FnType>::value,
+                                "'f' is not a noexcept function with prototype void(*)(T*)");
                         inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
                         result->m_instances.push_back(inst);
                     }
