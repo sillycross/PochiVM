@@ -4,10 +4,19 @@ string(REPLACE " -O0 " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE " -g " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 ")
 
-add_library(fastinterp_tpl_obj OBJECT
-  fastinterp_tpl.cpp
+SET(FASTINTERP_TPL_SOURCES
+  fastinterp_tpl_arithmetic_expr.cpp
+  fastinterp_tpl_astvariable.cpp
 )
 
+SET(FASTINTERP_SOURCES
+  fast_interp_helper.cpp
+  get_fs_base_helper.cpp
+)
+
+add_library(fastinterp_tpl_obj OBJECT
+  ${FASTINTERP_TPL_SOURCES}
+)
 # important compiler flags for the object file, must not be changed. see comments in dynamic_specialization_utils.h
 # TODO: clang++ currently does not support -mlarge-data-threshold which would hurt a bit of performance
 #
@@ -18,14 +27,21 @@ set_target_properties(fastinterp_tpl_obj PROPERTIES COMPILE_FLAGS " -mcmodel=med
 # The only source of truth of binary data is the object file.
 #
 add_library(fastinterp_tpl_ir OBJECT
-  fastinterp_tpl.cpp
+  ${FASTINTERP_TPL_SOURCES}
 )
-
 set_target_properties(fastinterp_tpl_ir PROPERTIES COMPILE_FLAGS " -emit-llvm -fno-exceptions ")
+
+set(generated_src_list "")
+foreach(cur_src ${FASTINTERP_TPL_SOURCES})
+  set(cur_generated_src "${GENERATED_FILES_DIR}/${cur_src}.lib.generated.cpp")
+  list(APPEND generated_src_list "${cur_generated_src}")
+  set_source_files_properties(${cur_generated_src} PROPERTIES GENERATED true)
+endforeach()
 
 add_executable(build_fast_interp_lib
   build_fast_interp_lib.cpp   
   $<TARGET_OBJECTS:fake_symbol_resolver_util>
+  $<TARGET_OBJECTS:runtime_lib_builder_util>
 ) 
 # for some reason, get a weird 'typeinfo for ErrorInfoBase does not exist' link error in debug
 # compile it in -fno-rtti for now, consider build llvm with rtti if we really need to fix it
@@ -38,18 +54,16 @@ target_link_libraries(build_fast_interp_lib PUBLIC
 
 set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_fwd_declarations.generated.h PROPERTIES GENERATED true)
 set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_library.generated.h PROPERTIES GENERATED true)
-set_source_files_properties(${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp PROPERTIES GENERATED true)
 
 add_library(fastinterp OBJECT
-  fast_interp_helper.cpp
-  get_fs_base_helper.cpp
-  ${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp
+  ${FASTINTERP_SOURCES}
+  ${generated_src_list}
 )
 
 add_custom_command(
   OUTPUT ${GENERATED_FILES_DIR}/fastinterp_fwd_declarations.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/fastinterp_library.generated.h
-  OUTPUT ${GENERATED_FILES_DIR}/fastinterp_library.generated.cpp
+  OUTPUT ${generated_src_list}
   COMMAND ${PROJECT_BINARY_DIR}/fastinterp/build_fast_interp_lib '$<TARGET_OBJECTS:fastinterp_tpl_ir>' '$<TARGET_OBJECTS:fastinterp_tpl_obj>' "${GENERATED_FILES_DIR}"
   DEPENDS $<TARGET_OBJECTS:fastinterp_tpl_ir> $<TARGET_OBJECTS:fastinterp_tpl_obj> build_fast_interp_lib 
 )

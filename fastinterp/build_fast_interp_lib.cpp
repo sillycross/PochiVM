@@ -5,6 +5,7 @@
 
 #include "runtime_lib_builder/fake_symbol_resolver.h"
 #include "runtime_lib_builder/reflective_stringify_parser.h"
+#include "runtime_lib_builder/symbol_list_util.h"
 
 #include "pochivm/ast_enums.h"
 #include "metavar.h"
@@ -568,11 +569,35 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     }
 }
 
-struct SourceFileInfo
+class SourceFileInfo : NonCopyable, NonMovable
 {
+public:
+    void Setup(const std::string& bc_file_, const std::string& obj_file_, const std::string& generated_folder)
+    {
+        obj_file = obj_file_;
+        bc_file = bc_file_;
+
+        // Figure out generated file names
+        //
+        fwd_h_part_path = obj_file + ".fwd.h.part";
+        lib_h_part_path = obj_file + ".lib.h.part";
+
+        {
+            ReleaseAssert(obj_file.length() > 0);
+            size_t i = obj_file.length() - 1;
+            while (i > 0 && obj_file[i] != '/') i--;
+            ReleaseAssert(obj_file[i] == '/');
+            std::string filename = obj_file.substr(i + 1);
+            ReleaseAssert(filename.length() > 2);
+            ReleaseAssert(filename.substr(filename.length() - 2) == ".o");
+            filename = filename.substr(0, filename.length() - 2);
+            lib_cpp_path = generated_folder + "/" + filename + ".lib.generated.cpp";
+        }
+    }
+
     // multi-thread-safe prepare phase
     //
-    void MTSafePrepare(const std::string& bc_file)
+    void MTSafePrepare()
     {
         SMDiagnostic llvmErr;
         std::unique_ptr<LLVMContext> context(new LLVMContext);
@@ -639,9 +664,11 @@ struct SourceFileInfo
 
     // Not MT safe
     //
-    void ExecuteAndInsertSymbols(std::map<uintptr_t, std::pair<SourceFileInfo*, std::string> >& addrToSymbol,
-                                 std::set<uintptr_t>& hasMultipleSymbolsMappingToThisAddress)
+    void PostProcess()
     {
+        std::map<uintptr_t, std::string> addrToSymbol;
+        std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
+        g_allBoilerplatePacks.clear();
         entryPoint();
         ExitOnError exitOnError;
         for (const std::string& symbol : allDeclarations)
@@ -652,15 +679,672 @@ struct SourceFileInfo
             {
                 hasMultipleSymbolsMappingToThisAddress.insert(addr);
             }
-            addrToSymbol[addr] = std::make_pair(this, symbol);
+            addrToSymbol[addr] = symbol;
         }
+
+        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        {
+            BoilerplatePack& bp = it->second;
+            for (BoilerplateInstance& inst : bp.m_instances)
+            {
+                uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
+                if (hasMultipleSymbolsMappingToThisAddress.count(addr))
+                {
+                    fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
+                                    "in boilerplate for %s. Please report a bug.\n",
+                            it->first.c_str());
+                    abort();
+                }
+                ReleaseAssert(addrToSymbol.count(addr));
+                inst.m_symbolName = addrToSymbol[addr];
+                ReleaseAssert(allDefinitions.count(inst.m_symbolName));
+            }
+        }
+
+        Expected<OwningBinary<Binary>> expectedBinary = createBinary(obj_file);
+        if (!expectedBinary)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Failed to parse object file %s. Please report a bug.\n",
+                    obj_file.c_str());
+            abort();
+        }
+        Binary* binary = expectedBinary.get().getBinary();
+
+        if (!isa<ObjectFile>(binary))
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Object file %s does not seem to be an object file. Please report a bug.\n",
+                    obj_file.c_str());
+            abort();
+        }
+        ObjectFile* obj = dyn_cast<ObjectFile>(binary);
+        ReleaseAssert(obj != nullptr);
+
+        ELFObjectFileBase* elf = dyn_cast<ELFObjectFileBase>(obj);
+        if (elf == nullptr)
+        {
+            fprintf(stderr, "[INTERNAL ERROR] Object file %s is not an ELF object file. Currently only ELF is supported.\n",
+                    obj_file.c_str());
+            abort();
+        }
+
+        std::map<SectionRef, std::vector<RelocationRef>> relocMap = GetRelocationMap(*obj);
+
+        {
+            std::map<std::string, BoilerplateInstance*> symbolToInstance;
+            for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+            {
+                BoilerplatePack& bp = it->second;
+                for (BoilerplateInstance& inst : bp.m_instances)
+                {
+                    ReleaseAssert(!symbolToInstance.count(inst.m_symbolName));
+                    symbolToInstance[inst.m_symbolName] = &inst;
+                }
+            }
+
+            for (auto it = relocMap.begin(); it != relocMap.end(); it++)
+            {
+                SectionRef sec = it->first;
+                if (sec.isText())
+                {
+                    Expected<StringRef> expectedName = sec.getName();
+                    if (!expectedName)
+                    {
+                        fprintf(stderr, "[INTERNAL ERROR] Failed to get a name for a section. Please report a bug.\n");
+                        abort();
+                    }
+                    std::string name = expectedName.get().str();
+                    std::string pref = ".text.";
+                    if (name.length() >= pref.length() && name.substr(0, pref.length()) == pref)
+                    {
+                        std::string symbol = name.substr(pref.length());
+                        if (symbolToInstance.count(symbol))
+                        {
+                            BoilerplateInstance* inst = symbolToInstance[symbol];
+                            if (inst == nullptr)
+                            {
+                                fprintf(stderr, "[INTERNAL ERROR] Unexpected: encountered two sections with same symbol name %s. "
+                                                "Please report a bug.\n", name.c_str());
+                                abort();
+                            }
+                            symbolToInstance[symbol] = nullptr;
+                            inst->m_llvmSectionRef = sec;
+                        }
+                    }
+                }
+            }
+
+            for (auto it = symbolToInstance.begin(); it != symbolToInstance.end(); it++)
+            {
+                if (it->second != nullptr)
+                {
+                    fprintf(stderr, "[INTERNAL ERROR] Unable to locate text section for symbol %s in object file. "
+                                    "Please report a bug.\n", it->first.c_str());
+                    abort();
+                }
+            }
+        }
+
+        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        {
+            BoilerplatePack& bp = it->second;
+            for (BoilerplateInstance& inst : bp.m_instances)
+            {
+                SectionRef sec = inst.m_llvmSectionRef;
+                std::vector<RelocationRef>& relocs = relocMap[sec];
+                for (const RelocationRef& rel : relocs)
+                {
+                    RelocationInfo info = GetRelocationInfo(elf, rel);
+                    inst.m_relocationInfo.push_back(info);
+                }
+            }
+        }
+
+        FILE* fp1 = fopen(fwd_h_part_path.c_str(), "w");
+        if (fp1 == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    fwd_h_part_path.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        FILE* fp2 = fopen(lib_h_part_path.c_str(), "w");
+        if (fp2 == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    lib_h_part_path.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        FILE* fp3 = fopen(lib_cpp_path.c_str(), "w");
+        if (fp3 == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                    lib_cpp_path.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        fprintf(fp3, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
+        fprintf(fp3, "#include \"fastinterp_library.generated.h\"\n\n");
+        fprintf(fp3, "namespace PochiVM {\n\n");
+
+        const std::string lib_varname_prefix = "__pochivm_fastinterp_boilerplate_lib_";
+        const std::string blueprint_varname_prefix = "__pochivm_fastinterp_boilerplate_blueprint_";
+
+        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        {
+            fprintf(fp2, "struct %s;\n", it->first.c_str());
+        }
+        fprintf(fp2, "\n");
+        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        {
+            int blueprint_varname_suffix = 0;
+            std::string midfix = GetUniqueSymbolHash(it->first);
+            BoilerplatePack& bp = it->second;
+            ReleaseAssert(bp.m_instances.size() > 0);
+            for (BoilerplateInstance& inst : bp.m_instances)
+            {
+                SectionRef section = inst.m_llvmSectionRef;
+                uint64_t size = section.getSize();
+                Expected<StringRef> content = section.getContents();
+                if (!content)
+                {
+                    fprintf(stderr, "[INTERNAL ERROR] Failed to get content for section for symbol %s. Please report a bug.\n",
+                            inst.m_symbolName.c_str());
+                    abort();
+                }
+                StringRef& sr = content.get();
+                ReleaseAssert(sr.size() == size);
+                uint8_t* data = new uint8_t[size];
+                Auto(delete [] data);
+                memcpy(data, sr.data(), size);
+
+                for (const RelocationInfo& rinfo : inst.m_relocationInfo)
+                {
+                    // TODO: support more types as we see them.
+                    // Reference: https://refspecs.linuxbase.org/elf/x86_64-abi-0.98.pdf Page 69
+                    //
+                    if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_TPOFF32))
+                    {
+                        fprintf(stderr, "[INTERNAL] Unhandled relocation type %s(%d) in symbol %s. "
+                                        "We haven't taken care of this case. Please report a bug.\n",
+                                rinfo.typeHumanReadableName.c_str(), static_cast<int>(rinfo.type), inst.m_symbolName.c_str());
+                        abort();
+                    }
+
+                    if (rinfo.type == ELF::R_X86_64_PLT32)
+                    {
+                        ReleaseAssert(UnalignedRead<uint32_t>(data + rinfo.offset) == 0);
+                    }
+                    else if (rinfo.type == ELF::R_X86_64_64)
+                    {
+                        ReleaseAssert(UnalignedRead<uint64_t>(data + rinfo.offset) == 0);
+                    }
+                    else if (rinfo.type == ELF::R_X86_64_TPOFF32)
+                    {
+                        if (rinfo.symbol != "__pochivm_thread_fastinterp_context")
+                        {
+                            fprintf(stderr, "Unknown use of thread-local variable in symbol %s, "
+                                            "thread-local variable symbol name = %s\n", inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                            abort();
+                        }
+                    }
+                    else
+                    {
+                        ReleaseAssert(false);
+                    }
+                }
+
+                std::vector<uint32_t> minusAddrOffsets32;
+                std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64, tpoff32List;
+                uint32_t highestBPFPOrdinal = 0;
+                uint32_t highestCFPOrdinal = 0;
+                uint32_t highestU64Ordinal = 0;
+                uint64_t usedBpfpMask = 0;
+                uint64_t usedCfpMask = 0;
+                uint64_t usedU64Mask = 0;
+                for (const RelocationInfo& rinfo : inst.m_relocationInfo)
+                {
+                    ReleaseAssert(rinfo.offset < size);
+                    if (rinfo.type == ELF::R_X86_64_PLT32)
+                    {
+                        ReleaseAssert(rinfo.offset + 4 <= size);
+                        uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(rinfo.offset)));
+                        uint32_t addend2 = static_cast<uint32_t>(static_cast<uint64_t>(rinfo.addend));
+                        addend += addend2;
+                        UnalignedAddAndWriteback<uint32_t>(data + rinfo.offset, addend);
+                        minusAddrOffsets32.push_back(static_cast<uint32_t>(rinfo.offset));
+                    }
+                    else if (rinfo.type == ELF::R_X86_64_64)
+                    {
+                        ReleaseAssert(rinfo.offset + 8 <= size);
+                        uint64_t addend = static_cast<uint64_t>(rinfo.addend);
+                        UnalignedAddAndWriteback<uint64_t>(data + rinfo.offset, addend);
+                    }
+                    else if (rinfo.type == ELF::R_X86_64_TPOFF32)
+                    {
+                        tpoff32List.push_back(std::make_pair(rinfo.offset, 0 /*ordinal*/));
+                        continue;
+                    }
+                    else
+                    {
+                        ReleaseAssert(false);
+                    }
+
+                    uint32_t ord;
+                    if (IsBoilerplateFnPtrPlaceholder(rinfo.symbol, ord /*out*/))
+                    {
+                        ReleaseAssert(ord < 64);
+                        highestBPFPOrdinal = std::max(highestBPFPOrdinal, ord + 1);
+                        if (rinfo.type == ELF::R_X86_64_PLT32)
+                        {
+                            bpfpList32.push_back(std::make_pair(rinfo.offset, ord));
+                        }
+                        else if (rinfo.type == ELF::R_X86_64_64)
+                        {
+                            bpfpList64.push_back(std::make_pair(rinfo.offset, ord));
+                        }
+                        else
+                        {
+                            ReleaseAssert(false);
+                        }
+                        usedBpfpMask |= (1ULL << ord);
+                    }
+                    else if (IsCppFnPtrPlaceholder(rinfo.symbol, ord /*out*/))
+                    {
+                        ReleaseAssert(ord < 64);
+                        highestCFPOrdinal = std::max(highestCFPOrdinal, ord + 1);
+                        ReleaseAssert(rinfo.type == ELF::R_X86_64_64);
+                        cfpList64.push_back(std::make_pair(rinfo.offset, ord));
+                        usedCfpMask |= (1ULL << ord);
+                    }
+                    else if (IsU64Placeholder(rinfo.symbol, ord /*out*/))
+                    {
+                        ReleaseAssert(ord < 64);
+                        highestU64Ordinal = std::max(highestU64Ordinal, ord + 1);
+                        ReleaseAssert(rinfo.type == ELF::R_X86_64_64);
+                        u64List64.push_back(std::make_pair(rinfo.offset, ord));
+                        usedU64Mask |= (1ULL << ord);
+                    }
+                    else
+                    {
+                        // TODO: handle external symbols
+                        fprintf(stderr, "%s %s\n", rinfo.typeHumanReadableName.c_str(), rinfo.symbol.c_str());
+                        ReleaseAssert(false);
+                    }
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : cfpList64)
+                {
+                    p.second += highestBPFPOrdinal;
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : u64List64)
+                {
+                    p.second += highestBPFPOrdinal + highestCFPOrdinal;
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : bpfpList32)
+                {
+                    allList32.push_back(p);
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : bpfpList64)
+                {
+                    allList64.push_back(p);
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : cfpList64)
+                {
+                    allList64.push_back(p);
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : u64List64)
+                {
+                    allList64.push_back(p);
+                }
+
+                std::sort(allList32.begin(), allList32.end());
+                std::sort(allList64.begin(), allList64.end());
+                std::sort(minusAddrOffsets32.begin(), minusAddrOffsets32.end());
+
+                int usedCfpOrdinalCnt = 0;
+                std::vector<int> cfpOrdinalMap;
+                cfpOrdinalMap.resize(highestCFPOrdinal);
+                for (uint32_t i = 0; i < highestCFPOrdinal; i++)
+                {
+                    if ((usedCfpMask & (1ULL <<i)) > 0)
+                    {
+                        cfpOrdinalMap[i] = usedCfpOrdinalCnt;
+                        usedCfpOrdinalCnt++;
+                    }
+                    else
+                    {
+                        cfpOrdinalMap[i] = -1;
+                    }
+                }
+
+                fprintf(fp3, "static uint8_t %s%s_%d_contents[%d] = {\n",
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
+                for (size_t i = 0; i < size; i++)
+                {
+                    fprintf(fp3, "%d", static_cast<int>(data[i]));
+                    if (i + 1 < size) {
+                        fprintf(fp3, ", ");
+                    }
+                    if (i % 16 == 15) {
+                        fprintf(fp3, "\n");
+                    }
+                }
+                fprintf(fp3, "\n};\n");
+
+                ReleaseAssert(size < (1ULL << 31));
+                fprintf(fp3, "constexpr uint32_t %s%s_%d_contentLength = %d;\n",
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
+
+                // Do startup-time fixup of external symbols
+                // In the same translational unit, global initializers are executed in the same order they are declared.
+                // (across translational unit there is no guarantee in initialization order)
+                // So it is important to put this initializer in the same CPP file as the "contents" array, and after the array,
+                // so at the time this global initializer is executed, the array is already initialized.
+                //
+                if (tpoff32List.size() > 0)
+                {
+                    fprintf(fp3, "static FastInterpInitFixupThreadLocalHelper __pochivm_fastinterp_internal_fixup_thread_local_%s_%d(\n",
+                            midfix.c_str(), blueprint_varname_suffix);
+                    fprintf(fp3, "    %s%s_%d_contents /*contentArray*/,\n", blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix);
+                    fprintf(fp3, "    %s%s_%d_contentLength /*contentArrayLength*/,\n", blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix);
+                    fprintf(fp3, "    std::array<size_t, %d>{\n", static_cast<int>(tpoff32List.size()));
+                    fprintf(fp3, "        ");
+                    for (size_t i = 0; i < tpoff32List.size(); i++)
+                    {
+                        fprintf(fp3, "%d", static_cast<int>(tpoff32List[i].first));
+                        if (i + 1 < tpoff32List.size()) {
+                            fprintf(fp3, ", ");
+                            if (i % 8 == 0) {
+                                fprintf(fp3, "\n        ");
+                            }
+                        }
+                    }
+                    fprintf(fp3, "\n    } /*fixupSites*/);\n");
+                }
+
+                fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d> %s%s_%d(\n",
+                        static_cast<int>(minusAddrOffsets32.size()),
+                        static_cast<int>(allList32.size()),
+                        static_cast<int>(allList64.size()),
+                        static_cast<int>(highestCFPOrdinal),
+                        blueprint_varname_prefix.c_str(),
+                        midfix.c_str(),
+                        blueprint_varname_suffix);
+                fprintf(fp3, "%s%s_%d_contents /*contents*/,\n", blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix);
+                fprintf(fp3, "%s%s_%d_contentLength /*contentLength*/,\n", blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix);
+
+                fprintf(fp3, "std::array<uint32_t, %d>{", static_cast<int>(minusAddrOffsets32.size()));
+                for (size_t i = 0; i < minusAddrOffsets32.size(); i++)
+                {
+                    fprintf(fp3, "%d", static_cast<int>(minusAddrOffsets32[i]));
+                    if (i + 1 < minusAddrOffsets32.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                }
+                fprintf(fp3, "} /*addr32FixupArray*/,\n");
+
+                fprintf(fp3, "std::array<FastInterpSymbolFixupRecord, %d>{", static_cast<int>(allList32.size()));
+                for (size_t i = 0; i < allList32.size(); i++)
+                {
+                    fprintf(fp3, "FastInterpSymbolFixupRecord{%d, %d}", static_cast<int>(allList32[i].first), static_cast<int>(allList32[i].second));
+                    if (i + 1 < allList32.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                    fprintf(fp3, "\n");
+                }
+                fprintf(fp3, "} /*symbol32FixupArray*/,\n");
+
+                fprintf(fp3, "std::array<FastInterpSymbolFixupRecord, %d>{", static_cast<int>(allList64.size()));
+                for (size_t i = 0; i < allList64.size(); i++)
+                {
+                    fprintf(fp3, "FastInterpSymbolFixupRecord{%d, %d}", static_cast<int>(allList64[i].first), static_cast<int>(allList64[i].second));
+                    if (i + 1 < allList64.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                    fprintf(fp3, "\n");
+                }
+                fprintf(fp3, "} /*symbol64FixupArray*/,\n");
+
+                fprintf(fp3, "%d /*highestBoilerplateFnptrPlaceholderOrdinal*/,\n", static_cast<int>(highestBPFPOrdinal));
+                fprintf(fp3, "%d /*highestUInt64PlaceholderOrdinal*/,\n", static_cast<int>(highestU64Ordinal));
+                fprintf(fp3, "%d /*numCppFnPtrPlaceholders*/,\n", static_cast<int>(usedCfpOrdinalCnt));
+
+                fprintf(fp3, "std::array<uint16_t, %d>{", static_cast<int>(cfpOrdinalMap.size()));
+                for (size_t i = 0; i < cfpOrdinalMap.size(); i++)
+                {
+                    fprintf(fp3, "static_cast<uint16_t>(%d)", static_cast<int>(cfpOrdinalMap[i]));
+                    if (i + 1 < cfpOrdinalMap.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                }
+                fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/\n");
+
+                fprintf(fp3, "#ifdef TESTBUILD\n");
+                fprintf(fp3, ", %lluULL /*usedBoilerplateFnPtrPlaceholderMask*/\n", static_cast<unsigned long long>(usedBpfpMask));
+                fprintf(fp3, ", %lluULL /*usedCppFnptrPlaceholderMask*/\n", static_cast<unsigned long long>(usedCfpMask));
+                fprintf(fp3, ", %lluULL /*usedUInt64PlaceholderMask*/\n", static_cast<unsigned long long>(usedU64Mask));
+                fprintf(fp3, ", \"%s\" /*symbolName*/\n", inst.m_symbolName.c_str());
+                fprintf(fp3, "#endif\n");
+                fprintf(fp3, ");\n\n");
+
+                blueprint_varname_suffix++;
+            }
+            ReleaseAssert(static_cast<int>(bp.m_instances.size()) == blueprint_varname_suffix);
+
+            size_t n = bp.m_params.size();
+            if (n == 0)
+            {
+                // TODO: handle
+                ReleaseAssert(false);
+            }
+            else
+            {
+                CuckooHashTable ht = GetCuckooHashTable(n, bp.m_instances);
+                fprintf(fp1, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s;\n",
+                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
+
+                fprintf(fp3, "constexpr FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s(\n",
+                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
+                fprintf(fp3, "std::array<uint32_t, %d> {", static_cast<int>(n * 3));
+                ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n && ht.h3.size() == n);
+                for (size_t i = 0; i < ht.h1.size(); i++)
+                {
+                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h1[i]));
+                    fprintf(fp3, ", ");
+                }
+                for (size_t i = 0; i < ht.h2.size(); i++)
+                {
+                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h2[i]));
+                    fprintf(fp3, ", ");
+                }
+                for (size_t i = 0; i < ht.h3.size(); i++)
+                {
+                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h3[i]));
+                    if (i + 1 < ht.h3.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                }
+                fprintf(fp3, "} /*hashfns*/,\n");
+                fprintf(fp3, "std::array<FastInterpBoilerplateSelectionHashTableEntry, %d> {\n", static_cast<int>(ht.ht.size()));
+                for (size_t i = 0; i < ht.ht.size(); i++)
+                {
+                    fprintf(fp3, "FastInterpBoilerplateSelectionHashTableEntry {");
+                    if (ht.ht[i].first == static_cast<uint32_t>(-1))
+                    {
+                        fprintf(fp3, "nullptr");
+                    }
+                    else
+                    {
+                        fprintf(fp3, "&%s%s_%d", blueprint_varname_prefix.c_str(), midfix.c_str(), static_cast<int>(ht.ht[i].first));
+                    }
+                    fprintf(fp3, ", %lluULL }", static_cast<unsigned long long>(ht.ht[i].second));
+                    if (i + 1 < ht.ht.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                    fprintf(fp3, "\n");
+                }
+                fprintf(fp3, "} /*hashtable*/\n");
+                fprintf(fp3, "#ifdef TESTBUILD\n");
+                fprintf(fp3, ", std::array<uint64_t, %d> {", static_cast<int>(n * ht.ht.size()));
+                ReleaseAssert(ht.ht.size() == ht.trueEntries.size());
+                {
+                    int cnt = 0;
+                    for (size_t i = 0; i < ht.trueEntries.size(); i++)
+                    {
+                        ReleaseAssert(ht.trueEntries[i].size() == n);
+                        for (size_t j = 0; j < n; j++)
+                        {
+                            fprintf(fp3, "%lluULL", static_cast<unsigned long long>(ht.trueEntries[i][j]));
+                            if (i + 1 < ht.trueEntries.size() || j + 1 < n)
+                            {
+                                fprintf(fp3, ", ");
+                            }
+                            cnt++;
+                            if (cnt % 16 == 15)
+                            {
+                                fprintf(fp3, "\n");
+                            }
+                        }
+                    }
+                }
+                fprintf(fp3, "\n} /*trueEntries*/\n");
+                fprintf(fp3, "#endif\n");
+                fprintf(fp3, ");\n\n");
+
+                fprintf(fp2, "template<>\nstruct FastInterpBoilerplateLibrary<%s>\n{\n",
+                        it->first.c_str());
+                fprintf(fp2, "    static const FastInterpBoilerplateBluePrint* SelectBoilerplateBluePrint(\n");
+                for (size_t i = 0; i < bp.m_params.size(); i++)
+                {
+                    BoilerplateParam param = bp.m_params[i];
+                    fprintf(fp2, "        %s %s", param.m_typename.c_str(), param.m_name.c_str());
+                    if (i + 1 < bp.m_params.size())
+                    {
+                        fprintf(fp2, ",");
+                    }
+                    else
+                    {
+                        fprintf(fp2, ")");
+                    }
+                    fprintf(fp2, "\n");
+                }
+                fprintf(fp2, "    {\n");
+                fprintf(fp2, "        return %s%s.SelectBoilerplateBluePrint(std::array<uint64_t, %d> {\n",
+                        lib_varname_prefix.c_str(), midfix.c_str(), static_cast<int>(n));
+                for (size_t i = 0; i < bp.m_params.size(); i++)
+                {
+                    BoilerplateParam param = bp.m_params[i];
+                    if (param.m_type == PochiVM::MetaVarType::PRIMITIVE_TYPE)
+                    {
+                        fprintf(fp2, "            %s.GetTypeId().value", param.m_name.c_str());
+                    }
+                    else
+                    {
+                        fprintf(fp2, "            static_cast<uint64_t>(%s)", param.m_name.c_str());
+                    }
+                    if (i + 1 < bp.m_params.size())
+                    {
+                        fprintf(fp2, ",");
+                    }
+                    fprintf(fp2, "\n");
+                }
+                fprintf(fp2, "        });\n");
+                fprintf(fp2, "    }\n");
+                fprintf(fp2, "};\n\n");
+            }
+        }
+
+        fprintf(fp3, "} // namespace PochiVM \n\n");
+
+        fclose(fp1);
+        fclose(fp2);
+        fclose(fp3);
     }
 
     std::set<std::string> allDefinitions, allDeclarations;
     std::unique_ptr<LLJIT> J;
     using FnPrototype = void(*)(void);
     FnPrototype entryPoint;
+    std::string bc_file;
+    std::string obj_file;
+    std::string fwd_h_part_path;
+    std::string lib_h_part_path;
+    std::string lib_cpp_path;
 };
+
+void AppendFileContent(FILE* fpOut, const std::string& path)
+{
+    size_t size;
+    uint8_t* data = nullptr;
+    {
+        struct stat st;
+        if (stat(path.c_str(), &st) != 0)
+        {
+            fprintf(stderr, "Failed to access file '%s' for file size, errno = %d (%s)\n",
+                    path.c_str(), errno, strerror(errno));
+            abort();
+        }
+        size = static_cast<size_t>(st.st_size);
+
+        // one more char for the trailing '\0'
+        //
+        data = new uint8_t[size + 1];
+
+        FILE* fp = fopen(path.c_str(), "r");
+        if (fp == nullptr)
+        {
+            fprintf(stderr, "Failed to open file '%s' for read, errno = %d (%s)\n",
+                    path.c_str(), errno, strerror(errno));
+            abort();
+        }
+
+        size_t bytesRead = fread(data, sizeof(uint8_t), size, fp);
+        ReleaseAssert(bytesRead == size);
+        data[size] = 0;
+
+        {
+            // just to sanity check we have reached eof
+            //
+            uint8_t _c;
+            ReleaseAssert(fread(&_c, sizeof(uint8_t), 1 /*numElements*/, fp) == 0);
+            ReleaseAssert(feof(fp));
+        }
+
+        fclose(fp);
+    }
+
+    ReleaseAssert(data != nullptr);
+    Auto(delete [] data);
+
+    size_t written = fwrite(data, 1 /*elementSize*/, size, fpOut);
+    ReleaseAssert(written == size);
+}
+
+std::vector<std::string> ProcessFileList(std::string fileList)
+{
+    std::vector<std::string> out;
+    size_t curPos = 0;
+    while (true)
+    {
+        size_t nextPos = fileList.find(";", curPos);
+        if (nextPos == std::string::npos)
+        {
+            ReleaseAssert(curPos < fileList.length());
+            out.push_back(fileList.substr(curPos));
+            break;
+        }
+        ReleaseAssert(curPos < nextPos);
+        out.push_back(fileList.substr(curPos, nextPos - curPos));
+        curPos = nextPos + 1;
+    }
+    return out;
+}
 
 }   // anonymous namespace
 
@@ -671,167 +1355,49 @@ int main(int argc, char** argv)
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
 
-    // params: [bc_file] [obj_file] [generated_header_dir]
+    // params: [bc_files] [obj_files] [generated_header_dir]
 
     ReleaseAssert(argc == 4);
-    std::string bc_file = argv[1];
-    std::string obj_file = argv[2];
+    std::string bc_files = argv[1];
+    std::string obj_files = argv[2];
     std::string output_dir = argv[3];
 
-    ReleaseAssert(bc_file.find(";") == std::string::npos);
-    ReleaseAssert(obj_file.find(";") == std::string::npos);
+    std::vector<std::string> allBcFiles = ProcessFileList(bc_files);
+    std::vector<std::string> allObjFiles = ProcessFileList(obj_files);
 
-    SourceFileInfo sfi;
-    sfi.MTSafePrepare(bc_file);
+    ReleaseAssert(allBcFiles.size() == allObjFiles.size());
 
-    // Match the function address with the symbol name
-    //
-    std::map<uintptr_t, std::pair<SourceFileInfo*, std::string> > addrToSymbol;
-    std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
-
-    sfi.ExecuteAndInsertSymbols(addrToSymbol, hasMultipleSymbolsMappingToThisAddress);
-
-    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+    std::vector<SourceFileInfo*> sfiList;
+    for (size_t i = 0; i < allBcFiles.size(); i++)
     {
-        BoilerplatePack& bp = it->second;
-        for (BoilerplateInstance& inst : bp.m_instances)
-        {
-            uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
-            if (hasMultipleSymbolsMappingToThisAddress.count(addr))
-            {
-                fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
-                                "in boilerplate for %s. Please report a bug.\n",
-                        it->first.c_str());
-                abort();
-            }
-            ReleaseAssert(addrToSymbol.count(addr));
-            inst.m_symbolName = addrToSymbol[addr].second;
-            ReleaseAssert(addrToSymbol[addr].first->allDefinitions.count(inst.m_symbolName));
-        }
+        SourceFileInfo* sfi = new SourceFileInfo;
+        sfi->Setup(allBcFiles[i], allObjFiles[i], output_dir);
+        sfiList.push_back(sfi);
     }
 
-    Expected<OwningBinary<Binary>> expectedBinary = createBinary(obj_file);
-    if (!expectedBinary)
+    for (SourceFileInfo* sfi : sfiList)
     {
-        fprintf(stderr, "[INTERNAL ERROR] Failed to parse object file %s. Please report a bug.\n",
-                obj_file.c_str());
-        abort();
-    }
-    Binary* binary = expectedBinary.get().getBinary();
-
-    if (!isa<ObjectFile>(binary))
-    {
-        fprintf(stderr, "[INTERNAL ERROR] Object file %s does not seem to be an object file. Please report a bug.\n",
-                obj_file.c_str());
-        abort();
-    }
-    ObjectFile* obj = dyn_cast<ObjectFile>(binary);
-    ReleaseAssert(obj != nullptr);
-
-    ELFObjectFileBase* elf = dyn_cast<ELFObjectFileBase>(obj);
-    if (elf == nullptr)
-    {
-        fprintf(stderr, "[INTERNAL ERROR] Object file %s is not an ELF object file. Currently only ELF is supported.\n",
-                obj_file.c_str());
-        abort();
-    }
-
-    std::map<SectionRef, std::vector<RelocationRef>> relocMap = GetRelocationMap(*obj);
-
-    {
-        std::map<std::string, BoilerplateInstance*> symbolToInstance;
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
-        {
-            BoilerplatePack& bp = it->second;
-            for (BoilerplateInstance& inst : bp.m_instances)
-            {
-                ReleaseAssert(!symbolToInstance.count(inst.m_symbolName));
-                symbolToInstance[inst.m_symbolName] = &inst;
-            }
-        }
-
-        for (auto it = relocMap.begin(); it != relocMap.end(); it++)
-        {
-            SectionRef sec = it->first;
-            if (sec.isText())
-            {
-                Expected<StringRef> expectedName = sec.getName();
-                if (!expectedName)
-                {
-                    fprintf(stderr, "[INTERNAL ERROR] Failed to get a name for a section. Please report a bug.\n");
-                    abort();
-                }
-                std::string name = expectedName.get().str();
-                std::string pref = ".text.";
-                if (name.length() >= pref.length() && name.substr(0, pref.length()) == pref)
-                {
-                    std::string symbol = name.substr(pref.length());
-                    if (symbolToInstance.count(symbol))
-                    {
-                        BoilerplateInstance* inst = symbolToInstance[symbol];
-                        if (inst == nullptr)
-                        {
-                            fprintf(stderr, "[INTERNAL ERROR] Unexpected: encountered two sections with same symbol name %s. "
-                                            "Please report a bug.\n", name.c_str());
-                            abort();
-                        }
-                        symbolToInstance[symbol] = nullptr;
-                        inst->m_llvmSectionRef = sec;
-                    }
-                }
-            }
-        }
-
-        for (auto it = symbolToInstance.begin(); it != symbolToInstance.end(); it++)
-        {
-            if (it->second != nullptr)
-            {
-                fprintf(stderr, "[INTERNAL ERROR] Unable to locate text section for symbol %s in object file. "
-                                "Please report a bug.\n", it->first.c_str());
-                abort();
-            }
-        }
-    }
-
-    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
-    {
-        BoilerplatePack& bp = it->second;
-        for (BoilerplateInstance& inst : bp.m_instances)
-        {
-            SectionRef sec = inst.m_llvmSectionRef;
-            std::vector<RelocationRef>& relocs = relocMap[sec];
-            for (const RelocationRef& rel : relocs)
-            {
-                RelocationInfo info = GetRelocationInfo(elf, rel);
-                inst.m_relocationInfo.push_back(info);
-            }
-        }
+        sfi->MTSafePrepare();
+        sfi->PostProcess();
     }
 
     std::string output1_name = output_dir + "/fastinterp_fwd_declarations.generated.h";
-    FILE* fp1 = fopen(output1_name.c_str(), "w");
+    std::string output1_tmp_name = output1_name + ".tmp";
+    FILE* fp1 = fopen(output1_tmp_name.c_str(), "w");
     if (fp1 == nullptr)
     {
         fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                output1_name.c_str(), errno, strerror(errno));
+                output1_tmp_name.c_str(), errno, strerror(errno));
         abort();
     }
 
     std::string output2_name = output_dir + "/fastinterp_library.generated.h";
-    FILE* fp2 = fopen(output2_name.c_str(), "w");
+    std::string output2_tmp_name = output2_name + ".tmp";
+    FILE* fp2 = fopen(output2_tmp_name.c_str(), "w");
     if (fp2 == nullptr)
     {
         fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                output2_name.c_str(), errno, strerror(errno));
-        abort();
-    }
-
-    std::string output3_name = output_dir + "/fastinterp_library.generated.cpp";
-    FILE* fp3 = fopen(output3_name.c_str(), "w");
-    if (fp3 == nullptr)
-    {
-        fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
-                output3_name.c_str(), errno, strerror(errno));
+                output2_tmp_name.c_str(), errno, strerror(errno));
         abort();
     }
 
@@ -846,452 +1412,41 @@ int main(int argc, char** argv)
     fprintf(fp2, "template<typename T>\n");
     fprintf(fp2, "struct FastInterpBoilerplateLibrary;    // unspecialized class intentionally undefined\n\n");
 
-    fprintf(fp3, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
-    fprintf(fp3, "#include \"fastinterp_library.generated.h\"\n\n");
-    fprintf(fp3, "namespace PochiVM {\n\n");
-
-    const std::string lib_varname_prefix = "__pochivm_fastinterp_boilerplate_lib_";
-    const std::string blueprint_varname_prefix = "__pochivm_fastinterp_boilerplate_blueprint_";
-    int blueprint_varname_suffix = 0;
-    int lib_varname_suffix = 0;
-
-    fprintf(fp2, "// Declarations of the library index types. We only need the typename as an index into the library, no definitions needed\n//\n");
-    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+    for (SourceFileInfo* sfi : sfiList)
     {
-        fprintf(fp2, "struct %s;\n", it->first.c_str());
-    }
-    fprintf(fp2, "\n");
-    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
-    {
-        BoilerplatePack& bp = it->second;
-        ReleaseAssert(bp.m_instances.size() > 0);
-        int begin_suffix = blueprint_varname_suffix;
-        for (BoilerplateInstance& inst : bp.m_instances)
-        {
-            SectionRef section = inst.m_llvmSectionRef;
-            uint64_t size = section.getSize();
-            Expected<StringRef> content = section.getContents();
-            if (!content)
-            {
-                fprintf(stderr, "[INTERNAL ERROR] Failed to get content for section for symbol %s. Please report a bug.\n",
-                        inst.m_symbolName.c_str());
-                abort();
-            }
-            StringRef& sr = content.get();
-            ReleaseAssert(sr.size() == size);
-            uint8_t* data = new uint8_t[size];
-            Auto(delete [] data);
-            memcpy(data, sr.data(), size);
-
-            for (const RelocationInfo& rinfo : inst.m_relocationInfo)
-            {
-                // TODO: support more types as we see them.
-                // Reference: https://refspecs.linuxbase.org/elf/x86_64-abi-0.98.pdf Page 69
-                //
-                if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_TPOFF32))
-                {
-                    fprintf(stderr, "[INTERNAL] Unhandled relocation type %s(%d) in symbol %s. "
-                                    "We haven't taken care of this case. Please report a bug.\n",
-                            rinfo.typeHumanReadableName.c_str(), static_cast<int>(rinfo.type), inst.m_symbolName.c_str());
-                    abort();
-                }
-
-                if (rinfo.type == ELF::R_X86_64_PLT32)
-                {
-                    ReleaseAssert(UnalignedRead<uint32_t>(data + rinfo.offset) == 0);
-                }
-                else if (rinfo.type == ELF::R_X86_64_64)
-                {
-                    ReleaseAssert(UnalignedRead<uint64_t>(data + rinfo.offset) == 0);
-                }
-                else if (rinfo.type == ELF::R_X86_64_TPOFF32)
-                {
-                    if (rinfo.symbol != "__pochivm_thread_fastinterp_context")
-                    {
-                        fprintf(stderr, "Unknown use of thread-local variable in symbol %s, "
-                                        "thread-local variable symbol name = %s\n", inst.m_symbolName.c_str(), rinfo.symbol.c_str());
-                        abort();
-                    }
-                }
-                else
-                {
-                    ReleaseAssert(false);
-                }
-            }
-
-            std::vector<uint32_t> minusAddrOffsets32;
-            std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64, tpoff32List;
-            uint32_t highestBPFPOrdinal = 0;
-            uint32_t highestCFPOrdinal = 0;
-            uint32_t highestU64Ordinal = 0;
-            uint64_t usedBpfpMask = 0;
-            uint64_t usedCfpMask = 0;
-            uint64_t usedU64Mask = 0;
-            for (const RelocationInfo& rinfo : inst.m_relocationInfo)
-            {
-                ReleaseAssert(rinfo.offset < size);
-                if (rinfo.type == ELF::R_X86_64_PLT32)
-                {
-                    ReleaseAssert(rinfo.offset + 4 <= size);
-                    uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(rinfo.offset)));
-                    uint32_t addend2 = static_cast<uint32_t>(static_cast<uint64_t>(rinfo.addend));
-                    addend += addend2;
-                    UnalignedAddAndWriteback<uint32_t>(data + rinfo.offset, addend);
-                    minusAddrOffsets32.push_back(static_cast<uint32_t>(rinfo.offset));
-                }
-                else if (rinfo.type == ELF::R_X86_64_64)
-                {
-                    ReleaseAssert(rinfo.offset + 8 <= size);
-                    uint64_t addend = static_cast<uint64_t>(rinfo.addend);
-                    UnalignedAddAndWriteback<uint64_t>(data + rinfo.offset, addend);
-                }
-                else if (rinfo.type == ELF::R_X86_64_TPOFF32)
-                {
-                    tpoff32List.push_back(std::make_pair(rinfo.offset, 0 /*ordinal*/));
-                    continue;
-                }
-                else
-                {
-                    ReleaseAssert(false);
-                }
-
-                uint32_t ord;
-                if (IsBoilerplateFnPtrPlaceholder(rinfo.symbol, ord /*out*/))
-                {
-                    ReleaseAssert(ord < 64);
-                    highestBPFPOrdinal = std::max(highestBPFPOrdinal, ord + 1);
-                    if (rinfo.type == ELF::R_X86_64_PLT32)
-                    {
-                        bpfpList32.push_back(std::make_pair(rinfo.offset, ord));
-                    }
-                    else if (rinfo.type == ELF::R_X86_64_64)
-                    {
-                        bpfpList64.push_back(std::make_pair(rinfo.offset, ord));
-                    }
-                    else
-                    {
-                        ReleaseAssert(false);
-                    }
-                    usedBpfpMask |= (1ULL << ord);
-                }
-                else if (IsCppFnPtrPlaceholder(rinfo.symbol, ord /*out*/))
-                {
-                    ReleaseAssert(ord < 64);
-                    highestCFPOrdinal = std::max(highestCFPOrdinal, ord + 1);
-                    ReleaseAssert(rinfo.type == ELF::R_X86_64_64);
-                    cfpList64.push_back(std::make_pair(rinfo.offset, ord));
-                    usedCfpMask |= (1ULL << ord);
-                }
-                else if (IsU64Placeholder(rinfo.symbol, ord /*out*/))
-                {
-                    ReleaseAssert(ord < 64);
-                    highestU64Ordinal = std::max(highestU64Ordinal, ord + 1);
-                    ReleaseAssert(rinfo.type == ELF::R_X86_64_64);
-                    u64List64.push_back(std::make_pair(rinfo.offset, ord));
-                    usedU64Mask |= (1ULL << ord);
-                }
-                else
-                {
-                    // TODO: handle external symbols
-                    fprintf(stderr, "%s %s\n", rinfo.typeHumanReadableName.c_str(), rinfo.symbol.c_str());
-                    ReleaseAssert(false);
-                }
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : cfpList64)
-            {
-                p.second += highestBPFPOrdinal;
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : u64List64)
-            {
-                p.second += highestBPFPOrdinal + highestCFPOrdinal;
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : bpfpList32)
-            {
-                allList32.push_back(p);
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : bpfpList64)
-            {
-                allList64.push_back(p);
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : cfpList64)
-            {
-                allList64.push_back(p);
-            }
-
-            for (std::pair<uint32_t, uint32_t>& p : u64List64)
-            {
-                allList64.push_back(p);
-            }
-
-            std::sort(allList32.begin(), allList32.end());
-            std::sort(allList64.begin(), allList64.end());
-            std::sort(minusAddrOffsets32.begin(), minusAddrOffsets32.end());
-
-            int usedCfpOrdinalCnt = 0;
-            std::vector<int> cfpOrdinalMap;
-            cfpOrdinalMap.resize(highestCFPOrdinal);
-            for (uint32_t i = 0; i < highestCFPOrdinal; i++)
-            {
-                if ((usedCfpMask & (1ULL <<i)) > 0)
-                {
-                    cfpOrdinalMap[i] = usedCfpOrdinalCnt;
-                    usedCfpOrdinalCnt++;
-                }
-                else
-                {
-                    cfpOrdinalMap[i] = -1;
-                }
-            }
-
-            fprintf(fp3, "static uint8_t %s%d_contents[%d] = {\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix,
-                    static_cast<int>(size));
-            for (size_t i = 0; i < size; i++)
-            {
-                fprintf(fp3, "%d", static_cast<int>(data[i]));
-                if (i + 1 < size) {
-                    fprintf(fp3, ", ");
-                }
-                if (i % 16 == 15) {
-                    fprintf(fp3, "\n");
-                }
-            }
-            fprintf(fp3, "\n};\n");
-
-            ReleaseAssert(size < (1ULL << 31));
-            fprintf(fp3, "constexpr uint32_t %s%d_contentLength = %d;\n",
-                    blueprint_varname_prefix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
-
-            // Do startup-time fixup of external symbols
-            // In the same translational unit, global initializers are executed in the same order they are declared.
-            // (across translational unit there is no guarantee in initialization order)
-            // So it is important to put this initializer in the same CPP file as the "contents" array, and after the array,
-            // so at the time this global initializer is executed, the array is already initialized.
-            //
-            if (tpoff32List.size() > 0)
-            {
-                fprintf(fp3, "static FastInterpInitFixupThreadLocalHelper __pochivm_fastinterp_internal_fixup_thread_local_%d(\n", blueprint_varname_suffix);
-                fprintf(fp3, "    %s%d_contents /*contentArray*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
-                fprintf(fp3, "    %s%d_contentLength /*contentArrayLength*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
-                fprintf(fp3, "    std::array<size_t, %d>{\n", static_cast<int>(tpoff32List.size()));
-                fprintf(fp3, "        ");
-                for (size_t i = 0; i < tpoff32List.size(); i++)
-                {
-                    fprintf(fp3, "%d", static_cast<int>(tpoff32List[i].first));
-                    if (i + 1 < tpoff32List.size()) {
-                        fprintf(fp3, ", ");
-                        if (i % 8 == 0) {
-                            fprintf(fp3, "\n        ");
-                        }
-                    }
-                }
-                fprintf(fp3, "\n    } /*fixupSites*/);\n");
-            }
-
-            fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d> %s%d(\n",
-                    static_cast<int>(minusAddrOffsets32.size()),
-                    static_cast<int>(allList32.size()),
-                    static_cast<int>(allList64.size()),
-                    static_cast<int>(highestCFPOrdinal),
-                    blueprint_varname_prefix.c_str(),
-                    blueprint_varname_suffix);
-            fprintf(fp3, "%s%d_contents /*contents*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
-            fprintf(fp3, "%s%d_contentLength /*contentLength*/,\n", blueprint_varname_prefix.c_str(), blueprint_varname_suffix);
-
-            fprintf(fp3, "std::array<uint32_t, %d>{", static_cast<int>(minusAddrOffsets32.size()));
-            for (size_t i = 0; i < minusAddrOffsets32.size(); i++)
-            {
-                fprintf(fp3, "%d", static_cast<int>(minusAddrOffsets32[i]));
-                if (i + 1 < minusAddrOffsets32.size()) {
-                    fprintf(fp3, ", ");
-                }
-            }
-            fprintf(fp3, "} /*addr32FixupArray*/,\n");
-
-            fprintf(fp3, "std::array<FastInterpSymbolFixupRecord, %d>{", static_cast<int>(allList32.size()));
-            for (size_t i = 0; i < allList32.size(); i++)
-            {
-                fprintf(fp3, "FastInterpSymbolFixupRecord{%d, %d}", static_cast<int>(allList32[i].first), static_cast<int>(allList32[i].second));
-                if (i + 1 < allList32.size()) {
-                    fprintf(fp3, ", ");
-                }
-                fprintf(fp3, "\n");
-            }
-            fprintf(fp3, "} /*symbol32FixupArray*/,\n");
-
-            fprintf(fp3, "std::array<FastInterpSymbolFixupRecord, %d>{", static_cast<int>(allList64.size()));
-            for (size_t i = 0; i < allList64.size(); i++)
-            {
-                fprintf(fp3, "FastInterpSymbolFixupRecord{%d, %d}", static_cast<int>(allList64[i].first), static_cast<int>(allList64[i].second));
-                if (i + 1 < allList64.size()) {
-                    fprintf(fp3, ", ");
-                }
-                fprintf(fp3, "\n");
-            }
-            fprintf(fp3, "} /*symbol64FixupArray*/,\n");
-
-            fprintf(fp3, "%d /*highestBoilerplateFnptrPlaceholderOrdinal*/,\n", static_cast<int>(highestBPFPOrdinal));
-            fprintf(fp3, "%d /*highestUInt64PlaceholderOrdinal*/,\n", static_cast<int>(highestU64Ordinal));
-            fprintf(fp3, "%d /*numCppFnPtrPlaceholders*/,\n", static_cast<int>(usedCfpOrdinalCnt));
-
-            fprintf(fp3, "std::array<uint16_t, %d>{", static_cast<int>(cfpOrdinalMap.size()));
-            for (size_t i = 0; i < cfpOrdinalMap.size(); i++)
-            {
-                fprintf(fp3, "static_cast<uint16_t>(%d)", static_cast<int>(cfpOrdinalMap[i]));
-                if (i + 1 < cfpOrdinalMap.size()) {
-                    fprintf(fp3, ", ");
-                }
-            }
-            fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/\n");
-
-            fprintf(fp3, "#ifdef TESTBUILD\n");
-            fprintf(fp3, ", %lluULL /*usedBoilerplateFnPtrPlaceholderMask*/\n", static_cast<unsigned long long>(usedBpfpMask));
-            fprintf(fp3, ", %lluULL /*usedCppFnptrPlaceholderMask*/\n", static_cast<unsigned long long>(usedCfpMask));
-            fprintf(fp3, ", %lluULL /*usedUInt64PlaceholderMask*/\n", static_cast<unsigned long long>(usedU64Mask));
-            fprintf(fp3, ", \"%s\" /*symbolName*/\n", inst.m_symbolName.c_str());
-            fprintf(fp3, "#endif\n");
-            fprintf(fp3, ");\n\n");
-
-            blueprint_varname_suffix++;
-        }
-        ReleaseAssert(begin_suffix + static_cast<int>(bp.m_instances.size()) == blueprint_varname_suffix);
-
-        size_t n = bp.m_params.size();
-        if (n == 0)
-        {
-            // TODO: handle
-            ReleaseAssert(false);
-        }
-        else
-        {
-            CuckooHashTable ht = GetCuckooHashTable(n, bp.m_instances);
-            fprintf(fp1, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%d;\n",
-                    static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), lib_varname_suffix);
-
-            fprintf(fp3, "constexpr FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%d(\n",
-                    static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), lib_varname_suffix);
-            fprintf(fp3, "std::array<uint32_t, %d> {", static_cast<int>(n * 3));
-            ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n && ht.h3.size() == n);
-            for (size_t i = 0; i < ht.h1.size(); i++)
-            {
-                fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h1[i]));
-                fprintf(fp3, ", ");
-            }
-            for (size_t i = 0; i < ht.h2.size(); i++)
-            {
-                fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h2[i]));
-                fprintf(fp3, ", ");
-            }
-            for (size_t i = 0; i < ht.h3.size(); i++)
-            {
-                fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h3[i]));
-                if (i + 1 < ht.h3.size()) {
-                    fprintf(fp3, ", ");
-                }
-            }
-            fprintf(fp3, "} /*hashfns*/,\n");
-            fprintf(fp3, "std::array<FastInterpBoilerplateSelectionHashTableEntry, %d> {\n", static_cast<int>(ht.ht.size()));
-            for (size_t i = 0; i < ht.ht.size(); i++)
-            {
-                fprintf(fp3, "FastInterpBoilerplateSelectionHashTableEntry {");
-                if (ht.ht[i].first == static_cast<uint32_t>(-1))
-                {
-                    fprintf(fp3, "nullptr");
-                }
-                else
-                {
-                    fprintf(fp3, "&%s%d", blueprint_varname_prefix.c_str(), begin_suffix + static_cast<int>(ht.ht[i].first));
-                }
-                fprintf(fp3, ", %lluULL }", static_cast<unsigned long long>(ht.ht[i].second));
-                if (i + 1 < ht.ht.size()) {
-                    fprintf(fp3, ", ");
-                }
-                fprintf(fp3, "\n");
-            }
-            fprintf(fp3, "} /*hashtable*/\n");
-            fprintf(fp3, "#ifdef TESTBUILD\n");
-            fprintf(fp3, ", std::array<uint64_t, %d> {", static_cast<int>(n * ht.ht.size()));
-            ReleaseAssert(ht.ht.size() == ht.trueEntries.size());
-            {
-                int cnt = 0;
-                for (size_t i = 0; i < ht.trueEntries.size(); i++)
-                {
-                    ReleaseAssert(ht.trueEntries[i].size() == n);
-                    for (size_t j = 0; j < n; j++)
-                    {
-                        fprintf(fp3, "%lluULL", static_cast<unsigned long long>(ht.trueEntries[i][j]));
-                        if (i + 1 < ht.trueEntries.size() || j + 1 < n)
-                        {
-                            fprintf(fp3, ", ");
-                        }
-                        cnt++;
-                        if (cnt % 16 == 15)
-                        {
-                            fprintf(fp3, "\n");
-                        }
-                    }
-                }
-            }
-            fprintf(fp3, "\n} /*trueEntries*/\n");
-            fprintf(fp3, "#endif\n");
-            fprintf(fp3, ");\n\n");
-
-            fprintf(fp2, "template<>\nstruct FastInterpBoilerplateLibrary<%s>\n{\n",
-                    it->first.c_str());
-            fprintf(fp2, "    static const FastInterpBoilerplateBluePrint* SelectBoilerplateBluePrint(\n");
-            for (size_t i = 0; i < bp.m_params.size(); i++)
-            {
-                BoilerplateParam param = bp.m_params[i];
-                fprintf(fp2, "        %s %s", param.m_typename.c_str(), param.m_name.c_str());
-                if (i + 1 < bp.m_params.size())
-                {
-                    fprintf(fp2, ",");
-                }
-                else
-                {
-                    fprintf(fp2, ")");
-                }
-                fprintf(fp2, "\n");
-            }
-            fprintf(fp2, "    {\n");
-            fprintf(fp2, "        return %s%d.SelectBoilerplateBluePrint(std::array<uint64_t, %d> {\n",
-                    lib_varname_prefix.c_str(), lib_varname_suffix, static_cast<int>(n));
-            for (size_t i = 0; i < bp.m_params.size(); i++)
-            {
-                BoilerplateParam param = bp.m_params[i];
-                if (param.m_type == PochiVM::MetaVarType::PRIMITIVE_TYPE)
-                {
-                    fprintf(fp2, "            %s.GetTypeId().value", param.m_name.c_str());
-                }
-                else
-                {
-                    fprintf(fp2, "            static_cast<uint64_t>(%s)", param.m_name.c_str());
-                }
-                if (i + 1 < bp.m_params.size())
-                {
-                    fprintf(fp2, ",");
-                }
-                fprintf(fp2, "\n");
-            }
-            fprintf(fp2, "        });\n");
-            fprintf(fp2, "    }\n");
-            fprintf(fp2, "};\n\n");
-
-            lib_varname_suffix++;
-        }
+        AppendFileContent(fp1, sfi->fwd_h_part_path);
+        AppendFileContent(fp2, sfi->lib_h_part_path);
     }
 
     fprintf(fp1, "} // namespace PochiVM \n\n");
     fprintf(fp2, "} // namespace PochiVM \n\n");
-    fprintf(fp3, "} // namespace PochiVM \n\n");
 
     fclose(fp1);
     fclose(fp2);
-    fclose(fp3);
+
+    // Rename to give all-or-nothing guarantee
+    //
+    {
+        int r = rename(output1_tmp_name.c_str(), output1_name.c_str());
+        ReleaseAssert(r == 0 || r == -1);
+        if (r == -1)
+        {
+            fprintf(stderr, "Failed to rename file '%s' into '%s', errno = %d (%s)\n",
+                    output1_tmp_name.c_str(), output1_name.c_str(), errno, strerror(errno));
+            abort();
+        }
+    }
+
+    {
+        int r = rename(output2_tmp_name.c_str(), output2_name.c_str());
+        ReleaseAssert(r == 0 || r == -1);
+        if (r == -1)
+        {
+            fprintf(stderr, "Failed to rename file '%s' into '%s', errno = %d (%s)\n",
+                    output2_tmp_name.c_str(), output2_name.c_str(), errno, strerror(errno));
+            abort();
+        }
+    }
 
     return 0;
 }
