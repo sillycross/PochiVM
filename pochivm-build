@@ -132,7 +132,7 @@ if (op == 'make'):
     if (isClean):
         option = "clean"
     else:
-        option = "-v -j6"  # hardcode parallelism=6 for now
+        option = "-j6"  # hardcode parallelism=6 for now
     cmd = "docker run -v %s:/home/u/PochiVM pochivm-build:latest bash -c 'cd PochiVM/build/%s && ninja %s'" % (base_dir, target, option)
     r = os.system(cmd)
     if (r != 0):

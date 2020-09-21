@@ -568,6 +568,100 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     }
 }
 
+struct SourceFileInfo
+{
+    // multi-thread-safe prepare phase
+    //
+    void MTSafePrepare(const std::string& bc_file)
+    {
+        SMDiagnostic llvmErr;
+        std::unique_ptr<LLVMContext> context(new LLVMContext);
+        std::unique_ptr<Module> module = parseIRFile(bc_file, llvmErr, *context.get());
+
+        if (module == nullptr)
+        {
+            fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bc_file.c_str());
+            llvmErr.print("build_fast_interp_lib" /*programName*/, errs());
+            abort();
+        }
+
+        // Iterate the IR file and pick up all the function name symbols
+        //
+        for (Function& f : module->functions())
+        {
+            if (f.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+                f.getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
+                f.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
+                f.getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
+                f.getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+            {
+                std::string name = f.getName();
+                // Empty functions are declarations
+                //
+                if (!f.empty())
+                {
+                    ReleaseAssert(!allDefinitions.count(name));
+                    allDefinitions.insert(name);
+                }
+                ReleaseAssert(!allDeclarations.count(name));
+                allDeclarations.insert(name);
+            }
+        }
+
+        // Beyond this point the IR module is gone: we move it to the JIT
+        //
+        ExitOnError exitOnError;
+        ThreadSafeModule tsm(std::move(module), std::move(context));
+
+        // Prepare for JIT execution of function __pochivm_register_runtime_library__ to figure out
+        // which functions are needed by the runtime library, and their detailed type information
+        //
+        J = exitOnError(LLJITBuilder().create());
+
+        char Prefix = EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
+        std::unique_ptr<DynamicLibrarySearchGenerator> R = exitOnError(DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
+        ReleaseAssert(R != nullptr);
+
+        // For undefined symbol in the IR file, first try to resolve in host process (it
+        // contains symbols from system library and our hook __pochivm_report_info__).
+        // If failed, it should be a symbol implemented in other CPP files,
+        // and we should only care about its address (and never actually need to invoke it),
+        // so just resolve it to an unique address using our FakeSymbolResolver.
+        //
+        J->getMainJITDylib().addGenerator(std::move(R));
+        AddFakeSymbolResolverGenerator(J.get());
+
+        exitOnError(J->addIRModule(std::move(tsm)));
+
+        auto entryPointSym = exitOnError(J->lookup("__pochivm_build_fast_interp_library__"));
+        entryPoint = reinterpret_cast<FnPrototype>(entryPointSym.getAddress());
+    }
+
+    // Not MT safe
+    //
+    void ExecuteAndInsertSymbols(std::map<uintptr_t, std::pair<SourceFileInfo*, std::string> >& addrToSymbol,
+                                 std::set<uintptr_t>& hasMultipleSymbolsMappingToThisAddress)
+    {
+        entryPoint();
+        ExitOnError exitOnError;
+        for (const std::string& symbol : allDeclarations)
+        {
+            auto sym = exitOnError(J->lookup(symbol));
+            uintptr_t addr = sym.getAddress();
+            if (addrToSymbol.count(addr))
+            {
+                hasMultipleSymbolsMappingToThisAddress.insert(addr);
+            }
+            addrToSymbol[addr] = std::make_pair(this, symbol);
+        }
+    }
+
+    std::set<std::string> allDefinitions, allDeclarations;
+    std::unique_ptr<LLJIT> J;
+    using FnPrototype = void(*)(void);
+    FnPrototype entryPoint;
+};
+
 }   // anonymous namespace
 
 int main(int argc, char** argv)
@@ -587,105 +681,32 @@ int main(int argc, char** argv)
     ReleaseAssert(bc_file.find(";") == std::string::npos);
     ReleaseAssert(obj_file.find(";") == std::string::npos);
 
-    SMDiagnostic llvmErr;
-    std::unique_ptr<LLVMContext> context(new LLVMContext);
-    std::unique_ptr<Module> module = parseIRFile(bc_file, llvmErr, *context.get());
+    SourceFileInfo sfi;
+    sfi.MTSafePrepare(bc_file);
 
-    if (module == nullptr)
-    {
-        fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bc_file.c_str());
-        llvmErr.print(argv[0], errs());
-        abort();
-    }
-
-    // Iterate the IR file and pick up all the function name symbols
+    // Match the function address with the symbol name
     //
-    std::set<std::string> allDefinitions, allDeclarations;
-    for (Function& f : module->functions())
+    std::map<uintptr_t, std::pair<SourceFileInfo*, std::string> > addrToSymbol;
+    std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
+
+    sfi.ExecuteAndInsertSymbols(addrToSymbol, hasMultipleSymbolsMappingToThisAddress);
+
+    for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
     {
-        if (f.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
-            f.getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
-            f.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
-            f.getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
-            f.getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+        BoilerplatePack& bp = it->second;
+        for (BoilerplateInstance& inst : bp.m_instances)
         {
-            std::string name = f.getName();
-            // Empty functions are declarations
-            //
-            if (!f.empty())
+            uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
+            if (hasMultipleSymbolsMappingToThisAddress.count(addr))
             {
-                ReleaseAssert(!allDefinitions.count(name));
-                allDefinitions.insert(name);
+                fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
+                                "in boilerplate for %s. Please report a bug.\n",
+                        it->first.c_str());
+                abort();
             }
-            ReleaseAssert(!allDeclarations.count(name));
-            allDeclarations.insert(name);
-        }
-    }
-
-    // Beyond this point the IR module is gone: we move it to the JIT
-    //
-    {
-        ExitOnError exitOnError;
-        ThreadSafeModule tsm(std::move(module), std::move(context));
-
-        // JIT execution function __pochivm_register_runtime_library__ to figure out
-        // which functions are needed by the runtime library, and their detailed type information
-        //
-        std::unique_ptr<LLJIT> J = exitOnError(LLJITBuilder().create());
-
-        char Prefix = EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
-        std::unique_ptr<DynamicLibrarySearchGenerator> R = exitOnError(DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
-        ReleaseAssert(R != nullptr);
-
-        // For undefined symbol in the IR file, first try to resolve in host process (it
-        // contains symbols from system library and our hook __pochivm_report_info__).
-        // If failed, it should be a symbol implemented in other CPP files,
-        // and we should only care about its address (and never actually need to invoke it),
-        // so just resolve it to an unique address using our FakeSymbolResolver.
-        //
-        J->getMainJITDylib().addGenerator(std::move(R));
-        AddFakeSymbolResolverGenerator(J.get());
-
-        exitOnError(J->addIRModule(std::move(tsm)));
-
-        auto entryPointSym = exitOnError(J->lookup("__pochivm_build_fast_interp_library__"));
-        using _FnPrototype = void(*)(void);
-        _FnPrototype entryPoint = reinterpret_cast<_FnPrototype>(entryPointSym.getAddress());
-        entryPoint();
-
-        // Match the function address with the symbol name
-        //
-        std::map<uintptr_t, std::string > addrToSymbol;
-        std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
-
-        for (const std::string& symbol : allDeclarations)
-        {
-            auto sym = exitOnError(J->lookup(symbol));
-            uintptr_t addr = sym.getAddress();
-            if (addrToSymbol.count(addr))
-            {
-                hasMultipleSymbolsMappingToThisAddress.insert(addr);
-            }
-            addrToSymbol[addr] = symbol;
-        }
-
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
-        {
-            BoilerplatePack& bp = it->second;
-            for (BoilerplateInstance& inst : bp.m_instances)
-            {
-                uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
-                if (hasMultipleSymbolsMappingToThisAddress.count(addr))
-                {
-                    fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
-                                    "in boilerplate for %s. Please report a bug.\n",
-                            it->first.c_str());
-                    abort();
-                }
-                ReleaseAssert(addrToSymbol.count(addr));
-                inst.m_symbolName = addrToSymbol[addr];
-                ReleaseAssert(allDefinitions.count(inst.m_symbolName));
-            }
+            ReleaseAssert(addrToSymbol.count(addr));
+            inst.m_symbolName = addrToSymbol[addr].second;
+            ReleaseAssert(addrToSymbol[addr].first->allDefinitions.count(inst.m_symbolName));
         }
     }
 

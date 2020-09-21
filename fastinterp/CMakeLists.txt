@@ -11,7 +11,7 @@ add_library(fastinterp_tpl_obj OBJECT
 # important compiler flags for the object file, must not be changed. see comments in dynamic_specialization_utils.h
 # TODO: clang++ currently does not support -mlarge-data-threshold which would hurt a bit of performance
 #
-set_target_properties(fastinterp_tpl_obj PROPERTIES COMPILE_FLAGS " -mcmodel=medium -fno-pic -fno-pie ")
+set_target_properties(fastinterp_tpl_obj PROPERTIES COMPILE_FLAGS " -mcmodel=medium -fno-pic -fno-pie -fno-exceptions ")
 
 # Unlike runtime_library_builder, it is fine we compile fastinterp_tpl twice
 # since the IR is only for extracting symbol names.
@@ -21,7 +21,7 @@ add_library(fastinterp_tpl_ir OBJECT
   fastinterp_tpl.cpp
 )
 
-set_target_properties(fastinterp_tpl_ir PROPERTIES COMPILE_FLAGS " -emit-llvm ")
+set_target_properties(fastinterp_tpl_ir PROPERTIES COMPILE_FLAGS " -emit-llvm -fno-exceptions ")
 
 add_executable(build_fast_interp_lib
   build_fast_interp_lib.cpp   
