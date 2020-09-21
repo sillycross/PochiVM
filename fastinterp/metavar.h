@@ -159,7 +159,11 @@ namespace internal
 struct PartialMetaVarValueInstance
 {
     std::vector<uint64_t> value;
-    PartialMetaVarValueInstance Push(uint64_t v) const
+
+    // Compiler should not inline this function, inlining it bloats up the code by too much,
+    // and significantly slows down compilation.
+    //
+    PartialMetaVarValueInstance __attribute__((__noinline__)) Push(uint64_t v) const
     {
         PartialMetaVarValueInstance ret = *this;
         ret.value.push_back(v);
@@ -239,41 +243,32 @@ struct metavar_materialize_helper
             template<auto... VArgs>
             struct impl3
             {
-                template<typename Dummy2>
+                template<typename Dummy, typename Enable = void>
                 struct impl4
                 {
-                    template<typename Dummy, typename Enable = void>
-                    struct impl5
-                    {
-                        static void insert(MetaVarMaterializedList* /*result*/, const PartialMetaVarValueInstance& /*instance*/)
-                        { }
-                    };
+                    static void invoke(MetaVarMaterializedList* /*result*/, const PartialMetaVarValueInstance& /*instance*/)
+                    { }
+                };
 
-                    template<typename Dummy>
-                    struct impl5<Dummy, typename std::enable_if<(
+                template<typename Dummy>
+                struct impl4<Dummy, typename std::enable_if<(
                         std::is_same<Dummy, void>::value &&
                         std::integral_constant<bool, (Materializer::template cond<TArgs..., VArgs...>())>::value)>::type>
+                {
+                    // This function is not performance-sensitive, but compile-time sensitive (we are going to compile
+                    // tens of thousands of these but they are only executed once and at build phase), tell compiler to not optimize
+                    //
+                    static void __attribute__((__optnone__, __noinline__)) invoke(MetaVarMaterializedList* result,
+                                                                                  const PartialMetaVarValueInstance& instance)
                     {
-                        // This function is not performance-sensitive, but compile-time sensitive (we are going to compile
-                        // tens of thousands of these but they are only executed once and at build phase), tell compiler to not optimize
-                        //
-                        static void __attribute__((__optnone__, __noinline__)) insert(MetaVarMaterializedList* result,
-                                                                                      const PartialMetaVarValueInstance& instance)
-                        {
-                            ReleaseAssert(instance.value.size() == result->m_metavars.size());
-                            MetaVarMaterializedInstance inst;
-                            inst.m_values = instance.value;
-                            using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
-                            static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
-                                          "'f' is not a noexcept function");
-                            inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
-                            result->m_instances.push_back(inst);
-                        }
-                    };
-
-                    static void invoke(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
-                    {
-                        impl5<void>::insert(result, instance);
+                        ReleaseAssert(instance.value.size() == result->m_metavars.size());
+                        MetaVarMaterializedInstance inst;
+                        inst.m_values = instance.value;
+                        using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
+                        static_assert(std::is_function<FnType>::value && is_noexcept_fn_helper<FnType>::value,
+                                "'f' is not a noexcept function");
+                        inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
+                        result->m_instances.push_back(inst);
                     }
                 };
             };
@@ -313,6 +308,9 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                 // Enable case (prefix 'cond' does not exist, or 'cond' returned true')
                 //
 
+                // This compiler should optimize this function, since it is only a simple tail-recursion optimization,
+                // and it significantly reduces the number of symbols to resolve, so the build-time-JIT is significantly (~3x) faster.
+                //
                 template<typename T, int cur, int ub>
                 static void invoke_enum(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
                 {

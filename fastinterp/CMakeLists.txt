@@ -1,4 +1,16 @@
 # remove -O0 -g flag, and add -O3 flag
+# This is very tricky: we are going to compile some crazily compile-time-intensive CPP files and 
+# then JIT them to get their symbol-to-code mappings.
+# So the total build time is clang's time to compile CPP file + LLVM JIT's time to JIT execute them.
+# Despite this is only executed as a build step, so all it impacts is the developer's user experience, 
+# we still want to make this step faster so we don't have to wait too long for every build.
+#
+# -O3 results in better inlining, so less symbols to resolve, so JIT can be faster (significantly). 
+# On the other hand, -O3 results in the compiler doing more work, also slowing down compilation significantly 
+# if inlining is done too extensively.
+#
+# So for fastest build time, we always use -O3, but in source code we manually add 'noinline' and 'optnone' 
+# to places where inlining actually hurts overall build time, to manually tune for fastest build time.
 # 
 string(REPLACE " -O0 " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE " -g " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})

@@ -15,11 +15,12 @@ struct FastInterpVariableImpl
     template<typename VarTypePtr>
     static void f(VarTypePtr* out) noexcept
     {
+        static_assert(std::is_pointer<VarTypePtr>::value, "unexpected VarTypePtr");
         // Must not use uint64_t, since it may be zero
         //
         DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
         uint32_t offset = CONSTANT_PLACEHOLDER_0;
-        *out = reinterpret_cast<VarTypePtr>(__pochivm_thread_fastinterp_context.m_stackFrame + offset);
+        *out = GetLocalVarAddress<typename std::remove_pointer<VarTypePtr>::type>(offset);
     }
 
     static auto metavars()
