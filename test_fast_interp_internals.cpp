@@ -234,3 +234,340 @@ TEST(TestFastInterpInternal, SanityThreadLocal_1)
     //
     check(sf1, false);
 }
+
+namespace
+{
+
+uint16_t GetRand16()
+{
+    return rand() & ((1<<16)-1);
+}
+
+uint32_t GetRand32()
+{
+    return (static_cast<uint32_t>(GetRand16()) << 16) + GetRand16();
+}
+
+uint64_t GetRand64()
+{
+    return (static_cast<uint64_t>(GetRand32()) << 32) + GetRand32();
+}
+
+template<typename T>
+std::function<void(void*)> GetZeroValueHelperInternal()
+{
+    return [](void* out)
+    {
+        *reinterpret_cast<T*>(out) = 0;
+    };
+}
+
+GEN_FUNCTION_SELECTOR(GetZeroValueHelperSelector, GetZeroValueHelperInternal, AstTypeHelper::is_primitive_type);
+
+template<typename T>
+std::function<void(void*)> GetRandValueHelperInternal()
+{
+    T result;
+    if constexpr(std::is_same<T, bool>::value)
+    {
+        result = static_cast<bool>(rand() % 2);
+    }
+    else if constexpr(std::is_integral<T>::value)
+    {
+        // signed overflow is undefined. Do not do it.
+        result = static_cast<T>(GetRand64()) / 2;
+    }
+    else
+    {
+        static_assert(std::is_floating_point<T>::value, "unexpected T");
+        result = static_cast<T>(rand()) / static_cast<T>(100000);
+    }
+    return [result](void* out)
+    {
+        *reinterpret_cast<T*>(out) = result;
+    };
+}
+
+GEN_FUNCTION_SELECTOR(GetRandValueHelperSelector, GetRandValueHelperInternal, AstTypeHelper::is_primitive_type);
+
+using RandValueGeneratorFn = std::function<void(void*)>(*)();
+RandValueGeneratorFn GetRandValueGenerator(TypeId typeId)
+{
+    return reinterpret_cast<RandValueGeneratorFn>(GetRandValueHelperSelector(typeId));
+}
+
+RandValueGeneratorFn GetZeroValueGenerator(TypeId typeId)
+{
+    return reinterpret_cast<RandValueGeneratorFn>(GetZeroValueHelperSelector(typeId));
+}
+
+template<typename T>
+void PopulateConstantPlaceholderInternal(FastInterpBoilerplateInstance* inst, uint32_t ord, std::function<void(void*)> dataFn)
+{
+    T out;
+    dataFn(&out);
+    inst->PopulateConstantPlaceholder<T>(ord, out);
+}
+
+GEN_FUNCTION_SELECTOR(PopulateConstantPlaceholderSelector, PopulateConstantPlaceholderInternal, AstTypeHelper::is_primitive_type);
+
+using PopulateConstantPlaceholderFn = void(*)(FastInterpBoilerplateInstance* inst, uint32_t ord, std::function<void(void*)> dataFn);
+PopulateConstantPlaceholderFn GetPopulateConstantPlaceholderFn(TypeId typeId)
+{
+    return reinterpret_cast<PopulateConstantPlaceholderFn>(PopulateConstantPlaceholderSelector(typeId));
+}
+
+template<typename T>
+void CheckMinusResultInternal(std::function<void(void*)> lhsFn, std::function<void(void*)> rhsFn, std::function<void(void*)> resultFn)
+{
+    T lhs;
+    lhsFn(&lhs);
+    T rhs;
+    rhsFn(&rhs);
+    T result;
+    resultFn(&result);
+    if constexpr(std::is_floating_point<T>::value)
+    {
+        double diff = fabs(static_cast<double>(lhs - rhs - result));
+        ReleaseAssert(diff < 1e-8);
+    }
+    else
+    {
+        static_assert(std::is_integral<T>::value, "unexpected T");
+        // PochiVM has no integer promotion behavior.
+        //
+        ReleaseAssert(static_cast<T>(lhs - rhs) == result);
+    }
+}
+
+GEN_FUNCTION_SELECTOR(CheckMinusResultSelector, CheckMinusResultInternal, AstTypeHelper::is_primitive_type);
+
+using CheckMinusResultFn = void(*)(std::function<void(void*)>, std::function<void(void*)>, std::function<void(void*)>);
+CheckMinusResultFn GetCheckMinusResultFn(TypeId typeId)
+{
+    return reinterpret_cast<CheckMinusResultFn>(CheckMinusResultSelector(typeId));
+}
+
+}
+
+TEST(TestFastInterpInternal, SanityArithmeticExpr)
+{
+    std::vector<TypeId> types {
+#define F(t) TypeId::Get<t>(),
+    FOR_EACH_PRIMITIVE_TYPE
+    TypeId::Get<void>()
+#undef F
+    };
+    types.pop_back();
+
+    std::vector<TypeId> indexTypes {
+        TypeId::Get<int32_t>(),
+        TypeId::Get<uint32_t>(),
+        TypeId::Get<int64_t>(),
+        TypeId::Get<uint64_t>()
+    };
+
+    auto fillPlaceholder = [](
+            bool isLhs, TypeId dataType, TypeId indexType, OperandShapeCategory osc,
+            FastInterpCodegenEngine* /*engine*/, FastInterpBoilerplateInstance* inst, std::function<void(void*)> dataFn)
+    {
+        uint32_t startOrd = (isLhs ? 0 : 2);
+        uint32_t varOffset = (isLhs ? 8 : 24);
+        if (isLhs && rand() % 2 == 0) { varOffset -= 8; }
+        if (osc == OperandShapeCategory::ZERO)
+        {
+            return;
+        }
+        else if (osc == OperandShapeCategory::LITERAL_NONZERO)
+        {
+            PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(dataType);
+            pcpFn(inst, startOrd, dataFn);
+        }
+        else if (osc == OperandShapeCategory::COMPLEX)
+        {
+            // TODO
+            ReleaseAssert(false);
+        }
+        else if (osc == OperandShapeCategory::VARIABLE)
+        {
+            inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
+            dataFn(reinterpret_cast<void*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset));
+        }
+        else if (osc == OperandShapeCategory::VARPTR_VAR)
+        {
+            inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
+            inst->PopulateConstantPlaceholder<uint32_t>(startOrd + 1, varOffset + 8);
+            uint8_t* v = new uint8_t[24];
+            for (size_t i = 0; i < 24; i++) v[i] = static_cast<uint8_t>(rand() % 256);
+            int offset;
+            if (indexType.IsSigned())
+            {
+                offset = rand() % 3 - 1;
+            }
+            else
+            {
+                offset = rand() % 2;
+            }
+            uint8_t* b = v + 8;
+            dataFn(b + static_cast<ssize_t>(dataType.Size()) * offset);
+            *reinterpret_cast<uint8_t**>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset) = b;
+            if (indexType == TypeId::Get<int32_t>())
+            {
+                *reinterpret_cast<int32_t*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset + 8) = offset;
+            }
+            else if (indexType == TypeId::Get<uint32_t>())
+            {
+                *reinterpret_cast<uint32_t*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset + 8) = static_cast<uint32_t>(offset);
+            }
+            else if (indexType == TypeId::Get<int64_t>())
+            {
+                *reinterpret_cast<int64_t*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset + 8) = offset;
+            }
+            else if (indexType == TypeId::Get<uint64_t>())
+            {
+                *reinterpret_cast<uint64_t*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset + 8) = static_cast<uint64_t>(offset);
+            }
+            else
+            {
+                ReleaseAssert(false);
+            }
+        }
+        else if (osc == OperandShapeCategory::VARPTR_LIT_NONZERO)
+        {
+            inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
+            uint8_t* v = new uint8_t[24];
+            for (size_t i = 0; i < 24; i++) v[i] = static_cast<uint8_t>(rand() % 256);
+            int offset;
+            if (indexType.IsSigned())
+            {
+                offset = ((rand() % 2 == 0) ? 1 : - 1);
+            }
+            else
+            {
+                offset = 1;
+            }
+            uint8_t* b = v + 8;
+            dataFn(b + static_cast<ssize_t>(dataType.Size()) * offset);
+            *reinterpret_cast<uint8_t**>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset) = b;
+            PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(indexType);
+            pcpFn(inst, startOrd + 1, [indexType, offset](void* out)
+            {
+                if (indexType == TypeId::Get<int32_t>())
+                {
+                    *reinterpret_cast<int32_t*>(out) = offset;
+                }
+                else if (indexType == TypeId::Get<uint32_t>())
+                {
+                    *reinterpret_cast<uint32_t*>(out) = static_cast<uint32_t>(offset);
+                }
+                else if (indexType == TypeId::Get<int64_t>())
+                {
+                    *reinterpret_cast<int64_t*>(out) = offset;
+                }
+                else if (indexType == TypeId::Get<uint64_t>())
+                {
+                    *reinterpret_cast<uint64_t*>(out) = static_cast<uint64_t>(offset);
+                }
+                else
+                {
+                    ReleaseAssert(false);
+                }
+            });
+        }
+        else if (osc == OperandShapeCategory::VARPTR_DEREF)
+        {
+            inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
+            uint8_t* v = new uint8_t[8];
+            for (size_t i = 0; i < 8; i++) v[i] = static_cast<uint8_t>(rand() % 256);
+            dataFn(v);
+            *reinterpret_cast<uint8_t**>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset) = v;
+        }
+        else
+        {
+            ReleaseAssert(false);
+        }
+    };
+
+    int numChecked = 0;
+    for (TypeId dataType : types)
+    {
+        if (dataType.IsBool())
+        {
+            continue;
+        }
+        for (int lhsOscInt = 0; lhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); lhsOscInt++)
+        {
+            for (TypeId lhsIndexType : indexTypes)
+            {
+                OperandShapeCategory lhsOsc = static_cast<OperandShapeCategory>(lhsOscInt);
+                if (lhsOsc == OperandShapeCategory::COMPLEX) { continue; } // TODO
+                if (lhsOsc != OperandShapeCategory::VARPTR_VAR && lhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                {
+                    if (lhsIndexType != TypeId::Get<int32_t>())
+                    {
+                        continue;
+                    }
+                }
+                std::function<void(void*)> lhsFn;
+                if (lhsOsc == OperandShapeCategory::ZERO)
+                {
+                    lhsFn = GetZeroValueGenerator(dataType)();
+                }
+                else
+                {
+                    lhsFn = GetRandValueGenerator(dataType)();
+                }
+                for (int rhsOscInt = 0; rhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); rhsOscInt++)
+                {
+                    for (TypeId rhsIndexType : indexTypes)
+                    {
+                        OperandShapeCategory rhsOsc = static_cast<OperandShapeCategory>(rhsOscInt);
+                        if (rhsOsc == OperandShapeCategory::COMPLEX) { continue; } // TODO
+                        if (rhsOsc != OperandShapeCategory::VARPTR_VAR && rhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                        {
+                            if (rhsIndexType != TypeId::Get<int32_t>())
+                            {
+                                continue;
+                            }
+                        }
+                        std::function<void(void*)> rhsFn;
+                        if (rhsOsc == OperandShapeCategory::ZERO)
+                        {
+                            rhsFn = GetZeroValueGenerator(dataType)();
+                        }
+                        else
+                        {
+                            rhsFn = GetRandValueGenerator(dataType)();
+                        }
+                        uint8_t* pad = new uint8_t[40];
+                        for (size_t i = 0; i < 40; i++) { pad[i] = static_cast<uint8_t>(rand() % 256); }
+                        __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(pad);
+                        FastInterpCodegenEngine engine;
+                        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+                        FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                                    BoilerplateLibrary::SelectBoilerplateBluePrint(
+                                        dataType.GetDefaultFastInterpTypeId(),
+                                        lhsIndexType.GetDefaultFastInterpTypeId(),
+                                        rhsIndexType.GetDefaultFastInterpTypeId(),
+                                        lhsOsc,
+                                        rhsOsc,
+                                        AstArithmeticExprType::SUB));
+                        fillPlaceholder(true /*isLhs*/, dataType, lhsIndexType, lhsOsc, &engine, inst, lhsFn);
+                        fillPlaceholder(false /*isLhs*/, dataType, rhsIndexType, rhsOsc, &engine, inst, rhsFn);
+                        engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+                        std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+                        void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+                        ReleaseAssert(fnPtrVoid != nullptr);
+                        using FnType = void(*)(void*);
+                        FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+                        std::function<void(void*)> resultFn = fnPtr;
+                        CheckMinusResultFn checkFn = GetCheckMinusResultFn(dataType);
+                        checkFn(lhsFn, rhsFn, resultFn);
+                        numChecked++;
+                    }
+                }
+            }
+        }
+    }
+    ReleaseAssert(numChecked == 1440);
+}

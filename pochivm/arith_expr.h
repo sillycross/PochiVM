@@ -17,6 +17,7 @@ public:
     {
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
         TestAssert(m_lhs->GetTypeId().IsPrimitiveType());
+        TestAssert(!m_lhs->GetTypeId().IsBool());
     }
 
     // Interp implementations

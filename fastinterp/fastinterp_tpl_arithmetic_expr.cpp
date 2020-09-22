@@ -9,6 +9,7 @@ struct FastInterpArithmeticExprImpl
     static constexpr bool cond()
     {
         if (std::is_same<OperandType, void>::value) { return false; }
+        if (std::is_same<OperandType, bool>::value) { return false; }
         if (std::is_pointer<OperandType>::value) { return false; }
         return true;
     }
