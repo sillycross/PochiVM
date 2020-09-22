@@ -19,6 +19,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 ")
 SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_arithmetic_expr.cpp
   fastinterp_tpl_astvariable.cpp
+  fastinterp_tpl_astliteral.cpp
 )
 
 SET(FASTINTERP_SOURCES

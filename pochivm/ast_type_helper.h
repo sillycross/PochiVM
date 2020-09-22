@@ -1206,36 +1206,6 @@ inline bool TypeId::MayReinterpretCastTo(TypeId other) const
     return fn();
 }
 
-template<typename T>
-bool WARN_UNUSED is_all_underlying_bits_zero(T t)
-{
-    // Apparently clang explicitly warns that "*reinterpret_cast<uint64_t*>(double)" has undefined behavior.
-    // After consulting cppreference.com:
-    //     "When it is needed to interpret the bytes of an object as a value of a different type,
-    //      std::memcpy or std::bit_cast (since C++20) can be used"
-    //
-    static_assert(std::is_fundamental<T>::value || std::is_pointer<T>::value, "Must be primitive type");
-    static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unexpected size");
-    if constexpr(sizeof(T) == 1)
-    {
-        return cxx2a_bit_cast<uint8_t>(t) == 0;
-    }
-    else if constexpr(sizeof(T) == 2)
-    {
-        return cxx2a_bit_cast<uint16_t>(t) == 0;
-    }
-    else if constexpr(sizeof(T) == 4)
-    {
-        return cxx2a_bit_cast<uint32_t>(t) == 0;
-    }
-    else
-    {
-        static_assert(sizeof(T) == 8, "Unexpected size");
-        return cxx2a_bit_cast<uint64_t>(t) == 0;
-    }
-    return true;
-}
-
 // In interp mode, we only know a limited set of types (fundamental types, pointer to fundamental types, and void**)
 // This is a wrapper over typeId so that only such types are allowed.
 //

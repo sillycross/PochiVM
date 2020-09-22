@@ -348,6 +348,22 @@ CheckMinusResultFn GetCheckMinusResultFn(TypeId typeId)
     return reinterpret_cast<CheckMinusResultFn>(CheckMinusResultSelector(typeId));
 }
 
+template<typename T>
+bool IsAllUnderlyingBitsZeroInternal(std::function<void(void*)> dataFn)
+{
+    T pad;
+    dataFn(&pad);
+    return PochiVM::is_all_underlying_bits_zero<T>(pad);
+}
+
+GEN_FUNCTION_SELECTOR(CheckIsAllUnderlyingBitsZeroSelector, IsAllUnderlyingBitsZeroInternal, AstTypeHelper::primitive_or_pointer_type);
+
+using CheckAllUnderlyingBitsZeroFn = bool(*)(std::function<void(void*)> dataFn);
+CheckAllUnderlyingBitsZeroFn GetAllUnderlyingBitsZeroChecker(TypeId typeId)
+{
+    return reinterpret_cast<CheckAllUnderlyingBitsZeroFn>(CheckIsAllUnderlyingBitsZeroSelector(typeId));
+}
+
 }
 
 TEST(TestFastInterpInternal, SanityArithmeticExpr)
@@ -369,7 +385,7 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
 
     auto fillPlaceholder = [](
             bool isLhs, TypeId dataType, TypeId indexType, OperandShapeCategory osc,
-            FastInterpCodegenEngine* /*engine*/, FastInterpBoilerplateInstance* inst, std::function<void(void*)> dataFn)
+            FastInterpCodegenEngine* engine, FastInterpBoilerplateInstance* inst, std::function<void(void*)> dataFn)
     {
         uint32_t startOrd = (isLhs ? 0 : 2);
         uint32_t varOffset = (isLhs ? 8 : 24);
@@ -385,8 +401,18 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
         }
         else if (osc == OperandShapeCategory::COMPLEX)
         {
-            // TODO
-            ReleaseAssert(false);
+            CheckAllUnderlyingBitsZeroFn checker = GetAllUnderlyingBitsZeroChecker(dataType);
+            bool isZero = checker(dataFn);
+            FastInterpBoilerplateInstance* lit = engine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FastInterpLiteralImpl>::SelectBoilerplateBluePrint(
+                            dataType.GetDefaultFastInterpTypeId(),
+                            isZero));
+            if (!isZero)
+            {
+                PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(dataType);
+                pcpFn(lit, 0, dataFn);
+            }
+            inst->PopulateBoilerplateFnPtrPlaceholder(startOrd, lit);
         }
         else if (osc == OperandShapeCategory::VARIABLE)
         {
@@ -500,7 +526,6 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
             for (TypeId lhsIndexType : indexTypes)
             {
                 OperandShapeCategory lhsOsc = static_cast<OperandShapeCategory>(lhsOscInt);
-                if (lhsOsc == OperandShapeCategory::COMPLEX) { continue; } // TODO
                 if (lhsOsc != OperandShapeCategory::VARPTR_VAR && lhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
                 {
                     if (lhsIndexType != TypeId::Get<int32_t>())
@@ -522,7 +547,6 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
                     for (TypeId rhsIndexType : indexTypes)
                     {
                         OperandShapeCategory rhsOsc = static_cast<OperandShapeCategory>(rhsOscInt);
-                        if (rhsOsc == OperandShapeCategory::COMPLEX) { continue; } // TODO
                         if (rhsOsc != OperandShapeCategory::VARPTR_VAR && rhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
                         {
                             if (rhsIndexType != TypeId::Get<int32_t>())
@@ -569,5 +593,117 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
             }
         }
     }
-    ReleaseAssert(numChecked == 1440);
+    ReleaseAssert(numChecked == 1690);
+}
+
+namespace {
+
+template<typename T>
+void CheckLiteralResultInternal(std::function<void(void*)> dataFn, std::function<void(void*)> resultFn)
+{
+    T data;
+    dataFn(&data);
+    T result;
+    resultFn(&result);
+    if constexpr(std::is_floating_point<T>::value)
+    {
+        double diff = fabs(static_cast<double>(data - result));
+        ReleaseAssert(diff < 1e-8);
+    }
+    else
+    {
+        static_assert(std::is_integral<T>::value || std::is_pointer<T>::value, "unexpected T");
+        ReleaseAssert(data == result);
+    }
+}
+
+GEN_FUNCTION_SELECTOR(CheckLiteralResultSelector, CheckLiteralResultInternal, AstTypeHelper::primitive_or_pointer_type);
+
+using CheckLiteralResultFn = void(*)(std::function<void(void*)>, std::function<void(void*)>);
+CheckLiteralResultFn GetCheckLiteralResultFn(TypeId typeId)
+{
+    return reinterpret_cast<CheckLiteralResultFn>(CheckLiteralResultSelector(typeId));
+}
+
+}
+
+TEST(TestFastInterpInternal, SanityLiteralExpr)
+{
+    std::vector<TypeId> types {
+#define F(t) TypeId::Get<t>(),
+    FOR_EACH_PRIMITIVE_TYPE
+    TypeId::Get<void>()
+#undef F
+    };
+    types.pop_back();
+
+    for (TypeId dataType : types)
+    {
+        for (bool isZero : { false, true })
+        {
+            std::function<void(void*)> dataFn;
+            if (isZero)
+            {
+                dataFn = GetZeroValueGenerator(dataType)();
+            }
+            else
+            {
+                dataFn = GetRandValueGenerator(dataType)();
+            }
+            FastInterpCodegenEngine engine;
+            using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+            FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                        BoilerplateLibrary::SelectBoilerplateBluePrint(
+                            dataType.GetDefaultFastInterpTypeId(), isZero));
+            if (!isZero)
+            {
+                PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(dataType);
+                pcpFn(inst, 0, dataFn);
+            }
+            engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+            std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+            void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+            ReleaseAssert(fnPtrVoid != nullptr);
+            using FnType = void(*)(void*);
+            FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+            std::function<void(void*)> resultFn = fnPtr;
+            CheckLiteralResultFn checkFn = GetCheckLiteralResultFn(dataType);
+            checkFn(dataFn, resultFn);
+        }
+    }
+
+    {
+        FastInterpCodegenEngine engine;
+        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+        FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                    BoilerplateLibrary::SelectBoilerplateBluePrint(
+                        TypeId::Get<void*>().GetDefaultFastInterpTypeId(), false /*isZero*/));
+        inst->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(2333));
+        engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+        std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+        void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+        ReleaseAssert(fnPtrVoid != nullptr);
+        using FnType = void(*)(void**);
+        FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+        void* result = reinterpret_cast<void*>(23456);
+        fnPtr(&result);
+        ReleaseAssert(result == reinterpret_cast<void*>(2333));
+    }
+
+    {
+        FastInterpCodegenEngine engine;
+        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+        FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                    BoilerplateLibrary::SelectBoilerplateBluePrint(
+                        TypeId::Get<void*>().GetDefaultFastInterpTypeId(), true /*isZero*/));
+        engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+        std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+        void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+        ReleaseAssert(fnPtrVoid != nullptr);
+        using FnType = void(*)(void**);
+        FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+        void* result = reinterpret_cast<void*>(23456);
+        fnPtr(&result);
+        ReleaseAssert(result == nullptr);
+    }
 }
