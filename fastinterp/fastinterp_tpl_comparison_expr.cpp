@@ -3,13 +3,12 @@
 namespace PochiVM
 {
 
-struct FastInterpArithmeticExprImpl
+struct FastInterpComparisonExprImpl
 {
     template<typename OperandType>
     static constexpr bool cond()
     {
         if (std::is_same<OperandType, void>::value) { return false; }
-        if (std::is_same<OperandType, bool>::value) { return false; }
         if (std::is_pointer<OperandType>::value) { return false; }
         return true;
     }
@@ -63,6 +62,15 @@ struct FastInterpArithmeticExprImpl
         {
             return false;
         }
+        // LHS and RHS cannot be both literal:
+        // We cannot compare equality between two placeholders if they are 64 bits.
+        // It is weird for users to write such expressions anyway, so it's OK to lose some performance in this case.
+        //
+        if (lhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO &&
+            rhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO)
+        {
+            return false;
+        }
         return true;
     }
 
@@ -71,24 +79,21 @@ struct FastInterpArithmeticExprImpl
              typename RhsIndexType,
              OperandShapeCategory lhsShapeCategory,
              OperandShapeCategory rhsShapeCategory,
-             AstArithmeticExprType arithType>
+             AstComparisonExprType comparisonType>
     static constexpr bool cond()
     {
-        if (std::is_floating_point<OperandType>::value && arithType == AstArithmeticExprType::MOD) { return false; }
         return true;
     }
 
-    // Placeholder rules:
-    // placeholder 0/1 reserved for LHS
-    // placeholder 2/3 reserved for RHS
-    //
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfloat-equal"
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
              OperandShapeCategory lhsShapeCategory,
              OperandShapeCategory rhsShapeCategory,
-             AstArithmeticExprType arithType>
-    static void f(OperandType* out) noexcept
+             AstComparisonExprType comparisonType>
+    static void f(bool* out) noexcept
     {
         OperandType lhs;
         if constexpr(lhsShapeCategory == OperandShapeCategory::COMPLEX)
@@ -180,25 +185,30 @@ struct FastInterpArithmeticExprImpl
             static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");
         }
 
-        if constexpr(arithType == AstArithmeticExprType::ADD) {
-            *out = lhs + rhs;
+        if constexpr(comparisonType == AstComparisonExprType::EQUAL) {
+            *out = (lhs == rhs);
         }
-        else if constexpr(arithType == AstArithmeticExprType::SUB) {
-            *out = lhs - rhs;
+        else if constexpr(comparisonType == AstComparisonExprType::NOT_EQUAL) {
+            *out = (lhs != rhs);
         }
-        else if constexpr(arithType == AstArithmeticExprType::MUL) {
-            *out = lhs * rhs;
+        else if constexpr(comparisonType == AstComparisonExprType::LESS_THAN) {
+            *out = (lhs < rhs);
         }
-        else if constexpr(arithType == AstArithmeticExprType::DIV) {
-            *out = lhs / rhs;
+        else if constexpr(comparisonType == AstComparisonExprType::LESS_EQUAL) {
+            *out = (lhs <= rhs);
         }
-        else if constexpr(arithType == AstArithmeticExprType::MOD) {
-            *out = lhs % rhs;
+        else if constexpr(comparisonType == AstComparisonExprType::GREATER_THAN) {
+            *out = (lhs > rhs);
         }
-        else {
-            static_assert(type_dependent_false<OperandType>::value, "Unexpected AstArithmeticExprType");
+        else if constexpr(comparisonType == AstComparisonExprType::GREATER_EQUAL) {
+            *out = (lhs >= rhs);
+        }
+        else
+        {
+            static_assert(type_dependent_false<OperandType>::value, "Unexpected AstComparisonExprType");
         }
     }
+#pragma clang diagnostic pop
 
     static auto metavars()
     {
@@ -208,7 +218,7 @@ struct FastInterpArithmeticExprImpl
                     CreateTypeMetaVar("rhsIndexType"),
                     CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
                     CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
-                    CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType")
+                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType")
         );
     }
 };
@@ -221,5 +231,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FastInterpArithmeticExprImpl>();
+    RegisterBoilerplate<FastInterpComparisonExprImpl>();
 }

@@ -259,21 +259,32 @@ public:
         // If T is 8-byte long, it is not allowed to pass in 0
         //
         TestAssertImp(sizeof(T) == 8, !is_all_underlying_bits_zero(value));
-        TestAssert(ordinal < m_owner->m_highestUInt64PlaceholderOrdinal);
+        // It is possible that we populate a constant placeholder that does not exist in boilerplate:
+        // the compiler might have optimized it out. For example, comparison of literal >= 0 of unsigned type,
+        // which is trivially true so the compiler may have optimized out the constant 'literal'.
+        // This should only happen to constant: functions may have side effects so compiler will never optimize it out,
+        // and currently we never do function calls inside a condition control flow that may be optimized out.
+        //
+        TestAssert(ordinal < 64);
         TestAssert(!(m_populatedUInt64PlaceholderMask & (1ULL << ordinal)));
-        TestAssert(m_owner->m_usedUInt64PlaceholderMask & (1ULL << ordinal));
 #ifdef TESTBUILD
         m_populatedUInt64PlaceholderMask |= (1ULL << ordinal);
 #endif
-        union U {
-            uint64_t u64v;
-            T tv;
-        };
-        U u;
-        u.u64v = 0;
-        u.tv = value;
-        m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
-                m_owner->m_highestCppFnptrPlaceholderOrdinal + ordinal] = u.u64v;
+        // We just allocated enough memory for that many ordinals.
+        // If it is a ordinal that has been optimized out by compiler, don't write.
+        //
+        if (ordinal < m_owner->m_highestUInt64PlaceholderOrdinal)
+        {
+            union U {
+                uint64_t u64v;
+                T tv;
+            };
+            U u;
+            u.u64v = 0;
+            u.tv = value;
+            m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
+                    m_owner->m_highestCppFnptrPlaceholderOrdinal + ordinal] = u.u64v;
+        }
     }
 
 private:
@@ -300,7 +311,7 @@ private:
         TestAssert(!m_isMaterialized);
         TestAssert(baseAddress % x_fastinterp_function_alignment == 0);
         TestAssert(m_populatedBoilerplateFnPtrPlaceholderMask == m_owner->m_usedBoilerplateFnPtrPlaceholderMask);
-        TestAssert(m_populatedUInt64PlaceholderMask == m_owner->m_usedUInt64PlaceholderMask);
+        TestAssert((m_populatedUInt64PlaceholderMask & m_owner->m_usedUInt64PlaceholderMask) == m_owner->m_usedUInt64PlaceholderMask);
         TestAssert(m_populatedCppFnptrPlaceholderMask == m_owner->m_usedCppFnptrPlaceholderMask);
 #ifdef TESTBUILD
         m_isMaterialized = true;

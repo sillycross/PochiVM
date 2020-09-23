@@ -20,6 +20,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_arithmetic_expr.cpp
   fastinterp_tpl_astvariable.cpp
   fastinterp_tpl_astliteral.cpp
+  fastinterp_tpl_comparison_expr.cpp
 )
 
 SET(FASTINTERP_SOURCES
