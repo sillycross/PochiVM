@@ -21,6 +21,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astvariable.cpp
   fastinterp_tpl_astliteral.cpp
   fastinterp_tpl_comparison_expr.cpp
+  fastinterp_tpl_astcallexpr.cpp
 )
 
 SET(FASTINTERP_SOURCES

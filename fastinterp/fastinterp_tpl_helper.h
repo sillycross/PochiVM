@@ -8,6 +8,7 @@
 #include "dynamic_specialization_utils.h"
 #include "pochivm/ast_enums.h"
 #include "fastinterp_context.h"
+#include "pochivm/cxx2a_bit_cast_helper.h"
 
 // fastinterp_tpl
 //

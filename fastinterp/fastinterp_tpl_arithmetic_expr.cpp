@@ -103,7 +103,8 @@ struct FastInterpArithmeticExprImpl
         }
         else if constexpr(lhsShapeCategory == OperandShapeCategory::ZERO)
         {
-            lhs = 0;
+            constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();
+            lhs = v;
         }
         else if constexpr(lhsShapeCategory == OperandShapeCategory::VARIABLE)
         {
@@ -148,7 +149,8 @@ struct FastInterpArithmeticExprImpl
         }
         else if constexpr(rhsShapeCategory == OperandShapeCategory::ZERO)
         {
-            rhs = 0;
+            constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();
+            rhs = v;
         }
         else if constexpr(rhsShapeCategory == OperandShapeCategory::VARIABLE)
         {

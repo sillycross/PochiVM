@@ -135,4 +135,11 @@ enum class AstComparisonExprType
     X_END_OF_ENUM
 };
 
+const int x_fastinterp_callexpr_num_inline_params = 10;
+enum class AstCallExprNumParameters
+{
+    MORE_THAN_TEN = x_fastinterp_callexpr_num_inline_params + 1,
+    X_END_OF_ENUM
+};
+
 }   // namespace PochiVM
