@@ -66,7 +66,7 @@ def BuildOrUpdateDockerImage():
         '/lib/x86_64-linux-gnu/libtinfo.so.5'
     ]
     for shared_lib in all_shared_libs:
-        cmd = 'docker run -it -v%s:/home/u/PochiVM pochivm-build:latest cp %s /home/u/PochiVM/shared_libs' % (base_dir, shared_lib)
+        cmd = 'docker run -v%s:/home/u/PochiVM pochivm-build:latest cp %s /home/u/PochiVM/shared_libs' % (base_dir, shared_lib)
         r = os.system(cmd)
         if (r != 0):
             print('[ERROR] Failed to copy shared library %s, exit code = %d' % (shared_lib, r))

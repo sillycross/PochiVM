@@ -8,7 +8,7 @@ TEST(TestFastInterpInternal, SanitySymbolNames)
 {
     // Sanity check 'SelectBoilerplateBluePrint' indeed selected the boilerplate we expected by checking its symbol name
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
@@ -16,14 +16,14 @@ TEST(TestFastInterpInternal, SanitySymbolNames)
                                                                OperandShapeCategory::LITERAL_NONZERO,
                                                                OperandShapeCategory::LITERAL_NONZERO,
                                                                AstArithmeticExprType::ADD);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIiiiLNS_20OperandShapeCategoryE4ELS2_4ELNS_21AstArithmeticExprTypeE0EEEvPT_"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIiiiLNS_20OperandShapeCategoryE4ELS2_4ELNS_21AstArithmeticExprTypeE0EEEvPT_"));
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                                                                OperandShapeCategory::COMPLEX,
                                                                OperandShapeCategory::ZERO,
                                                                AstArithmeticExprType::MUL);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM28FastInterpArithmeticExprImpl1fIdiiLNS_20OperandShapeCategoryE6ELS2_5ELNS_21AstArithmeticExprTypeE2EEEvPT_"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIdiiLNS_20OperandShapeCategoryE6ELS2_5ELNS_21AstArithmeticExprTypeE2EEEvPT_"));
     std::ignore = blueprint;
 }
 
@@ -31,7 +31,7 @@ TEST(TestFastInterpInternal, Sanity_1)
 {
     // Test the simplest case: add two zeros.. no placeholders shall be needed
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint;
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
@@ -56,7 +56,7 @@ TEST(TestFastInterpInternal, Sanity_2)
 {
     // Test arith operation on two literal values
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
@@ -83,7 +83,7 @@ TEST(TestFastInterpInternal, Sanity_3)
 {
     // Test arith operation on two literal values, type is double to test that bitcasting works as expected.
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     const FastInterpBoilerplateBluePrint* blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(
                 TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
@@ -110,7 +110,7 @@ TEST(TestFastInterpInternal, Sanity_4)
 {
     // Test a expression tree '(a + b) * (c - d)'
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
@@ -156,7 +156,7 @@ TEST(TestFastInterpInternal, Sanity_5)
 {
     // Test a expression tree '(a + b) / (c - d)', double type
     //
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
@@ -201,7 +201,7 @@ TEST(TestFastInterpInternal, Sanity_5)
 
 TEST(TestFastInterpInternal, SanityThreadLocal_1)
 {
-    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpVariableImpl>;
+    using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIVariableImpl>;
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
@@ -440,7 +440,7 @@ void FillPlaceholderForArithOrCompareExpr(
         CheckAllUnderlyingBitsZeroFn checker = GetAllUnderlyingBitsZeroChecker(dataType);
         bool isZero = checker(dataFn);
         FastInterpBoilerplateInstance* lit = engine->InstantiateBoilerplate(
-                    FastInterpBoilerplateLibrary<FastInterpLiteralImpl>::SelectBoilerplateBluePrint(
+                    FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
                         dataType.GetDefaultFastInterpTypeId(),
                         isZero));
         if (!isZero)
@@ -624,7 +624,7 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
                             for (size_t i = 0; i < 40; i++) { pad[i] = static_cast<uint8_t>(rand() % 256); }
                             __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(pad);
                             FastInterpCodegenEngine engine;
-                            using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpArithmeticExprImpl>;
+                            using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIArithmeticExprImpl>;
                             FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                                         BoilerplateLibrary::SelectBoilerplateBluePrint(
                                             dataType.GetDefaultFastInterpTypeId(),
@@ -717,7 +717,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
                 dataFn = GetRandValueGenerator(dataType)(false /*forMult*/);
             }
             FastInterpCodegenEngine engine;
-            using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+            using BoilerplateLibrary = FastInterpBoilerplateLibrary<FILiteralImpl>;
             FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                         BoilerplateLibrary::SelectBoilerplateBluePrint(
                             dataType.GetDefaultFastInterpTypeId(), isZero));
@@ -740,7 +740,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
 
     {
         FastInterpCodegenEngine engine;
-        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FILiteralImpl>;
         FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                     BoilerplateLibrary::SelectBoilerplateBluePrint(
                         TypeId::Get<void*>().GetDefaultFastInterpTypeId(), false /*isZero*/));
@@ -758,7 +758,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
 
     {
         FastInterpCodegenEngine engine;
-        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpLiteralImpl>;
+        using BoilerplateLibrary = FastInterpBoilerplateLibrary<FILiteralImpl>;
         FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                     BoilerplateLibrary::SelectBoilerplateBluePrint(
                         TypeId::Get<void*>().GetDefaultFastInterpTypeId(), true /*isZero*/));
@@ -929,7 +929,7 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
                                 for (size_t i = 0; i < 40; i++) { pad[i] = static_cast<uint8_t>(rand() % 256); }
                                 __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(pad);
                                 FastInterpCodegenEngine engine;
-                                using BoilerplateLibrary = FastInterpBoilerplateLibrary<FastInterpComparisonExprImpl>;
+                                using BoilerplateLibrary = FastInterpBoilerplateLibrary<FIComparisonExprImpl>;
                                 FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                                             BoilerplateLibrary::SelectBoilerplateBluePrint(
                                                 dataType.GetDefaultFastInterpTypeId(),

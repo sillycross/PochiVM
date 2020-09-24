@@ -3,7 +3,7 @@
 namespace PochiVM
 {
 
-struct FastInterpComparisonExprImpl
+struct FIComparisonExprImpl
 {
     template<typename OperandType>
     static constexpr bool cond()
@@ -233,5 +233,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FastInterpComparisonExprImpl>();
+    RegisterBoilerplate<FIComparisonExprImpl>();
 }

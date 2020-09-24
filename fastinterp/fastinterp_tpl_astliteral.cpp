@@ -3,7 +3,7 @@
 namespace PochiVM
 {
 
-struct FastInterpLiteralImpl
+struct FILiteralImpl
 {
     // Only allow primitive type and 'void*'
     //
@@ -47,5 +47,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FastInterpLiteralImpl>();
+    RegisterBoilerplate<FILiteralImpl>();
 }

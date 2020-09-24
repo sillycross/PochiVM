@@ -3,7 +3,7 @@
 namespace PochiVM
 {
 
-struct FastInterpVariableImpl
+struct FIVariableImpl
 {
     template<typename VarTypePtr>
     static constexpr bool cond()
@@ -39,5 +39,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FastInterpVariableImpl>();
+    RegisterBoilerplate<FIVariableImpl>();
 }
