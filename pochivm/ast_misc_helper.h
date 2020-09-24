@@ -2,20 +2,10 @@
 
 #include "common.h"
 #include "pochivm_context.h"
+#include "ast_enums.h"
 
 namespace PochiVM
 {
-
-// Interp mode control signal
-// Used for control flow redirection statements (Break/Continue/Return)
-//
-enum class InterpControlSignal
-{
-    None,
-    Break,
-    Continue,
-    Return
-};
 
 // A simple helper for marking nodes as visited when traversing AST
 //

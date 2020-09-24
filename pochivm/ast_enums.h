@@ -185,6 +185,17 @@ private:
     uint32_t m_value;
 };
 
+// Interp mode control signal
+// Used for control flow redirection statements (Break/Continue/Return)
+//
+enum class InterpControlSignal
+{
+    None,
+    Break,
+    Continue,
+    Return
+};
+
 const int x_fastinterp_function_num_inline_stmts = 10;
 enum class FIFunctionNumStatements
 {

@@ -82,8 +82,9 @@ struct FICallGeneratedFnImpl
         //
         if constexpr(isNoExcept)
         {
+            InterpControlSignal tmp;    // TODO: FIXME for temporary test only
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(void*) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(nullptr);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(&tmp);
         }
         else
         {
