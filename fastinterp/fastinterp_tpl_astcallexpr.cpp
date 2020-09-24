@@ -82,16 +82,17 @@ struct FICallGeneratedFnImpl
         //
         if constexpr(isNoExcept)
         {
-            InterpControlSignal tmp;    // TODO: FIXME for temporary test only
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(void*) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(&tmp);
+            // noexcept function has prototype void(*)() noexcept
+            //
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)() noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0();
         }
         else
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(bool*) noexcept);
-            bool exceptionThrown;
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(&exceptionThrown);
-            if (unlikely(exceptionThrown))
+            // function that may throw has prototype bool(*)() noexcept, and returns true if it throws
+            //
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(bool(*)() noexcept);
+            if (unlikely(BOILERPLATE_FNPTR_PLACEHOLDER_0()))
             {
                 // The function call threw a C++ exception.
                 // Call the soft-emulated exception handler. It never returns.

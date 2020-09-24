@@ -4,16 +4,9 @@
 //
 
 #include "common.h"
-#include <csetjmp>
 
 namespace PochiVM
 {
-
-// From CppReference: "The std::jmp_buf type is an array type suitable for storing information to restore a calling environment."
-// We decay it to a pointer type to store it in a non-owning way.
-//
-using std_jmp_buf_ptr = std::decay<std::jmp_buf>::type;
-static_assert(std::is_pointer<std_jmp_buf_ptr>::value && sizeof(std_jmp_buf_ptr) == 8, "unexpected type");
 
 // This is directly used as a thread_local for performance reasons.
 // So it must be trivially constructible.
@@ -24,10 +17,13 @@ struct FastInterpContext
     //
     uintptr_t m_stackFrame;
 
-    // longjmp() target if a C++ exception is thrown out
+    // __builtin_longjmp() target if a C++ exception is thrown out
     // The code should jump to it after calling all destructors.
     //
-    std_jmp_buf_ptr m_ehTarget;
+    // See fastinterp_tpl_helper.h on why we are using __builtin_setjmp/__builtin_longjmp
+    // instead of glibc setjmp/longjmp
+    //
+    void** m_ehTarget;
 };
 
 }   // namespace PochiVM

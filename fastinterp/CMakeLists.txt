@@ -14,7 +14,7 @@
 # 
 string(REPLACE " -O0 " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 string(REPLACE " -g " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 ")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 -fconstexpr-depth=131072 -ftemplate-depth=131072 ")
 
 SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_arithmetic_expr.cpp
@@ -23,6 +23,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_comparison_expr.cpp
   fastinterp_tpl_astcallexpr.cpp
   fastinterp_tpl_astreturn.cpp
+  fastinterp_tpl_astfunction.cpp
 )
 
 SET(FASTINTERP_SOURCES

@@ -199,8 +199,7 @@ enum class InterpControlSignal
 const int x_fastinterp_function_num_inline_stmts = 10;
 enum class FIFunctionNumStatements
 {
-    MORE_THAN_TEN = x_fastinterp_function_num_inline_stmts + 1,
-    X_END_OF_ENUM
+    X_END_OF_ENUM = x_fastinterp_function_num_inline_stmts + 1
 };
 
 enum class FIFunctionStmtsMayReturnMask

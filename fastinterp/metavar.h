@@ -174,8 +174,20 @@ struct PartialMetaVarValueInstance
 template<typename T>
 struct is_fastinterp_fn_prototype : std::false_type {};
 
+// Normal interp fn used for almost everything
+//
 template<typename T>
 struct is_fastinterp_fn_prototype<void(T*) noexcept> : std::true_type {};
+
+// Special interp fn used for function
+// void(*)() used for noexcept function, and bool(*)() used for function that may throw
+// Maybe this is premature optimization to try to save one parameter, but nevermind..
+//
+template<>
+struct is_fastinterp_fn_prototype<void() noexcept> : std::true_type {};
+
+template<>
+struct is_fastinterp_fn_prototype<bool() noexcept> : std::true_type {};
 
 // metavar_has_cond_fn<T, TArgs...>::impl<VArgs...>::value
 //     true if either
@@ -269,7 +281,7 @@ struct metavar_materialize_helper
                         inst.m_values = instance.value;
                         using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
                         static_assert(is_fastinterp_fn_prototype<FnType>::value,
-                                "'f' is not a noexcept function with prototype void(*)(T*)");
+                                "'f' is not a noexcept function with prototype void(*)(T*), void(*)() or bool(*)()");
                         inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
                         result->m_instances.push_back(inst);
                     }
@@ -314,15 +326,23 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                 // This compiler should optimize this function, since it is only a simple tail-recursion optimization,
                 // and it significantly reduces the number of symbols to resolve, so the build-time-JIT is significantly (~3x) faster.
                 //
-                template<typename T, int cur, int ub>
+                template<typename T, int lb, int ub>
                 static void invoke_enum(MetaVarMaterializedList* result, const PartialMetaVarValueInstance& instance)
                 {
-                    if constexpr(cur < ub)
+                    if constexpr(lb + 1 == ub)
                     {
-                        constexpr T value = static_cast<T>(cur);
+                        constexpr T value = static_cast<T>(lb);
                         impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
-                                    result, instance.Push(static_cast<uint64_t>(cur)));
-                        invoke_enum<T, cur + 1, ub>(result, instance);
+                                    result, instance.Push(static_cast<uint64_t>(lb)));
+                    }
+                    else
+                    {
+                        // We have to use a binary recursive strategy to reduce recursion depth to logrithmic...
+                        // or clang crashes.....
+                        //
+                        constexpr int mid = (lb + ub) / 2;
+                        invoke_enum<T, lb, mid>(result, instance);
+                        invoke_enum<T, mid, ub>(result, instance);
                     }
                 }
 
@@ -371,6 +391,7 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                     {
                         static_assert(std::is_enum<T>::value, "Unexpected MetaVarType");
                         constexpr int ub = static_cast<int>(first);
+                        static_assert(ub > 0);
                         invoke_enum<T, 0, ub>(result, instance);
                     }
                 }
