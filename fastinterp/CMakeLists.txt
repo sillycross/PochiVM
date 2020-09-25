@@ -24,6 +24,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astcallexpr.cpp
   fastinterp_tpl_astreturn.cpp
   fastinterp_tpl_astfunction.cpp
+  fastinterp_tpl_return_arith_expr.cpp
+  fastinterp_tpl_if_stmt.cpp
 )
 
 SET(FASTINTERP_SOURCES
