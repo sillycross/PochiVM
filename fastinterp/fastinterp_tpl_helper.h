@@ -2,7 +2,9 @@
 
 // This file should only be included by fastinterp_tpl_*.cpp
 //
-#define INSIDE_FASTINTERP_TPL_CPP
+#ifndef POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp");
+#endif
 
 #include "metavar.h"
 #include "dynamic_specialization_utils.h"

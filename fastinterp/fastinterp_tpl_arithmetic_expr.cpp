@@ -1,4 +1,7 @@
+#define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+
 #include "fastinterp_tpl_helper.h"
+#include "fastinterp_tpl_operandshape_helper.h"
 
 namespace PochiVM
 {
@@ -37,14 +40,7 @@ struct FIArithmeticExprImpl
              OperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        // If LHS is not an array-element shape, we should always pass in the fake LhsIndexType of int32_t
-        //
-        if (!(lhsShapeCategory == OperandShapeCategory::VARPTR_VAR ||
-            lhsShapeCategory == OperandShapeCategory::VARPTR_LIT_NONZERO) &&
-            !std::is_same<LhsIndexType, int32_t>::value)
-        {
-            return false;
-        }
+        if (!OperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
         return true;
     }
 
@@ -55,14 +51,7 @@ struct FIArithmeticExprImpl
              OperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        // If RHS is not an array-element shape, we should always pass in the fake RhsIndexType of int32_t
-        //
-        if (!(rhsShapeCategory == OperandShapeCategory::VARPTR_VAR ||
-            rhsShapeCategory == OperandShapeCategory::VARPTR_LIT_NONZERO) &&
-            !std::is_same<RhsIndexType, int32_t>::value)
-        {
-            return false;
-        }
+        if (!OperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
         return true;
     }
 
@@ -90,97 +79,8 @@ struct FIArithmeticExprImpl
              AstArithmeticExprType arithType>
     static void f(OperandType* out) noexcept
     {
-        OperandType lhs;
-        if constexpr(lhsShapeCategory == OperandShapeCategory::COMPLEX)
-        {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(OperandType*) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(&lhs /*out*/);
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(OperandType);
-            lhs = CONSTANT_PLACEHOLDER_0;
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::ZERO)
-        {
-            constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();
-            lhs = v;
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::VARIABLE)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-            lhs = *GetLocalVarAddress<OperandType>(CONSTANT_PLACEHOLDER_0);
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::VARPTR_DEREF)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-            lhs = **GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_0);
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::VARPTR_VAR)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_0);
-            LhsIndexType index = *GetLocalVarAddress<LhsIndexType>(CONSTANT_PLACEHOLDER_1);
-            lhs = varPtr[index];
-        }
-        else if constexpr(lhsShapeCategory == OperandShapeCategory::VARPTR_LIT_NONZERO)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_1(LhsIndexType);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_0);
-            lhs = varPtr[CONSTANT_PLACEHOLDER_1];
-        }
-        else
-        {
-            static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");
-        }
-
-        OperandType rhs;
-        if constexpr(rhsShapeCategory == OperandShapeCategory::COMPLEX)
-        {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_2(void(*)(OperandType*) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_2(&rhs /*out*/);
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_2(OperandType);
-            rhs = CONSTANT_PLACEHOLDER_2;
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::ZERO)
-        {
-            constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();
-            rhs = v;
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::VARIABLE)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
-            rhs = *GetLocalVarAddress<OperandType>(CONSTANT_PLACEHOLDER_2);
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::VARPTR_DEREF)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
-            rhs = **GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_2);
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::VARPTR_VAR)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_3(uint32_t);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_2);
-            RhsIndexType index = *GetLocalVarAddress<RhsIndexType>(CONSTANT_PLACEHOLDER_3);
-            rhs = varPtr[index];
-        }
-        else if constexpr(rhsShapeCategory == OperandShapeCategory::VARPTR_LIT_NONZERO)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_3(RhsIndexType);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_2);
-            rhs = varPtr[CONSTANT_PLACEHOLDER_3];
-        }
-        else
-        {
-            static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");
-        }
+        OperandType lhs = OperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
+        OperandType rhs = OperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
 
         if constexpr(arithType == AstArithmeticExprType::ADD) {
             *out = lhs + rhs;

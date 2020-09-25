@@ -1,4 +1,7 @@
+#define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+
 #include "fastinterp_tpl_helper.h"
+#include "fastinterp_tpl_operandshape_helper.h"
 
 namespace PochiVM
 {
@@ -16,18 +19,7 @@ struct FISimpleReturnImpl
         {
             return std::is_same<OscIndexType, int32_t>::value && osc == OperandShapeCategory::COMPLEX;
         }
-        if (!is_valid_index_type<OscIndexType>())
-        {
-            return false;
-        }
-        // If osc is not an array-element shape, we should always pass in the fake oscIndexType of int32_t
-        //
-        if (!(osc == OperandShapeCategory::VARPTR_VAR ||
-            osc == OperandShapeCategory::VARPTR_LIT_NONZERO) &&
-            !std::is_same<OscIndexType, int32_t>::value)
-        {
-            return false;
-        }
+        if (!OperandShapeCategoryHelper::cond<OscIndexType, osc>()) { return false; }
         return true;
     }
 
@@ -36,51 +28,7 @@ struct FISimpleReturnImpl
     {
         if constexpr(!std::is_same<ReturnType, void>::value)
         {
-            ReturnType value;
-            if constexpr(osc == OperandShapeCategory::COMPLEX)
-            {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(ReturnType*) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(&value /*out*/);
-            }
-            else if constexpr(osc == OperandShapeCategory::LITERAL_NONZERO)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(ReturnType);
-                value = CONSTANT_PLACEHOLDER_0;
-            }
-            else if constexpr(osc == OperandShapeCategory::ZERO)
-            {
-                constexpr ReturnType v = PochiVM::get_all_bits_zero_value<ReturnType>();
-                value = v;
-            }
-            else if constexpr(osc == OperandShapeCategory::VARIABLE)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                value = *GetLocalVarAddress<ReturnType>(CONSTANT_PLACEHOLDER_0);
-            }
-            else if constexpr(osc == OperandShapeCategory::VARPTR_DEREF)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                value = **GetLocalVarAddress<ReturnType*>(CONSTANT_PLACEHOLDER_0);
-            }
-            else if constexpr(osc == OperandShapeCategory::VARPTR_VAR)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-                ReturnType* varPtr = *GetLocalVarAddress<ReturnType*>(CONSTANT_PLACEHOLDER_0);
-                OscIndexType index = *GetLocalVarAddress<OscIndexType>(CONSTANT_PLACEHOLDER_1);
-                value = varPtr[index];
-            }
-            else if constexpr(osc == OperandShapeCategory::VARPTR_LIT_NONZERO)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                DEFINE_CONSTANT_PLACEHOLDER_1(OscIndexType);
-                ReturnType* varPtr = *GetLocalVarAddress<ReturnType*>(CONSTANT_PLACEHOLDER_0);
-                value = varPtr[CONSTANT_PLACEHOLDER_1];
-            }
-            else
-            {
-                static_assert(type_dependent_false<ReturnType>::value, "unexpected literal category");
-            }
+            ReturnType value = OperandShapeCategoryHelper::get_0_1<ReturnType, OscIndexType, osc>();
             *GetLocalVarAddress<ReturnType>(0 /*offset*/) = value;
         }
         *out = InterpControlSignal::Return;

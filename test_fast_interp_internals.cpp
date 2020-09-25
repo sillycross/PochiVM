@@ -1227,6 +1227,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
     auto cppFnLambda2 = [](void* ret, void** params) noexcept -> void
     {
         ReleaseAssert(ret == nullptr);
+        ReleaseAssert(!shallThrow);
         **reinterpret_cast<int**>(params[0]) = 456;
     };
     auto exnHandlerLambda = [](void* exnContext, uintptr_t sfBase) noexcept -> void
