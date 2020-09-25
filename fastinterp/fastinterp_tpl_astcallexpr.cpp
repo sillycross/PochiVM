@@ -130,6 +130,132 @@ struct FICallGeneratedFnImpl
     }
 };
 
+// Call a CPP function
+//
+struct FICallCppFnImpl
+{
+    // TODO: support specialization of parameter shapes
+    // maybe consider varptr / var / literal? but perf impact should be very small
+    //
+    template<bool isReturnTypeVoid,
+             bool isNoExcept,
+             FICallExprNumParameters numParameters>
+    static constexpr bool cond()
+    {
+        return true;
+    }
+
+    // Constant placeholder 0: EH context pointer indicating current program position, if the call may throw
+    // CPP placeholder 0: the function to call
+    // CPP placeholder 1: EH handler, if the call may throw
+    // BoilerplateFn placeholder 0 - n: the function evaluating each parameter
+    //
+    template<bool isReturnTypeVoid,
+             bool isNoExcept,
+             FICallExprNumParameters numParameters>
+    static void f([[maybe_unused]] void* out) noexcept
+    {
+        // CPP function has an interface of 'void* /*ret*/, void** /*params*/' where
+        // 'params' is an array holding pointers to all parameters.
+        //
+
+        constexpr int numParams = static_cast<int>(numParameters);
+        uint64_t params[numParams];
+        void* paramsPtr[numParams];
+
+        for (int i = 0; i < numParams; i++)
+        {
+            paramsPtr[i] = &params[i];
+        }
+
+        // Populate parameters into 'params'
+        //
+
+#define EVALUATE_PARAM(paramOrd, placeholderOrd)                                                \
+    if constexpr(numParams > paramOrd)                                                          \
+    {                                                                                           \
+        INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)(void*) noexcept); \
+        BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd (params + paramOrd);                   \
+    }
+
+        EVALUATE_PARAM(0, 0)
+        EVALUATE_PARAM(1, 1)
+        EVALUATE_PARAM(2, 2)
+        EVALUATE_PARAM(3, 3)
+        EVALUATE_PARAM(4, 4)
+        EVALUATE_PARAM(5, 5)
+        EVALUATE_PARAM(6, 6)
+        EVALUATE_PARAM(7, 7)
+        EVALUATE_PARAM(8, 8)
+        EVALUATE_PARAM(9, 9)
+
+#undef EVALUATE_PARAM
+
+        if constexpr(numParams > 10)
+        {
+            // Evaluate the remaining parameters in an outlined function
+            //
+            static_assert(numParameters == FICallExprNumParameters::MORE_THAN_TEN);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_10(void(*)(void*) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_10(params + 10);
+        }
+
+        // Execute function call
+        //
+        if constexpr(isNoExcept)
+        {
+            // noexcept function has prototype void(*)(void*, void**) noexcept
+            //
+            if constexpr(isReturnTypeVoid)
+            {
+                DEFINE_CPP_FNTPR_PLACEHOLDER_0(void(*)(void*, void**) noexcept);
+                CPP_FNTPR_PLACEHOLDER_0(nullptr, paramsPtr);
+            }
+            else
+            {
+                DEFINE_CPP_FNTPR_PLACEHOLDER_0(void(*)(void*, void**) noexcept);
+                CPP_FNTPR_PLACEHOLDER_0(out, paramsPtr);
+            }
+        }
+        else
+        {
+            // function that may throw has prototype bool(*)(void*, void**) noexcept, and returns true if it throws
+            //
+            bool exceptionThrown;
+            if constexpr(isReturnTypeVoid)
+            {
+                DEFINE_CPP_FNTPR_PLACEHOLDER_0(bool(*)(void*, void**) noexcept);
+                exceptionThrown = CPP_FNTPR_PLACEHOLDER_0(nullptr, paramsPtr);
+            }
+            else
+            {
+                DEFINE_CPP_FNTPR_PLACEHOLDER_0(bool(*)(void*, void**) noexcept);
+                exceptionThrown = CPP_FNTPR_PLACEHOLDER_0(out, paramsPtr);
+            }
+            if (unlikely(exceptionThrown))
+            {
+                // The function call threw a C++ exception.
+                // Call the soft-emulated exception handler. It never returns.
+                //
+                DEFINE_CPP_FNTPR_PLACEHOLDER_1(void(*)(void*, uintptr_t) noexcept);
+                DEFINE_CONSTANT_PLACEHOLDER_0(void*);
+                CPP_FNTPR_PLACEHOLDER_1(CONSTANT_PLACEHOLDER_0, __pochivm_thread_fastinterp_context.m_stackFrame);
+                // TODO: testassert false
+                __builtin_unreachable();
+            }
+        }
+    }
+
+    static auto metavars()
+    {
+        return CreateMetaVarList(
+                    CreateBoolMetaVar("isReturnTypeVoid"),
+                    CreateBoolMetaVar("isNoExcept"),
+                    CreateEnumMetaVar<FICallExprNumParameters::X_END_OF_ENUM>("numParams")
+        );
+    }
+};
+
 }   // namespace PochiVM
 
 // build_fast_interp_lib.cpp JIT entry point
@@ -139,4 +265,5 @@ void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
     RegisterBoilerplate<FICallGeneratedFnImpl>();
+    RegisterBoilerplate<FICallCppFnImpl>();
 }

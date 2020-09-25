@@ -1116,3 +1116,206 @@ TEST(TestFastInterpInternal, SanityCallExpr_2)
     //
     ReleaseAssert(__pochivm_thread_fastinterp_context.m_stackFrame == reinterpret_cast<uintptr_t>(sf));
 }
+
+TEST(TestFastInterpInternal, SanityCallExpr_3)
+{
+    // This test tests calling CPP function noexcept case
+    //
+    auto cppFnLambda = [](void* ret, void** params) noexcept -> void
+    {
+        *reinterpret_cast<int*>(ret) = *reinterpret_cast<int*>(params[0]) - *reinterpret_cast<int*>(params[1]);
+    };
+    using CppFnProto = void(*)(void*, void**) noexcept;
+    CppFnProto cppFn = cppFnLambda;
+    FastInterpCodegenEngine engine;
+    FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallCppFnImpl>::SelectBoilerplateBluePrint(
+                    false /*isRetValVoid*/,
+                    true /*isNoExcept*/,
+                    static_cast<FICallExprNumParameters>(2) /*numParams*/));
+
+    FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    inst2->PopulateConstantPlaceholder<int>(0, 12345);
+
+    FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    inst3->PopulateConstantPlaceholder<int>(0, 67890);
+
+    inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
+    inst->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
+    inst->PopulateCppFnPtrPlaceholder(0, cppFn);
+
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+    ReleaseAssert(fnPtrVoid != nullptr);
+    using FnType = void(*)(int*);
+    FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+
+    int output = 0;
+    fnPtr(&output);
+    ReleaseAssert(output == 12345 - 67890);
+}
+
+TEST(TestFastInterpInternal, SanityCallExpr_4)
+{
+    // This test tests calling CPP function may throw case (but does not throw)
+    //
+    auto cppFnLambda = [](void* ret, void** params) noexcept -> bool
+    {
+        ReleaseAssert(ret == nullptr);
+        **reinterpret_cast<int**>(params[0]) = 123;
+        return false;
+    };
+    auto exnHandlerLambda = [](void* /*exnContext*/, uintptr_t /*sfBase*/) noexcept -> void
+    {
+        ReleaseAssert(false);
+    };
+    using CppFnProto = bool(*)(void*, void**) noexcept;
+    CppFnProto cppFn = cppFnLambda;
+    using ExnFnProto = void(*)(void*, uintptr_t) noexcept;
+    ExnFnProto exnHandler = exnHandlerLambda;
+
+    FastInterpCodegenEngine engine;
+    FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallCppFnImpl>::SelectBoilerplateBluePrint(
+                    true /*isRetValVoid*/,
+                    false /*isNoExcept*/,
+                    static_cast<FICallExprNumParameters>(1) /*numParams*/));
+
+    int value = 0;
+    FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<void*>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    inst2->PopulateConstantPlaceholder<void*>(0, &value);
+
+    inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
+    inst->PopulateCppFnPtrPlaceholder(0, cppFn);
+    inst->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(12345));
+    inst->PopulateCppFnPtrPlaceholder(1, exnHandler);
+
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+    ReleaseAssert(fnPtrVoid != nullptr);
+    using FnType = void(*)(void*);
+    FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+
+    fnPtr(nullptr);
+    ReleaseAssert(value == 123);
+}
+
+TEST(TestFastInterpInternal, SanityCallExpr_5)
+{
+    // This test tests calling CPP function may throw case (which actually throws)
+    //
+    __pochivm_thread_fastinterp_context.m_stackFrame = 233333;
+    __pochivm_thread_fastinterp_context.m_ehTarget = nullptr;
+    static bool shallThrow = false;
+    auto cppFnLambda = [](void* ret, void** params) noexcept -> bool
+    {
+        ReleaseAssert(ret == nullptr);
+        **reinterpret_cast<int**>(params[0]) = 123;
+        return shallThrow;
+    };
+    auto cppFnLambda2 = [](void* ret, void** params) noexcept -> void
+    {
+        ReleaseAssert(ret == nullptr);
+        **reinterpret_cast<int**>(params[0]) = 456;
+    };
+    auto exnHandlerLambda = [](void* exnContext, uintptr_t sfBase) noexcept -> void
+    {
+        if (!shallThrow)
+        {
+            ReleaseAssert(false);
+        }
+        else
+        {
+            ReleaseAssert(exnContext == reinterpret_cast<void*>(12345));
+            ReleaseAssert(sfBase == 233333);
+            __builtin_longjmp(__pochivm_thread_fastinterp_context.m_ehTarget, 1);
+        }
+    };
+    using CppFnProtoMayThrow = bool(*)(void*, void**) noexcept;
+    CppFnProtoMayThrow cppFn = cppFnLambda;
+    using ExnFnProto = void(*)(void*, uintptr_t) noexcept;
+    ExnFnProto exnHandler = exnHandlerLambda;
+    using CppFnProtoNoThrow = void(*)(void*, void**) noexcept;
+    CppFnProtoNoThrow cppFn2 = cppFnLambda2;
+
+    FastInterpCodegenEngine engine;
+    FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallCppFnImpl>::SelectBoilerplateBluePrint(
+                    true /*isRetValVoid*/,
+                    false /*isNoExcept*/,
+                    static_cast<FICallExprNumParameters>(1) /*numParams*/));
+
+    int value = 0;
+    FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<void*>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    inst2->PopulateConstantPlaceholder<void*>(0, &value);
+
+    inst1->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
+    inst1->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(12345));
+    inst1->PopulateCppFnPtrPlaceholder(0, cppFn);
+    inst1->PopulateCppFnPtrPlaceholder(1, exnHandler);
+
+    FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallCppFnImpl>::SelectBoilerplateBluePrint(
+                    true /*isRetValVoid*/,
+                    true /*isNoExcept*/,
+                    static_cast<FICallExprNumParameters>(1) /*numParams*/));
+    inst3->PopulateCppFnPtrPlaceholder(0, cppFn2);
+
+    FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<void*>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    inst4->PopulateConstantPlaceholder<void*>(0, &value);
+
+    inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst4);
+
+    FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIFunctionImpl>::SelectBoilerplateBluePrint(
+                    false /*isNoExcept*/,
+                    static_cast<PochiVM::FIFunctionNumStatements>(2) /*numStmts*/,
+                    static_cast<PochiVM::FIFunctionStmtsMayReturnMask>(0) /*mayReturnMask*/));
+    inst5->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
+    inst5->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
+
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst5);
+    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+    ReleaseAssert(fnPtrVoid != nullptr);
+    using FnType = bool(*)();
+    FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+
+    {
+        shallThrow = false;
+        value = 0;
+        ReleaseAssert(fnPtr() == false);
+        ReleaseAssert(value == 456);
+    }
+
+    {
+        shallThrow = true;
+        value = 0;
+        ReleaseAssert(fnPtr() == true);
+        ReleaseAssert(value == 123);
+    }
+
+    {
+        shallThrow = false;
+        value = 0;
+        ReleaseAssert(fnPtr() == false);
+        ReleaseAssert(value == 456);
+    }
+}
