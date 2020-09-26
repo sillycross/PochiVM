@@ -67,6 +67,7 @@ public:
 #endif
         )
     {
+        ReleaseAssert(contentLength % x_fastinterp_function_alignment == 0);
         for (uint32_t i = 0; i < addr32FixupArrayLength; i++)
         {
             ReleaseAssert(addr32FixupArray[i] + 4 <= contentLength);

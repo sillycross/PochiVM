@@ -570,6 +570,39 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     }
 }
 
+// It seems like clang++ populates multi-byte nop in function padding.
+// Of course this is not a correctness issue, since those paddings are never executed.
+// However, probably clang++ didn't do this without a reason. Maybe it helps with CPU pipelining..?
+// Anyway, it doesn't hurt for us to do that as well. At least it helps with gdb assembly dump.
+//
+void Populate_X86_64_NopInstructions(uint8_t* addr, size_t length)
+{
+    // From Intel's Manual:
+    //    https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2b-manual.pdf
+    //    Page 165, table 4-12, "Recommended Multi-Byte Sequence of NOP Instruction"
+    //
+    static constexpr uint8_t nop1[] = { 0x90 };
+    static constexpr uint8_t nop2[] = { 0x66, 0x90 };
+    static constexpr uint8_t nop3[] = { 0x0F, 0x1F, 0x00 };
+    static constexpr uint8_t nop4[] = { 0x0F, 0x1F, 0x40, 0x00 };
+    static constexpr uint8_t nop5[] = { 0x0F, 0x1F, 0x44, 0x00, 0x00 };
+    static constexpr uint8_t nop6[] = { 0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00 };
+    static constexpr uint8_t nop7[] = { 0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00 };
+    static constexpr uint8_t nop8[] = { 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    static constexpr uint8_t nop9[] = { 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    static constexpr const uint8_t* nops[10] = {
+        nullptr, nop1, nop2, nop3, nop4, nop5, nop6, nop7, nop8, nop9
+    };
+    while (length > 0)
+    {
+        size_t choice = 9;
+        choice = std::min(choice, length);
+        memcpy(addr, nops[choice], choice);
+        length -= choice;
+        addr += choice;
+    }
+}
+
 class SourceFileInfo : NonCopyable, NonMovable
 {
 public:
@@ -846,7 +879,7 @@ public:
             for (BoilerplateInstance& inst : bp.m_instances)
             {
                 SectionRef section = inst.m_llvmSectionRef;
-                uint64_t size = section.getSize();
+                uint64_t preAlignedSize = section.getSize();
                 Expected<StringRef> content = section.getContents();
                 if (!content)
                 {
@@ -855,10 +888,15 @@ public:
                     abort();
                 }
                 StringRef& sr = content.get();
-                ReleaseAssert(sr.size() == size);
-                uint8_t* data = new uint8_t[size];
+                ReleaseAssert(sr.size() == preAlignedSize);
+                size_t alignedSize = (preAlignedSize + PochiVM::x_fastinterp_function_alignment - 1) /
+                        PochiVM::x_fastinterp_function_alignment * PochiVM::x_fastinterp_function_alignment;
+                ReleaseAssert(alignedSize > 0 && alignedSize >= preAlignedSize && alignedSize % PochiVM::x_fastinterp_function_alignment == 0);
+
+                uint8_t* data = new uint8_t[alignedSize];
                 Auto(delete [] data);
-                memcpy(data, sr.data(), size);
+                memcpy(data, sr.data(), preAlignedSize);
+                Populate_X86_64_NopInstructions(data + preAlignedSize, alignedSize - preAlignedSize);
 
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {
@@ -906,10 +944,10 @@ public:
                 uint64_t usedU64Mask = 0;
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {
-                    ReleaseAssert(rinfo.offset < size);
+                    ReleaseAssert(rinfo.offset < preAlignedSize);
                     if (rinfo.type == ELF::R_X86_64_PLT32)
                     {
-                        ReleaseAssert(rinfo.offset + 4 <= size);
+                        ReleaseAssert(rinfo.offset + 4 <= preAlignedSize);
                         uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(rinfo.offset)));
                         uint32_t addend2 = static_cast<uint32_t>(static_cast<uint64_t>(rinfo.addend));
                         addend += addend2;
@@ -918,7 +956,7 @@ public:
                     }
                     else if (rinfo.type == ELF::R_X86_64_64)
                     {
-                        ReleaseAssert(rinfo.offset + 8 <= size);
+                        ReleaseAssert(rinfo.offset + 8 <= preAlignedSize);
                         uint64_t addend = static_cast<uint64_t>(rinfo.addend);
                         UnalignedAddAndWriteback<uint64_t>(data + rinfo.offset, addend);
                     }
@@ -1026,11 +1064,11 @@ public:
                 }
 
                 fprintf(fp3, "static uint8_t %s%s_%d_contents[%d] = {\n",
-                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
-                for (size_t i = 0; i < size; i++)
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(alignedSize));
+                for (size_t i = 0; i < alignedSize; i++)
                 {
                     fprintf(fp3, "%d", static_cast<int>(data[i]));
-                    if (i + 1 < size) {
+                    if (i + 1 < alignedSize) {
                         fprintf(fp3, ", ");
                     }
                     if (i % 16 == 15) {
@@ -1039,9 +1077,9 @@ public:
                 }
                 fprintf(fp3, "\n};\n");
 
-                ReleaseAssert(size < (1ULL << 31));
+                ReleaseAssert(alignedSize < (1ULL << 31));
                 fprintf(fp3, "constexpr uint32_t %s%s_%d_contentLength = %d;\n",
-                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(size));
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(alignedSize));
 
                 // Do startup-time fixup of external symbols
                 // In the same translational unit, global initializers are executed in the same order they are declared.

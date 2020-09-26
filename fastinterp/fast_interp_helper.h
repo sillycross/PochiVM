@@ -41,12 +41,6 @@ namespace PochiVM
 //        Returns the function pointer for boilerplate instance registered in 'RegisterGeneratedFunctionEntryPoint'.
 //
 
-// The function alignment of the generated functions
-// This must at least the function alignment used to compile fastinterp_tpl.cpp
-// Default clang++ function alignment is 16.
-//
-constexpr size_t x_fastinterp_function_alignment = 16;
-
 struct FastInterpSymbolFixupRecord
 {
     constexpr FastInterpSymbolFixupRecord()
@@ -91,7 +85,7 @@ public:
 
     size_t GetCodeSectionLength() const
     {
-        return (m_contentLength + x_fastinterp_function_alignment - 1) / x_fastinterp_function_alignment * x_fastinterp_function_alignment;
+        return m_contentLength;
     }
 
     size_t GetDataSectionLength() const
