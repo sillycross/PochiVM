@@ -18,17 +18,17 @@ struct FILiteralImpl
     }
 
     template<typename LiteralType, bool isAllUnderlyingBitsZero>
-    static void f(LiteralType* out) noexcept
+    static LiteralType f() noexcept
     {
         if constexpr(isAllUnderlyingBitsZero)
         {
             constexpr LiteralType v = PochiVM::get_all_bits_zero_value<LiteralType>();
-            *out = v;
+            return v;
         }
         else
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(LiteralType);
-            *out = CONSTANT_PLACEHOLDER_0;
+            return CONSTANT_PLACEHOLDER_0;
         }
     }
 

@@ -83,28 +83,28 @@ struct FIComparisonExprImpl
              OperandShapeCategory lhsShapeCategory,
              OperandShapeCategory rhsShapeCategory,
              AstComparisonExprType comparisonType>
-    static void f(bool* out) noexcept
+    static bool f() noexcept
     {
         OperandType lhs = OperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
         OperandType rhs = OperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
 
         if constexpr(comparisonType == AstComparisonExprType::EQUAL) {
-            *out = (lhs == rhs);
+            return (lhs == rhs);
         }
         else if constexpr(comparisonType == AstComparisonExprType::NOT_EQUAL) {
-            *out = (lhs != rhs);
+            return (lhs != rhs);
         }
         else if constexpr(comparisonType == AstComparisonExprType::LESS_THAN) {
-            *out = (lhs < rhs);
+            return (lhs < rhs);
         }
         else if constexpr(comparisonType == AstComparisonExprType::LESS_EQUAL) {
-            *out = (lhs <= rhs);
+            return (lhs <= rhs);
         }
         else if constexpr(comparisonType == AstComparisonExprType::GREATER_THAN) {
-            *out = (lhs > rhs);
+            return (lhs > rhs);
         }
         else if constexpr(comparisonType == AstComparisonExprType::GREATER_EQUAL) {
-            *out = (lhs >= rhs);
+            return (lhs >= rhs);
         }
         else
         {

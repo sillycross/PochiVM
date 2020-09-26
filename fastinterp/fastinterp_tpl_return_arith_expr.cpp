@@ -64,6 +64,11 @@ struct FIReturnArithmeticExprImpl
     static constexpr bool cond()
     {
         if (std::is_floating_point<OperandType>::value && arithType == AstArithmeticExprType::MOD) { return false; }
+        // floating point division by 0 is undefined behavior, and clang generates a special relocation
+        // to directly return the binary representation of NaN/Inf. We cannot support this relocation easily.
+        //
+        if ((arithType == AstArithmeticExprType::MOD || arithType == AstArithmeticExprType::DIV)
+            && rhsShapeCategory == OperandShapeCategory::ZERO) { return false; }
         return true;
     }
 
@@ -73,7 +78,7 @@ struct FIReturnArithmeticExprImpl
              OperandShapeCategory lhsShapeCategory,
              OperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType>
-    static void f(InterpControlSignal* out) noexcept
+    static InterpControlSignal f() noexcept
     {
         ReturnType lhs = OperandShapeCategoryHelper::get_0_1<ReturnType, LhsIndexType, lhsShapeCategory>();
         ReturnType rhs = OperandShapeCategoryHelper::get_2_3<ReturnType, RhsIndexType, rhsShapeCategory>();
@@ -96,7 +101,7 @@ struct FIReturnArithmeticExprImpl
         else {
             static_assert(type_dependent_false<ReturnType>::value, "Unexpected AstArithmeticExprType");
         }
-        *out = InterpControlSignal::Return;
+        return InterpControlSignal::Return;
     }
 
     static auto metavars()

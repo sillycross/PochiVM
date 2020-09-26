@@ -135,11 +135,55 @@ enum class AstComparisonExprType
     X_END_OF_ENUM
 };
 
-const int x_fastinterp_callexpr_num_inline_params = 10;
+const int x_fastinterp_callexpr_num_inline_params = 3;
 enum class FICallExprNumParameters
 {
-    MORE_THAN_TEN = x_fastinterp_callexpr_num_inline_params + 1,
+    MORE_THAN_THREE = x_fastinterp_callexpr_num_inline_params + 1,
     X_END_OF_ENUM
+};
+
+namespace math
+{
+
+constexpr int power(int base, int exp)
+{
+    int result = 1;
+    for (int i = 0; i < exp; i++) result *= base;
+    return result;
+}
+
+}   // namespace math
+
+// Sometimes we don't need to understand the internal representation of a type,
+// we just want to forward it to somewhere else.
+// In that case, we don't have to enumerate every type (so we can inline more in one function).
+// We just need to distinguish types that are different in ABI.
+//
+enum class FIABIDistinctType
+{
+    INT_8,
+    INT_16,
+    INT_32,
+    INT_64,
+    FLOAT,
+    DOUBLE,
+    X_END_OF_ENUM
+};
+
+template<FIABIDistinctType t> struct TypeForABIDistinctTypeImpl;
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::INT_8> { using type = uint8_t; };
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::INT_16> { using type = uint16_t; };
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::INT_32> { using type = uint32_t; };
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::INT_64> { using type = uint64_t; };
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::FLOAT> { using type = float; };
+template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::DOUBLE> { using type = double; };
+
+template<FIABIDistinctType t>
+using TypeForABIDistinctType = typename TypeForABIDistinctTypeImpl<t>::type;
+
+enum class FICallExprParamTypeMask
+{
+    X_END_OF_ENUM = math::power(static_cast<int>(FIABIDistinctType::X_END_OF_ENUM), x_fastinterp_callexpr_num_inline_params)
 };
 
 class PossibleControlSignals

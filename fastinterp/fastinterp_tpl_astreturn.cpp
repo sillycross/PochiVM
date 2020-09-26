@@ -24,14 +24,14 @@ struct FISimpleReturnImpl
     }
 
     template<typename ReturnType, typename OscIndexType, OperandShapeCategory osc>
-    static void f(InterpControlSignal* out) noexcept
+    static InterpControlSignal f() noexcept
     {
         if constexpr(!std::is_same<ReturnType, void>::value)
         {
             ReturnType value = OperandShapeCategoryHelper::get_0_1<ReturnType, OscIndexType, osc>();
             *GetLocalVarAddress<ReturnType>(0 /*offset*/) = value;
         }
-        *out = InterpControlSignal::Return;
+        return InterpControlSignal::Return;
     }
 
     static auto metavars()

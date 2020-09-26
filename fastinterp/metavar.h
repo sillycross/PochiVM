@@ -6,6 +6,7 @@
 #include "pochivm/common.h"
 #include "pochivm/reflective_stringify_helper.h"
 #include "pochivm/for_each_primitive_type.h"
+#include "fastinterp_boilerplate_allowed_shapes.h"
 
 namespace PochiVM
 {
@@ -171,24 +172,6 @@ struct PartialMetaVarValueInstance
     }
 };
 
-template<typename T>
-struct is_fastinterp_fn_prototype : std::false_type {};
-
-// Normal interp fn used for almost everything
-//
-template<typename T>
-struct is_fastinterp_fn_prototype<void(T*) noexcept> : std::true_type {};
-
-// Special interp fn used for function
-// void(*)() used for noexcept function, and bool(*)() used for function that may throw
-// Maybe this is premature optimization to try to save one parameter, but nevermind..
-//
-template<>
-struct is_fastinterp_fn_prototype<void() noexcept> : std::true_type {};
-
-template<>
-struct is_fastinterp_fn_prototype<bool() noexcept> : std::true_type {};
-
 // metavar_has_cond_fn<T, TArgs...>::impl<VArgs...>::value
 //     true if either
 //     (1) T does NOT have cond<TArgs..., VArgs>
@@ -280,8 +263,9 @@ struct metavar_materialize_helper
                         MetaVarMaterializedInstance inst;
                         inst.m_values = instance.value;
                         using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
-                        static_assert(is_fastinterp_fn_prototype<FnType>::value,
-                                "'f' is not a noexcept function with prototype void(*)(T*), void(*)() or bool(*)()");
+                        static_assert(is_allowed_boilerplate_shape<FnType>::value,
+                                "'f' is not among the allowed shapes of boilerplate functions. "
+                                "If you need a new shape, put it in fastinterp_boilerplate_allowed_shapes.h.");
                         inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
                         result->m_instances.push_back(inst);
                     }

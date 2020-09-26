@@ -35,8 +35,9 @@ struct Materializer1
     }
 
     template<typename T1, typename T2, TestEnum1 v1, TestEnum2 v2, bool v3>
-    static void f(std::pair<T1, std::pair<T2, uint64_t>>* a) noexcept
+    static void f(uintptr_t t) noexcept
     {
+        std::pair<T1, std::pair<T2, uint64_t>>* a = reinterpret_cast<std::pair<T1, std::pair<T2, uint64_t>>*>(t);
         a->second.second = static_cast<uint64_t>(*a->first) + static_cast<uint64_t>(a->second.first) +
                 static_cast<uint64_t>(v1) + static_cast<uint64_t>(v2) + static_cast<uint64_t>(v3);
     }
@@ -51,8 +52,19 @@ struct Materializer2
     }
 
     template<typename T1>
-    static void f(T1*) noexcept
-    { }
+    static T1 f() noexcept
+    {
+        if constexpr(std::is_pointer<T1>::value) {
+            return nullptr;
+        }
+        else if constexpr(std::is_same<T1, void>::value) {
+            return;
+        }
+        else
+        {
+            return 0;
+        }
+    }
 };
 
 }   // namespace TestMetaVar

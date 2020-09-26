@@ -21,7 +21,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astvariable.cpp
   fastinterp_tpl_astliteral.cpp
   fastinterp_tpl_comparison_expr.cpp
-  fastinterp_tpl_astcallexpr.cpp
+  fastinterp_tpl_astcall_generatedfn.cpp
+  fastinterp_tpl_astcall_cppfn.cpp
   fastinterp_tpl_astreturn.cpp
   fastinterp_tpl_astfunction.cpp
   fastinterp_tpl_return_arith_expr.cpp

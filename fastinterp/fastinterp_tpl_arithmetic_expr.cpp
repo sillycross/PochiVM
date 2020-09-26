@@ -64,6 +64,11 @@ struct FIArithmeticExprImpl
     static constexpr bool cond()
     {
         if (std::is_floating_point<OperandType>::value && arithType == AstArithmeticExprType::MOD) { return false; }
+        // floating point division by 0 is undefined behavior, and clang generates a special relocation
+        // to directly return the binary representation of NaN/Inf. We cannot support this relocation easily.
+        //
+        if ((arithType == AstArithmeticExprType::MOD || arithType == AstArithmeticExprType::DIV)
+            && rhsShapeCategory == OperandShapeCategory::ZERO) { return false; }
         return true;
     }
 
@@ -77,25 +82,25 @@ struct FIArithmeticExprImpl
              OperandShapeCategory lhsShapeCategory,
              OperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType>
-    static void f(OperandType* out) noexcept
+    static OperandType f() noexcept
     {
         OperandType lhs = OperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
         OperandType rhs = OperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
 
         if constexpr(arithType == AstArithmeticExprType::ADD) {
-            *out = lhs + rhs;
+            return lhs + rhs;
         }
         else if constexpr(arithType == AstArithmeticExprType::SUB) {
-            *out = lhs - rhs;
+            return lhs - rhs;
         }
         else if constexpr(arithType == AstArithmeticExprType::MUL) {
-            *out = lhs * rhs;
+            return lhs * rhs;
         }
         else if constexpr(arithType == AstArithmeticExprType::DIV) {
-            *out = lhs / rhs;
+            return lhs / rhs;
         }
         else if constexpr(arithType == AstArithmeticExprType::MOD) {
-            *out = lhs % rhs;
+            return lhs % rhs;
         }
         else {
             static_assert(type_dependent_false<OperandType>::value, "Unexpected AstArithmeticExprType");

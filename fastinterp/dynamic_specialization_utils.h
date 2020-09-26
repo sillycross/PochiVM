@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pochivm/common.h"
+#include "fastinterp_boilerplate_allowed_shapes.h"
 
 // Define 'placeholders' that will be replaced by constant values at runtime.
 //
@@ -18,7 +19,7 @@
 //                  For simplicity, it is recommended that you unconditionally always pair
 //                  a CONSTANT_PLACEHOLDER with a is-zero boolean template parameter.
 //
-// (3) DEFINE_CPP_FNTPR_PLACEHOLDER_[n](noexcept-function-pointer-type)
+// (3) DEFINE_CPP_FNPTR_PLACEHOLDER_[n](noexcept-function-pointer-type)
 //         Define CPP_FNPTR_PLACEHOLDER_[n] to hold a function pointer that will point to a C++ function in host process of type 'type'.
 //         WARNING: It is not allowed to hold a null function pointer.
 //
@@ -99,14 +100,14 @@ INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(12)
 template<typename T> struct __pochivm_is_noexcept_fnptr_helper : std::false_type {};
 template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper<R(*)(Args...) noexcept> : std::true_type {};
 
-#define INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(ordinal, ...)                                                     \
-    using _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
-    static_assert(std::is_pointer<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                            \
-        std::is_function<typename std::remove_pointer<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::type>::value && \
-        __pochivm_is_noexcept_fnptr_helper<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value,                     \
-        "not a noexcept function pointer");                                                                             \
-    const _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal BOILERPLATE_FNPTR_PLACEHOLDER_ ## ordinal =                   \
-        reinterpret_cast<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
+#define INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(ordinal, ...)                                             \
+    using _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                        \
+    static_assert(std::is_pointer<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                    \
+        is_allowed_boilerplate_shape<typename std::remove_pointer<                                              \
+            _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::type>::value,                                     \
+        "not among the allowed shapes of boilerplate function pointer, did you forget noexcept?");              \
+    const _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal BOILERPLATE_FNPTR_PLACEHOLDER_ ## ordinal =           \
+        reinterpret_cast<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                      \
             __pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_ ## ordinal)
 
 #define INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(ordinal, ...)                                                      \
@@ -124,14 +125,14 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         reinterpret_cast<const _UNION_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal *>(                                 \
             &_DONOTUSE_INTERNAL_CONSTANT_PLACEHOLDER_ ## ordinal)->__pochivm_actual_value
 
-#define INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(ordinal, ...)                                                     \
-    using _CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
-    static_assert(std::is_pointer<_CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                            \
-        std::is_function<typename std::remove_pointer<_CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal>::type>::value && \
-        __pochivm_is_noexcept_fnptr_helper<_CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal>::value,                     \
+#define INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(ordinal, ...)                                                     \
+    using _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
+    static_assert(std::is_pointer<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                            \
+        std::is_function<typename std::remove_pointer<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::type>::value && \
+        __pochivm_is_noexcept_fnptr_helper<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value,                     \
         "not a noexcept function pointer");                                                                     \
-    const _CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal CPP_FNTPR_PLACEHOLDER_ ## ordinal =                           \
-        reinterpret_cast<_CPP_FNTPR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
+    const _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal CPP_FNPTR_PLACEHOLDER_ ## ordinal =                           \
+        reinterpret_cast<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
             __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal)
 
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
@@ -162,16 +163,16 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #define DEFINE_CONSTANT_PLACEHOLDER_11(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(11, __VA_ARGS__)
 #define DEFINE_CONSTANT_PLACEHOLDER_12(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(12, __VA_ARGS__)
 
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_0(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(0, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_1(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(1, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_2(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(2, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_3(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(3, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_4(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(4, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_5(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(5, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_6(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(6, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_7(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(7, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_8(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(8, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_9(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(9, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_10(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(10, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_11(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(11, __VA_ARGS__)
-#define DEFINE_CPP_FNTPR_PLACEHOLDER_12(...) INTERNAL_DEFINE_CPP_FNTPR_PLACEHOLDER(12, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_1(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(1, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_2(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(2, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_3(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(3, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_4(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(4, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_5(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(5, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_6(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(6, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_7(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(7, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_8(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(8, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_9(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(9, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_10(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(10, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_11(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(11, __VA_ARGS__)
+#define DEFINE_CPP_FNPTR_PLACEHOLDER_12(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(12, __VA_ARGS__)

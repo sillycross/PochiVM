@@ -29,6 +29,11 @@ struct FIIfStatementImpl
         return true;
     }
 
+    template<FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum, FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum>
+    using ReturnTypeHelper = typename std::conditional<
+        static_cast<int>(trueBranchMayCFRMaskEnum) == 0 && static_cast<int>(falseBranchMayCFRMaskEnum) == 0,
+        void, InterpControlSignal>::type;
+
     // BoilerplateFn placeholder 0: the condition
     // BoilerplateFn placeholder 1-5: the true branch
     // BoilerplateFn placeholder 6-10: the false branch
@@ -37,32 +42,31 @@ struct FIIfStatementImpl
              FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
              FIIfStmtNumStatements numFalseBranchStmtsEnum,
              FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum>
-    static void f([[maybe_unused]] InterpControlSignal* ics) noexcept
+    static ReturnTypeHelper<trueBranchMayCFRMaskEnum, falseBranchMayCFRMaskEnum> f() noexcept
     {
-        bool cond;
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(bool*) noexcept);
-        BOILERPLATE_FNPTR_PLACEHOLDER_0(&cond);
+        using ReturnType = ReturnTypeHelper<trueBranchMayCFRMaskEnum, falseBranchMayCFRMaskEnum>;
 
 #define EXECUTE_STMT(stmtOrd, placeholderOrd)                                                                      \
     if constexpr(numStmts > (stmtOrd))                                                                             \
     {                                                                                                              \
         if constexpr((mayCFRMask & (1 << (stmtOrd))) != 0)                                                         \
         {                                                                                                          \
-            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)(InterpControlSignal*) noexcept); \
-            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd(ics);                                                 \
-            if (*ics != InterpControlSignal::None)                                                                 \
+            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, InterpControlSignal(*)() noexcept);      \
+            InterpControlSignal ics = BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd();                          \
+            if (ics != InterpControlSignal::None)                                                                  \
             {                                                                                                      \
-                return;                                                                                            \
+                return ics;                                                                                        \
             }                                                                                                      \
         }                                                                                                          \
         else                                                                                                       \
         {                                                                                                          \
-            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)(InterpControlSignal*) noexcept); \
-            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd(nullptr);                                             \
+            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)() noexcept);                     \
+            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd();                                                    \
         }                                                                                                          \
     }
 
-        if (cond)
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(bool(*)() noexcept);
+        if (BOILERPLATE_FNPTR_PLACEHOLDER_0())
         {
             constexpr int numStmts = static_cast<int>(numTrueBranchStmtsEnum);
             constexpr int mayCFRMask = static_cast<int>(trueBranchMayCFRMaskEnum);
@@ -71,6 +75,11 @@ struct FIIfStatementImpl
             EXECUTE_STMT(2, 3)
             EXECUTE_STMT(3, 4)
             EXECUTE_STMT(4, 5)
+
+            if constexpr(!std::is_same<ReturnType, void>::value)
+            {
+                return InterpControlSignal::None;
+            }
         }
         else
         {
@@ -81,6 +90,11 @@ struct FIIfStatementImpl
             EXECUTE_STMT(2, 8)
             EXECUTE_STMT(3, 9)
             EXECUTE_STMT(4, 10)
+
+            if constexpr(!std::is_same<ReturnType, void>::value)
+            {
+                return InterpControlSignal::None;
+            }
         }
         static_assert(static_cast<int>(FIIfStmtNumStatements::X_END_OF_ENUM) == 5 + 1);
 

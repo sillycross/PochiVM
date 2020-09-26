@@ -32,31 +32,30 @@ struct OperandShapeCategoryHelper
     template<typename OperandType, typename OscIndexType, OperandShapeCategory osc>                         \
     static OperandType WARN_UNUSED __attribute__((__always_inline__)) meth_name() noexcept                  \
     {                                                                                                       \
-        OperandType value;                                                                                  \
         if constexpr(osc == OperandShapeCategory::COMPLEX)                                                  \
         {                                                                                                   \
-            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholder1, void(*)(OperandType*) noexcept);    \
-            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholder1(&value /*out*/);                                 \
+            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholder1, OperandType(*)() noexcept);         \
+            return BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholder1();                                        \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::LITERAL_NONZERO)                                     \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, OperandType);                                \
-            value = CONSTANT_PLACEHOLDER_ ## placeholder1;                                                  \
+            return CONSTANT_PLACEHOLDER_ ## placeholder1;                                                   \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::ZERO)                                                \
         {                                                                                                   \
             constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();                      \
-            value = v;                                                                                      \
+            return v;                                                                                       \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::VARIABLE)                                            \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
-            value = *GetLocalVarAddress<OperandType>(CONSTANT_PLACEHOLDER_ ## placeholder1);                \
+            return *GetLocalVarAddress<OperandType>(CONSTANT_PLACEHOLDER_ ## placeholder1);                 \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::VARPTR_DEREF)                                        \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
-            value = **GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_ ## placeholder1);              \
+            return **GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_ ## placeholder1);               \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::VARPTR_VAR)                                          \
         {                                                                                                   \
@@ -64,20 +63,19 @@ struct OperandShapeCategoryHelper
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint32_t);                                   \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_ ## placeholder1); \
             OscIndexType index = *GetLocalVarAddress<OscIndexType>(CONSTANT_PLACEHOLDER_ ## placeholder2);  \
-            value = varPtr[index];                                                                          \
+            return varPtr[index];                                                                           \
         }                                                                                                   \
         else if constexpr(osc == OperandShapeCategory::VARPTR_LIT_NONZERO)                                  \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, OscIndexType);                               \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_ ## placeholder1); \
-            value = varPtr[CONSTANT_PLACEHOLDER_ ## placeholder2];                                          \
+            return varPtr[CONSTANT_PLACEHOLDER_ ## placeholder2];                                           \
         }                                                                                                   \
         else                                                                                                \
         {                                                                                                   \
             static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");         \
         }                                                                                                   \
-        return value;                                                                                       \
     }
 
     OSCHELPER_GENERATE_METHOD(get_0_1, 0, 1)

@@ -14,24 +14,21 @@ static void __attribute__((__always_inline__)) FIFunctionBodyImplInternal() noex
     constexpr int numStmts = static_cast<int>(numStmtsEnum);
     constexpr int mayReturnMask = static_cast<int>(mayReturnMaskEnum);
 
-    InterpControlSignal ics [[maybe_unused]] = InterpControlSignal::None;
-
 #define EXECUTE_STMT(stmtOrd, placeholderOrd)                                                                      \
     if constexpr(numStmts > (stmtOrd))                                                                             \
     {                                                                                                              \
         if constexpr((mayReturnMask & (1 << (stmtOrd))) != 0)                                                      \
         {                                                                                                          \
-            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)(InterpControlSignal*) noexcept); \
-            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd(&ics);                                                \
-            if (ics == InterpControlSignal::Return)                                                                \
+            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, InterpControlSignal(*)() noexcept);      \
+            if (BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd() != InterpControlSignal::None)                   \
             {                                                                                                      \
                 return;                                                                                            \
             }                                                                                                      \
         }                                                                                                          \
         else                                                                                                       \
         {                                                                                                          \
-            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)(InterpControlSignal*) noexcept); \
-            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd(nullptr);                                             \
+            INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholderOrd, void(*)() noexcept);                     \
+            BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholderOrd();                                                    \
         }                                                                                                          \
     }
 
