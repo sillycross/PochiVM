@@ -7,6 +7,8 @@ namespace PochiVM
 
 struct FIIfStatementImpl
 {
+    // TODO: we should support special-casing the 'cond' being a bool variable: this is a very common case
+    //
     template<FIIfStmtNumStatements numTrueBranchStmtsEnum,
              FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum>
     static constexpr bool cond()

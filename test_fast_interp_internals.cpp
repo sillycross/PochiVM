@@ -1584,7 +1584,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 
 TEST(TestFastInterpInternal, SanityCallExprParams)
 {
-    static bool cppFnExecuted = false;
+    static bool cppFnExecuted;
     auto cppFnLambda = [](void** params) noexcept -> void
     {
         cppFnExecuted = true;
@@ -1736,6 +1736,7 @@ TEST(TestFastInterpInternal, SanityCallExprParams)
     using FnType = void(*)();
     FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
 
+    cppFnExecuted = false;
     fnPtr();
     ReleaseAssert(cppFnExecuted);
 }
