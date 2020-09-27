@@ -187,9 +187,66 @@ template<> struct TypeForABIDistinctTypeImpl<FIABIDistinctType::DOUBLE> { using 
 template<FIABIDistinctType t>
 using TypeForABIDistinctType = typename TypeForABIDistinctTypeImpl<t>::type;
 
+template<typename T>
+constexpr FIABIDistinctType GetFIABIDistinctType()
+{
+    if constexpr(std::is_pointer<T>::value)
+    {
+        static_assert(sizeof(T) == 8, "unexpected pointer size");
+        return FIABIDistinctType::INT_64;
+    }
+    else if constexpr(std::is_integral<T>::value)
+    {
+        constexpr size_t size = sizeof(T);
+        if constexpr(size == 1) {
+            return FIABIDistinctType::INT_8;
+        }
+        else if constexpr(size == 2) {
+            return FIABIDistinctType::INT_16;
+        }
+        else if constexpr(size == 4) {
+            return FIABIDistinctType::INT_32;
+        }
+        else if constexpr(size == 8) {
+            return FIABIDistinctType::INT_64;
+        }
+        else {
+            static_assert(type_dependent_false<T>::value, "unexpected size of integral type");
+        }
+    }
+    else if constexpr(std::is_same<T, float>::value)
+    {
+        return FIABIDistinctType::FLOAT;
+    }
+    else if constexpr(std::is_same<T, double>::value)
+    {
+        return FIABIDistinctType::DOUBLE;
+    }
+    else
+    {
+        static_assert(type_dependent_false<T>::value, "unexpected type T");
+    }
+}
+
 enum class FICallExprParamTypeMask
 {
     X_END_OF_ENUM = math::power(static_cast<int>(FIABIDistinctType::X_END_OF_ENUM), x_fastinterp_callexpr_num_inline_params)
+};
+
+// In fastinterp, additional parameters to an AstCallExpr is passed in by this operator
+// This operator itself inlines at most 4 additional parameters,
+// and then optionally call the next operator to fill the still remaining ones.
+//
+const int x_fastinterp_callexpr_extra_num_inline_params = 4;
+enum class FICallExprNumExtraParameters
+{
+    MORE_THAN_FOUR = x_fastinterp_callexpr_extra_num_inline_params + 1,
+    X_END_OF_ENUM
+};
+
+enum class FICallExprExtraParamTypeMask
+{
+    X_END_OF_ENUM = math::power(static_cast<int>(FIABIDistinctType::X_END_OF_ENUM), x_fastinterp_callexpr_extra_num_inline_params)
 };
 
 class PossibleControlSignals

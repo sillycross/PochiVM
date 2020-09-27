@@ -32,7 +32,8 @@ struct FICallCppFnImpl
         return true;
     }
 
-    // Constant placeholder 0: EH context pointer indicating current program position, if the call may throw
+    // Constant placeholder 0: true number of parameters
+    // Constant placeholder 1: EH context pointer indicating current program position, if the call may throw
     // CPP placeholder 0: the function to call
     // CPP placeholder 1: EH handler, if the call may throw
     // BoilerplateFn placeholder 0 - n: the function evaluating each parameter
@@ -52,10 +53,18 @@ struct FICallCppFnImpl
         constexpr uint32_t numParams = static_cast<uint32_t>(numParamsEnum);
         constexpr int numAbiTypes = static_cast<int>(FIABIDistinctType::X_END_OF_ENUM);
 
-        uint8_t params[numParams * 8];
-        void* paramsPtr[numParams];
+        DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+        const uint32_t trueNumParams = CONSTANT_PLACEHOLDER_0;
+        uint8_t* params = reinterpret_cast<uint8_t*>(alloca(trueNumParams * 8));
+        void** paramsPtr = reinterpret_cast<void**>(alloca(trueNumParams * 8));
 
-        for (uint32_t i = 0; i < numParams; i++)
+        // TODO: unfortunately clang thinks this loop is huge, and generates vectorized instructions
+        // Even worse, it would reference constants in a constant table, causing relocations that we don't currently support.
+        // Disable vectorization for now as a workaround.
+        // This whole 'paramsPtr' thing is just a historical debt of the old DebugInterp API. We should fix it at some time.
+        //
+#pragma clang loop vectorize(disable)
+        for (uint32_t i = 0; i < trueNumParams; i++)
         {
             paramsPtr[i] = &params[i * 8];
         }
@@ -134,8 +143,8 @@ struct FICallCppFnImpl
             // Call the soft-emulated exception handler. It never returns.
             //
             DEFINE_CPP_FNPTR_PLACEHOLDER_1(void(*)(void*, uintptr_t) noexcept);
-            DEFINE_CONSTANT_PLACEHOLDER_0(void*);
-            CPP_FNPTR_PLACEHOLDER_1(CONSTANT_PLACEHOLDER_0, __pochivm_thread_fastinterp_context.m_stackFrame);
+            DEFINE_CONSTANT_PLACEHOLDER_1(void*);
+            CPP_FNPTR_PLACEHOLDER_1(CONSTANT_PLACEHOLDER_1, __pochivm_thread_fastinterp_context.m_stackFrame);
             // TODO: testassert false
             __builtin_unreachable();
         }

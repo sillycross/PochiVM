@@ -1144,6 +1144,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_3)
                     static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_32) *
                                                          static_cast<int>(FIABIDistinctType::X_END_OF_ENUM) +
                                                          static_cast<int>(FIABIDistinctType::INT_32))));
+    inst->PopulateConstantPlaceholder<uint32_t>(0, 2);
 
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
@@ -1197,6 +1198,8 @@ TEST(TestFastInterpInternal, SanityCallExpr_4)
                     false /*isNoExcept*/,
                     static_cast<FICallExprNumParameters>(1),
                     static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_64))));
+    inst->PopulateConstantPlaceholder<uint32_t>(0, 1);
+
     int value = 0;
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
@@ -1206,7 +1209,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_4)
 
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst->PopulateCppFnPtrPlaceholder(0, cppFn);
-    inst->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(12345));
+    inst->PopulateConstantPlaceholder<void*>(1, reinterpret_cast<void*>(12345));
     inst->PopulateCppFnPtrPlaceholder(1, exnHandler);
 
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
@@ -1265,6 +1268,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
                     false /*isNoExcept*/,
                     static_cast<FICallExprNumParameters>(1),
                     static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_64))));
+    inst1->PopulateConstantPlaceholder<uint32_t>(0, 1);
 
     int value = 0;
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
@@ -1274,7 +1278,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
     inst2->PopulateConstantPlaceholder<void*>(0, &value);
 
     inst1->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
-    inst1->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(12345));
+    inst1->PopulateConstantPlaceholder<void*>(1, reinterpret_cast<void*>(12345));
     inst1->PopulateCppFnPtrPlaceholder(0, cppFn);
     inst1->PopulateCppFnPtrPlaceholder(1, exnHandler);
 
@@ -1285,6 +1289,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
                     true /*isNoExcept*/,
                     static_cast<FICallExprNumParameters>(1),
                     static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_64))));
+    inst3->PopulateConstantPlaceholder<uint32_t>(0, 1);
     inst3->PopulateCppFnPtrPlaceholder(0, cppFn2);
 
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
@@ -1452,6 +1457,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 {
     // Same logic as the previous test, but now the function is not noexcept (but does not actually throw either)
     // Just as another sanity test, and to understand the cost of setjmp()
+    // fib(40) noexcept is 1.28s, fib(40) with setjmp but no longjmp happening is 2.18s
     //
     auto exnHandlerLambda = [](void* /*exnContext*/, uintptr_t /*sfBase*/) noexcept -> void
     {
@@ -1574,4 +1580,162 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
         uint64_t result = *reinterpret_cast<uint64_t*>(stackFrame);
         ReleaseAssert(result == 75025);
     }
+}
+
+TEST(TestFastInterpInternal, SanityCallExprParams)
+{
+    static bool cppFnExecuted = false;
+    auto cppFnLambda = [](void** params) noexcept -> void
+    {
+        cppFnExecuted = true;
+        ReleaseAssert(*reinterpret_cast<int8_t*>(params[0]) == static_cast<int8_t>(-123));
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(params[1]) == static_cast<uint8_t>(210));
+        ReleaseAssert(*reinterpret_cast<int16_t*>(params[2]) == static_cast<int16_t>(-1234));
+        ReleaseAssert(*reinterpret_cast<uint16_t*>(params[3]) == static_cast<uint16_t>(12345));
+        ReleaseAssert(*reinterpret_cast<int32_t*>(params[4]) == static_cast<int32_t>(-1234567));
+        ReleaseAssert(*reinterpret_cast<uint32_t*>(params[5]) == static_cast<uint32_t>(3214567890U));
+        ReleaseAssert(*reinterpret_cast<int64_t*>(params[6]) == static_cast<int64_t>(-12345678987654321LL));
+        ReleaseAssert(*reinterpret_cast<uint64_t*>(params[7]) == static_cast<uint64_t>(12345678987654321ULL));
+        ReleaseAssert(*reinterpret_cast<bool*>(params[8]) == true);
+        ReleaseAssert(*reinterpret_cast<bool*>(params[9]) == false);
+        ReleaseAssert(fabs(static_cast<double>(*reinterpret_cast<float*>(params[10])) - 1.2345) < 1e-7);
+        ReleaseAssert(fabs(*reinterpret_cast<double*>(params[11]) - 2.3456) < 1e-13);
+    };
+    using CppFnProto = void(*)(void**) noexcept;
+    CppFnProto cppFn = cppFnLambda;
+
+    constexpr int FIABIBase = static_cast<int>(FIABIDistinctType::X_END_OF_ENUM);
+    FastInterpCodegenEngine engine;
+    FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallCppFnImpl>::SelectBoilerplateBluePrint(
+                    true /*isReturnTypeVoid*/,
+                    FIABIDistinctType::INT_8,
+                    true /*isNoExcept*/,
+                    FICallExprNumParameters::MORE_THAN_THREE,
+                    static_cast<FICallExprParamTypeMask>(static_cast<int>(GetFIABIDistinctType<int8_t>())
+                           + math::power(FIABIBase, 1) * static_cast<int>(GetFIABIDistinctType<uint8_t>())
+                           + math::power(FIABIBase, 2) * static_cast<int>(GetFIABIDistinctType<int16_t>()))));
+    inst->PopulateConstantPlaceholder<uint32_t>(0, 12);
+    inst->PopulateCppFnPtrPlaceholder(0, cppFn);
+
+    FastInterpBoilerplateInstance* param0 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int8_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param0->PopulateConstantPlaceholder<int8_t>(0, static_cast<int8_t>(-123));
+
+    FastInterpBoilerplateInstance* param1 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint8_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param1->PopulateConstantPlaceholder<uint8_t>(0, static_cast<uint8_t>(210));
+
+    FastInterpBoilerplateInstance* param2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int16_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param2->PopulateConstantPlaceholder<int16_t>(0, static_cast<int16_t>(-1234));
+
+    FastInterpBoilerplateInstance* extraParamList1 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprExtraParamsImpl>::SelectBoilerplateBluePrint(
+                    FICallExprNumExtraParameters::MORE_THAN_FOUR,
+                    static_cast<FICallExprExtraParamTypeMask>(static_cast<int>(GetFIABIDistinctType<uint16_t>())
+                           + math::power(FIABIBase, 1) * static_cast<int>(GetFIABIDistinctType<int32_t>())
+                           + math::power(FIABIBase, 2) * static_cast<int>(GetFIABIDistinctType<uint32_t>())
+                           + math::power(FIABIBase, 3) * static_cast<int>(GetFIABIDistinctType<int64_t>()))));
+    inst->PopulateBoilerplateFnPtrPlaceholder(0, param0);
+    inst->PopulateBoilerplateFnPtrPlaceholder(1, param1);
+    inst->PopulateBoilerplateFnPtrPlaceholder(2, param2);
+    inst->PopulateBoilerplateFnPtrPlaceholder(3, extraParamList1);
+
+    FastInterpBoilerplateInstance* param3 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint16_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param3->PopulateConstantPlaceholder<uint16_t>(0, static_cast<uint16_t>(12345));
+
+    FastInterpBoilerplateInstance* param4 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param4->PopulateConstantPlaceholder<int32_t>(0, static_cast<int32_t>(-1234567));
+
+    FastInterpBoilerplateInstance* param5 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint32_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param5->PopulateConstantPlaceholder<uint32_t>(0, static_cast<uint32_t>(3214567890U));
+
+    FastInterpBoilerplateInstance* param6 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int64_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param6->PopulateConstantPlaceholder<int64_t>(0, static_cast<int64_t>(-12345678987654321LL));
+
+    FastInterpBoilerplateInstance* extraParamList2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprExtraParamsImpl>::SelectBoilerplateBluePrint(
+                    FICallExprNumExtraParameters::MORE_THAN_FOUR,
+                    static_cast<FICallExprExtraParamTypeMask>(static_cast<int>(GetFIABIDistinctType<uint64_t>())
+                           + math::power(FIABIBase, 1) * static_cast<int>(GetFIABIDistinctType<bool>())
+                           + math::power(FIABIBase, 2) * static_cast<int>(GetFIABIDistinctType<bool>())
+                           + math::power(FIABIBase, 3) * static_cast<int>(GetFIABIDistinctType<float>()))));
+
+    extraParamList1->PopulateBoilerplateFnPtrPlaceholder(0, param3);
+    extraParamList1->PopulateBoilerplateFnPtrPlaceholder(1, param4);
+    extraParamList1->PopulateBoilerplateFnPtrPlaceholder(2, param5);
+    extraParamList1->PopulateBoilerplateFnPtrPlaceholder(3, param6);
+    extraParamList1->PopulateBoilerplateFnPtrPlaceholder(4, extraParamList2);
+
+    FastInterpBoilerplateInstance* param7 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param7->PopulateConstantPlaceholder<uint64_t>(0, static_cast<uint64_t>(12345678987654321ULL));
+
+    FastInterpBoilerplateInstance* param8 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<bool>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param8->PopulateConstantPlaceholder<bool>(0, true);
+
+    FastInterpBoilerplateInstance* param9 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<bool>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param9->PopulateConstantPlaceholder<bool>(0, false);
+
+    FastInterpBoilerplateInstance* param10 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<float>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param10->PopulateConstantPlaceholder<float>(0, static_cast<float>(1.2345));
+
+    FastInterpBoilerplateInstance* extraParamList3 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprExtraParamsImpl>::SelectBoilerplateBluePrint(
+                    static_cast<FICallExprNumExtraParameters>(1),
+                    static_cast<FICallExprExtraParamTypeMask>(static_cast<int>(GetFIABIDistinctType<double>()))));
+
+    extraParamList2->PopulateBoilerplateFnPtrPlaceholder(0, param7);
+    extraParamList2->PopulateBoilerplateFnPtrPlaceholder(1, param8);
+    extraParamList2->PopulateBoilerplateFnPtrPlaceholder(2, param9);
+    extraParamList2->PopulateBoilerplateFnPtrPlaceholder(3, param10);
+    extraParamList2->PopulateBoilerplateFnPtrPlaceholder(4, extraParamList3);
+
+    FastInterpBoilerplateInstance* param11 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<double>().GetDefaultFastInterpTypeId(),
+                    false /*isAllUnderlyingBitsZero*/));
+    param11->PopulateConstantPlaceholder<double>(0, static_cast<double>(2.3456));
+
+    extraParamList3->PopulateBoilerplateFnPtrPlaceholder(0, param11);
+
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+    ReleaseAssert(fnPtrVoid != nullptr);
+    using FnType = void(*)();
+    FnType fnPtr = reinterpret_cast<FnType>(fnPtrVoid);
+
+    fnPtr();
+    ReleaseAssert(cppFnExecuted);
 }
