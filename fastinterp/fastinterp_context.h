@@ -32,7 +32,7 @@ struct FastInterpContext
 // For fastinterp_tpl.cpp, we need to make it a real definition (instead of an ODR one)
 // so accesses do not need to go through TLS wrapper
 //
-#ifndef INSIDE_FASTINTERP_TPL_CPP
+#ifndef POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 inline thread_local PochiVM::FastInterpContext __pochivm_thread_fastinterp_context;
 #else
 extern thread_local PochiVM::FastInterpContext __pochivm_thread_fastinterp_context;
