@@ -1,6 +1,7 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 
 #include "fastinterp_tpl_while_loop.h"
+#include "fastinterp_tpl_cfr_limit_checker.hpp"
 #include "fastinterp_tpl_common.hpp"
 
 namespace PochiVM
@@ -11,108 +12,63 @@ struct FIWhileLoopImpl
     template<typename CondOperatorType>
     static constexpr bool cond()
     {
-        if (!std::is_same<CondOperatorType, int32_t>::value &&
-            !std::is_same<CondOperatorType, uint32_t>::value &&
-            !std::is_same<CondOperatorType, int64_t>::value &&
-            !std::is_same<CondOperatorType, uint64_t>::value)
-        {
-            return false;
-        }
+        if (!FIConditionCombChecker::cond<CondOperatorType>()) { return false; }
         return true;
     }
 
     template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape>
-    static constexpr bool cond()
-    {
-        if (condShape != FILoopConditionShapeCategory::SIMPLE_COMPARISON)
-        {
-            if (!std::is_same<CondOperatorType, int32_t>::value) { return false; }
-        }
-        return true;
-    }
-
-    template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape,
-             AstComparisonExprType condComparator>
-    static constexpr bool cond()
-    {
-        if (condShape != FILoopConditionShapeCategory::SIMPLE_COMPARISON)
-        {
-            if (condComparator != AstComparisonExprType::EQUAL) { return false; }
-        }
-        if (condComparator != AstComparisonExprType::EQUAL &&
-            condComparator != AstComparisonExprType::LESS_THAN &&
-            condComparator != AstComparisonExprType::LESS_EQUAL)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape,
-             AstComparisonExprType condComparator,
-             FILoopConditionOperandShapeCategory condLhsShape>
-    static constexpr bool cond()
-    {
-        if (condShape != FILoopConditionShapeCategory::SIMPLE_COMPARISON)
-        {
-            if (condLhsShape != FILoopConditionOperandShapeCategory::LITERAL_ZERO) { return false; }
-        }
-        else
-        {
-            if (sizeof(CondOperatorType) != 8 && condLhsShape == FILoopConditionOperandShapeCategory::LITERAL_ZERO)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape,
-             AstComparisonExprType condComparator,
-             FILoopConditionOperandShapeCategory condLhsShape,
-             FILoopConditionOperandShapeCategory condRhsShape>
-    static constexpr bool cond()
-    {
-        if (condShape != FILoopConditionShapeCategory::SIMPLE_COMPARISON)
-        {
-            if (condRhsShape != FILoopConditionOperandShapeCategory::LITERAL_ZERO) { return false; }
-        }
-        else
-        {
-            if (sizeof(CondOperatorType) != 8 && condRhsShape == FILoopConditionOperandShapeCategory::LITERAL_ZERO)
-            {
-                return false;
-            }
-            // At least one side of the comparison should be a variable
-            //
-            if (condLhsShape != FILoopConditionOperandShapeCategory::VARIABLE &&
-                condRhsShape != FILoopConditionOperandShapeCategory::VARIABLE)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape,
-             AstComparisonExprType condComparator,
-             FILoopConditionOperandShapeCategory condLhsShape,
-             FILoopConditionOperandShapeCategory condRhsShape,
              FIWhileLoopNumStatements numStmtsEnum,
              FIWhileLoopMayCFRMask mayCFRMaskEnum>
     static constexpr bool cond()
     {
         constexpr int numStmts = static_cast<int>(numStmtsEnum);
         constexpr int mayCFRMask = static_cast<int>(mayCFRMaskEnum);
-        if (mayCFRMask >= (1 << numStmts))
-        {
-            return false;
-        }
+        return FICheckIsUnderCfrLimit(x_fastinterp_while_loop_cfr_limit, numStmts, mayCFRMask);
+    }
+
+    template<typename CondOperatorType,
+             FIWhileLoopNumStatements numStmtsEnum,
+             FIWhileLoopMayCFRMask mayCFRMaskEnum,
+             FIConditionShapeCategory condShape>
+    static constexpr bool cond()
+    {
+        if (!FIConditionCombChecker::cond<CondOperatorType, condShape>()) { return false; }
+        return true;
+    }
+
+    template<typename CondOperatorType,
+             FIWhileLoopNumStatements numStmtsEnum,
+             FIWhileLoopMayCFRMask mayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator>
+    static constexpr bool cond()
+    {
+        if (!FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator>()) { return false; }
+        return true;
+    }
+
+    template<typename CondOperatorType,
+             FIWhileLoopNumStatements numStmtsEnum,
+             FIWhileLoopMayCFRMask mayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape>
+    static constexpr bool cond()
+    {
+        if (!FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator, condLhsShape>()) { return false; }
+        return true;
+    }
+
+    template<typename CondOperatorType,
+             FIWhileLoopNumStatements numStmtsEnum,
+             FIWhileLoopMayCFRMask mayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape,
+             FIConditionOperandShapeCategory condRhsShape>
+    static constexpr bool cond()
+    {
+        if (!FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator, condLhsShape, condRhsShape>()) { return false; }
         return true;
     }
 
@@ -125,12 +81,12 @@ struct FIWhileLoopImpl
     // function boilerplate 1 - n is used for the body of the function.
     //
     template<typename CondOperatorType,
-             FILoopConditionShapeCategory condShape,
-             AstComparisonExprType condComparator,
-             FILoopConditionOperandShapeCategory condLhsShape,
-             FILoopConditionOperandShapeCategory condRhsShape,
              FIWhileLoopNumStatements numStmtsEnum,
-             FIWhileLoopMayCFRMask mayCFRMaskEnum>
+             FIWhileLoopMayCFRMask mayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape,
+             FIConditionOperandShapeCategory condRhsShape>
     static typename std::conditional<static_cast<int>(mayCFRMaskEnum) == 0, void, InterpControlSignal>::type f() noexcept
     {
         using ReturnType = typename std::conditional<static_cast<int>(mayCFRMaskEnum) == 0, void, InterpControlSignal>::type;
@@ -142,7 +98,7 @@ struct FIWhileLoopImpl
         {
             // Evaluate loop condition
             //
-            if constexpr(condShape == FILoopConditionShapeCategory::COMPLEX)
+            if constexpr(condShape == FIConditionShapeCategory::COMPLEX)
             {
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(bool(*)() noexcept);
                 if (!BOILERPLATE_FNPTR_PLACEHOLDER_0())
@@ -150,7 +106,7 @@ struct FIWhileLoopImpl
                     break;
                 }
             }
-            else if constexpr(condShape == FILoopConditionShapeCategory::VARIABLE)
+            else if constexpr(condShape == FIConditionShapeCategory::VARIABLE)
             {
                 DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
                 if (!*GetLocalVarAddress<bool>(CONSTANT_PLACEHOLDER_0))
@@ -158,37 +114,37 @@ struct FIWhileLoopImpl
                     break;
                 }
             }
-            else if constexpr(condShape == FILoopConditionShapeCategory::SIMPLE_COMPARISON)
+            else if constexpr(condShape == FIConditionShapeCategory::SIMPLE_COMPARISON)
             {
                 CondOperatorType lhs, rhs;
-                if constexpr(condLhsShape == FILoopConditionOperandShapeCategory::VARIABLE)
+                if constexpr(condLhsShape == FIConditionOperandShapeCategory::VARIABLE)
                 {
                     DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
                     lhs = *GetLocalVarAddress<CondOperatorType>(CONSTANT_PLACEHOLDER_0);
                 }
-                else if constexpr(condLhsShape == FILoopConditionOperandShapeCategory::LITERAL_NONZERO)
+                else if constexpr(condLhsShape == FIConditionOperandShapeCategory::LITERAL_NONZERO)
                 {
                     DEFINE_CONSTANT_PLACEHOLDER_0(CondOperatorType);
                     lhs = CONSTANT_PLACEHOLDER_0;
                 }
                 else
                 {
-                    static_assert(condLhsShape == FILoopConditionOperandShapeCategory::LITERAL_ZERO);
+                    static_assert(condLhsShape == FIConditionOperandShapeCategory::LITERAL_ZERO);
                     lhs = 0;
                 }
-                if constexpr(condRhsShape == FILoopConditionOperandShapeCategory::VARIABLE)
+                if constexpr(condRhsShape == FIConditionOperandShapeCategory::VARIABLE)
                 {
                     DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
                     rhs = *GetLocalVarAddress<CondOperatorType>(CONSTANT_PLACEHOLDER_1);
                 }
-                else if constexpr(condRhsShape == FILoopConditionOperandShapeCategory::LITERAL_NONZERO)
+                else if constexpr(condRhsShape == FIConditionOperandShapeCategory::LITERAL_NONZERO)
                 {
                     DEFINE_CONSTANT_PLACEHOLDER_1(CondOperatorType);
                     rhs = CONSTANT_PLACEHOLDER_1;
                 }
                 else
                 {
-                    static_assert(condRhsShape == FILoopConditionOperandShapeCategory::LITERAL_ZERO);
+                    static_assert(condRhsShape == FIConditionOperandShapeCategory::LITERAL_ZERO);
                     rhs = 0;
                 }
                 bool comparisonResult;
@@ -212,7 +168,7 @@ struct FIWhileLoopImpl
             }
             else
             {
-                static_assert(condShape == FILoopConditionShapeCategory::LITERAL_TRUE);
+                static_assert(condShape == FIConditionShapeCategory::LITERAL_TRUE);
             }
 
             // Evaluate loop body
@@ -255,10 +211,12 @@ struct FIWhileLoopImpl
             EXECUTE_STMT(4, 5)
             EXECUTE_STMT(5, 6)
             EXECUTE_STMT(6, 7)
+            EXECUTE_STMT(7, 8)
+
 
 #undef EXECUTE_STMT
 
-            static_assert(static_cast<int>(FIWhileLoopNumStatements::X_END_OF_ENUM) == 7 + 1);
+            static_assert(static_cast<int>(FIWhileLoopNumStatements::X_END_OF_ENUM) == 8 + 1);
         }
         if constexpr(!std::is_same<ReturnType, void>::value)
         {
@@ -270,12 +228,12 @@ struct FIWhileLoopImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("condOperatorType"),
-                    CreateEnumMetaVar<FILoopConditionShapeCategory::X_END_OF_ENUM>("condShape"),
-                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("condComparator"),
-                    CreateEnumMetaVar<FILoopConditionOperandShapeCategory::X_END_OF_ENUM>("condLhsOperandShape"),
-                    CreateEnumMetaVar<FILoopConditionOperandShapeCategory::X_END_OF_ENUM>("condRhsOperandShape"),
                     CreateEnumMetaVar<FIWhileLoopNumStatements::X_END_OF_ENUM>("numStmts"),
-                    CreateEnumMetaVar<FIWhileLoopMayCFRMask::X_END_OF_ENUM>("mayCFRMask")
+                    CreateEnumMetaVar<FIWhileLoopMayCFRMask::X_END_OF_ENUM>("mayCFRMask"),
+                    CreateEnumMetaVar<FIConditionShapeCategory::X_END_OF_ENUM>("condShape"),
+                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("condComparator"),
+                    CreateEnumMetaVar<FIConditionOperandShapeCategory::X_END_OF_ENUM>("condLhsOperandShape"),
+                    CreateEnumMetaVar<FIConditionOperandShapeCategory::X_END_OF_ENUM>("condRhsOperandShape")
         );
     }
 };
