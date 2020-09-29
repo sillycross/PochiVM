@@ -13,17 +13,17 @@ TEST(TestFastInterpInternal, SanitySymbolNames)
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                                                               OperandShapeCategory::LITERAL_NONZERO,
-                                                               OperandShapeCategory::LITERAL_NONZERO,
+                                                               FIOperandShapeCategory::LITERAL_NONZERO,
+                                                               FIOperandShapeCategory::LITERAL_NONZERO,
                                                                AstArithmeticExprType::ADD);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIiiiLNS_20OperandShapeCategoryE4ELS2_4ELNS_21AstArithmeticExprTypeE0EEET_v"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIiiiLNS_22FIOperandShapeCategoryE4ELS2_4ELNS_21AstArithmeticExprTypeE0EEET_v"));
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                                                               OperandShapeCategory::COMPLEX,
-                                                               OperandShapeCategory::ZERO,
+                                                               FIOperandShapeCategory::COMPLEX,
+                                                               FIOperandShapeCategory::ZERO,
                                                                AstArithmeticExprType::MUL);
-    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIdiiLNS_20OperandShapeCategoryE6ELS2_5ELNS_21AstArithmeticExprTypeE2EEET_v"));
+    TestAssert(blueprint->TestOnly_GetSymbolName() == std::string("_ZN7PochiVM20FIArithmeticExprImpl1fIdiiLNS_22FIOperandShapeCategoryE6ELS2_5ELNS_21AstArithmeticExprTypeE2EEET_v"));
     std::ignore = blueprint;
 }
 
@@ -36,8 +36,8 @@ TEST(TestFastInterpInternal, Sanity_1)
     blueprint = BoilerplateLibrary::SelectBoilerplateBluePrint(TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                                                                TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                                                               OperandShapeCategory::ZERO,
-                                                               OperandShapeCategory::ZERO,
+                                                               FIOperandShapeCategory::ZERO,
+                                                               FIOperandShapeCategory::ZERO,
                                                                AstArithmeticExprType::ADD);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
@@ -59,8 +59,8 @@ TEST(TestFastInterpInternal, Sanity_2)
                 TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                OperandShapeCategory::LITERAL_NONZERO,
-                OperandShapeCategory::LITERAL_NONZERO,
+                FIOperandShapeCategory::LITERAL_NONZERO,
+                FIOperandShapeCategory::LITERAL_NONZERO,
                 AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
@@ -84,8 +84,8 @@ TEST(TestFastInterpInternal, Sanity_3)
                 TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                 TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                OperandShapeCategory::LITERAL_NONZERO,
-                OperandShapeCategory::LITERAL_NONZERO,
+                FIOperandShapeCategory::LITERAL_NONZERO,
+                FIOperandShapeCategory::LITERAL_NONZERO,
                 AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
@@ -111,24 +111,24 @@ TEST(TestFastInterpInternal, Sanity_4)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::ADD));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX,
-                    OperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::MUL));
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
     inst1->PopulateConstantPlaceholder<int>(0, 321);
@@ -155,24 +155,24 @@ TEST(TestFastInterpInternal, Sanity_5)
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::ADD));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX,
-                    OperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::DIV));
     engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
     inst1->PopulateConstantPlaceholder<double>(0, 321);
@@ -428,22 +428,22 @@ CheckAllUnderlyingBitsZeroFn GetAllUnderlyingBitsZeroChecker(TypeId typeId)
 }
 
 void FillPlaceholderForArithOrCompareExpr(
-        bool isLhs, TypeId dataType, TypeId indexType, OperandShapeCategory osc,
+        bool isLhs, TypeId dataType, TypeId indexType, FIOperandShapeCategory osc,
         FastInterpCodegenEngine* engine, FastInterpBoilerplateInstance* inst, std::function<void(void*)> dataFn)
 {
     uint32_t startOrd = (isLhs ? 0 : 2);
     uint32_t varOffset = (isLhs ? 8 : 24);
     if (isLhs && rand() % 2 == 0) { varOffset -= 8; }
-    if (osc == OperandShapeCategory::ZERO)
+    if (osc == FIOperandShapeCategory::ZERO)
     {
         return;
     }
-    else if (osc == OperandShapeCategory::LITERAL_NONZERO)
+    else if (osc == FIOperandShapeCategory::LITERAL_NONZERO)
     {
         PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(dataType);
         pcpFn(inst, startOrd, dataFn);
     }
-    else if (osc == OperandShapeCategory::COMPLEX)
+    else if (osc == FIOperandShapeCategory::COMPLEX)
     {
         CheckAllUnderlyingBitsZeroFn checker = GetAllUnderlyingBitsZeroChecker(dataType);
         bool isZero = checker(dataFn);
@@ -458,12 +458,12 @@ void FillPlaceholderForArithOrCompareExpr(
         }
         inst->PopulateBoilerplateFnPtrPlaceholder(startOrd, lit);
     }
-    else if (osc == OperandShapeCategory::VARIABLE)
+    else if (osc == FIOperandShapeCategory::VARIABLE)
     {
         inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
         dataFn(reinterpret_cast<void*>(__pochivm_thread_fastinterp_context.m_stackFrame + varOffset));
     }
-    else if (osc == OperandShapeCategory::VARPTR_VAR)
+    else if (osc == FIOperandShapeCategory::VARPTR_VAR)
     {
         inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
         inst->PopulateConstantPlaceholder<uint32_t>(startOrd + 1, varOffset + 8);
@@ -502,7 +502,7 @@ void FillPlaceholderForArithOrCompareExpr(
             ReleaseAssert(false);
         }
     }
-    else if (osc == OperandShapeCategory::VARPTR_LIT_NONZERO)
+    else if (osc == FIOperandShapeCategory::VARPTR_LIT_NONZERO)
     {
         inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
         uint8_t* v = new uint8_t[24];
@@ -544,7 +544,7 @@ void FillPlaceholderForArithOrCompareExpr(
             }
         });
     }
-    else if (osc == OperandShapeCategory::VARPTR_DEREF)
+    else if (osc == FIOperandShapeCategory::VARPTR_DEREF)
     {
         inst->PopulateConstantPlaceholder<uint32_t>(startOrd, varOffset);
         uint8_t* v = new uint8_t[8];
@@ -584,26 +584,26 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
         {
             continue;
         }
-        for (int lhsOscInt = 0; lhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); lhsOscInt++)
+        for (int lhsOscInt = 0; lhsOscInt < static_cast<int>(FIOperandShapeCategory::X_END_OF_ENUM); lhsOscInt++)
         {
             for (TypeId lhsIndexType : indexTypes)
             {
-                OperandShapeCategory lhsOsc = static_cast<OperandShapeCategory>(lhsOscInt);
-                if (lhsOsc != OperandShapeCategory::VARPTR_VAR && lhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                FIOperandShapeCategory lhsOsc = static_cast<FIOperandShapeCategory>(lhsOscInt);
+                if (lhsOsc != FIOperandShapeCategory::VARPTR_VAR && lhsOsc != FIOperandShapeCategory::VARPTR_LIT_NONZERO)
                 {
                     if (lhsIndexType != TypeId::Get<int32_t>())
                     {
                         continue;
                     }
                 }
-                for (int rhsOscInt = 0; rhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); rhsOscInt++)
+                for (int rhsOscInt = 0; rhsOscInt < static_cast<int>(FIOperandShapeCategory::X_END_OF_ENUM); rhsOscInt++)
                 {
                     for (TypeId rhsIndexType : indexTypes)
                     {
                         for (AstArithmeticExprType arithType : { AstArithmeticExprType::SUB, AstArithmeticExprType::MUL })
                         {
-                            OperandShapeCategory rhsOsc = static_cast<OperandShapeCategory>(rhsOscInt);
-                            if (rhsOsc != OperandShapeCategory::VARPTR_VAR && rhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                            FIOperandShapeCategory rhsOsc = static_cast<FIOperandShapeCategory>(rhsOscInt);
+                            if (rhsOsc != FIOperandShapeCategory::VARPTR_VAR && rhsOsc != FIOperandShapeCategory::VARPTR_LIT_NONZERO)
                             {
                                 if (rhsIndexType != TypeId::Get<int32_t>())
                                 {
@@ -611,7 +611,7 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
                                 }
                             }
                             std::function<void(void*)> lhsFn;
-                            if (lhsOsc == OperandShapeCategory::ZERO)
+                            if (lhsOsc == FIOperandShapeCategory::ZERO)
                             {
                                 lhsFn = GetZeroValueGenerator(dataType)();
                             }
@@ -620,7 +620,7 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
                                 lhsFn = GetRandValueGenerator(dataType)(arithType == AstArithmeticExprType::MUL /*forMult*/);
                             }
                             std::function<void(void*)> rhsFn;
-                            if (rhsOsc == OperandShapeCategory::ZERO)
+                            if (rhsOsc == FIOperandShapeCategory::ZERO)
                             {
                                 rhsFn = GetZeroValueGenerator(dataType)();
                             }
@@ -864,31 +864,31 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
         int numChecked = 0;
         for (TypeId dataType : types)
         {
-            for (int lhsOscInt = 0; lhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); lhsOscInt++)
+            for (int lhsOscInt = 0; lhsOscInt < static_cast<int>(FIOperandShapeCategory::X_END_OF_ENUM); lhsOscInt++)
             {
                 for (TypeId lhsIndexType : indexTypes)
                 {
-                    OperandShapeCategory lhsOsc = static_cast<OperandShapeCategory>(lhsOscInt);
-                    if (lhsOsc != OperandShapeCategory::VARPTR_VAR && lhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                    FIOperandShapeCategory lhsOsc = static_cast<FIOperandShapeCategory>(lhsOscInt);
+                    if (lhsOsc != FIOperandShapeCategory::VARPTR_VAR && lhsOsc != FIOperandShapeCategory::VARPTR_LIT_NONZERO)
                     {
                         if (lhsIndexType != TypeId::Get<int32_t>())
                         {
                             continue;
                         }
                     }
-                    for (int rhsOscInt = 0; rhsOscInt < static_cast<int>(OperandShapeCategory::X_END_OF_ENUM); rhsOscInt++)
+                    for (int rhsOscInt = 0; rhsOscInt < static_cast<int>(FIOperandShapeCategory::X_END_OF_ENUM); rhsOscInt++)
                     {
                         for (TypeId rhsIndexType : indexTypes)
                         {
-                            OperandShapeCategory rhsOsc = static_cast<OperandShapeCategory>(rhsOscInt);
-                            if (rhsOsc != OperandShapeCategory::VARPTR_VAR && rhsOsc != OperandShapeCategory::VARPTR_LIT_NONZERO)
+                            FIOperandShapeCategory rhsOsc = static_cast<FIOperandShapeCategory>(rhsOscInt);
+                            if (rhsOsc != FIOperandShapeCategory::VARPTR_VAR && rhsOsc != FIOperandShapeCategory::VARPTR_LIT_NONZERO)
                             {
                                 if (rhsIndexType != TypeId::Get<int32_t>())
                                 {
                                     continue;
                                 }
                             }
-                            if (lhsOsc == OperandShapeCategory::LITERAL_NONZERO && rhsOsc == OperandShapeCategory::LITERAL_NONZERO)
+                            if (lhsOsc == FIOperandShapeCategory::LITERAL_NONZERO && rhsOsc == FIOperandShapeCategory::LITERAL_NONZERO)
                             {
                                 continue;
                             }
@@ -902,7 +902,7 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
                             {
                                 AstComparisonExprType compareType = allCompareType[compareOrd];
                                 std::function<void(void*)> lhsFn;
-                                if (lhsOsc == OperandShapeCategory::ZERO)
+                                if (lhsOsc == FIOperandShapeCategory::ZERO)
                                 {
                                     lhsFn = GetZeroValueGenerator(dataType)();
                                 }
@@ -911,7 +911,7 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
                                     lhsFn = GetRandValueGenerator(dataType)(false /*forMult*/);
                                 }
                                 std::function<void(void*)> rhsFn;
-                                if (rhsOsc == OperandShapeCategory::ZERO)
+                                if (rhsOsc == FIOperandShapeCategory::ZERO)
                                 {
                                     rhsFn = GetZeroValueGenerator(dataType)();
                                 }
@@ -920,7 +920,7 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
                                     rhsFn = GetRandValueGenerator(dataType)(false /*forMult*/);
                                 }
                                 bool expectSame = false;
-                                if (compareOrd == 3 && (lhsOsc == OperandShapeCategory::ZERO) == (rhsOsc == OperandShapeCategory::ZERO))
+                                if (compareOrd == 3 && (lhsOsc == FIOperandShapeCategory::ZERO) == (rhsOsc == FIOperandShapeCategory::ZERO))
                                 {
                                     rhsFn = lhsFn;
                                     expectSame = true;
@@ -989,8 +989,8 @@ TEST(TestFastInterpInternal, SanityCallExpr_1)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
                     AstArithmeticExprType::SUB));
     inst1->PopulateConstantPlaceholder<uint32_t>(0, 8);
     inst1->PopulateConstantPlaceholder<uint32_t>(2, 16);
@@ -999,7 +999,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_1)
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX));
+                    FIOperandShapeCategory::COMPLEX));
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
 
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
@@ -1061,8 +1061,8 @@ TEST(TestFastInterpInternal, SanityCallExpr_2)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
                     AstArithmeticExprType::SUB));
     inst1->PopulateConstantPlaceholder<uint32_t>(0, 8);
     inst1->PopulateConstantPlaceholder<uint32_t>(2, 16);
@@ -1071,7 +1071,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_2)
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX));
+                    FIOperandShapeCategory::COMPLEX));
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
 
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
@@ -1079,8 +1079,8 @@ TEST(TestFastInterpInternal, SanityCallExpr_2)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::VARIABLE,
                     AstArithmeticExprType::SUB));
     inst3->PopulateConstantPlaceholder<uint32_t>(0, 7 * 4);
     inst3->PopulateConstantPlaceholder<uint32_t>(2, 8 * 4);
@@ -1367,7 +1367,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO));
+                    FIOperandShapeCategory::LITERAL_NONZERO));
     true_br->PopulateConstantPlaceholder<uint64_t>(0, 1);
     if_stmt->PopulateBoilerplateFnPtrPlaceholder(1, true_br);
 
@@ -1376,8 +1376,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX,
-                    OperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::ADD));
 
     FastInterpBoilerplateInstance* call1 = engine.InstantiateBoilerplate(
@@ -1395,8 +1395,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     call1_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
     call1_param->PopulateConstantPlaceholder<int>(2, 1);
@@ -1419,8 +1419,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     call2_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
     call2_param->PopulateConstantPlaceholder<int>(2, 2);
@@ -1488,7 +1488,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::LITERAL_NONZERO));
+                    FIOperandShapeCategory::LITERAL_NONZERO));
     true_br->PopulateConstantPlaceholder<uint64_t>(0, 1);
     if_stmt->PopulateBoilerplateFnPtrPlaceholder(1, true_br);
 
@@ -1497,8 +1497,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::COMPLEX,
-                    OperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
+                    FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::ADD));
 
     FastInterpBoilerplateInstance* call1 = engine.InstantiateBoilerplate(
@@ -1518,8 +1518,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     call1_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
     call1_param->PopulateConstantPlaceholder<int>(2, 1);
@@ -1544,8 +1544,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB));
     call2_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
     call2_param->PopulateConstantPlaceholder<int>(2, 2);

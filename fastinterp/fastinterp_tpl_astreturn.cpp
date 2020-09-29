@@ -10,25 +10,25 @@ namespace PochiVM
 //
 struct FISimpleReturnImpl
 {
-    template<typename ReturnType, typename OscIndexType, OperandShapeCategory osc>
+    template<typename ReturnType, typename OscIndexType, FIOperandShapeCategory osc>
     static constexpr bool cond()
     {
         // If return type is 'void', must specify dummy osc = COMPLEX and oscIndex = int32_t
         //
         if (std::is_same<ReturnType, void>::value)
         {
-            return std::is_same<OscIndexType, int32_t>::value && osc == OperandShapeCategory::COMPLEX;
+            return std::is_same<OscIndexType, int32_t>::value && osc == FIOperandShapeCategory::COMPLEX;
         }
-        if (!OperandShapeCategoryHelper::cond<OscIndexType, osc>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OscIndexType, osc>()) { return false; }
         return true;
     }
 
-    template<typename ReturnType, typename OscIndexType, OperandShapeCategory osc>
+    template<typename ReturnType, typename OscIndexType, FIOperandShapeCategory osc>
     static InterpControlSignal f() noexcept
     {
         if constexpr(!std::is_same<ReturnType, void>::value)
         {
-            ReturnType value = OperandShapeCategoryHelper::get_0_1<ReturnType, OscIndexType, osc>();
+            ReturnType value = FIOperandShapeCategoryHelper::get_0_1<ReturnType, OscIndexType, osc>();
             *GetLocalVarAddress<ReturnType>(0 /*offset*/) = value;
         }
         return InterpControlSignal::Return;
@@ -39,7 +39,7 @@ struct FISimpleReturnImpl
         return CreateMetaVarList(
                     CreateTypeMetaVar("returnType"),
                     CreateTypeMetaVar("oscIndexType"),
-                    CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("osc")
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("osc")
         );
     }
 };

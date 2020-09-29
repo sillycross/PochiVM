@@ -36,28 +36,28 @@ struct FIComparisonExprImpl
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory>
+             FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!OperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
         return true;
     }
 
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory>
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!OperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
 
         // LHS and RHS cannot be both literal:
         // We cannot compare equality between two placeholders if they are 64 bits.
         // It is weird for users to write such expressions anyway, so it's OK to lose some performance in this case.
         //
-        if (lhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO &&
-            rhsShapeCategory == OperandShapeCategory::LITERAL_NONZERO)
+        if (lhsShapeCategory == FIOperandShapeCategory::LITERAL_NONZERO &&
+            rhsShapeCategory == FIOperandShapeCategory::LITERAL_NONZERO)
         {
             return false;
         }
@@ -67,8 +67,8 @@ struct FIComparisonExprImpl
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory,
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory,
              AstComparisonExprType comparisonType>
     static constexpr bool cond()
     {
@@ -80,13 +80,13 @@ struct FIComparisonExprImpl
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory,
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory,
              AstComparisonExprType comparisonType>
     static bool f() noexcept
     {
-        OperandType lhs = OperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
-        OperandType rhs = OperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
+        OperandType lhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
+        OperandType rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
 
         if constexpr(comparisonType == AstComparisonExprType::EQUAL) {
             return (lhs == rhs);
@@ -119,8 +119,8 @@ struct FIComparisonExprImpl
                     CreateTypeMetaVar("operandType"),
                     CreateTypeMetaVar("lhsIndexType"),
                     CreateTypeMetaVar("rhsIndexType"),
-                    CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
-                    CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
                     CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType")
         );
     }

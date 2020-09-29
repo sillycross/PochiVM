@@ -14,7 +14,7 @@ namespace PochiVM
 // instead of many function calls (get addr 'a', deref 'a', get addr 'i', deref 'i',
 // get addr 'a[i]', deref 'a[i]')
 //
-enum class OperandShapeCategory
+enum class FIOperandShapeCategory
 {
     // A simple variable. e.g. 'a'
     //

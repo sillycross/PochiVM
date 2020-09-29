@@ -6,9 +6,9 @@
 namespace PochiVM
 {
 
-struct OperandShapeCategoryHelper
+struct FIOperandShapeCategoryHelper
 {
-    template<typename OscIndexType, OperandShapeCategory osc>
+    template<typename OscIndexType, FIOperandShapeCategory osc>
     static constexpr bool cond()
     {
         if (!is_valid_index_type<OscIndexType>())
@@ -17,8 +17,8 @@ struct OperandShapeCategoryHelper
         }
         // If osc is not an array-element shape, we should always pass in the fake oscIndexType of int32_t
         //
-        if (!(osc == OperandShapeCategory::VARPTR_VAR ||
-            osc == OperandShapeCategory::VARPTR_LIT_NONZERO) &&
+        if (!(osc == FIOperandShapeCategory::VARPTR_VAR ||
+            osc == FIOperandShapeCategory::VARPTR_LIT_NONZERO) &&
             !std::is_same<OscIndexType, int32_t>::value)
         {
             return false;
@@ -30,35 +30,35 @@ struct OperandShapeCategoryHelper
     // As is all helprs in fastinterp_tpl, always_inline is required.
     //
 #define OSCHELPER_GENERATE_METHOD(meth_name, placeholder1, placeholder2)                                    \
-    template<typename OperandType, typename OscIndexType, OperandShapeCategory osc>                         \
+    template<typename OperandType, typename OscIndexType, FIOperandShapeCategory osc>                       \
     static OperandType WARN_UNUSED __attribute__((__always_inline__)) meth_name() noexcept                  \
     {                                                                                                       \
-        if constexpr(osc == OperandShapeCategory::COMPLEX)                                                  \
+        if constexpr(osc == FIOperandShapeCategory::COMPLEX)                                                \
         {                                                                                                   \
             INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(placeholder1, OperandType(*)() noexcept);         \
             return BOILERPLATE_FNPTR_PLACEHOLDER_ ## placeholder1();                                        \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::LITERAL_NONZERO)                                     \
+        else if constexpr(osc == FIOperandShapeCategory::LITERAL_NONZERO)                                   \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, OperandType);                                \
             return CONSTANT_PLACEHOLDER_ ## placeholder1;                                                   \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::ZERO)                                                \
+        else if constexpr(osc == FIOperandShapeCategory::ZERO)                                              \
         {                                                                                                   \
             constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();                      \
             return v;                                                                                       \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::VARIABLE)                                            \
+        else if constexpr(osc == FIOperandShapeCategory::VARIABLE)                                          \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
             return *GetLocalVarAddress<OperandType>(CONSTANT_PLACEHOLDER_ ## placeholder1);                 \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::VARPTR_DEREF)                                        \
+        else if constexpr(osc == FIOperandShapeCategory::VARPTR_DEREF)                                      \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
             return **GetLocalVarAddress<OperandType*>(CONSTANT_PLACEHOLDER_ ## placeholder1);               \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::VARPTR_VAR)                                          \
+        else if constexpr(osc == FIOperandShapeCategory::VARPTR_VAR)                                        \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint32_t);                                   \
@@ -66,7 +66,7 @@ struct OperandShapeCategoryHelper
             OscIndexType index = *GetLocalVarAddress<OscIndexType>(CONSTANT_PLACEHOLDER_ ## placeholder2);  \
             return varPtr[index];                                                                           \
         }                                                                                                   \
-        else if constexpr(osc == OperandShapeCategory::VARPTR_LIT_NONZERO)                                  \
+        else if constexpr(osc == FIOperandShapeCategory::VARPTR_LIT_NONZERO)                                \
         {                                                                                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                   \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, OscIndexType);                               \

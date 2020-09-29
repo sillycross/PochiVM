@@ -37,29 +37,29 @@ struct FIArithmeticExprImpl
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory>
+             FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!OperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
         return true;
     }
 
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory>
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!OperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
         return true;
     }
 
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory,
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType>
     static constexpr bool cond()
     {
@@ -68,7 +68,7 @@ struct FIArithmeticExprImpl
         // to directly return the binary representation of NaN/Inf. We cannot support this relocation easily.
         //
         if ((arithType == AstArithmeticExprType::MOD || arithType == AstArithmeticExprType::DIV)
-            && rhsShapeCategory == OperandShapeCategory::ZERO) { return false; }
+            && rhsShapeCategory == FIOperandShapeCategory::ZERO) { return false; }
         return true;
     }
 
@@ -79,13 +79,13 @@ struct FIArithmeticExprImpl
     template<typename OperandType,
              typename LhsIndexType,
              typename RhsIndexType,
-             OperandShapeCategory lhsShapeCategory,
-             OperandShapeCategory rhsShapeCategory,
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType>
     static OperandType f() noexcept
     {
-        OperandType lhs = OperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
-        OperandType rhs = OperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
+        OperandType lhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>();
+        OperandType rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>();
 
         if constexpr(arithType == AstArithmeticExprType::ADD) {
             return lhs + rhs;
@@ -113,8 +113,8 @@ struct FIArithmeticExprImpl
                     CreateTypeMetaVar("operandType"),
                     CreateTypeMetaVar("lhsIndexType"),
                     CreateTypeMetaVar("rhsIndexType"),
-                    CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
-                    CreateEnumMetaVar<OperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
                     CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType")
         );
     }
