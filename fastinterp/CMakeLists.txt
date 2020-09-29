@@ -30,6 +30,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_if_stmt.cpp
   fastinterp_tpl_logical_expr.cpp
   fastinterp_tpl_astblock.cpp
+  fastinterp_tpl_while_loop.cpp
+  fastinterp_tpl_for_loop.cpp
 )
 
 SET(FASTINTERP_SOURCES
