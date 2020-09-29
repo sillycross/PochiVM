@@ -1,6 +1,8 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 
 #include "fastinterp_tpl_if_stmt.h"
+#include "fastinterp_tpl_condition_shape.hpp"
+#include "fastinterp_tpl_cfr_limit_checker.hpp"
 #include "fastinterp_tpl_common.hpp"
 
 namespace PochiVM
@@ -8,19 +10,24 @@ namespace PochiVM
 
 struct FIIfStatementImpl
 {
-    // TODO: we should support special-casing the 'cond' being a bool variable: this is a very common case
-    //
-    template<FIIfStmtNumStatements numTrueBranchStmtsEnum,
+    template<typename CondOperatorType>
+    static constexpr bool cond()
+    {
+        return FIConditionCombChecker::cond<CondOperatorType>();
+    }
+
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
              FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum>
     static constexpr bool cond()
     {
         constexpr int numStmts = static_cast<int>(numTrueBranchStmtsEnum);
         constexpr int mayCFRMask = static_cast<int>(trueBranchMayCFRMaskEnum);
-        if (mayCFRMask >= (1 << numStmts)) { return false; }
-        return true;
+        return FICheckIsUnderCfrLimit(x_fastinterp_if_stmt_cfr_limit, numStmts, mayCFRMask);
     }
 
-    template<FIIfStmtNumStatements numTrueBranchStmtsEnum,
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
              FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
              FIIfStmtNumStatements numFalseBranchStmtsEnum,
              FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum>
@@ -28,8 +35,61 @@ struct FIIfStatementImpl
     {
         constexpr int numStmts = static_cast<int>(numFalseBranchStmtsEnum);
         constexpr int mayCFRMask = static_cast<int>(falseBranchMayCFRMaskEnum);
-        if (mayCFRMask >= (1 << numStmts)) { return false; }
-        return true;
+        return FICheckIsUnderCfrLimit(x_fastinterp_if_stmt_cfr_limit, numStmts, mayCFRMask);
+    }
+
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
+             FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
+             FIIfStmtNumStatements numFalseBranchStmtsEnum,
+             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum,
+             FIConditionShapeCategory condShape>
+    static constexpr bool cond()
+    {
+        // Additionally disallow 'literal true' as if-condition: it's stupid, and it results
+        // in compiler optimizing out the 'false' clause, firing a false positive assertion in placeholder checker
+        //
+        if (condShape == FIConditionShapeCategory::LITERAL_TRUE) { return false; }
+        return FIConditionCombChecker::cond<CondOperatorType, condShape>();
+    }
+
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
+             FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
+             FIIfStmtNumStatements numFalseBranchStmtsEnum,
+             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator>
+    static constexpr bool cond()
+    {
+        return FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator>();
+    }
+
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
+             FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
+             FIIfStmtNumStatements numFalseBranchStmtsEnum,
+             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape>
+    static constexpr bool cond()
+    {
+        return FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator, condLhsShape>();
+    }
+
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
+             FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
+             FIIfStmtNumStatements numFalseBranchStmtsEnum,
+             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape,
+             FIConditionOperandShapeCategory condRhsShape>
+    static constexpr bool cond()
+    {
+        return FIConditionCombChecker::cond<CondOperatorType, condShape, condComparator, condLhsShape, condRhsShape>();
     }
 
     template<FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum, FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum>
@@ -41,10 +101,15 @@ struct FIIfStatementImpl
     // BoilerplateFn placeholder 1-5: the true branch
     // BoilerplateFn placeholder 6-10: the false branch
     //
-    template<FIIfStmtNumStatements numTrueBranchStmtsEnum,
+    template<typename CondOperatorType,
+             FIIfStmtNumStatements numTrueBranchStmtsEnum,
              FIIfStmtMayCFRMask trueBranchMayCFRMaskEnum,
              FIIfStmtNumStatements numFalseBranchStmtsEnum,
-             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum>
+             FIIfStmtMayCFRMask falseBranchMayCFRMaskEnum,
+             FIConditionShapeCategory condShape,
+             AstComparisonExprType condComparator,
+             FIConditionOperandShapeCategory condLhsShape,
+             FIConditionOperandShapeCategory condRhsShape>
     static ReturnTypeHelper<trueBranchMayCFRMaskEnum, falseBranchMayCFRMaskEnum> f() noexcept
     {
         using ReturnType = ReturnTypeHelper<trueBranchMayCFRMaskEnum, falseBranchMayCFRMaskEnum>;
@@ -68,8 +133,7 @@ struct FIIfStatementImpl
         }                                                                                                          \
     }
 
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(bool(*)() noexcept);
-        if (BOILERPLATE_FNPTR_PLACEHOLDER_0())
+        if (FIConditionShapeHelper::get_0_1<CondOperatorType, condShape, condComparator, condLhsShape, condRhsShape>())
         {
             constexpr int numStmts = static_cast<int>(numTrueBranchStmtsEnum);
             constexpr int mayCFRMask = static_cast<int>(trueBranchMayCFRMaskEnum);
@@ -107,10 +171,15 @@ struct FIIfStatementImpl
     static auto metavars()
     {
         return CreateMetaVarList(
+                    CreateTypeMetaVar("condOperatorType"),
                     CreateEnumMetaVar<FIIfStmtNumStatements::X_END_OF_ENUM>("trueBranchNumStmts"),
                     CreateEnumMetaVar<FIIfStmtMayCFRMask::X_END_OF_ENUM>("trueBranchMayCFRMask"),
                     CreateEnumMetaVar<FIIfStmtNumStatements::X_END_OF_ENUM>("falseBranchNumStmts"),
-                    CreateEnumMetaVar<FIIfStmtMayCFRMask::X_END_OF_ENUM>("falseBranchMayCFRMask")
+                    CreateEnumMetaVar<FIIfStmtMayCFRMask::X_END_OF_ENUM>("falseBranchMayCFRMask"),
+                    CreateEnumMetaVar<FIConditionShapeCategory::X_END_OF_ENUM>("condShape"),
+                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("condComparator"),
+                    CreateEnumMetaVar<FIConditionOperandShapeCategory::X_END_OF_ENUM>("condLhsOperandShape"),
+                    CreateEnumMetaVar<FIConditionOperandShapeCategory::X_END_OF_ENUM>("condRhsOperandShape")
         );
     }
 };

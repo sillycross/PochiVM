@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.h"
-#include "fastinterp_tpl_condition_shape.h"
 
 namespace PochiVM
 {

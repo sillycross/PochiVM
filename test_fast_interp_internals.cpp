@@ -1350,22 +1350,18 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
 
     FastInterpBoilerplateInstance* if_stmt = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIIfStatementImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     static_cast<FIIfStmtNumStatements>(1) /*trueBranchNumStmts*/,
                     static_cast<FIIfStmtMayCFRMask>(1) /*trueBranchMayCFRMask*/,
                     static_cast<FIIfStmtNumStatements>(1) /*falseBranchNumStmts*/,
-                    static_cast<FIIfStmtMayCFRMask>(1) /*falseBranchMayCFRMask*/));
+                    static_cast<FIIfStmtMayCFRMask>(1) /*falseBranchMayCFRMask*/,
+                    FIConditionShapeCategory::SIMPLE_COMPARISON,
+                    AstComparisonExprType::LESS_EQUAL,
+                    FIConditionOperandShapeCategory::VARIABLE,
+                    FIConditionOperandShapeCategory::LITERAL_NONZERO_OR_32BIT));
 
-    FastInterpBoilerplateInstance* if_cond = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIComparisonExprImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    AstComparisonExprType::LESS_EQUAL));
-    if_cond->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
-    if_cond->PopulateConstantPlaceholder<int>(2, 2);
-    if_stmt->PopulateBoilerplateFnPtrPlaceholder(0, if_cond);
+    if_stmt->PopulateConstantPlaceholder<uint32_t>(0, 8);
+    if_stmt->PopulateConstantPlaceholder<int>(1, 2);
 
     FastInterpBoilerplateInstance* true_br = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
@@ -1457,7 +1453,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 {
     // Same logic as the previous test, but now the function is not noexcept (but does not actually throw either)
     // Just as another sanity test, and to understand the cost of setjmp()
-    // fib(40) noexcept is 1.28s, fib(40) with setjmp but no longjmp happening is 2.18s
+    // fib(40) noexcept is 1.05s, fib(40) with setjmp but no longjmp happening is 1.73s
     //
     auto exnHandlerLambda = [](void* /*exnContext*/, uintptr_t /*sfBase*/) noexcept -> void
     {
@@ -1475,22 +1471,18 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 
     FastInterpBoilerplateInstance* if_stmt = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIIfStatementImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     static_cast<FIIfStmtNumStatements>(1) /*trueBranchNumStmts*/,
                     static_cast<FIIfStmtMayCFRMask>(1) /*trueBranchMayCFRMask*/,
                     static_cast<FIIfStmtNumStatements>(1) /*falseBranchNumStmts*/,
-                    static_cast<FIIfStmtMayCFRMask>(1) /*falseBranchMayCFRMask*/));
+                    static_cast<FIIfStmtMayCFRMask>(1) /*falseBranchMayCFRMask*/,
+                    FIConditionShapeCategory::SIMPLE_COMPARISON,
+                    AstComparisonExprType::LESS_EQUAL,
+                    FIConditionOperandShapeCategory::VARIABLE,
+                    FIConditionOperandShapeCategory::LITERAL_NONZERO_OR_32BIT));
 
-    FastInterpBoilerplateInstance* if_cond = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIComparisonExprImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    OperandShapeCategory::VARIABLE,
-                    OperandShapeCategory::LITERAL_NONZERO,
-                    AstComparisonExprType::LESS_EQUAL));
-    if_cond->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
-    if_cond->PopulateConstantPlaceholder<int>(2, 2);
-    if_stmt->PopulateBoilerplateFnPtrPlaceholder(0, if_cond);
+    if_stmt->PopulateConstantPlaceholder<uint32_t>(0, 8);
+    if_stmt->PopulateConstantPlaceholder<int>(1, 2);
 
     FastInterpBoilerplateInstance* true_br = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(

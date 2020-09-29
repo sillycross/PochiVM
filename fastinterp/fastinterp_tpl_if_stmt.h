@@ -6,7 +6,7 @@ namespace PochiVM
 {
 
 const int x_fastinterp_if_stmt_num_inline_stmts = 5;
-constexpr std::array<int, x_fastinterp_if_stmt_num_inline_stmts + 1> x_astinterp_if_stmt_cfr_limit {
+constexpr std::array<int, x_fastinterp_if_stmt_num_inline_stmts + 1> x_fastinterp_if_stmt_cfr_limit {
     -1, -1, -1, 1, 0, 0
 };
 enum class FIIfStmtNumStatements

@@ -1,6 +1,7 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 
 #include "fastinterp_tpl_for_loop.h"
+#include "fastinterp_tpl_condition_shape.hpp"
 #include "fastinterp_tpl_cfr_limit_checker.hpp"
 #include "fastinterp_tpl_common.hpp"
 
@@ -104,77 +105,12 @@ struct FIForLoopImpl
         {
             // Evaluate loop condition
             //
-            if constexpr(condShape == FIConditionShapeCategory::COMPLEX)
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(bool(*)() noexcept);
-                if (!BOILERPLATE_FNPTR_PLACEHOLDER_0())
+                bool cond = FIConditionShapeHelper::get_0_1<CondOperatorType, condShape, condComparator, condLhsShape, condRhsShape>();
+                if (!cond)
                 {
                     break;
                 }
-            }
-            else if constexpr(condShape == FIConditionShapeCategory::VARIABLE)
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                if (!*GetLocalVarAddress<bool>(CONSTANT_PLACEHOLDER_0))
-                {
-                    break;
-                }
-            }
-            else if constexpr(condShape == FIConditionShapeCategory::SIMPLE_COMPARISON)
-            {
-                CondOperatorType lhs, rhs;
-                if constexpr(condLhsShape == FIConditionOperandShapeCategory::VARIABLE)
-                {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-                    lhs = *GetLocalVarAddress<CondOperatorType>(CONSTANT_PLACEHOLDER_0);
-                }
-                else if constexpr(condLhsShape == FIConditionOperandShapeCategory::LITERAL_NONZERO)
-                {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(CondOperatorType);
-                    lhs = CONSTANT_PLACEHOLDER_0;
-                }
-                else
-                {
-                    static_assert(condLhsShape == FIConditionOperandShapeCategory::LITERAL_ZERO);
-                    lhs = 0;
-                }
-                if constexpr(condRhsShape == FIConditionOperandShapeCategory::VARIABLE)
-                {
-                    DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-                    rhs = *GetLocalVarAddress<CondOperatorType>(CONSTANT_PLACEHOLDER_1);
-                }
-                else if constexpr(condRhsShape == FIConditionOperandShapeCategory::LITERAL_NONZERO)
-                {
-                    DEFINE_CONSTANT_PLACEHOLDER_1(CondOperatorType);
-                    rhs = CONSTANT_PLACEHOLDER_1;
-                }
-                else
-                {
-                    static_assert(condRhsShape == FIConditionOperandShapeCategory::LITERAL_ZERO);
-                    rhs = 0;
-                }
-                bool comparisonResult;
-                if constexpr(condComparator == AstComparisonExprType::EQUAL)
-                {
-                    comparisonResult = (lhs == rhs);
-                }
-                else if constexpr(condComparator == AstComparisonExprType::LESS_THAN)
-                {
-                    comparisonResult = (lhs < rhs);
-                }
-                else
-                {
-                    static_assert(condComparator == AstComparisonExprType::LESS_EQUAL);
-                    comparisonResult = (lhs <= rhs);
-                }
-                if (!comparisonResult)
-                {
-                    break;
-                }
-            }
-            else
-            {
-                static_assert(condShape == FIConditionShapeCategory::LITERAL_TRUE);
             }
 
             // Evaluate loop body

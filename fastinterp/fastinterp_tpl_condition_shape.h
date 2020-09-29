@@ -34,7 +34,7 @@ enum class FIConditionShapeCategory
 enum class FIConditionOperandShapeCategory
 {
     LITERAL_ZERO,
-    LITERAL_NONZERO,
+    LITERAL_NONZERO_OR_32BIT,
     VARIABLE,
     X_END_OF_ENUM
 };
