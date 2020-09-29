@@ -3,5 +3,6 @@
 // Header file to use FastInterp internal API interface
 //
 
-#include "fast_interp_helper.h"
+#include "fastinterp_all_tpl_headers.h"
+#include "fastinterp_helper.h"
 #include "generated/fastinterp_library.generated.h"

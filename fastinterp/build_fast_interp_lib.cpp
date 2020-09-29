@@ -9,7 +9,7 @@
 #include "runtime_lib_builder/check_file_md5.h"
 
 #include "pochivm/ast_enums.h"
-#include "metavar.h"
+#include "metavar.hpp"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -1539,11 +1539,12 @@ int main(int argc, char** argv)
     }
 
     fprintf(fp1, "// GENERATED FILE, DO NOT EDIT!\n//\n\n#pragma once\n");
-    fprintf(fp1, "#include \"fastinterp/fast_interp_generated_header_helper.h\"\n\n");
+    fprintf(fp1, "#include \"fastinterp/fastinterp_generated_header_helper.h\"\n\n");
     fprintf(fp1, "namespace PochiVM {\n\n");
 
     fprintf(fp2, "// GENERATED FILE, DO NOT EDIT!\n//\n\n#pragma once\n");
-    fprintf(fp2, "#include \"fastinterp_fwd_declarations.generated.h\"\n\n");
+    fprintf(fp2, "#include \"fastinterp_fwd_declarations.generated.h\"\n");
+    fprintf(fp2, "#include \"fastinterp/fastinterp_all_tpl_headers.h\"\n\n");
     fprintf(fp2, "namespace PochiVM {\n\n");
 
     fprintf(fp2, "template<typename T>\n");

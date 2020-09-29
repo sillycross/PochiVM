@@ -1,6 +1,7 @@
 #pragma once
 
-#include "fastinterp_tpl_helper.h"
+#include "fastinterp_tpl_operandshape.h"
+#include "fastinterp_tpl_common.hpp"
 
 namespace PochiVM
 {

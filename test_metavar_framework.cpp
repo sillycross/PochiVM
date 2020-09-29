@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "fastinterp/metavar.h"
+#include "fastinterp/metavar.hpp"
 #include "pochivm.h"
 
 using namespace PochiVM;

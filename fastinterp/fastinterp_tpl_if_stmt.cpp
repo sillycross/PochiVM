@@ -1,6 +1,7 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 
-#include "fastinterp_tpl_helper.h"
+#include "fastinterp_tpl_if_stmt.h"
+#include "fastinterp_tpl_common.hpp"
 
 namespace PochiVM
 {

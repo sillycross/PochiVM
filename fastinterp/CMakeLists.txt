@@ -33,7 +33,7 @@ SET(FASTINTERP_TPL_SOURCES
 )
 
 SET(FASTINTERP_SOURCES
-  fast_interp_helper.cpp
+  fastinterp_helper.cpp
   get_fs_base_helper.cpp
 )
 
