@@ -33,6 +33,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_logical_expr.cpp
   fastinterp_tpl_astblock.cpp
   fastinterp_tpl_assign_arith_expr.cpp
+  fastinterp_tpl_assign_common.cpp
 )
 
 SET(FASTINTERP_SOURCES

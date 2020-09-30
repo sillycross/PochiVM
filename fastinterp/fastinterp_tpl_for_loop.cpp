@@ -175,7 +175,7 @@ struct FIForLoopImpl
 
             {
 step_block:
-                constexpr int numStmts = static_cast<int>(bodyNumStmtsEnum);
+                constexpr int numStmts = static_cast<int>(stepNumStmtsEnum);
                 EXECUTE_STMT(0, 9)
                 EXECUTE_STMT(1, 10)
                 EXECUTE_STMT(2, 11)

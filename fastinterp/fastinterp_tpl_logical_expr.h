@@ -11,6 +11,9 @@ class FILogicalOperatorTree
 public:
     static_assert(height > 0);
 
+    template<int h>
+    friend class FILogicalOperatorTree;
+
     constexpr FILogicalOperatorTree() : value(0) {}
     constexpr FILogicalOperatorTree(int value_) : value(value_) {
         TestAssert(0 <= value && value < x_max);
@@ -98,6 +101,9 @@ template<>
 class FILogicalOperatorTree<0>
 {
 public:
+    template<int h>
+    friend class FILogicalOperatorTree;
+
     constexpr FILogicalOperatorTree() : value(0) {}
     constexpr FILogicalOperatorTree(int value_) : value(value_) {
         TestAssert(0 <= value && value < x_max);
