@@ -19,6 +19,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 -fconste
 SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_while_loop.cpp
   fastinterp_tpl_for_loop.cpp
+  fastinterp_tpl_if_stmt.cpp
   fastinterp_tpl_arithmetic_expr.cpp
   fastinterp_tpl_astvariable.cpp
   fastinterp_tpl_astliteral.cpp
@@ -29,7 +30,6 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astreturn.cpp
   fastinterp_tpl_astfunction.cpp
   fastinterp_tpl_return_arith_expr.cpp
-  fastinterp_tpl_if_stmt.cpp
   fastinterp_tpl_logical_expr.cpp
   fastinterp_tpl_astblock.cpp
   fastinterp_tpl_assign_arith_expr.cpp
