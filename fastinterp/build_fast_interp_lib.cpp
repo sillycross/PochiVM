@@ -859,7 +859,7 @@ public:
         }
 
         fprintf(fp3, "// GENERATED FILE, DO NOT EDIT!\n//\n\n");
-        fprintf(fp3, "#include \"fastinterp_fwd_declarations.generated.h\"\n\n");
+        fprintf(fp3, "#include \"fastinterp/fastinterp_generated_header_helper.h\"\n\n");
         fprintf(fp3, "namespace PochiVM {\n\n");
 
         const std::string lib_varname_prefix = "__pochivm_fastinterp_boilerplate_lib_";
@@ -1189,6 +1189,8 @@ public:
                 fprintf(fp1, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s;\n",
                         static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
 
+                fprintf(fp3, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s;\n",
+                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
                 fprintf(fp3, "constexpr FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s(\n",
                         static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
                 fprintf(fp3, "std::array<uint32_t, %d> {", static_cast<int>(n * 3));
