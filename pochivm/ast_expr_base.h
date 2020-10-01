@@ -41,7 +41,8 @@ public:
         AstReturnStmt,
         AstLogicalAndOrExpr,
         AstLogicalNotExpr,
-        AstThrowStmt
+        AstThrowStmt,
+        AstRvalueToConstPrimitiveRefExpr
     };
 
     AstNodeType() {}
@@ -79,6 +80,7 @@ public:
         case AstNodeType::AstLogicalAndOrExpr: return "AstLogicalAndOrExpr";
         case AstNodeType::AstLogicalNotExpr: return "AstLogicalNotExpr";
         case AstNodeType::AstThrowStmt: return "AstThrowStmt";
+        case AstNodeType::AstRvalueToConstPrimitiveRefExpr: return "AstRvalueToConstPrimitiveRefExpr";
         }
         __builtin_unreachable();
     }

@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 %struct.TestNonTrivialCopyConstructor = type { i32 }
-%"struct.PochiVM::ReflectionHelper::tpl_sequence.3" = type { i8 }
+%"struct.PochiVM::ReflectionHelper::tpl_sequence.6" = type { i8 }
 
 @_ZTI29TestNonTrivialCopyConstructor = external dso_local constant { i8*, i8* }
 
@@ -22,7 +22,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI29TestNonTrivialCopyConstructorJiEE4callIJiEEEvPS2_DpT_(%struct.TestNonTrivialCopyConstructor* %0, i32 %1) #1 align 2 {
   %3 = alloca %struct.TestNonTrivialCopyConstructor*, align 8
   %4 = alloca i32, align 4
-  %5 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.3", align 1
+  %5 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.6", align 1
   store %struct.TestNonTrivialCopyConstructor* %0, %struct.TestNonTrivialCopyConstructor** %3, align 8
   store i32 %1, i32* %4, align 4
   %6 = load %struct.TestNonTrivialCopyConstructor*, %struct.TestNonTrivialCopyConstructor** %3, align 8
@@ -44,7 +44,7 @@ declare dso_local void @__cxa_throw(i8*, i8*, i8*)
 define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI29TestNonTrivialCopyConstructorJRKS2_EE4callIJPS3_EEEvPS2_DpT_(%struct.TestNonTrivialCopyConstructor* %0, %struct.TestNonTrivialCopyConstructor* %1) #1 align 2 {
   %3 = alloca %struct.TestNonTrivialCopyConstructor*, align 8
   %4 = alloca %struct.TestNonTrivialCopyConstructor*, align 8
-  %5 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.3", align 1
+  %5 = alloca %"struct.PochiVM::ReflectionHelper::tpl_sequence.6", align 1
   store %struct.TestNonTrivialCopyConstructor* %0, %struct.TestNonTrivialCopyConstructor** %3, align 8
   store %struct.TestNonTrivialCopyConstructor* %1, %struct.TestNonTrivialCopyConstructor** %4, align 8
   %6 = load %struct.TestNonTrivialCopyConstructor*, %struct.TestNonTrivialCopyConstructor** %3, align 8

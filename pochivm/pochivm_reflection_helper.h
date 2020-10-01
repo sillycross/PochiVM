@@ -92,16 +92,6 @@ struct is_const_primitive_type_ref_type : std::integral_constant<bool,
 template<typename T>
 struct remove_param_type_ref
 {
-    using type = typename std::conditional<
-        is_const_primitive_type_ref_type<T>::value,
-        typename convert_const_primitive_type_ref<T>::type,
-        typename remove_type_ref_internal<T>::type
-    >::type;
-};
-
-template<typename T>
-struct remove_ret_type_ref
-{
     using type = typename remove_type_ref_internal<T>::type;
 };
 
@@ -148,18 +138,11 @@ struct is_converted_reference_type : std::integral_constant<bool,
 
 // Whether the conversion is non-trivial (changes LLVM prototype)
 // We make pass-by-value non-primitive-type parameter a pointer, which changes LLVM prototype.
-// The 'const PT&' => 'PT' conversion also changes LLVM prototype.
 // The reference-to-pointer conversion does not, because C++ Itanium ABI specifies
 // that reference should be passed as if it were a pointer to the object in ABI.
 //
 template<typename T>
 struct is_nontrivial_arg_conversion : std::integral_constant<bool,
-    is_const_primitive_type_ref_type<T>::value ||
-    (!std::is_reference<T>::value && is_converted_reference_type<T>::value)
-> {};
-
-template<typename T>
-struct is_nontrivial_ret_conversion : std::integral_constant<bool,
     !std::is_reference<T>::value && is_converted_reference_type<T>::value
 > {};
 
@@ -169,26 +152,11 @@ struct arg_transform_helper
     using RemovedRefArgType = typename remove_param_type_ref<T>::type;
     using RemovedCvArgType = typename recursive_remove_cv<RemovedRefArgType>::type;
     using ApiArgType = typename std::conditional<
-                is_const_primitive_type_ref_type<T>::value,
-                RemovedCvArgType,
-                typename std::conditional<
-                    is_converted_reference_type<T>::value,
-                    typename std::remove_pointer<RemovedCvArgType>::type,
-                    RemovedCvArgType>::type>::type;
-    static const bool isApiArgVariable = (is_const_primitive_type_ref_type<T>::value) ?
-                false : is_converted_reference_type<T>::value;
-};
-
-template<typename T>
-struct ret_transform_helper
-{
-    using RemovedRefArgType = typename remove_ret_type_ref<T>::type;
-    using RemovedCvArgType = typename recursive_remove_cv<RemovedRefArgType>::type;
-    using ApiArgType = typename std::conditional<
                     is_converted_reference_type<T>::value,
                     typename std::remove_pointer<RemovedCvArgType>::type,
                     RemovedCvArgType>::type;
     static const bool isApiArgVariable = is_converted_reference_type<T>::value;
+    static const bool isApiArgConstPrimitiveReference = is_const_primitive_type_ref_type<T>::value;
 };
 
 template<typename R, typename... Args>
@@ -197,7 +165,7 @@ struct function_typenames_helper_internal
     static const size_t numArgs = sizeof...(Args);
 
     using ReturnType = R;
-    using ApiReturnType = typename ret_transform_helper<ReturnType>::ApiArgType;
+    using ApiReturnType = typename arg_transform_helper<ReturnType>::ApiArgType;
 
     template<size_t i> using ArgType = typename std::tuple_element<i, std::tuple<Args...>>::type;
     template<size_t i> using RemovedRefArgType = typename arg_transform_helper<ArgType<i>>::RemovedRefArgType;
@@ -206,12 +174,15 @@ struct function_typenames_helper_internal
     template<size_t i>
     static constexpr bool isApiArgTypeVariable() { return arg_transform_helper<ArgType<i>>::isApiArgVariable; }
 
+    template<size_t i>
+    static constexpr bool isApiArgTypeConstPrimitiveReference() { return arg_transform_helper<ArgType<i>>::isApiArgConstPrimitiveReference; }
+
     static constexpr bool isApiReturnTypeVariable() { return std::is_reference<ReturnType>::value; }
 
     template<size_t i>
     static constexpr bool isArgNontriviallyConverted() { return is_nontrivial_arg_conversion<ArgType<i>>::value; }
 
-    static constexpr bool isRetValNontriviallyConverted() { return is_nontrivial_ret_conversion<ReturnType>::value; }
+    static constexpr bool isRetValNontriviallyConverted() { return is_nontrivial_arg_conversion<ReturnType>::value; }
 
     template<size_t n, typename Enable = void>
     struct build_original_typenames_array_internal
@@ -244,14 +215,16 @@ struct function_typenames_helper_internal
     template<size_t n, typename Enable = void>
     struct build_api_typenames_array_internal
     {
-        static constexpr std::array<std::pair<const char*, bool>, n+1> get()
+        static constexpr std::array<std::pair<const char*, std::pair<bool, bool> >, n+1> get()
         {
             return PochiVM::AstTypeHelper::constexpr_std_array_concat(
                     build_api_typenames_array_internal<n-1>::get(),
-                    std::array<std::pair<const char*, bool>, 1>{
+                    std::array<std::pair<const char*, std::pair<bool, bool> >, 1>{
                             std::make_pair(
                                     __pochivm_stringify_type__<ApiArgType<n-1>>(),
-                                    isApiArgTypeVariable<n-1>() /*isVar*/)
+                                    std::make_pair(
+                                        isApiArgTypeVariable<n-1>() /*isVar*/,
+                                        isApiArgTypeConstPrimitiveReference<n-1>() /*isConstPrimitiveRef*/))
                     });
         }
     };
@@ -259,17 +232,18 @@ struct function_typenames_helper_internal
     template<size_t n>
     struct build_api_typenames_array_internal<n, typename std::enable_if<(n == 0)>::type>
     {
-        static constexpr std::array<std::pair<const char*, bool>, n+1> get()
+        static constexpr std::array<std::pair<const char*, std::pair<bool, bool> >, n+1> get()
         {
-            return std::array<std::pair<const char*, bool>, 1>{
+            return std::array<std::pair<const char*, std::pair<bool, bool> >, 1>{
                     std::make_pair(__pochivm_stringify_type__<ApiReturnType>(),
-                                   isApiReturnTypeVariable() /*isVar*/) };
+                                   std::make_pair(isApiReturnTypeVariable() /*isVar*/,
+                                                  false /*isConstPrimitiveRef*/)) };
         }
     };
 
-    static const std::pair<const char*, bool>* get_api_ret_and_param_typenames()
+    static const std::pair<const char*, std::pair<bool, bool> >* get_api_ret_and_param_typenames()
     {
-        static constexpr std::array<std::pair<const char*, bool>, numArgs + 1> data =
+        static constexpr std::array<std::pair<const char*, std::pair<bool, bool> >, numArgs + 1> data =
                 build_api_typenames_array_internal<numArgs>::get();
         return data.data();
     }
@@ -419,8 +393,7 @@ struct gen_tpl_sequence<0, S...>
 //             The return value is then constructed-in-place at the given address using in-place new.
 //        (b) If the return value is by-reference, it becomes a pointer type.
 //        (c) If the return value is a primitive type, it is unchanged.
-//    (3) Each parameter which is a by-value non-primitive type or a by-reference non-pritimive or
-//        non-const type becomes a pointer. const reference primitive type becomes a simple value.
+//    (3) Each parameter which is a by-value non-primitive type or a by-reference type becomes a pointer.
 //
 // function_wrapper_helper<fnPtr>::isTrivial()
 //    Return true if the transformation is trivial (so the transformation is not needed)
@@ -454,11 +427,11 @@ private:
         }
     };
 
-    // reference type parameter (not const PT&)
+    // reference type parameter
     //
     template<int k>
     struct convert_param_internal<k, typename std::enable_if<(
-            std::is_reference<OutType<k>>::value && !is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
+            std::is_reference<OutType<k>>::value)>::type>
     {
         static_assert(std::is_lvalue_reference<OutType<k>>::value,
                       "function returning rvalue reference is not supported");
@@ -471,26 +444,6 @@ private:
         static type get(InType<k> v) noexcept
         {
             return *v;
-        }
-    };
-
-    // 'const PT&' shape
-    //
-    template<int k>
-    struct convert_param_internal<k, typename std::enable_if<(
-            is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
-    {
-        static_assert(std::is_lvalue_reference<OutType<k>>::value,
-                      "function returning rvalue reference is not supported");
-        static_assert(std::is_same<InType<k> const&, OutType<k>>::value,
-                      "unexpected InType");
-
-        static constexpr bool is_nothrow = true;
-
-        using type = InType<k>;
-        static type get(InType<k> v) noexcept
-        {
-            return v;
         }
     };
 
@@ -755,11 +708,11 @@ private:
         }
     };
 
-    // reference type parameter (not const PT&)
+    // reference type parameter
     //
     template<int k>
     struct convert_param_internal<k, typename std::enable_if<(
-            std::is_reference<OutType<k>>::value && !is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
+            std::is_reference<OutType<k>>::value)>::type>
     {
         static_assert(std::is_lvalue_reference<OutType<k>>::value,
                       "function returning rvalue reference is not supported");
@@ -772,26 +725,6 @@ private:
         static type get(InType<k> v) noexcept
         {
             return *v;
-        }
-    };
-
-    // 'const PT&' shape
-    //
-    template<int k>
-    struct convert_param_internal<k, typename std::enable_if<(
-            is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
-    {
-        static_assert(std::is_lvalue_reference<OutType<k>>::value,
-                      "function returning rvalue reference is not supported");
-        static_assert(std::is_same<InType<k> const&, OutType<k>>::value,
-                      "unexpected InType");
-
-        static constexpr bool is_nothrow = true;
-
-        using type = InType<k>;
-        static type get(InType<k> v) noexcept
-        {
-            return v;
         }
     };
 
@@ -953,7 +886,7 @@ struct RawFnTypeNamesInfo
 {
     RawFnTypeNamesInfo(FunctionType fnType,
                        size_t numArgs,
-                       const std::pair<const char*, bool>* apiRetAndArgTypenames,
+                       const std::pair<const char*, std::pair<bool, bool> >* apiRetAndArgTypenames,
                        const char* const* originalRetAndArgTypenames,
                        const char* classTypename,
                        const char* fnName,
@@ -991,7 +924,7 @@ struct RawFnTypeNamesInfo
     // original: the original C++ defintion
     // transformed: our transformed definition into our supported typesystem
     //
-    const std::pair<const char*, bool>* m_apiRetAndArgTypenames;
+    const std::pair<const char*, std::pair<bool, bool> >* m_apiRetAndArgTypenames;
     const char* const* m_originalRetAndArgTypenames;
     // nullptr if it is a free function or a static class method,
     // otherwise the class typename
@@ -1081,7 +1014,7 @@ struct get_raw_fn_typenames_info
     static RawFnTypeNamesInfo get_constructor(size_t numArgs,
                                               const char* class_typename,
                                               const char* const* orig_ret_and_param_typenames,
-                                              const std::pair<const char*, bool>* api_ret_and_param_typenames,
+                                              const std::pair<const char*, std::pair<bool, bool> >* api_ret_and_param_typenames,
                                               bool isNoExcept,
                                               bool isCopyConstructor)
     {
@@ -1183,7 +1116,7 @@ void RegisterDestructorIfNeeded()
     using fnInfo = ReflectionHelper::function_typenames_helper<decltype(t)>;
     if constexpr(fnInfo::isRetValNontriviallyConverted())
     {
-        using ReturnedClassType = typename ReflectionHelper::ret_transform_helper<typename fnInfo::ReturnType>::ApiArgType;
+        using ReturnedClassType = typename ReflectionHelper::arg_transform_helper<typename fnInfo::ReturnType>::ApiArgType;
         RegisterDestructor<ReturnedClassType>();
     }
 }

@@ -14,6 +14,9 @@ namespace PochiVM
 template<typename T>
 class Reference;
 
+template<typename T>
+class ConstPrimitiveReference;
+
 // A wrapper class holding a RValue of type known at C++ build time (so static_asserts on types are possible),
 // It holds a pointer to a AstNodeBase class with same type. This class is safe to pass around by value.
 // This class is the core of the various APIs that allows user to build up the AST tree.
@@ -39,6 +42,11 @@ public:
     //
     template<typename U, typename = std::enable_if_t<AstTypeHelper::may_implicit_convert<T, U>::value> >
     operator Value<U>() const;
+
+    // Implicit type conversion: RValue to const primitive reference
+    //
+    template<typename Enable = void, typename = std::enable_if_t<std::is_same<Enable, void>::value && !std::is_same<T, void>::value> >
+    operator ConstPrimitiveReference<T>() const;
 
     // operator dereference: possible for T* where T is not void*.
     // Returns a reference to the value at the pointer address.
@@ -191,6 +199,36 @@ inline Value<bool> operator!(const Value<bool>& op)
     return Value<bool>(new AstLogicalNotExpr(op.__pochivm_value_ptr));
 }
 
+// Const primitive reference: only used as an intermediate helper for calling C++ functions.
+// If a C++ function has parameter 'const int&', C++ allows both rvalue (e.g. '1') and reference (e.g. 'a')
+// to bind to that parameter. We need this helper struct to support this behavior.
+// If the input is rvalue, the conversion to this struct generates a 'AstRvalueToConstPrimitiveRefExpr' operator.
+//
+template<typename T>
+class ConstPrimitiveReference
+{
+public:
+    static_assert(AstTypeHelper::is_primitive_type<T>::value || std::is_pointer<T>::value,
+                  "Only primitive types allowed");
+
+    ConstPrimitiveReference(AstNodeBase* ptr)
+        : __pochivm_ref_ptr(ptr)
+    {
+        TestAssert(__pochivm_ref_ptr->GetTypeId().IsType<T*>());
+    }
+
+    AstNodeBase* const __pochivm_ref_ptr;
+};
+
+// Implicit type conversion: RValue to const primitive reference
+//
+template<typename T>
+template<typename, typename>
+Value<T>::operator ConstPrimitiveReference<T>() const
+{
+    return ConstPrimitiveReference<T>(new AstRvalueToConstPrimitiveRefExpr(__pochivm_value_ptr));
+}
+
 // Language utility: construct a literal
 // Example: Literal<int64_t>(1)
 //
@@ -240,6 +278,13 @@ public:
         , __pochivm_ref_ptr(ptr)
     {
         TestAssert(__pochivm_ref_ptr->GetTypeId().IsType<T*>());
+    }
+
+    // Implicit type conversion: reference to const primitive reference
+    //
+    operator ConstPrimitiveReference<T>() const
+    {
+        return ConstPrimitiveReference<T>(__pochivm_ref_ptr);
     }
 
 protected:

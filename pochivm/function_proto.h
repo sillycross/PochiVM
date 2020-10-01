@@ -912,6 +912,14 @@ inline void AstFunction::PrepareForInterp()
             v->SetInterpOffset(size);
             size += v->GetStorageSize();
         }
+        else if (nodeType == AstNodeType::AstRvalueToConstPrimitiveRefExpr)
+        {
+            AstRvalueToConstPrimitiveRefExpr* v = assert_cast<AstRvalueToConstPrimitiveRefExpr*>(cur);
+            uint32_t storageSize = static_cast<uint32_t>(v->GetTypeId().RemovePointer().Size());
+            size = up_align(size, std::min(8U, storageSize));
+            v->m_interpOffset = size;
+            size += storageSize;
+        }
     };
     // Allocate space for parameters
     // We need to do these specially, becuase AST traverse would only allocate space

@@ -67,12 +67,17 @@ struct ParsedFnTypeNamesInfo
         m_numArgs = src->m_numArgs;
         m_origRet = ParseTypeName(src->m_originalRetAndArgTypenames[0]);
         m_ret = ParseTypeName(src->m_apiRetAndArgTypenames[0].first);
-        m_isRetApiVar = src->m_apiRetAndArgTypenames[0].second;
+        m_isRetApiVar = src->m_apiRetAndArgTypenames[0].second.first;
         for (size_t i = 1; i <= src->m_numArgs; i++)
         {
             m_origParams.push_back(ParseTypeName(src->m_originalRetAndArgTypenames[i]));
             m_params.push_back(ParseTypeName(src->m_apiRetAndArgTypenames[i].first));
-            m_isParamsApiVar.push_back(src->m_apiRetAndArgTypenames[i].second);
+            if (src->m_apiRetAndArgTypenames[i].second.second)
+            {
+                ReleaseAssert(src->m_apiRetAndArgTypenames[i].second.first);
+            }
+            m_isParamsApiVar.push_back(src->m_apiRetAndArgTypenames[i].second.first);
+            m_isParamsApiConstPrimitiveRef.push_back(src->m_apiRetAndArgTypenames[i].second.second);
         }
         m_fnType = src->m_fnType;
         if (m_fnType == PochiVM::ReflectionHelper::FunctionType::NonStaticMemberFn ||
@@ -315,6 +320,7 @@ struct ParsedFnTypeNamesInfo
     std::vector<std::string> m_origParams;
     std::vector<std::string> m_params;
     std::vector<bool> m_isParamsApiVar;
+    std::vector<bool> m_isParamsApiConstPrimitiveRef;
     // typename of return value, before and after transform
     //
     std::string m_origRet;
@@ -430,6 +436,7 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     if (a.m_functionName != b.m_functionName) { return a.m_functionName < b.m_functionName; }
     if (a.m_params != b.m_params) { return a.m_params < b.m_params; }
     if (a.m_isParamsApiVar != b.m_isParamsApiVar) { return a.m_isParamsApiVar < b.m_isParamsApiVar; }
+    if (a.m_isParamsApiConstPrimitiveRef != b.m_isParamsApiConstPrimitiveRef) { return a.m_isParamsApiConstPrimitiveRef < b.m_isParamsApiConstPrimitiveRef; }
     if (a.m_ret != b.m_ret) { return a.m_ret < b.m_ret; }
     if (a.m_isRetApiVar != b.m_isRetApiVar) { return a.m_isRetApiVar < b.m_isRetApiVar; }
     if (a.m_templateParams.size() != b.m_templateParams.size()) { return a.m_templateParams.size() < b.m_templateParams.size(); }
@@ -455,7 +462,8 @@ static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNo
     fprintf(fp, "(%s", (info.m_params.size() == firstParam ? ")" : "\n"));
     for (size_t i = firstParam; i < info.m_params.size(); i++)
     {
-        fprintf(fp, "        %s<%s>", (info.m_isParamsApiVar[i] ? "Reference" : "Value"), info.m_params[i].c_str());
+        fprintf(fp, "        %s<%s>", (info.m_isParamsApiConstPrimitiveRef[i] ?
+                "ConstPrimitiveReference" : (info.m_isParamsApiVar[i] ? "Reference" : "Value")), info.m_params[i].c_str());
         if (!doNotPrintVarName)
         {
             fprintf(fp, " __pochivm_%d", static_cast<int>(i - firstParam));
@@ -1116,6 +1124,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                            data[start].m_functionName == data[end].m_functionName &&
                            data[start].m_params == data[end].m_params &&
                            data[start].m_isParamsApiVar == data[end].m_isParamsApiVar &&
+                           data[start].m_isParamsApiConstPrimitiveRef == data[end].m_isParamsApiConstPrimitiveRef &&
                            data[start].m_ret == data[end].m_ret &&
                            data[start].m_isRetApiVar == data[end].m_isRetApiVar &&
                            data[start].m_templateParams.size() == data[end].m_templateParams.size())
@@ -1287,6 +1296,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                            data[start].m_functionName == data[end].m_functionName &&
                            data[start].m_params == data[end].m_params &&
                            data[start].m_isParamsApiVar == data[end].m_isParamsApiVar &&
+                           data[start].m_isParamsApiConstPrimitiveRef == data[end].m_isParamsApiConstPrimitiveRef &&
                            data[start].m_ret == data[end].m_ret &&
                            data[start].m_isRetApiVar == data[end].m_isRetApiVar &&
                            data[start].m_templateParams.size() == data[end].m_templateParams.size())

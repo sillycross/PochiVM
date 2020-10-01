@@ -255,4 +255,45 @@ public:
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstTrashPtrExpr; }
 };
 
+// Converts a rvalue to a temporary reference, so it matches the expectation of a C++ function
+// Internally it just creates an alloca, put the rvalue there, and returns the address
+//
+class AstRvalueToConstPrimitiveRefExpr : public AstNodeBase
+{
+public:
+    AstRvalueToConstPrimitiveRefExpr(AstNodeBase* operand)
+        : AstNodeBase(operand->GetTypeId().AddPointer())
+        , m_operand(operand)
+    {
+        TestAssert(operand->GetTypeId().IsPrimitiveType() || operand->GetTypeId().IsPointerType());
+    }
+
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    template<typename T>
+    void InterpImpl(T** out)
+    {
+        T* addr = reinterpret_cast<T*>(thread_pochiVMContext->m_interpStackFrameBase + m_interpOffset);
+        m_operand->Interp(addr);
+        *out = addr;
+    }
+
+    GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstRvalueToConstPrimitiveRefExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
+
+    virtual void SetupInterpImpl() override
+    {
+        m_interpFn = SelectImpl(GetTypeId());
+    }
+
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    {
+        fn(m_operand);
+    }
+
+    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstRvalueToConstPrimitiveRefExpr; }
+
+    AstNodeBase* m_operand;
+    uint32_t m_interpOffset;
+};
+
 }   // namespace PochiVM

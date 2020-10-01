@@ -2,6 +2,7 @@
 #include "error_context.h"
 #include "ast_type_helper.hpp"
 #include "pochivm.hpp"
+#include "function_proto.h"
 
 namespace PochiVM
 {
@@ -95,6 +96,22 @@ Value* WARN_UNUSED AstNullptrExpr::EmitIRImpl()
 Value* WARN_UNUSED AstTrashPtrExpr::EmitIRImpl()
 {
     CHECK_REPORT_BUG(false, "unimplemented");
+}
+
+Value* WARN_UNUSED AstRvalueToConstPrimitiveRefExpr::EmitIRImpl()
+{
+    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    auto savedIp = thread_llvmContext->m_builder->saveIP();
+    thread_llvmContext->m_builder->SetInsertPoint(thread_llvmContext->GetCurFunction()->GetEntryBlock());
+    assert(GetTypeId().IsPointerType());
+    Type* llvmType = AstTypeHelper::llvm_type_of(GetTypeId().RemovePointer());
+    Value* addr = thread_llvmContext->m_builder->CreateAlloca(
+                      llvmType,
+                      nullptr /*ArraySize*/);
+    thread_llvmContext->m_builder->restoreIP(savedIp);
+    Value* data = m_operand->EmitIR();
+    AstTypeHelper::create_store_helper(GetTypeId().RemovePointer(), data, addr);
+    return addr;
 }
 
 }   // namespace PochiVM
