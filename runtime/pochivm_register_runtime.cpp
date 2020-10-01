@@ -187,6 +187,7 @@ static void RegisterRuntimeLibrary()
     RegisterConstructor<TestConstPrimitiveTypeCtor, const int&, int&, const int*&, int*&, int* const&, const int* const&>();
     RegisterMemberObject<&TestConstPrimitiveTypeCtor::value>();
     RegisterFreeFn<&TestNonPrimitiveTypeConstRef>();
+    RegisterFreeFn<&TestAddressOfConstPrimitiveRef>();
 }
 
 // DO NOT MODIFY

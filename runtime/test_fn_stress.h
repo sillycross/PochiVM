@@ -544,3 +544,8 @@ inline size_t TestNonPrimitiveTypeConstRef(const std::vector<int>& r)
 {
     return r.size();
 }
+
+inline const int* TestAddressOfConstPrimitiveRef(const int& v)
+{
+    return &v;
+}

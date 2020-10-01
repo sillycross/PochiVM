@@ -4453,3 +4453,45 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_2)
         ReleaseAssert(jitFn1(&v) == 123 * 3 + 3 * 2 + 1);
     }
 }
+
+TEST(SanityCallCppFn, ConstRefParameterConversion_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype1 = std::function<int*(int*)>;
+    {
+        auto [fn, a] = NewFunction<FnPrototype1>("testfn");
+        fn.SetBody(
+                Return(CallFreeFn::TestAddressOfConstPrimitiveRef(*a))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForInterp();
+
+    {
+        FnPrototype1 interpFn1 = thread_pochiVMContext->m_curModule->
+                GetGeneratedFunctionInterpMode<FnPrototype1>("testfn");
+
+        int v = 123;
+        ReleaseAssert(interpFn1(&v) == &v);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+
+        FnPrototype1 jitFn1 = jit.GetFunction<FnPrototype1>("testfn");
+
+        int v = 123;
+        ReleaseAssert(jitFn1(&v) == &v);
+    }
+}
