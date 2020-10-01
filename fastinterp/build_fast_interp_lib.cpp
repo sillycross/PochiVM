@@ -1,3 +1,5 @@
+#define POCHIVM_INSIDE_BUILD_FASTINTERP_LIB_CPP
+
 #include <iomanip>
 #include <sstream>
 
@@ -8,7 +10,7 @@
 #include "runtime_lib_builder/symbol_list_util.h"
 #include "runtime_lib_builder/check_file_md5.h"
 
-#include "pochivm/ast_enums.h"
+#include "fastinterp_function_alignment.h"
 #include "metavar.hpp"
 
 #include "llvm/ADT/STLExtras.h"

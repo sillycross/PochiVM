@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.h"
-#include "ast_enums.h"
+#include "interp_control_signal.h"
 #include "ast_type_helper.h"
 #include "ast_misc_helper.h"
 

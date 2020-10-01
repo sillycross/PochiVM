@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pochivm/common.h"
-#include "pochivm/ast_enums.h"
+#include "pochivm/ast_comparison_expr_type.h"
 
 namespace PochiVM
 {

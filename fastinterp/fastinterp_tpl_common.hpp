@@ -8,7 +8,6 @@ static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp"
 
 #include "metavar.hpp"
 #include "dynamic_specialization_utils.hpp"
-#include "pochivm/ast_enums.h"
 #include "fastinterp_context.h"
 #include "pochivm/cxx2a_bit_cast_helper.h"
 

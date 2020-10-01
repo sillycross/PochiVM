@@ -1,5 +1,15 @@
 #pragma once
 
+// This file should only be included by fastinterp_tpl_*.cpp or build_fast_interp_lib.cpp
+//
+#ifndef POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+#ifndef POCHIVM_INSIDE_BUILD_FASTINTERP_LIB_CPP
+#ifndef POCHIVM_INSIDE_METAVAR_UNIT_TEST_CPP
+static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp or build_fast_interp_lib.cpp");
+#endif
+#endif
+#endif
+
 // Most of the PochiVM headers indirectly depend on this file
 // Be very careful if you want to add a include here
 //

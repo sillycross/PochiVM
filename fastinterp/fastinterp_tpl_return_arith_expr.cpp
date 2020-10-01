@@ -2,6 +2,8 @@
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_tpl_operandshape.hpp"
+#include "pochivm/ast_arithmetic_expr_type.h"
+#include "pochivm/interp_control_signal.h"
 
 namespace PochiVM
 {

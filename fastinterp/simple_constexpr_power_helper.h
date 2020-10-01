@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common.h"
-#include "fastinterp_tpl_abi_distinct_type_helper.h"
 
 namespace PochiVM {
 namespace math {

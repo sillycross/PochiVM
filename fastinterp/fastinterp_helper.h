@@ -4,8 +4,8 @@
 //
 
 #include "pochivm/common.h"
-#include "pochivm/ast_enums.h"
 #include "pochivm/ast_type_helper.h"
+#include "fastinterp_function_alignment.h"
 
 namespace PochiVM
 {

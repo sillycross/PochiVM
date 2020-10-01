@@ -2,38 +2,8 @@
 
 #include "common.h"
 
-// This file is used by both pochivm and fastinterp
-//
-
 namespace PochiVM
 {
-
-// The function alignment of the generated fastinterp functions
-// This must at least the function alignment used to compile fastinterp_tpl_*.cpp
-// Default clang++ function alignment is 16.
-//
-constexpr size_t x_fastinterp_function_alignment = 16;
-
-enum class AstArithmeticExprType
-{
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    MOD,
-    X_END_OF_ENUM
-};
-
-enum class AstComparisonExprType
-{
-    EQUAL,
-    NOT_EQUAL,
-    LESS_THAN,
-    LESS_EQUAL,
-    GREATER_THAN,
-    GREATER_EQUAL,
-    X_END_OF_ENUM
-};
 
 class PossibleControlSignals
 {
@@ -76,17 +46,6 @@ private:
     const static uint32_t x_MAY_BREAK = 2;
     const static uint32_t x_MAY_RETURN = 4;
     uint32_t m_value;
-};
-
-// Interp mode control signal
-// Used for control flow redirection statements (Break/Continue/Return)
-//
-enum class InterpControlSignal
-{
-    None,
-    Break,
-    Continue,
-    Return
 };
 
 }   // namespace PochiVM

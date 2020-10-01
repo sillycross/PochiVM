@@ -2,6 +2,7 @@
 
 #include "fastinterp_tpl_astblock.h"
 #include "fastinterp_tpl_common.hpp"
+#include "pochivm/interp_control_signal.h"
 
 namespace PochiVM
 {

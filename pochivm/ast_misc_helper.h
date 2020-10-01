@@ -2,7 +2,6 @@
 
 #include "common.h"
 #include "pochivm_context.h"
-#include "ast_enums.h"
 
 namespace PochiVM
 {

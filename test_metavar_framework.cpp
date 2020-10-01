@@ -1,3 +1,5 @@
+#define POCHIVM_INSIDE_METAVAR_UNIT_TEST_CPP
+
 #include "gtest/gtest.h"
 
 #include "fastinterp/metavar.hpp"

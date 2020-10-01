@@ -4,6 +4,7 @@
 #include "fastinterp_tpl_cfr_limit_checker.hpp"
 #include "fastinterp_tpl_condition_shape.hpp"
 #include "fastinterp_tpl_common.hpp"
+#include "pochivm/interp_control_signal.h"
 
 namespace PochiVM
 {
