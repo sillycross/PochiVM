@@ -515,3 +515,32 @@ uint64_t TestMismatchedLLVMTypeName3(std::pair<uint32_t, uint16_t>* v);
 uint64_t TestMismatchedLLVMTypeName4(std::pair<uint16_t, uint32_t>* v);
 
 extern int g_testGlobalVariable1;
+
+inline int TestConstPrimitiveTypeParam(const int& a, int& b, const int*& c, int*& d, int* const& e, const int* const& f)
+{
+    return a + b + *c + *d + *e + *f;
+}
+
+inline int& TestConstPrimitiveTypeReturn1(int* v)
+{
+    return *v;
+}
+
+inline const int& TestConstPrimitiveTypeReturn2(const int* v)
+{
+    return *v;
+}
+
+struct TestConstPrimitiveTypeCtor
+{
+    TestConstPrimitiveTypeCtor(const int& a, int& b, const int*& c, int*& d, int* const& e, const int* const& f)
+    {
+        value = a + b + *c + *d + *e + *f;
+    }
+    int value;
+};
+
+inline size_t TestNonPrimitiveTypeConstRef(const std::vector<int>& r)
+{
+    return r.size();
+}

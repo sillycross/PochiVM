@@ -1548,6 +1548,7 @@ int main(int argc, char** argv)
 
     fprintf(fp2, "// GENERATED FILE, DO NOT EDIT!\n//\n\n#pragma once\n");
     fprintf(fp2, "#include \"fastinterp_fwd_declarations.generated.h\"\n");
+    fprintf(fp2, "#include \"pochivm/ast_type_helper.h\"\n");
     fprintf(fp2, "#include \"fastinterp/fastinterp_all_tpl_headers.h\"\n\n");
     fprintf(fp2, "namespace PochiVM {\n\n");
 

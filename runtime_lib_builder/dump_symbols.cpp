@@ -203,7 +203,19 @@ struct ParsedFnTypeNamesInfo
         }
         ReleaseAssert(i > 0);
         m_templateParams.clear();
+        bool isTemplatedFunction = false;
         if (demangledSymbolName[i] == '>')
+        {
+            // Special case 'operator->' case: this is not a real template right-bracket
+            //
+            std::string sig = "operator->";
+            if (!(i >= sig.length() - 1 && demangledSymbolName.substr(i - sig.length() + 1, sig.length()) == sig))
+            {
+                isTemplatedFunction = true;
+            }
+        }
+
+        if (isTemplatedFunction)
         {
             // There are template parameters, parse them out
             //

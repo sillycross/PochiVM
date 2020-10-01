@@ -4,7 +4,7 @@
 //
 
 #include "pochivm/common.h"
-#include "pochivm/ast_type_helper.h"
+#include "pochivm/cxx2a_bit_cast_helper.h"
 #include "fastinterp_function_alignment.h"
 
 namespace PochiVM

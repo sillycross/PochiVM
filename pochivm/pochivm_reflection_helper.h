@@ -18,14 +18,14 @@ template<typename T> struct is_primitive_type : std::false_type {};
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-// remove_param_type_ref<T>::type
+// remove_type_ref_internal<T>::type
 // Transform a C++-type to a primitive type that we support by removing refs (but does not drop cv-qualifier)
 //    Transform reference to pointer (e.g. 'int&' becomes 'int*')
 //    Transform non-primitive pass-by-value parameter to pointer (e.g. 'std::string' becomes 'std::string*)
 //    Lockdown rvalue-reference (e.g. 'int&&')
 //
 template<typename T>
-struct remove_param_type_ref {
+struct remove_type_ref_internal {
     // Non-primitive pass-by-value parameter, or pass-by-reference parameter, becomes a pointer
     //
     using type = typename std::add_pointer<T>::type;
@@ -33,45 +33,83 @@ struct remove_param_type_ref {
 
 // Primitive types are unchanged
 //
-#define F(t) template<> struct remove_param_type_ref<t> { using type = t; };
+#define F(t) template<> struct remove_type_ref_internal<t> { using type = t; };
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
-#define F(t) template<> struct remove_param_type_ref<const t> { using type = const t; };
+#define F(t) template<> struct remove_type_ref_internal<const t> { using type = const t; };
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
 
 // Pointer types are unchanged
 //
 template<typename T>
-struct remove_param_type_ref<T*> {
+struct remove_type_ref_internal<T*> {
     using type = T*;
 };
 
 // void type is unchanged
 //
 template<>
-struct remove_param_type_ref<void> {
+struct remove_type_ref_internal<void> {
     using type = void;
 };
 
 template<>
-struct remove_param_type_ref<const void> {
+struct remove_type_ref_internal<const void> {
     using type = const void;
 };
 
 // Lockdown rvalue-reference parameter
 //
 template<typename T>
-struct remove_param_type_ref<T&&> {
+struct remove_type_ref_internal<T&&> {
     static_assert(sizeof(T) == 0, "Function with rvalue-reference parameter is not supported!");
+};
+
+// convert 'const primitive type&' to 'primitive type'
+//
+template<typename T>
+struct convert_const_primitive_type_ref
+{
+    using type = T;
+};
+
+#define F(t) template<> struct convert_const_primitive_type_ref<const t&> { using type = t; };
+FOR_EACH_PRIMITIVE_TYPE
+#undef F
+
+template<typename T>
+struct convert_const_primitive_type_ref<T* const&> {
+    using type = T*;
+};
+
+template<typename T>
+struct is_const_primitive_type_ref_type : std::integral_constant<bool,
+    (!std::is_same<typename convert_const_primitive_type_ref<T>::type, T>::value)>
+{ };
+
+template<typename T>
+struct remove_param_type_ref
+{
+    using type = typename std::conditional<
+        is_const_primitive_type_ref_type<T>::value,
+        typename convert_const_primitive_type_ref<T>::type,
+        typename remove_type_ref_internal<T>::type
+    >::type;
+};
+
+template<typename T>
+struct remove_ret_type_ref
+{
+    using type = typename remove_type_ref_internal<T>::type;
 };
 
 // recursive_remove_cv<T>::type
 //    Drop const-qualifier recursively ('const int* const* const' becomes 'int**')
 //    Lockdown volatile-qualifier
 //
-// It assumes that T is a type generated from remove_param_type_ref.
+// It assumes that T is a type generated from remove_param_type_ref or remove_ret_type_ref.
 //
 template<typename T>
 struct recursive_remove_cv {
@@ -105,17 +143,24 @@ struct recursive_remove_cv<T*> {
 //
 template<typename T>
 struct is_converted_reference_type : std::integral_constant<bool,
-    !std::is_same<typename remove_param_type_ref<T>::type, T>::value
+    !std::is_same<typename remove_type_ref_internal<T>::type, T>::value
 > {};
 
 // Whether the conversion is non-trivial (changes LLVM prototype)
-// We make pass-by-value non-primitive-type parameter a pointer, which changes LLVM prototype
+// We make pass-by-value non-primitive-type parameter a pointer, which changes LLVM prototype.
+// The 'const PT&' => 'PT' conversion also changes LLVM prototype.
 // The reference-to-pointer conversion does not, because C++ Itanium ABI specifies
 // that reference should be passed as if it were a pointer to the object in ABI.
 //
 template<typename T>
 struct is_nontrivial_arg_conversion : std::integral_constant<bool,
-     !std::is_reference<T>::value && is_converted_reference_type<T>::value
+    is_const_primitive_type_ref_type<T>::value ||
+    (!std::is_reference<T>::value && is_converted_reference_type<T>::value)
+> {};
+
+template<typename T>
+struct is_nontrivial_ret_conversion : std::integral_constant<bool,
+    !std::is_reference<T>::value && is_converted_reference_type<T>::value
 > {};
 
 template<typename T>
@@ -124,9 +169,25 @@ struct arg_transform_helper
     using RemovedRefArgType = typename remove_param_type_ref<T>::type;
     using RemovedCvArgType = typename recursive_remove_cv<RemovedRefArgType>::type;
     using ApiArgType = typename std::conditional<
-            is_converted_reference_type<T>::value /*cond*/,
-            typename std::remove_pointer<RemovedCvArgType>::type /*true*/,
-            RemovedCvArgType /*false*/>::type;
+                is_const_primitive_type_ref_type<T>::value,
+                RemovedCvArgType,
+                typename std::conditional<
+                    is_converted_reference_type<T>::value,
+                    typename std::remove_pointer<RemovedCvArgType>::type,
+                    RemovedCvArgType>::type>::type;
+    static const bool isApiArgVariable = (is_const_primitive_type_ref_type<T>::value) ?
+                false : is_converted_reference_type<T>::value;
+};
+
+template<typename T>
+struct ret_transform_helper
+{
+    using RemovedRefArgType = typename remove_ret_type_ref<T>::type;
+    using RemovedCvArgType = typename recursive_remove_cv<RemovedRefArgType>::type;
+    using ApiArgType = typename std::conditional<
+                    is_converted_reference_type<T>::value,
+                    typename std::remove_pointer<RemovedCvArgType>::type,
+                    RemovedCvArgType>::type;
     static const bool isApiArgVariable = is_converted_reference_type<T>::value;
 };
 
@@ -136,7 +197,7 @@ struct function_typenames_helper_internal
     static const size_t numArgs = sizeof...(Args);
 
     using ReturnType = R;
-    using ApiReturnType = typename arg_transform_helper<ReturnType>::ApiArgType;
+    using ApiReturnType = typename ret_transform_helper<ReturnType>::ApiArgType;
 
     template<size_t i> using ArgType = typename std::tuple_element<i, std::tuple<Args...>>::type;
     template<size_t i> using RemovedRefArgType = typename arg_transform_helper<ArgType<i>>::RemovedRefArgType;
@@ -150,7 +211,7 @@ struct function_typenames_helper_internal
     template<size_t i>
     static constexpr bool isArgNontriviallyConverted() { return is_nontrivial_arg_conversion<ArgType<i>>::value; }
 
-    static constexpr bool isRetValNontriviallyConverted() { return is_nontrivial_arg_conversion<ReturnType>::value; }
+    static constexpr bool isRetValNontriviallyConverted() { return is_nontrivial_ret_conversion<ReturnType>::value; }
 
     template<size_t n, typename Enable = void>
     struct build_original_typenames_array_internal
@@ -358,7 +419,8 @@ struct gen_tpl_sequence<0, S...>
 //             The return value is then constructed-in-place at the given address using in-place new.
 //        (b) If the return value is by-reference, it becomes a pointer type.
 //        (c) If the return value is a primitive type, it is unchanged.
-//    (3) Each parameter which is a by-value non-primitive type or a by-reference type becomes a pointer.
+//    (3) Each parameter which is a by-value non-primitive type or a by-reference non-pritimive or
+//        non-const type becomes a pointer. const reference primitive type becomes a simple value.
 //
 // function_wrapper_helper<fnPtr>::isTrivial()
 //    Return true if the transformation is trivial (so the transformation is not needed)
@@ -392,11 +454,11 @@ private:
         }
     };
 
-    // reference type parameter
+    // reference type parameter (not const PT&)
     //
     template<int k>
     struct convert_param_internal<k, typename std::enable_if<(
-                                             std::is_reference<OutType<k>>::value)>::type>
+            std::is_reference<OutType<k>>::value && !is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
     {
         static_assert(std::is_lvalue_reference<OutType<k>>::value,
                       "function returning rvalue reference is not supported");
@@ -409,6 +471,26 @@ private:
         static type get(InType<k> v) noexcept
         {
             return *v;
+        }
+    };
+
+    // 'const PT&' shape
+    //
+    template<int k>
+    struct convert_param_internal<k, typename std::enable_if<(
+            is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
+    {
+        static_assert(std::is_lvalue_reference<OutType<k>>::value,
+                      "function returning rvalue reference is not supported");
+        static_assert(std::is_same<InType<k> const&, OutType<k>>::value,
+                      "unexpected InType");
+
+        static constexpr bool is_nothrow = true;
+
+        using type = InType<k>;
+        static type get(InType<k> v) noexcept
+        {
+            return v;
         }
     };
 
@@ -673,11 +755,11 @@ private:
         }
     };
 
-    // reference type parameter
+    // reference type parameter (not const PT&)
     //
     template<int k>
     struct convert_param_internal<k, typename std::enable_if<(
-                                             std::is_reference<OutType<k>>::value)>::type>
+            std::is_reference<OutType<k>>::value && !is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
     {
         static_assert(std::is_lvalue_reference<OutType<k>>::value,
                       "function returning rvalue reference is not supported");
@@ -690,6 +772,26 @@ private:
         static type get(InType<k> v) noexcept
         {
             return *v;
+        }
+    };
+
+    // 'const PT&' shape
+    //
+    template<int k>
+    struct convert_param_internal<k, typename std::enable_if<(
+            is_const_primitive_type_ref_type<OutType<k>>::value)>::type>
+    {
+        static_assert(std::is_lvalue_reference<OutType<k>>::value,
+                      "function returning rvalue reference is not supported");
+        static_assert(std::is_same<InType<k> const&, OutType<k>>::value,
+                      "unexpected InType");
+
+        static constexpr bool is_nothrow = true;
+
+        using type = InType<k>;
+        static type get(InType<k> v) noexcept
+        {
+            return v;
         }
     };
 
@@ -1081,7 +1183,7 @@ void RegisterDestructorIfNeeded()
     using fnInfo = ReflectionHelper::function_typenames_helper<decltype(t)>;
     if constexpr(fnInfo::isRetValNontriviallyConverted())
     {
-        using ReturnedClassType = typename ReflectionHelper::arg_transform_helper<typename fnInfo::ReturnType>::ApiArgType;
+        using ReturnedClassType = typename ReflectionHelper::ret_transform_helper<typename fnInfo::ReturnType>::ApiArgType;
         RegisterDestructor<ReturnedClassType>();
     }
 }

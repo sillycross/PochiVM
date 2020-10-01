@@ -177,8 +177,16 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::*)()>(&std::vector<int>::begin)>();
     RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::*)()>(&std::vector<int>::end)>();
     RegisterMemberFn<&std::vector<int>::iterator::operator*>();
+    RegisterMemberFn<&std::vector<int>::iterator::operator->>();
     // RegisterMemberFn<static_cast<std::vector<int>::iterator(std::vector<int>::iterator::*)(int)>(&std::vector<int>::iterator::operator++)>();
     // RegisterMemberFn<static_cast<std::vector<int>::iterator&(std::vector<int>::iterator::*)()>(&std::vector<int>::iterator::operator++)>();
+
+    RegisterFreeFn<&TestConstPrimitiveTypeParam>();
+    RegisterFreeFn<&TestConstPrimitiveTypeReturn1>();
+    RegisterFreeFn<&TestConstPrimitiveTypeReturn2>();
+    RegisterConstructor<TestConstPrimitiveTypeCtor, const int&, int&, const int*&, int*&, int* const&, const int* const&>();
+    RegisterMemberObject<&TestConstPrimitiveTypeCtor::value>();
+    RegisterFreeFn<&TestNonPrimitiveTypeConstRef>();
 }
 
 // DO NOT MODIFY
