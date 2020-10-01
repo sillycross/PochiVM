@@ -35,7 +35,7 @@ std::function<U(T)> GetStaticCastFn()
     using FnPrototype = std::function<U(T)>;
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
-    fn.SetBody(Return(val.template StaticCast<U>()));
+    fn.SetBody(Return(StaticCast<U>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
@@ -260,7 +260,7 @@ TEST(Sanity, ReinterpretCast_1)
     using FnPrototype = std::function<uint64_t*(double*)>;
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
-    fn.SetBody(Return(val.ReinterpretCast<uint64_t*>()));
+    fn.SetBody(Return(ReinterpretCast<uint64_t*>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
@@ -288,7 +288,7 @@ TEST(Sanity, ReinterpretCast_2)
     using FnPrototype = std::function<uint64_t(double*)>;
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
-    fn.SetBody(Return(val.ReinterpretCast<uint64_t>()));
+    fn.SetBody(Return(ReinterpretCast<uint64_t>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();
@@ -311,7 +311,7 @@ TEST(Sanity, ReinterpretCast_3)
     using FnPrototype = std::function<double*(uint64_t)>;
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
-    fn.SetBody(Return(val.ReinterpretCast<double*>()));
+    fn.SetBody(Return(ReinterpretCast<double*>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForInterp();

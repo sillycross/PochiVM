@@ -19,8 +19,8 @@ TEST(SanityCallCppFn, Sanity_1)
         auto [fn, c, v] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                c.Deref().SetY(v + Literal<int>(1)),
-                Return(c.Deref().GetY() + Literal<int>(2))
+                c->SetY(v + Literal<int>(1)),
+                Return((*c).GetY() + Literal<int>(2))
         );
     }
 
@@ -95,8 +95,8 @@ TEST(SanityCallCppFn, Sanity_2)
         auto [fn, c, v] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                c.Deref().PushVec(v),
-                Return(c.Deref().GetVectorSum())
+                c->PushVec(v),
+                Return(c->GetVectorSum())
         );
     }
 
@@ -178,7 +178,7 @@ TEST(SanityCallCppFn, TypeMismatchErrorCase)
         auto [fn, c] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                Return(c.Deref().GetVectorSum())
+                Return(c->GetVectorSum())
         );
     }
 
@@ -200,7 +200,7 @@ TEST(SanityCallCppFn, Sanity_3)
         auto [fn, c] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                Return(CallFreeFn::FreeFnRecursive2(c.Deref()))
+                Return(CallFreeFn::FreeFnRecursive2(*c))
         );
     }
 
@@ -264,7 +264,7 @@ TEST(SanityCallCppFn, UnusedCppTypeCornerCase)
         auto [fn, c] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                Return(c.ReinterpretCast<void*>())
+                Return(ReinterpretCast<void*>(c))
         );
     }
 
@@ -435,7 +435,7 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_2)
 
         fn.SetBody(
                 Declare(d, a == Literal<int>(233)),
-                CallFreeFn::TestCornerCases::BoolParamTest2(d, b.Deref(), c),
+                CallFreeFn::TestCornerCases::BoolParamTest2(d, *b, c),
                 Return(d)
         );
     }
@@ -786,7 +786,7 @@ TEST(SanityCallCppFn, NonTrivialCopyConstructor)
     {
         auto [fn, param] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
-                Return(Variable<TestNonTrivialCopyConstructor>::Fn(param.Deref()))
+                Return(Variable<TestNonTrivialCopyConstructor>::Fn(*param))
         );
     }
 
@@ -1085,7 +1085,7 @@ TEST(SanityCallCppFn, Constructor_4)
         auto [fn, param, param2] = NewFunction<FnPrototype>("testfn");
         auto v = fn.NewVariable<std::vector<int>>();
         fn.SetBody(
-                Declare(v, Constructor<std::vector<int>>(param2.Deref())),
+                Declare(v, Constructor<std::vector<int>>(*param2)),
                 CallFreeFn::CopyVectorInt(param, v.Addr())
         );
     }
@@ -1456,15 +1456,15 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_1)
         auto v3 = fn.NewVariable<TestDestructor2>();
         auto v4 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                r.Deref().Push(Literal<int>(1003)),
+                r->Push(Literal<int>(1003)),
                 Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                r.Deref().Push(Literal<int>(1004))
+                r->Push(Literal<int>(1004))
         );
     }
 
@@ -1518,29 +1518,29 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_2)
         auto v6 = fn.NewVariable<TestDestructor2>();
         auto v7 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Scope(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004))
+                    r->Push(Literal<int>(1004))
                 ),
-                r.Deref().Push(Literal<int>(1005)),
+                (*r).Push(Literal<int>(1005)),
                 Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                r.Deref().Push(Literal<int>(1006)),
+                r->Push(Literal<int>(1006)),
                 Scope(
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1008)),
+                    r->Push(Literal<int>(1008)),
                     Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                    r.Deref().Push(Literal<int>(1009))
+                    r->Push(Literal<int>(1009))
                 ),
-                r.Deref().Push(Literal<int>(1010)),
+                r->Push(Literal<int>(1010)),
                 Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                r.Deref().Push(Literal<int>(1011))
+                r->Push(Literal<int>(1011))
         );
     }
 
@@ -1595,29 +1595,29 @@ TEST(SanityCallCppFn, BlockDoesNotConstituteVariableScope)
         auto v6 = fn.NewVariable<TestDestructor2>();
         auto v7 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Block(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004))
+                    r->Push(Literal<int>(1004))
                 ),
-                r.Deref().Push(Literal<int>(1005)),
+                r->Push(Literal<int>(1005)),
                 Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                r.Deref().Push(Literal<int>(1006)),
+                r->Push(Literal<int>(1006)),
                 Block(
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1008)),
+                    r->Push(Literal<int>(1008)),
                     Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                    r.Deref().Push(Literal<int>(1009))
+                    r->Push(Literal<int>(1009))
                 ),
-                r.Deref().Push(Literal<int>(1010)),
+                r->Push(Literal<int>(1010)),
                 Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                r.Deref().Push(Literal<int>(1011))
+                r->Push(Literal<int>(1011))
         );
     }
 
@@ -1674,33 +1674,33 @@ TEST(SanityCallCppFn, DestructorCalledUponReturnStmt)
         auto v8 = fn.NewVariable<TestDestructor2>();
         auto v9 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 Scope(
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004)),
+                    r->Push(Literal<int>(1004)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Scope(
-                        r.Deref().Push(Literal<int>(1006)),
+                        r->Push(Literal<int>(1006)),
                         Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                        r.Deref().Push(Literal<int>(1007)),
+                        r->Push(Literal<int>(1007)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1008))
+                        r->Push(Literal<int>(1008))
                     ),
-                    r.Deref().Push(Literal<int>(1009)),
+                    r->Push(Literal<int>(1009)),
                     Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                    r.Deref().Push(Literal<int>(1010)),
+                    r->Push(Literal<int>(1010)),
                     Scope(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013)),
+                        r->Push(Literal<int>(1013)),
                         Return()
                     )
                 )
@@ -1765,53 +1765,53 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_1)
         auto v13 = fn.NewVariable<TestDestructor2>();
         auto v14 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 If(b1).Then(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1004)),
+                        r->Push(Literal<int>(1004)),
                         Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                        r.Deref().Push(Literal<int>(1005)),
+                        r->Push(Literal<int>(1005)),
                         Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                        r.Deref().Push(Literal<int>(1006))
+                        r->Push(Literal<int>(1006))
                     ).Else(
-                        r.Deref().Push(Literal<int>(1007)),
+                        r->Push(Literal<int>(1007)),
                         Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009))
+                        r->Push(Literal<int>(1009))
                     ),
-                    r.Deref().Push(Literal<int>(1010)),
+                    r->Push(Literal<int>(1010)),
                     Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                    r.Deref().Push(Literal<int>(1011))
+                    r->Push(Literal<int>(1011))
                 ).Else(
-                    r.Deref().Push(Literal<int>(1012)),
+                    r->Push(Literal<int>(1012)),
                     Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                    r.Deref().Push(Literal<int>(1013)),
+                    r->Push(Literal<int>(1013)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1014)),
+                        r->Push(Literal<int>(1014)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1015)),
+                        r->Push(Literal<int>(1015)),
                         Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                        r.Deref().Push(Literal<int>(1016))
+                        r->Push(Literal<int>(1016))
                     ).Else(
-                        r.Deref().Push(Literal<int>(1017)),
+                        r->Push(Literal<int>(1017)),
                         Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                        r.Deref().Push(Literal<int>(1018)),
+                        r->Push(Literal<int>(1018)),
                         Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                        r.Deref().Push(Literal<int>(1019))
+                        r->Push(Literal<int>(1019))
                     ),
-                    r.Deref().Push(Literal<int>(1020)),
+                    r->Push(Literal<int>(1020)),
                     Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
-                    r.Deref().Push(Literal<int>(1021))
+                    r->Push(Literal<int>(1021))
                 ),
-                r.Deref().Push(Literal<int>(1022)),
+                r->Push(Literal<int>(1022)),
                 Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
-                r.Deref().Push(Literal<int>(1023))
+                r->Push(Literal<int>(1023))
         );
     }
 
@@ -1919,56 +1919,56 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_2)
         auto v13 = fn.NewVariable<TestDestructor2>();
         auto v14 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 If(b1).Then(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1004)),
+                        r->Push(Literal<int>(1004)),
                         Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                        r.Deref().Push(Literal<int>(1005)),
+                        r->Push(Literal<int>(1005)),
                         Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                        r.Deref().Push(Literal<int>(1006)),
+                        r->Push(Literal<int>(1006)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1007)),
+                        r->Push(Literal<int>(1007)),
                         Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009))
+                        r->Push(Literal<int>(1009))
                     ),
-                    r.Deref().Push(Literal<int>(1010)),
+                    r->Push(Literal<int>(1010)),
                     Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                    r.Deref().Push(Literal<int>(1011)),
+                    r->Push(Literal<int>(1011)),
                     Return()
                 ).Else(
-                    r.Deref().Push(Literal<int>(1012)),
+                    r->Push(Literal<int>(1012)),
                     Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                    r.Deref().Push(Literal<int>(1013)),
+                    r->Push(Literal<int>(1013)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1014)),
+                        r->Push(Literal<int>(1014)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1015)),
+                        r->Push(Literal<int>(1015)),
                         Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                        r.Deref().Push(Literal<int>(1016)),
+                        r->Push(Literal<int>(1016)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1017)),
+                        r->Push(Literal<int>(1017)),
                         Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                        r.Deref().Push(Literal<int>(1018)),
+                        r->Push(Literal<int>(1018)),
                         Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                        r.Deref().Push(Literal<int>(1019))
+                        r->Push(Literal<int>(1019))
                     ),
-                    r.Deref().Push(Literal<int>(1020)),
+                    r->Push(Literal<int>(1020)),
                     Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
-                    r.Deref().Push(Literal<int>(1021))
+                    r->Push(Literal<int>(1021))
                 ),
-                r.Deref().Push(Literal<int>(1022)),
+                r->Push(Literal<int>(1022)),
                 Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
-                r.Deref().Push(Literal<int>(1023))
+                r->Push(Literal<int>(1023))
         );
     }
 
@@ -2072,49 +2072,49 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_3)
         auto v12 = fn.NewVariable<TestDestructor2>();
         auto v13 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 If(b1).Then(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1004)),
+                        r->Push(Literal<int>(1004)),
                         Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                        r.Deref().Push(Literal<int>(1005)),
+                        r->Push(Literal<int>(1005)),
                         Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                        r.Deref().Push(Literal<int>(1006)),
+                        r->Push(Literal<int>(1006)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1007)),
+                        r->Push(Literal<int>(1007)),
                         Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Return()
                     )
                 ).Else(
-                    r.Deref().Push(Literal<int>(1012)),
+                    r->Push(Literal<int>(1012)),
                     Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                    r.Deref().Push(Literal<int>(1013)),
+                    r->Push(Literal<int>(1013)),
                     If(b2).Then(
-                        r.Deref().Push(Literal<int>(1014)),
+                        r->Push(Literal<int>(1014)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1015)),
+                        r->Push(Literal<int>(1015)),
                         Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                        r.Deref().Push(Literal<int>(1016)),
+                        r->Push(Literal<int>(1016)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1017)),
+                        r->Push(Literal<int>(1017)),
                         Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                        r.Deref().Push(Literal<int>(1018)),
+                        r->Push(Literal<int>(1018)),
                         Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                        r.Deref().Push(Literal<int>(1019))
+                        r->Push(Literal<int>(1019))
                     ),
-                    r.Deref().Push(Literal<int>(1020)),
+                    r->Push(Literal<int>(1020)),
                     Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
-                    r.Deref().Push(Literal<int>(1021)),
+                    r->Push(Literal<int>(1021)),
                     Return()
                 )
         );
@@ -2220,45 +2220,45 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_1)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 For(Block(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004)),
+                    r->Push(Literal<int>(1004)),
                     Declare(i, Literal<int>(0))
                 ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Break()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -2374,45 +2374,45 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_2)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 For(Block(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004)),
+                    r->Push(Literal<int>(1004)),
                     Declare(i, Literal<int>(0))
                 ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Continue()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -2531,45 +2531,45 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_3)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 For(Block(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004)),
+                    r->Push(Literal<int>(1004)),
                     Declare(i, Literal<int>(0))
                 ), i < Literal<int>(3), Assign(i, i + Literal<int>(1))).Do(
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -2678,26 +2678,26 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_4)
         auto v5 = fn.NewVariable<TestDestructor2>();
         auto v6 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 For(Block(
-                    r.Deref().Push(Literal<int>(1002)),
+                    r->Push(Literal<int>(1002)),
                     Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                    r.Deref().Push(Literal<int>(1003)),
+                    r->Push(Literal<int>(1003)),
                     Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
-                    r.Deref().Push(Literal<int>(1004))
+                    r->Push(Literal<int>(1004))
                 ), b, Block()).Do(
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     Break()
                 ),
-                r.Deref().Push(Literal<int>(1008)),
+                r->Push(Literal<int>(1008)),
                 Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                r.Deref().Push(Literal<int>(1009))
+                r->Push(Literal<int>(1009))
         );
     }
 
@@ -2775,42 +2775,42 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_1)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 Declare(i, Literal<int>(0)),
                 While(i < Literal<int>(3)).Do(
                     Assign(i, i + Literal<int>(1)),
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i - Literal<int>(1) == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Return()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -2925,42 +2925,42 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_2)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 Declare(i, Literal<int>(0)),
                 While(i < Literal<int>(3)).Do(
                     Assign(i, i + Literal<int>(1)),
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i - Literal<int>(1) == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Break()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -3075,42 +3075,42 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_3)
         auto v11 = fn.NewVariable<TestDestructor2>();
         auto v12 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 Declare(i, Literal<int>(0)),
                 While(i < Literal<int>(3)).Do(
                     Assign(i, i + Literal<int>(1)),
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     If(i - Literal<int>(1) == x).Then(
-                        r.Deref().Push(Literal<int>(1008)),
+                        r->Push(Literal<int>(1008)),
                         Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                        r.Deref().Push(Literal<int>(1009)),
+                        r->Push(Literal<int>(1009)),
                         Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
-                        r.Deref().Push(Literal<int>(1010)),
+                        r->Push(Literal<int>(1010)),
                         Continue()
                     ).Else(
-                        r.Deref().Push(Literal<int>(1011)),
+                        r->Push(Literal<int>(1011)),
                         Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
-                        r.Deref().Push(Literal<int>(1012)),
+                        r->Push(Literal<int>(1012)),
                         Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
-                        r.Deref().Push(Literal<int>(1013))
+                        r->Push(Literal<int>(1013))
                     ),
-                    r.Deref().Push(Literal<int>(1014)),
+                    r->Push(Literal<int>(1014)),
                     Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
-                    r.Deref().Push(Literal<int>(1015)),
+                    r->Push(Literal<int>(1015)),
                     Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                    r.Deref().Push(Literal<int>(1016))
+                    r->Push(Literal<int>(1016))
                 ),
-                r.Deref().Push(Literal<int>(1017)),
+                r->Push(Literal<int>(1017)),
                 Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                r.Deref().Push(Literal<int>(1018))
+                r->Push(Literal<int>(1018))
         );
     }
 
@@ -3221,22 +3221,22 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_4)
         auto v5 = fn.NewVariable<TestDestructor2>();
         auto v6 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().Push(Literal<int>(1000)),
+                r->Push(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
-                r.Deref().Push(Literal<int>(1001)),
+                r->Push(Literal<int>(1001)),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().Push(Literal<int>(1002)),
+                r->Push(Literal<int>(1002)),
                 While(b).Do(
-                    r.Deref().Push(Literal<int>(1005)),
+                    r->Push(Literal<int>(1005)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().Push(Literal<int>(1006)),
+                    r->Push(Literal<int>(1006)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
-                    r.Deref().Push(Literal<int>(1007)),
+                    r->Push(Literal<int>(1007)),
                     Break()
                 ),
-                r.Deref().Push(Literal<int>(1008)),
+                r->Push(Literal<int>(1008)),
                 Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                r.Deref().Push(Literal<int>(1009))
+                r->Push(Literal<int>(1009))
         );
     }
 
@@ -3723,44 +3723,44 @@ TEST(SanityCallCppFn, Exception_PropagateThrough_1)
         auto v13 = fn.NewVariable<TestDestructor2>();
         auto v14 = fn.NewVariable<TestDestructor2>();
         fn.SetBody(
-                r.Deref().PushMaybeThrow(Literal<int>(1000)),
+                r->PushMaybeThrow(Literal<int>(1000)),
                 Declare(v1, Constructor<TestDestructor2>(r, Literal<int>(1))),
                 Declare(v2, Constructor<TestDestructor2>(r, Literal<int>(2))),
-                r.Deref().PushMaybeThrow(Literal<int>(1001)),
+                r->PushMaybeThrow(Literal<int>(1001)),
                 Declare(v3, Constructor<TestDestructor2>(r, Literal<int>(3))),
                 Scope(
-                    r.Deref().PushMaybeThrow(Literal<int>(1002)),
+                    r->PushMaybeThrow(Literal<int>(1002)),
                     Declare(v4, Constructor<TestDestructor2>(r, Literal<int>(4))),
-                    r.Deref().PushMaybeThrow(Literal<int>(1003)),
+                    r->PushMaybeThrow(Literal<int>(1003)),
                     Declare(v5, Constructor<TestDestructor2>(r, Literal<int>(5))),
                     Declare(v6, Constructor<TestDestructor2>(r, Literal<int>(6))),
-                    r.Deref().PushMaybeThrow(Literal<int>(1004))
+                    r->PushMaybeThrow(Literal<int>(1004))
                 ),
-                r.Deref().PushMaybeThrow(Literal<int>(1005)),
+                r->PushMaybeThrow(Literal<int>(1005)),
                 Declare(v7, Constructor<TestDestructor2>(r, Literal<int>(7))),
                 Scope(
-                    r.Deref().PushMaybeThrow(Literal<int>(1006)),
+                    r->PushMaybeThrow(Literal<int>(1006)),
                     Declare(v8, Constructor<TestDestructor2>(r, Literal<int>(8))),
                     Declare(v9, Constructor<TestDestructor2>(r, Literal<int>(9))),
                     Scope(
-                        r.Deref().PushMaybeThrow(Literal<int>(1007)),
+                        r->PushMaybeThrow(Literal<int>(1007)),
                         Declare(v10, Constructor<TestDestructor2>(r, Literal<int>(10))),
                         Scope(
-                            r.Deref().PushMaybeThrow(Literal<int>(1008)),
+                            r->PushMaybeThrow(Literal<int>(1008)),
                             Declare(v11, Constructor<TestDestructor2>(r, Literal<int>(11))),
-                            r.Deref().PushMaybeThrow(Literal<int>(1009))
+                            r->PushMaybeThrow(Literal<int>(1009))
                         ),
                         Declare(v12, Constructor<TestDestructor2>(r, Literal<int>(12))),
-                        r.Deref().PushMaybeThrow(Literal<int>(1010))
+                        r->PushMaybeThrow(Literal<int>(1010))
                     ),
-                    r.Deref().PushMaybeThrow(Literal<int>(1011)),
+                    r->PushMaybeThrow(Literal<int>(1011)),
                     Declare(v13, Constructor<TestDestructor2>(r, Literal<int>(13))),
-                    r.Deref().PushMaybeThrow(Literal<int>(1012)),
-                    r.Deref().PushMaybeThrow(Literal<int>(1013))
+                    r->PushMaybeThrow(Literal<int>(1012)),
+                    r->PushMaybeThrow(Literal<int>(1013))
                 ),
-                r.Deref().PushMaybeThrow(Literal<int>(1014)),
+                r->PushMaybeThrow(Literal<int>(1014)),
                 Declare(v14, Constructor<TestDestructor2>(r, Literal<int>(14))),
-                r.Deref().PushMaybeThrow(Literal<int>(1015))
+                r->PushMaybeThrow(Literal<int>(1015))
         );
     }
 
@@ -4015,7 +4015,7 @@ TEST(SanityCallCppFn, MemberObjectAccessor_1)
     {
         auto [fn, r] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
-                Return(r.Deref().first())
+                Return(r->first())
         );
     }
 
@@ -4083,7 +4083,7 @@ TEST(SanityCallCppFn, MemberObjectAccessor_2)
     {
         auto [fn, r, v] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
-                Assign(r.Deref().second(), v)
+                Assign(r->second(), v)
         );
     }
 

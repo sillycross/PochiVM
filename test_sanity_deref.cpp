@@ -44,10 +44,9 @@ TEST(Sanity, LinkedListChasing)
         auto sum = fn.NewVariable<uint64_t>("sum");
         fn.SetBody(
             Declare(sum, Literal<uint64_t>(0)),
-            While(head.ReinterpretCast<uint64_t>() != Literal<uint64_t>(0)).Do(
-                Assign(sum, sum + head.ReinterpretCast<uint64_t*>().Deref()),
-                Assign(head, (head.ReinterpretCast<uint64_t>() + Literal<uint64_t>(8))
-                                 .ReinterpretCast<void**>().Deref())
+            While(ReinterpretCast<uint64_t>(head) != Literal<uint64_t>(0)).Do(
+                Assign(sum, sum + *ReinterpretCast<uint64_t*>(head)),
+                Assign(head, *ReinterpretCast<void**>(ReinterpretCast<uint64_t>(head) + Literal<uint64_t>(8)))
             ),
             Return(sum)
         );
@@ -108,14 +107,14 @@ TEST(Sanity, StoreIntoLocalVar)
     {
         auto [fn, addr, value] = NewFunction<FnPrototype1>("store_value");
         fn.SetBody(
-            Assign(addr.Deref(), value + Literal<int>(233))
+            Assign(*addr, value + Literal<int>(233))
         );
     }
 
     {
         auto [fn, addr, value] = NewFunction<FnPrototype1>("inc_value");
         fn.SetBody(
-            Assign(addr.Deref(), addr.Deref() + value)
+            Assign(*addr, *addr + value)
         );
     }
 
@@ -208,7 +207,7 @@ TEST(Sanity, BoolDeref)
     {
         auto [fn, addr, value] = NewFunction<FnPrototype>("store_bool");
         fn.SetBody(
-                Assign(addr.Deref(), value)
+                Assign(*addr, value)
         );
     }
 

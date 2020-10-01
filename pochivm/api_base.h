@@ -38,31 +38,9 @@ public:
     // Implicit type conversion: an integer to a wider integer
     //
     template<typename U, typename = std::enable_if_t<AstTypeHelper::may_implicit_convert<T, U>::value> >
-    operator Value<U>() const
-    {
-        static_assert(AstTypeHelper::may_implicit_convert<T, U>::value, "cannot implicitly convert T to U");
-        return StaticCast<U>();
-    }
+    operator Value<U>() const;
 
-    // Explicit static_cast conversion between primitive types, or up/down cast between pointers
-    //
-    template<typename U, typename = std::enable_if_t<AstTypeHelper::may_static_cast<T, U>::value> >
-    Value<U> StaticCast() const
-    {
-        static_assert(AstTypeHelper::may_static_cast<T, U>::value, "cannot static_cast T to U");
-        return Value<U>(new AstStaticCastExpr(__pochivm_value_ptr, TypeId::Get<U>()));
-    }
-
-    // reinterpret_cast conversion between pointers, or between pointer and uint64_t
-    //
-    template<typename U, typename = std::enable_if_t<AstTypeHelper::may_reinterpret_cast<T, U>::value> >
-    Value<U> ReinterpretCast() const
-    {
-        static_assert(AstTypeHelper::may_reinterpret_cast<T, U>::value, "cannot reinterpret_cast T to U");
-        return Value<U>(new AstReinterpretCastExpr(__pochivm_value_ptr, TypeId::Get<U>()));
-    }
-
-    // Deref(): possible for T* where T is not void*.
+    // operator dereference: possible for T* where T is not void*.
     // Returns a reference to the value at the pointer address.
     // This is internally a no-op, since a reference is internally just a value of type T*,
     // but this allows users to write code in a more C++-like manner.
@@ -71,13 +49,49 @@ public:
              std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
              !std::is_same<T, void*>::value
     )>* = nullptr >
-    Reference<typename std::remove_pointer<T>::type> Deref() const;
+    Reference<typename std::remove_pointer<T>::type> operator*() const;
+
+    // operator->(): possible for T* where T is a C++ type
+    //
+    template<typename Enable = void, std::enable_if_t<(
+             std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
+             AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
+    )>* = nullptr >
+    Reference<typename std::remove_pointer<T>::type>* operator->() const;
 
     // Immutable. There is no reason to modify __pochivm_value_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
     AstNodeBase* const __pochivm_value_ptr;
 };
+
+// Explicit static_cast conversion between primitive types, or up/down cast between pointers
+//
+template<typename U, typename T, typename = std::enable_if_t<AstTypeHelper::may_static_cast<T, U>::value> >
+Value<U> StaticCast(const Value<T>& src)
+{
+    static_assert(AstTypeHelper::may_static_cast<T, U>::value, "cannot static_cast T to U");
+    return Value<U>(new AstStaticCastExpr(src.__pochivm_value_ptr, TypeId::Get<U>()));
+}
+
+// reinterpret_cast conversion between pointers, or between pointer and uint64_t
+//
+template<typename U, typename T, typename = std::enable_if_t<AstTypeHelper::may_reinterpret_cast<T, U>::value> >
+Value<U> ReinterpretCast(const Value<T>& src)
+{
+    static_assert(AstTypeHelper::may_reinterpret_cast<T, U>::value, "cannot reinterpret_cast T to U");
+    return Value<U>(new AstReinterpretCastExpr(src.__pochivm_value_ptr, TypeId::Get<U>()));
+}
+
+// Implicit type conversion: an integer to a wider integer
+//
+template<typename T>
+template<typename U, typename>
+Value<T>::operator Value<U>() const
+{
+    static_assert(AstTypeHelper::may_implicit_convert<T, U>::value, "cannot implicitly convert T to U");
+    return StaticCast<U>(*this);
+}
 
 // Arithmetic ops convenience operator overloading
 //
@@ -283,13 +297,30 @@ template<typename Enable, std::enable_if_t<(
          std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
          !std::is_same<T, void*>::value
 )>*>
-Reference<typename std::remove_pointer<T>::type> Value<T>::Deref() const
+Reference<typename std::remove_pointer<T>::type> Value<T>::operator*() const
 {
     static_assert(std::is_pointer<T>::value && !std::is_same<T, void*>::value,
                   "must be a non void* pointer to deref");
 
     using _PointerElementType = typename std::remove_pointer<T>::type;
     return Reference<_PointerElementType>(__pochivm_value_ptr);
+}
+
+template<typename T>
+template<typename Enable, std::enable_if_t<(
+         std::is_same<Enable, void>::value && std::is_pointer<T>::value &&
+         AstTypeHelper::is_cpp_class_type<typename std::remove_pointer<T>::type>::value
+)>*>
+Reference<typename std::remove_pointer<T>::type>* Value<T>::operator->() const
+{
+    using _PointerElementType = typename std::remove_pointer<T>::type;
+    // operator-> must return a pointer
+    // This operation is actually a no-op, it is just a type system conversion.
+    // We take advantage of the fact that Reference<CPP class> is just storing the
+    // same pointer as this class, to get rid of the std::new.
+    //
+    static_assert(sizeof(Reference<_PointerElementType>) == 8, "unexpected size of Reference");
+    return reinterpret_cast<Reference<_PointerElementType>*>(const_cast<AstNodeBase**>(&__pochivm_value_ptr));
 }
 
 // Language utility: Assign a value to a variable
