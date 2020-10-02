@@ -2038,8 +2038,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
 
     {
-        uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(40));
-        for (size_t i = 0; i < 16; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
+        uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(48));
+        for (size_t i = 0; i < 48; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
         *reinterpret_cast<int*>(stackFrame + 8) = n;
         *reinterpret_cast<int**>(stackFrame + 16) = lp;
         *reinterpret_cast<int**>(stackFrame + 24) = pr;
