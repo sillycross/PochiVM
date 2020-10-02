@@ -12,7 +12,7 @@ class AstDereferenceExpr : public AstNodeBase
 {
 public:
     AstDereferenceExpr(AstNodeBase* operand)
-        : AstNodeBase(operand->GetTypeId().RemovePointer())  
+        : AstNodeBase(AstNodeType::AstDereferenceExpr, operand->GetTypeId().RemovePointer())
         , m_operand(operand)
     {
         TestAssert(m_operand->GetTypeId().IsPointerType());
@@ -43,8 +43,6 @@ public:
         fn(m_operand);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDereferenceExpr; }
-
 private:
     AstNodeBase* m_operand;
 };
@@ -55,7 +53,7 @@ class AstLiteralExpr : public AstNodeBase
 {
 public:
     AstLiteralExpr(TypeId typeId, void* valuePtr)
-        : AstNodeBase(typeId)
+        : AstNodeBase(AstNodeType::AstLiteralExpr, typeId)
         , m_useHijackedLLVMValue(false)
         , m_hijackedLLVMValue(nullptr)
     {
@@ -77,8 +75,6 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstLiteralExpr; }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
@@ -150,7 +146,7 @@ class AstAssignExpr : public AstNodeBase
 {
 public:
     AstAssignExpr(AstNodeBase* dst, AstNodeBase* src)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstAssignExpr, TypeId::Get<void>())
         , m_dst(dst), m_src(src)
     {
         TestAssert(m_src->GetTypeId().IsPrimitiveType() || m_src->GetTypeId().IsPointerType());
@@ -187,8 +183,6 @@ public:
         fn(m_dst);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstAssignExpr; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
 private:
@@ -202,7 +196,7 @@ class AstNullptrExpr : public AstNodeBase
 {
 public:
     AstNullptrExpr(TypeId typeId)
-        : AstNodeBase(typeId)
+        : AstNodeBase(AstNodeType::AstNullptrExpr, typeId)
     {
         TestAssert(typeId.IsPointerType());
     }
@@ -215,8 +209,6 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstNullptrExpr; }
 };
 
 // A TRASH pointer known at codegen time
@@ -238,7 +230,7 @@ class AstTrashPtrExpr : public AstNodeBase
 {
 public:
     AstTrashPtrExpr(TypeId typeId)
-        : AstNodeBase(typeId)
+        : AstNodeBase(AstNodeType::AstTrashPtrExpr, typeId)
     {
         TestAssert(typeId.IsPointerType());
     }
@@ -251,8 +243,6 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstTrashPtrExpr; }
 };
 
 // Converts a rvalue to a temporary reference, so it matches the expectation of a C++ function
@@ -262,7 +252,7 @@ class AstRvalueToConstPrimitiveRefExpr : public AstNodeBase
 {
 public:
     AstRvalueToConstPrimitiveRefExpr(AstNodeBase* operand)
-        : AstNodeBase(operand->GetTypeId().AddPointer())
+        : AstNodeBase(AstNodeType::AstRvalueToConstPrimitiveRefExpr, operand->GetTypeId().AddPointer())
         , m_operand(operand)
     {
         TestAssert(operand->GetTypeId().IsPrimitiveType() || operand->GetTypeId().IsPointerType());
@@ -289,8 +279,6 @@ public:
     {
         fn(m_operand);
     }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstRvalueToConstPrimitiveRefExpr; }
 
     AstNodeBase* m_operand;
     uint32_t m_debugInterpOffset;

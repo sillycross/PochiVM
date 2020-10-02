@@ -14,7 +14,7 @@ class AstThrowStmt : public AstNodeBase
 {
 public:
     AstThrowStmt(AstNodeBase* operand, bool isCtor, bool isLValueObject)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstThrowStmt, TypeId::Get<void>())
         , m_operand(operand)
         , m_isCtor(isCtor)
         , m_isLValueObject(isLValueObject)
@@ -72,11 +72,6 @@ public:
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
     {
         fn(m_operand);
-    }
-
-    virtual AstNodeType GetAstNodeType() const override
-    {
-        return AstNodeType::AstThrowStmt;
     }
 
     template<typename T>

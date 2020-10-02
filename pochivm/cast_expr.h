@@ -11,7 +11,7 @@ class AstStaticCastExpr : public AstNodeBase
 {
 public:
     AstStaticCastExpr(AstNodeBase* operand, TypeId castTo)
-        : AstNodeBase(castTo)
+        : AstNodeBase(AstNodeType::AstStaticCastExpr, castTo)
         , m_operand(operand)
     {
         TestAssert(m_operand->GetTypeId().MayStaticCastTo(castTo));
@@ -76,8 +76,6 @@ public:
         fn(m_operand);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstStaticCastExpr; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
 private:
@@ -90,7 +88,7 @@ class AstReinterpretCastExpr : public AstNodeBase
 {
 public:
     AstReinterpretCastExpr(AstNodeBase* operand, TypeId castTo)
-        : AstNodeBase(castTo)
+        : AstNodeBase(AstNodeType::AstReinterpretCastExpr, castTo)
         , m_operand(operand)
     {
         TestAssert(m_operand->GetTypeId().MayReinterpretCastTo(castTo));
@@ -115,8 +113,6 @@ public:
     {
         fn(m_operand);
     }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstReinterpretCastExpr; }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 

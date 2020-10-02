@@ -11,7 +11,7 @@ class AstLogicalAndOrExpr : public AstNodeBase
 {
 public:
     AstLogicalAndOrExpr(bool isAnd, AstNodeBase* lhs, AstNodeBase* rhs)
-        : AstNodeBase(TypeId::Get<bool>())
+        : AstNodeBase(AstNodeType::AstLogicalAndOrExpr, TypeId::Get<bool>())
         , m_isAnd(isAnd), m_lhs(lhs), m_rhs(rhs)
     {
         TestAssert(m_lhs->GetTypeId().IsBool());
@@ -54,8 +54,6 @@ public:
         fn(m_rhs);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstLogicalAndOrExpr; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
 private:
@@ -72,7 +70,7 @@ class AstLogicalNotExpr : public AstNodeBase
 {
 public:
     AstLogicalNotExpr(AstNodeBase* op)
-        : AstNodeBase(TypeId::Get<bool>())
+        : AstNodeBase(AstNodeType::AstLogicalNotExpr, TypeId::Get<bool>())
         , m_op(op)
     {
         TestAssert(m_op->GetTypeId().IsBool());
@@ -93,8 +91,6 @@ public:
     {
         fn(m_op);
     }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstLogicalNotExpr; }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 

@@ -95,8 +95,8 @@ private:
 class AstNodeBase : NonCopyable, NonMovable
 {
 public:
-    AstNodeBase(TypeId typeId)
-        : m_debugInterpFn(nullptr), m_mark(), m_typeId(typeId)
+    AstNodeBase(AstNodeType nodeType, TypeId typeId)
+        : m_debugInterpFn(nullptr), m_mark(), m_nodeType(nodeType), m_typeId(typeId)
     {
         TestAssert(!typeId.IsInvalid());
     }
@@ -140,7 +140,10 @@ public:
 
     // Returns the AstNodeType of this node
     //
-    virtual AstNodeType GetAstNodeType() const = 0;
+    AstNodeType GetAstNodeType() const
+    {
+        return m_nodeType;
+    }
 
     // Set up m_debugInterpFn
     //
@@ -179,6 +182,10 @@ protected:
     // Helper color mark for AST traversal
     //
     AstTraverseColorMark m_mark;
+
+    // The type of this node
+    //
+    AstNodeType m_nodeType;
 
     // The TypeId of the underlying type of this node.
     //

@@ -12,7 +12,7 @@ class AstArithmeticExpr : public AstNodeBase
 {
 public:
     AstArithmeticExpr(char op, AstNodeBase* lhs, AstNodeBase* rhs)
-        : AstNodeBase(lhs->GetTypeId())
+        : AstNodeBase(AstNodeType::AstArithmeticExpr, lhs->GetTypeId())
         , m_op(op), m_lhs(lhs), m_rhs(rhs)
     {
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
@@ -106,8 +106,6 @@ public:
         fn(m_rhs);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstArithmeticExpr; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
 private:
@@ -123,7 +121,7 @@ class AstComparisonExpr : public AstNodeBase
 {
 public:
     AstComparisonExpr(const char* op, AstNodeBase* lhs, AstNodeBase* rhs)
-        : AstNodeBase(TypeId::Get<bool>())
+        : AstNodeBase(AstNodeType::AstComparisonExpr, TypeId::Get<bool>())
         , m_lhs(lhs), m_rhs(rhs)
     {
         assert(op[0] != '\0');
@@ -258,8 +256,6 @@ public:
         fn(m_rhs);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstComparisonExpr; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
 private:
@@ -267,8 +263,5 @@ private:
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };
-
-// TODO: logical operations
-//
 
 }   // namespace PochiVM

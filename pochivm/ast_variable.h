@@ -24,7 +24,7 @@ class AstVariable : public AstNodeBase, public DestructorIREmitter
 {
 public:
     AstVariable(TypeId typeId, AstFunction* owner, uint32_t varnameSuffix, const char* name = "var")
-        : AstNodeBase(typeId)
+        : AstNodeBase(AstNodeType::AstVariable, typeId)
         , m_varname(name)
         , m_functionOwner(owner)
         , m_llvmValue(nullptr)
@@ -61,8 +61,6 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstVariable; }
 
     const char* GetVarNameNoSuffix() const { return m_varname; }
     uint32_t GetVarSuffix() const { return m_varnameSuffix; }

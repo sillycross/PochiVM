@@ -20,7 +20,7 @@ class AstDereferenceVariableExpr : public AstNodeBase
 {
 public:
     AstDereferenceVariableExpr(AstVariable* operand)
-        : AstNodeBase(operand->GetTypeId().RemovePointer())
+        : AstNodeBase(AstNodeType::AstDereferenceVariableExpr, operand->GetTypeId().RemovePointer())
         , m_operand(operand)
     {
         TestAssert(m_operand->GetTypeId().IsPointerType());
@@ -54,8 +54,6 @@ public:
         fn(m_operand);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDereferenceVariableExpr; }
-
 private:
     AstVariable* m_operand;
 };
@@ -67,12 +65,12 @@ class AstBlock : public AstNodeBase
 {
 public:
     AstBlock()
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstBlock, TypeId::Get<void>())
         , m_contents()
     { }
 
     AstBlock(const std::vector<AstNodeBase*>& contents)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstBlock, TypeId::Get<void>())
         , m_contents(contents)
     {
 #ifdef TESTBUILD
@@ -109,8 +107,6 @@ public:
         }
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstBlock; }
-
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
     void Append(AstNodeBase* stmt)
@@ -130,12 +126,12 @@ class AstScope : public AstNodeBase
 {
 public:
     AstScope()
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstScope, TypeId::Get<void>())
         , m_contents()
     { }
 
     AstScope(const std::vector<AstNodeBase*>& contents)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstScope, TypeId::Get<void>())
         , m_contents(contents)
     {
 #ifdef TESTBUILD
@@ -180,8 +176,6 @@ public:
         }
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstScope; }
-
     void Append(AstNodeBase* stmt)
     {
         TestAssert(stmt->GetTypeId().IsVoid());
@@ -198,7 +192,7 @@ class AstIfStatement : public AstNodeBase
 {
 public:
     AstIfStatement(AstNodeBase* condClause, AstScope* thenClause)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstIfStatement, TypeId::Get<void>())
         , m_condClause(condClause)
         , m_thenClause(thenClause)
         , m_elseClause(nullptr)
@@ -248,8 +242,6 @@ public:
         if (m_elseClause != nullptr) { fn(m_elseClause); }
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstIfStatement; }
-
 private:
     AstNodeBase* m_condClause;
     AstScope* m_thenClause;
@@ -262,7 +254,7 @@ class AstWhileLoop : public AstNodeBase
 {
 public:
     AstWhileLoop(AstNodeBase* condClause, AstScope* body)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstWhileLoop, TypeId::Get<void>())
         , m_condClause(condClause)
         , m_body(body)
     {
@@ -322,8 +314,6 @@ public:
         fn(m_body);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstWhileLoop; }
-
 private:
     AstNodeBase* m_condClause;
     AstScope* m_body;
@@ -338,7 +328,7 @@ public:
                AstNodeBase* condClause,
                AstBlock* stepClause,
                AstScope* body)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstForLoop, TypeId::Get<void>())
         , m_startClause(startClause)
         , m_condClause(condClause)
         , m_stepClause(stepClause)
@@ -416,8 +406,6 @@ public:
         fn(m_stepClause);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstForLoop; }
-
     AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
     AstBlock* GetStepBlock() const { return m_stepClause; }
@@ -435,7 +423,7 @@ class AstBreakOrContinueStmt : public AstNodeBase
 {
 public:
     AstBreakOrContinueStmt(bool isBreak)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstBreakOrContinueStmt, TypeId::Get<void>())
         , m_isBreak(isBreak)
     { }
 
@@ -462,8 +450,6 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstBreakOrContinueStmt; }
 
 private:
     // whether it is a break statement or a continue statement

@@ -539,7 +539,7 @@ public:
     AstCallExpr(const std::string& name,
                 const std::vector<AstNodeBase*>& params,
                 TypeId returnType)
-        : AstNodeBase(returnType)
+        : AstNodeBase(AstNodeType::AstCallExpr, returnType)
         , m_fnName(name)
         , m_params(params)
         , m_isCppFunction(false)
@@ -551,7 +551,7 @@ public:
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
                 const std::vector<AstNodeBase*>& params)
-        : AstNodeBase(cppFunctionMd->m_returnType)
+        : AstNodeBase(AstNodeType::AstCallExpr, cppFunctionMd->m_returnType)
         , m_fnName()
         , m_params(params)
         , m_isCppFunction(true)
@@ -692,8 +692,6 @@ public:
         }
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstCallExpr; }
-
 private:
     std::string m_fnName;
     std::vector<AstNodeBase*> m_params;
@@ -717,7 +715,7 @@ class AstDeclareVariable : public AstNodeBase
 {
 public:
     AstDeclareVariable(AstVariable* variable)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstDeclareVariable, TypeId::Get<void>())
         , m_assignExpr(nullptr)
         , m_callExpr(nullptr)
         , m_variable(variable)
@@ -727,7 +725,7 @@ public:
     }
 
     AstDeclareVariable(AstVariable* variable, AstAssignExpr* assignExpr)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstDeclareVariable, TypeId::Get<void>())
         , m_assignExpr(assignExpr)
         , m_callExpr(nullptr)
         , m_variable(variable)
@@ -738,7 +736,7 @@ public:
     }
 
     AstDeclareVariable(AstVariable* variable, AstCallExpr* callExpr, bool isCtor)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstDeclareVariable, TypeId::Get<void>())
         , m_assignExpr(nullptr)
         , m_callExpr(callExpr)
         , m_variable(variable)
@@ -803,8 +801,6 @@ public:
         fn(m_variable);
     }
 
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstDeclareVariable; }
-
     // An assign statement for primitive type variable initialization.
     //
     AstAssignExpr* m_assignExpr;
@@ -819,7 +815,7 @@ class AstReturnStmt : public AstNodeBase
 {
 public:
     AstReturnStmt(AstNodeBase* retVal)
-        : AstNodeBase(TypeId::Get<void>())
+        : AstNodeBase(AstNodeType::AstReturnStmt, TypeId::Get<void>())
         , m_retVal(retVal)
     {
         TestAssertImp(m_retVal != nullptr,
@@ -863,8 +859,6 @@ public:
             fn(m_retVal);
         }
     }
-
-    virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstReturnStmt; }
 
     AstNodeBase* m_retVal;
 };
