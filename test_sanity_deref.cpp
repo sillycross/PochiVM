@@ -54,7 +54,7 @@ TEST(Sanity, LinkedListChasing)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     Data* head = BuildLinkedList();
@@ -132,7 +132,7 @@ TEST(Sanity, StoreIntoLocalVar)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
@@ -213,7 +213,7 @@ TEST(Sanity, BoolDeref)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {

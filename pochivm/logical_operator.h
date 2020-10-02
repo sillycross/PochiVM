@@ -20,31 +20,31 @@ public:
 
     void InterpImplAnd(bool* out)
     {
-        m_lhs->Interp(out);
+        m_lhs->DebugInterp(out);
         // Short circuiting
         //
         if (!*out) { return; }
-        m_rhs->Interp(out);
+        m_rhs->DebugInterp(out);
     }
 
     void InterpImplOr(bool* out)
     {
-        m_lhs->Interp(out);
+        m_lhs->DebugInterp(out);
         // Short circuiting
         //
         if (*out) { return; }
-        m_rhs->Interp(out);
+        m_rhs->DebugInterp(out);
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         if (m_isAnd)
         {
-            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalAndOrExpr::InterpImplAnd);
+            m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalAndOrExpr::InterpImplAnd);
         }
         else
         {
-            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalAndOrExpr::InterpImplOr);
+            m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalAndOrExpr::InterpImplOr);
         }
     }
 
@@ -80,13 +80,13 @@ public:
 
     void InterpImpl(bool* out)
     {
-        m_op->Interp(out);
+        m_op->DebugInterp(out);
         *out = !*out;
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalNotExpr::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalNotExpr::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override

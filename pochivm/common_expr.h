@@ -27,15 +27,15 @@ public:
     void InterpImpl(T* out)
     {
         T* src;
-        m_operand->Interp(&src);
+        m_operand->DebugInterp(&src);
         *out = *src;
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstDereferenceExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(GetTypeId());
+        m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -71,9 +71,9 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstLiteralExpr, InterpImpl, AstTypeHelper::primitive_or_pointer_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(GetTypeId());
+        m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
@@ -167,8 +167,8 @@ public:
     {
         SrcT src;
         SrcT* dst;
-        m_src->Interp(&src);
-        m_dst->Interp(&dst);
+        m_src->DebugInterp(&src);
+        m_dst->DebugInterp(&dst);
         *dst = src;
     }
 
@@ -176,9 +176,9 @@ public:
 
     AstNodeBase* GetDst() const { return m_dst; }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(m_src->GetTypeId());
+        m_debugInterpFn = SelectImpl(m_src->GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -209,7 +209,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         TestAssert(false && "unimplemented");
     }
@@ -245,7 +245,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         TestAssert(false && "unimplemented");
     }
@@ -273,16 +273,16 @@ public:
     template<typename T>
     void InterpImpl(T** out)
     {
-        T* addr = reinterpret_cast<T*>(thread_pochiVMContext->m_interpStackFrameBase + m_interpOffset);
-        m_operand->Interp(addr);
+        T* addr = reinterpret_cast<T*>(thread_pochiVMContext->m_debugInterpStackFrameBase + m_debugInterpOffset);
+        m_operand->DebugInterp(addr);
         *out = addr;
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstRvalueToConstPrimitiveRefExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(GetTypeId());
+        m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -293,7 +293,7 @@ public:
     virtual AstNodeType GetAstNodeType() const override { return AstNodeType::AstRvalueToConstPrimitiveRefExpr; }
 
     AstNodeBase* m_operand;
-    uint32_t m_interpOffset;
+    uint32_t m_debugInterpOffset;
 };
 
 }   // namespace PochiVM

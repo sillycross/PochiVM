@@ -30,7 +30,7 @@ public:
         , m_llvmValue(nullptr)
         , m_varnameSuffix(varnameSuffix)
         , m_storageSize(static_cast<uint32_t>(typeId.RemovePointer().Size()))
-        , m_interpOffset(static_cast<uint32_t>(-1))
+        , m_debugInterpOffset(static_cast<uint32_t>(-1))
     {
         TestAssert(GetTypeId().IsPointerType());
     }
@@ -50,14 +50,14 @@ public:
     template<typename T>
     void InterpImpl(T* out)
     {
-        *out = reinterpret_cast<T>(thread_pochiVMContext->m_interpStackFrameBase + m_interpOffset);
+        *out = reinterpret_cast<T>(thread_pochiVMContext->m_debugInterpStackFrameBase + m_debugInterpOffset);
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstVariable, InterpImpl, std::is_pointer)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(GetTypeId());
+        m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
@@ -69,16 +69,16 @@ public:
     AstFunction* GetFunctionOwner() const { return m_functionOwner; }
     uint32_t GetStorageSize() const { return m_storageSize; }
 
-    void SetInterpOffset(uint32_t offset)
+    void SetDebugInterpOffset(uint32_t offset)
     {
-        assert(m_interpOffset == static_cast<uint32_t>(-1) && offset != static_cast<uint32_t>(-1));
-        m_interpOffset = offset;
+        assert(m_debugInterpOffset == static_cast<uint32_t>(-1) && offset != static_cast<uint32_t>(-1));
+        m_debugInterpOffset = offset;
     }
 
-    uint32_t GetInterpOffset() const
+    uint32_t GetDebugInterpOffset() const
     {
-        assert(m_interpOffset != static_cast<uint32_t>(-1));
-        return m_interpOffset;
+        assert(m_debugInterpOffset != static_cast<uint32_t>(-1));
+        return m_debugInterpOffset;
     }
 
 private:
@@ -101,7 +101,7 @@ private:
     uint32_t m_storageSize;
     // The offset in stackframe that stores the value of this variable, in interp mode
     //
-    uint32_t m_interpOffset;
+    uint32_t m_debugInterpOffset;
 };
 
 }   // namespace PochiVM

@@ -71,7 +71,7 @@ TEST(Sanity, BreakAndContinue)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {

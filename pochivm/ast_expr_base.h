@@ -90,13 +90,13 @@ private:
 };
 
 // The base class of all expressions
-// WARNING: All derived classes must have this class as the first base class! Or Interp() breaks!
+// WARNING: All derived classes must have this class as the first base class! Or DebugInterp() breaks!
 //
 class AstNodeBase : NonCopyable, NonMovable
 {
 public:
     AstNodeBase(TypeId typeId)
-        : m_interpFn(nullptr), m_mark(), m_typeId(typeId)
+        : m_debugInterpFn(nullptr), m_mark(), m_typeId(typeId)
     {
         TestAssert(!typeId.IsInvalid());
     }
@@ -142,21 +142,21 @@ public:
     //
     virtual AstNodeType GetAstNodeType() const = 0;
 
-    // Set up m_interpFn
+    // Set up m_debugInterpFn
     //
-    virtual void SetupInterpImpl() = 0;
+    virtual void SetupDebugInterpImpl() = 0;
 
     TypeId GetTypeId() const { return m_typeId; }
 
     AstTraverseColorMark& GetColorMark() { return m_mark; }
 
-    void Interp(void* out /*out*/)
+    void DebugInterp(void* out /*out*/)
     {
         using InterpFnPrototype = void(*)(void* /*this*/, void* /*out, returnValue*/);
         // This relies on that all derived class inherit this class as the first base class
         // so that static_cast<AstNodeBase*>(derived) == reinterpret_cast<AstNodeBase*>(derived)
         //
-        reinterpret_cast<InterpFnPrototype>(m_interpFn)(this, out);
+        reinterpret_cast<InterpFnPrototype>(m_debugInterpFn)(this, out);
     }
 
 protected:
@@ -174,7 +174,7 @@ protected:
     //
     // Since they only differ in pointer types, all interp implementations can be called using InterpFnPrototype.
     //
-    void* m_interpFn;
+    void* m_debugInterpFn;
 
     // Helper color mark for AST traversal
     //

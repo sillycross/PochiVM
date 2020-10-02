@@ -57,7 +57,7 @@ public:
     {
         TestAssert((AstTypeHelper::may_static_cast<SrcT, DstT>::value));
         SrcT value;
-        m_operand->Interp(&value);
+        m_operand->DebugInterp(&value);
         // We do not allow static_cast if the src value is nullptr
         //
         assert_not_nullptr_helper<SrcT>::execute(&value);
@@ -66,9 +66,9 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstStaticCastExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
+        m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -100,15 +100,15 @@ public:
     void InterpImpl(DstT* out)
     {
         SrcT value;
-        m_operand->Interp(&value);
+        m_operand->DebugInterp(&value);
         *out = reinterpret_cast<DstT>(value);
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstReinterpretCastExpr, InterpImpl, AstTypeHelper::pointer_or_uint64_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
+        m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override

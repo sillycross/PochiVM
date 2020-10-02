@@ -88,7 +88,7 @@ public:
             // The address of the LValue object is the second parameter to the copy-constructor callExpr
             //
             AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
-            callExpr->GetParams()[1]->Interp(&addr /*out*/);
+            callExpr->GetParams()[1]->DebugInterp(&addr /*out*/);
             throw *addr;
         }
         else
@@ -98,7 +98,7 @@ public:
             {
                 // If m_operand is not a CallExpr for constructor, just evaluate it and we will get what we want
                 //
-                m_operand->Interp(addr /*out*/);
+                m_operand->DebugInterp(addr /*out*/);
             }
             else
             {
@@ -110,7 +110,7 @@ public:
                 AstLiteralExpr* literalExpr = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
                 assert(literalExpr->GetTypeId() == m_exceptionTypeId.AddPointer());
                 literalExpr->ResetPointerValue(addr);
-                m_operand->Interp(nullptr /*out*/);
+                m_operand->DebugInterp(nullptr /*out*/);
             }
             // At this time the exception object is constructed.
             //
@@ -143,10 +143,10 @@ public:
         }
     };
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = select_impl_based_on_exception_type<select_impl_helper>::get(m_exceptionTypeId);
-        TestAssert(m_interpFn != nullptr);
+        m_debugInterpFn = select_impl_based_on_exception_type<select_impl_helper>::get(m_exceptionTypeId);
+        TestAssert(m_debugInterpFn != nullptr);
     }
 
     AstNodeBase* m_operand;

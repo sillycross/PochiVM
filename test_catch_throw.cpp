@@ -24,7 +24,7 @@ TEST(SanityCatchThrow, ThrowSanity_1)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -114,7 +114,7 @@ TEST(SanityCatchThrow, ThrowSanity_2)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -191,7 +191,7 @@ TEST(SanityCatchThrow, ThrowSanity_3)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -271,7 +271,7 @@ TEST(SanityCatchThrow, ThrowSanity_4)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -347,7 +347,7 @@ TEST(SanityCatchThrow, ThrowSanity_5)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -445,7 +445,7 @@ TEST(SanityCatchThrow, ThrowSanity_6)
     std::vector<int> expectedAns {233, -233};
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -528,7 +528,7 @@ TEST(SanityCatchThrow, ThrowSanity_7)
     std::vector<int> expectedAns {233, -233};
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->
@@ -636,7 +636,7 @@ TEST(SanityCatchThrow, ThrowSanity_8)
     }
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->

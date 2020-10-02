@@ -31,7 +31,7 @@ template<typename T>
 void AstFunctionInterpStoreParamsHelper(T* dst, AstNodeBase* src)
 {
     T value;
-    src->Interp(&value);
+    src->DebugInterp(&value);
     *dst = value;
 }
 
@@ -59,9 +59,9 @@ private:
         , m_whileLoopSuffixOrdinal(0)
         , m_forLoopSuffixOrdinal(0)
         , m_logicalOpSuffixOrdinal(0)
-        , m_interpStackFrameSize(static_cast<uint32_t>(-1))
-        , m_interpStoreParamFns()
-        , m_interpStoreRetValFn(nullptr)
+        , m_debugInterpStackFrameSize(static_cast<uint32_t>(-1))
+        , m_debugInterpStoreParamFns()
+        , m_debugInterpStoreRetValFn(nullptr)
         , m_llvmEntryBlock(nullptr)
     { }
 
@@ -185,42 +185,42 @@ public:
     //
     // Interp execute the function
     //
-    void Interp(AstNodeBase** params, void* returnValueOut)
+    void DebugInterp(AstNodeBase** params, void* returnValueOut)
     {
         // Allocate space for the new stack frame
         //
-        assert(m_interpStackFrameSize != static_cast<uint32_t>(-1) && m_interpStackFrameSize > 0);
-        void* stackFrameBase = alloca(m_interpStackFrameSize);
+        assert(m_debugInterpStackFrameSize != static_cast<uint32_t>(-1) && m_debugInterpStackFrameSize > 0);
+        void* stackFrameBase = alloca(m_debugInterpStackFrameSize);
 
         // Store parameters into stack frame
         // The parameter expressions must be evaluated in the OLD stack frame,
         // so it is important we not switch to the new stack frame now.
         // However, their results should be stored into corrresponding addresses in new stack frame.
         //
-        assert(m_interpStoreParamFns.size() == m_params.size());
+        assert(m_debugInterpStoreParamFns.size() == m_params.size());
         for (size_t i = 0; i < GetNumParams(); i++)
         {
-            InterpSetParam(reinterpret_cast<uintptr_t>(stackFrameBase), i, params[i]);
+            DebugInterpSetParam(reinterpret_cast<uintptr_t>(stackFrameBase), i, params[i]);
         }
 
         // Switch to the new stack frame, saving the old one
         //
-        uintptr_t oldStackFrameBase = thread_pochiVMContext->m_interpStackFrameBase;
-        thread_pochiVMContext->m_interpStackFrameBase = reinterpret_cast<uintptr_t>(stackFrameBase);
+        uintptr_t oldStackFrameBase = thread_pochiVMContext->m_debugInterpStackFrameBase;
+        thread_pochiVMContext->m_debugInterpStackFrameBase = reinterpret_cast<uintptr_t>(stackFrameBase);
 
         // Save the old variable scope stack, and switch to a new empty scope stack.
         //
         std::vector<std::vector<AstVariable*>> oldScopeStack;
-        oldScopeStack.swap(thread_pochiVMContext->m_interpScopeStack);
+        oldScopeStack.swap(thread_pochiVMContext->m_debugInterpScopeStack);
 
         // Execute function
         //
         InterpControlSignal ics = InterpControlSignal::None;
-        m_body->Interp(&ics);
+        m_body->DebugInterp(&ics);
 
         // The scope stack must end up empty after the function's execution
         //
-        TestAssert(thread_pochiVMContext->m_interpScopeStack.size() == 0);
+        TestAssert(thread_pochiVMContext->m_debugInterpScopeStack.size() == 0);
 
         // The control signal must not be continue/break: they should never reach here
         //
@@ -234,25 +234,25 @@ public:
         // Retrieve return value if exists
         // The return value is always stored at stackFrameBase
         //
-        m_interpStoreRetValFn(returnValueOut /*dst*/, stackFrameBase /*src*/);
+        m_debugInterpStoreRetValFn(returnValueOut /*dst*/, stackFrameBase /*src*/);
 
         // Restore stack frame and variable scope stack
         //
-        thread_pochiVMContext->m_interpStackFrameBase = oldStackFrameBase;
-        thread_pochiVMContext->m_interpScopeStack.swap(oldScopeStack);
+        thread_pochiVMContext->m_debugInterpStackFrameBase = oldStackFrameBase;
+        thread_pochiVMContext->m_debugInterpScopeStack.swap(oldScopeStack);
     }
 
     // Set up various information needed for interp execution
     //
-    void PrepareForInterp();
+    void PrepareForDebugInterp();
 
 private:
 
-    void InterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
+    void DebugInterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
     {
         assert(i < GetNumParams() && param->GetTypeId() == GetParamType(i));
-        uintptr_t addr = newStackFrameBase + m_params[i]->GetInterpOffset();
-        m_interpStoreParamFns[i](reinterpret_cast<void*>(addr), param);
+        uintptr_t addr = newStackFrameBase + m_params[i]->GetDebugInterpOffset();
+        m_debugInterpStoreParamFns[i](reinterpret_cast<void*>(addr), param);
     }
 
     // Function parameters in LLVM are RValues. However, we make them LValues here,
@@ -277,15 +277,15 @@ private:
     //
     // Stack frame size needed to store the temp data
     //
-    uint32_t m_interpStackFrameSize;
+    uint32_t m_debugInterpStackFrameSize;
     // function pointer for storing each parameter on invocation
     //
     using _StoreParamsFn = void(*)(void*, AstNodeBase*);
-    std::vector<_StoreParamsFn> m_interpStoreParamFns;
+    std::vector<_StoreParamsFn> m_debugInterpStoreParamFns;
     // function pointer for retrieving return value and store to variable
     //
     using _StoreRetValFn = void(*)(void*, void*);
-    _StoreRetValFn m_interpStoreRetValFn;
+    _StoreRetValFn m_debugInterpStoreRetValFn;
 
     // llvm data
     //
@@ -305,7 +305,7 @@ public:
         , m_llvmModule(nullptr)
 #ifdef TESTBUILD
         , m_validated(false)
-        , m_interpPrepared(false)
+        , m_debugInterpPrepared(false)
         , m_irEmitted(false)
         , m_irOptimized(false)
 #endif
@@ -333,17 +333,17 @@ public:
         }
     }
 
-    void PrepareForInterp()
+    void PrepareForDebugInterp()
     {
-        TestAssert(!m_interpPrepared);
+        TestAssert(!m_debugInterpPrepared);
 #ifdef TESTBUILD
-        m_interpPrepared = true;
+        m_debugInterpPrepared = true;
 #endif
         AstTraverseColorMark::ClearAll();
         for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
         {
             AstFunction* fn = iter->second;
-            fn->PrepareForInterp();
+            fn->PrepareForDebugInterp();
         }
     }
 
@@ -396,7 +396,7 @@ public:
     template<typename T>
     T GetGeneratedFunctionInterpMode(const std::string& name)
     {
-        assert(m_interpPrepared);
+        assert(m_debugInterpPrepared);
         AstFunction* fn = GetAstFunction(name);
         if (fn == nullptr)
         {
@@ -436,7 +436,7 @@ private:
             // Construct AstLiteralExpr by in-place new
             //
             new (memoryOwner) AstLiteralExpr(TypeId::Get<F>(), &first);
-            memoryOwner->SetupInterpImpl();
+            memoryOwner->SetupDebugInterpImpl();
             construct_params(memoryOwner + 1, args...);
         }
 
@@ -459,7 +459,7 @@ private:
 
             // Interp the function, fill in return value at 'ret'
             //
-            fn->Interp(params, ret);
+            fn->DebugInterp(params, ret);
         }
     };
 
@@ -525,7 +525,7 @@ private:
     llvm::Module* m_llvmModule;
 #ifdef TESTBUILD
     bool m_validated;
-    bool m_interpPrepared;
+    bool m_debugInterpPrepared;
     bool m_irEmitted;
     bool m_irOptimized;
 #endif
@@ -545,7 +545,7 @@ public:
         , m_isCppFunction(false)
         , m_cppFunctionMd(nullptr)
         , m_interpFunction(nullptr)
-        , m_interpStoreParamFns()
+        , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
     { }
 
@@ -557,7 +557,7 @@ public:
         , m_isCppFunction(true)
         , m_cppFunctionMd(cppFunctionMd)
         , m_interpFunction(nullptr)
-        , m_interpStoreParamFns()
+        , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
     {
         assert(m_cppFunctionMd != nullptr);
@@ -574,7 +574,7 @@ public:
 
     void InterpImplGeneratedFunction(void* out)
     {
-        m_interpFunction->Interp(m_params.data(), out);
+        m_interpFunction->DebugInterp(m_params.data(), out);
     }
 
     void InterpImplCppFunction(void* out)
@@ -596,7 +596,7 @@ public:
         for (size_t i = 0; i < m_cppFunctionMd->m_numParams; i++)
         {
             void* storePos = alloca(m_cppFunctionMd->m_paramTypes[i].Size());
-            m_interpStoreParamFns[i](storePos, m_params[i]);
+            m_debugInterpStoreParamFns[i](storePos, m_params[i]);
             *curParam = storePos;
             curParam++;
         }
@@ -607,7 +607,7 @@ public:
         {
             out = nullptr;
         }
-        m_cppFunctionMd->m_interpFn(out /*ret*/, params);
+        m_cppFunctionMd->m_debugInterpFn(out /*ret*/, params);
     }
 
     // Validate that all caller types matches corresponding callee types
@@ -664,13 +664,13 @@ public:
 
     void SetSretAddress(llvm::Value* address);
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         if (!m_isCppFunction)
         {
             m_interpFunction = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
             TestAssert(m_interpFunction != nullptr);
-            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplGeneratedFunction);
+            m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplGeneratedFunction);
         }
         else
         {
@@ -678,9 +678,9 @@ public:
             {
                 _StoreParamsFn storeParamsFn = reinterpret_cast<_StoreParamsFn>(
                         internal::AstFunctionInterpStoreParamsSelector(m_cppFunctionMd->m_paramTypes[i]));
-                m_interpStoreParamFns.push_back(storeParamsFn);
+                m_debugInterpStoreParamFns.push_back(storeParamsFn);
             }
-            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplCppFunction);
+            m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstCallExpr::InterpImplCppFunction);
         }
     }
 
@@ -707,7 +707,7 @@ private:
     // The non-CPP function's interp mode storeParamHelper belongs to the AstFunction class.
     //
     using _StoreParamsFn = void(*)(void*, AstNodeBase*);
-    std::vector<_StoreParamsFn> m_interpStoreParamFns;
+    std::vector<_StoreParamsFn> m_debugInterpStoreParamFns;
     // In LLVM mode, for function using sret, the position to which its return value shall be stored
     //
     llvm::Value* m_sretAddress;
@@ -759,7 +759,7 @@ public:
     {
         if (m_assignExpr != nullptr)
         {
-            m_assignExpr->Interp(nullptr /*out*/);
+            m_assignExpr->DebugInterp(nullptr /*out*/);
         }
         else if (m_callExpr != nullptr)
         {
@@ -768,17 +768,17 @@ public:
                 void* addr;
                 // 'addr' now points to the storing address of the variable
                 //
-                m_variable->Interp(&addr /*out*/);
+                m_variable->DebugInterp(&addr /*out*/);
                 // evaluate the call expression, which will construct the return value in-place at 'addr'
                 //
-                m_callExpr->Interp(addr /*out*/);
+                m_callExpr->DebugInterp(addr /*out*/);
             }
             else
             {
                 // For ctor, return value is void, and the address of the variable
                 // has been placed on the first parameter
                 //
-                m_callExpr->Interp(nullptr /*out*/);
+                m_callExpr->DebugInterp(nullptr /*out*/);
             }
         }
         // If the variable being declared is a CPP class, we should push it into the current variable scope.
@@ -786,14 +786,14 @@ public:
         //
         if (m_variable->GetTypeId().RemovePointer().IsCppClassType())
         {
-            assert(thread_pochiVMContext->m_interpScopeStack.size() > 0);
-            thread_pochiVMContext->m_interpScopeStack.back().push_back(m_variable);
+            assert(thread_pochiVMContext->m_debugInterpScopeStack.size() > 0);
+            thread_pochiVMContext->m_debugInterpScopeStack.back().push_back(m_variable);
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -831,7 +831,7 @@ public:
     template<typename T>
     void InterpImpl(InterpControlSignal* out)
     {
-        m_retVal->Interp(reinterpret_cast<void*>(thread_pochiVMContext->m_interpStackFrameBase));
+        m_retVal->DebugInterp(reinterpret_cast<void*>(thread_pochiVMContext->m_debugInterpStackFrameBase));
         assert(*out == InterpControlSignal::None);
         *out = InterpControlSignal::Return;
     }
@@ -844,15 +844,15 @@ public:
         *out = InterpControlSignal::Return;
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         if (m_retVal == nullptr)
         {
-            m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstReturnStmt::InterpImplVoid);
+            m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstReturnStmt::InterpImplVoid);
         }
         else
         {
-            m_interpFn = SelectImpl(m_retVal->GetTypeId());
+            m_debugInterpFn = SelectImpl(m_retVal->GetTypeId());
         }
     }
 
@@ -869,18 +869,18 @@ public:
     AstNodeBase* m_retVal;
 };
 
-inline void AstFunction::PrepareForInterp()
+inline void AstFunction::PrepareForDebugInterp()
 {
-    assert(m_interpStackFrameSize == static_cast<uint32_t>(-1));
-    // Setup m_interpStoreParamFns and m_interpStoreRetValFn
+    assert(m_debugInterpStackFrameSize == static_cast<uint32_t>(-1));
+    // Setup m_debugInterpStoreParamFns and m_debugInterpStoreRetValFn
     //
     for (size_t i = 0; i < GetNumParams(); i++)
     {
         _StoreParamsFn storeParamsFn = reinterpret_cast<_StoreParamsFn>(
                     internal::AstFunctionInterpStoreParamsSelector(GetParamType(i)));
-        m_interpStoreParamFns.push_back(storeParamsFn);
+        m_debugInterpStoreParamFns.push_back(storeParamsFn);
     }
-    m_interpStoreRetValFn = reinterpret_cast<_StoreRetValFn>(
+    m_debugInterpStoreRetValFn = reinterpret_cast<_StoreRetValFn>(
                 AstTypeHelper::void_safe_store_value_selector(GetReturnType()));
 
     // Compute stack frame size, and offsets for various variables
@@ -901,7 +901,7 @@ inline void AstFunction::PrepareForInterp()
     {
         assert(cur->GetColorMark().IsNoColor());
         cur->GetColorMark().MarkColorA();
-        cur->SetupInterpImpl();
+        cur->SetupDebugInterpImpl();
         AstNodeType nodeType = cur->GetAstNodeType();
         if (nodeType == AstNodeType::AstVariable)
         {
@@ -909,7 +909,7 @@ inline void AstFunction::PrepareForInterp()
             // pad to natural alignment min(8, storageSize)
             //
             size = up_align(size, std::min(8U, v->GetStorageSize()));
-            v->SetInterpOffset(size);
+            v->SetDebugInterpOffset(size);
             size += v->GetStorageSize();
         }
         else if (nodeType == AstNodeType::AstRvalueToConstPrimitiveRefExpr)
@@ -917,7 +917,7 @@ inline void AstFunction::PrepareForInterp()
             AstRvalueToConstPrimitiveRefExpr* v = assert_cast<AstRvalueToConstPrimitiveRefExpr*>(cur);
             uint32_t storageSize = static_cast<uint32_t>(v->GetTypeId().RemovePointer().Size());
             size = up_align(size, std::min(8U, storageSize));
-            v->m_interpOffset = size;
+            v->m_debugInterpOffset = size;
             size += storageSize;
         }
     };
@@ -950,7 +950,7 @@ inline void AstFunction::PrepareForInterp()
     //
     size = std::max(8U, size);
     size = up_align(size, 8);
-    m_interpStackFrameSize = size;
+    m_debugInterpStackFrameSize = size;
 }
 
 inline bool WARN_UNUSED AstFunction::Validate()

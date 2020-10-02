@@ -43,7 +43,7 @@ std::function<void(T, T)> fnName()                                              
     auto [fn, val1, val2] = NewFunction<FnPrototype>("MyFn");                    \
     fn.SetBody(Return(val1 opName val2));                                        \
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());               \
-    thread_pochiVMContext->m_curModule->PrepareForInterp();                      \
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();                      \
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->                  \
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");  \
     ReleaseAssert(interpFn != nullptr);                                          \

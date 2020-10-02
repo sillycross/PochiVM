@@ -35,7 +35,7 @@ public:
     void InterpImpl(T* out)
     {
         T* src;
-        m_operand->Interp(&src);
+        m_operand->DebugInterp(&src);
         *out = *src;
     }
 
@@ -44,9 +44,9 @@ public:
                               InterpImpl,
                               AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = SelectImpl(GetTypeId());
+        m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -88,7 +88,7 @@ public:
         assert(ics != nullptr && *ics == InterpControlSignal::None);
         for (AstNodeBase* stmt : m_contents)
         {
-            stmt->Interp(ics);
+            stmt->DebugInterp(ics);
             if (unlikely(*ics != InterpControlSignal::None))
             {
                 break;
@@ -96,9 +96,9 @@ public:
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstBlock::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBlock::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -159,7 +159,7 @@ public:
         assert(ics != nullptr && *ics == InterpControlSignal::None);
         for (AstNodeBase* stmt : m_contents)
         {
-            stmt->Interp(ics);
+            stmt->DebugInterp(ics);
             if (unlikely(*ics != InterpControlSignal::None))
             {
                 break;
@@ -167,9 +167,9 @@ public:
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstScope::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstScope::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -223,20 +223,20 @@ public:
     {
         assert(ics != nullptr && *ics == InterpControlSignal::None);
         bool cond;
-        m_condClause->Interp(&cond);
+        m_condClause->DebugInterp(&cond);
         if (cond)
         {
-            m_thenClause->Interp(ics);
+            m_thenClause->DebugInterp(ics);
         }
         else if (m_elseClause != nullptr)
         {
-            m_elseClause->Interp(ics);
+            m_elseClause->DebugInterp(ics);
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstIfStatement::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstIfStatement::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -277,10 +277,10 @@ public:
         while (true)
         {
             bool cond;
-            m_condClause->Interp(&cond);
+            m_condClause->DebugInterp(&cond);
             if (!cond) { break; }
 
-            m_body->Interp(ics);
+            m_body->DebugInterp(ics);
             if (unlikely(*ics != InterpControlSignal::None))
             {
                 if (*ics == InterpControlSignal::Break)
@@ -311,9 +311,9 @@ public:
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstWhileLoop::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstWhileLoop::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -359,7 +359,7 @@ public:
         //
         AutoInterpExecutionScope aies;
 
-        m_startClause->Interp(ics);
+        m_startClause->DebugInterp(ics);
         // Break/Continue/Return statements not allowed in for-loop init block
         //
         TestAssert(*ics == InterpControlSignal::None);
@@ -367,10 +367,10 @@ public:
         while (true)
         {
             bool cond;
-            m_condClause->Interp(&cond);
+            m_condClause->DebugInterp(&cond);
             if (!cond) { break; }
 
-            m_body->Interp(ics);
+            m_body->DebugInterp(ics);
             // Logic similar to while-loop, see while-loop for comments
             //
             if (unlikely(*ics != InterpControlSignal::None))
@@ -394,16 +394,16 @@ public:
                 }
             }
 
-            m_stepClause->Interp(ics);
+            m_stepClause->DebugInterp(ics);
             // Break/Continue/Return statements not allowed in for-loop step block
             //
             TestAssert(*ics == InterpControlSignal::None);
         }
     }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstForLoop::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstForLoop::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
@@ -456,9 +456,9 @@ public:
 
     bool IsBreakStatement() const { return m_isBreak; }
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
-        m_interpFn = AstTypeHelper::GetClassMethodPtr(&AstBreakOrContinueStmt::InterpImpl);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBreakOrContinueStmt::InterpImpl);
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }

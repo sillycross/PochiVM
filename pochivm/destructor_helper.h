@@ -34,7 +34,7 @@ inline void InterpCallDestructorHelper(const CppFunctionMetadata* md, void* addr
     void* paramsArray[1];
     paramsArray[0] = &addr;
     assert(md->m_returnType.IsVoid() && md->m_numParams == 1 && !md->m_isUsingSret);
-    md->m_interpFn(nullptr /*ret*/, paramsArray);
+    md->m_debugInterpFn(nullptr /*ret*/, paramsArray);
 }
 
 // Destruct a local variable in interp mode
@@ -49,7 +49,7 @@ inline void InterpDestructLocalVariableHelper(AstVariable* var) noexcept
     // 'addr' is the address of the local variable
     //
     void* addr;
-    var->Interp(&addr /*out*/);
+    var->DebugInterp(&addr /*out*/);
     assert(md->m_numParams == 1 && md->m_paramTypes[0] == var->GetTypeId());
     InterpCallDestructorHelper(md, addr);
 }
@@ -61,21 +61,21 @@ struct AutoInterpExecutionScope
 {
     AutoInterpExecutionScope()
     {
-        thread_pochiVMContext->m_interpScopeStack.push_back(std::vector<AstVariable*>());
+        thread_pochiVMContext->m_debugInterpScopeStack.push_back(std::vector<AstVariable*>());
     }
 
     ~AutoInterpExecutionScope()
     {
-        assert(thread_pochiVMContext->m_interpScopeStack.size() > 0);
+        assert(thread_pochiVMContext->m_debugInterpScopeStack.size() > 0);
         // Call destructors in reverse order of the variables are declared
         //
-        const std::vector<AstVariable*>& vec = thread_pochiVMContext->m_interpScopeStack.back();
+        const std::vector<AstVariable*>& vec = thread_pochiVMContext->m_debugInterpScopeStack.back();
         for (auto rit = vec.rbegin(); rit != vec.rend(); rit++)
         {
             AstVariable* var = *rit;
             InterpDestructLocalVariableHelper(var);
         }
-        thread_pochiVMContext->m_interpScopeStack.pop_back();
+        thread_pochiVMContext->m_debugInterpScopeStack.pop_back();
     }
 };
 

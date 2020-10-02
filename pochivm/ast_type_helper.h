@@ -343,7 +343,7 @@ struct CppFunctionMetadata
     bool m_isUsingSret;
     // The interp function interface
     //
-    InterpCallCppFunctionImpl m_interpFn;
+    InterpCallCppFunctionImpl m_debugInterpFn;
     // The unique ordinal, starting from 0
     //
     size_t m_functionOrdinal;

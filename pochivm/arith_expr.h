@@ -27,8 +27,8 @@ public:
     void AddImpl(T* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = lhs + rhs;
     }
 
@@ -38,8 +38,8 @@ public:
     void SubImpl(T* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = lhs - rhs;
     }
 
@@ -49,8 +49,8 @@ public:
     void MulImpl(T* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = lhs * rhs;
     }
 
@@ -60,8 +60,8 @@ public:
     void DivImpl(T* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = lhs / rhs;
     }
 
@@ -71,29 +71,29 @@ public:
     void ModImpl(T* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = lhs % rhs;
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectModImpl, AstArithmeticExpr, ModImpl, AstTypeHelper::is_primitive_int_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         if (m_op == '+') {
-            m_interpFn = SelectAddImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectAddImpl(m_lhs->GetTypeId());
         }
         else if (m_op == '-') {
-            m_interpFn = SelectSubImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectSubImpl(m_lhs->GetTypeId());
         }
         else if (m_op == '*') {
-            m_interpFn = SelectMulImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectMulImpl(m_lhs->GetTypeId());
         }
         else if (m_op == '/') {
-            m_interpFn = SelectDivImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectDivImpl(m_lhs->GetTypeId());
         }
         else if (m_op == '%') {
-            m_interpFn = SelectModImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectModImpl(m_lhs->GetTypeId());
         }
         else {
             TestAssert(false);
@@ -144,8 +144,8 @@ public:
     void EqImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs == rhs);
     }
 #pragma clang diagnostic pop
@@ -158,8 +158,8 @@ public:
     void NeqImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs != rhs);
     }
 #pragma clang diagnostic pop
@@ -170,8 +170,8 @@ public:
     void GtImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs > rhs);
     }
 
@@ -181,8 +181,8 @@ public:
     void GEqImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs >= rhs);
     }
 
@@ -192,8 +192,8 @@ public:
     void LtImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs < rhs);
     }
 
@@ -203,47 +203,47 @@ public:
     void LEqImpl(bool* out)
     {
         T lhs, rhs;
-        m_lhs->Interp(&lhs);
-        m_rhs->Interp(&rhs);
+        m_lhs->DebugInterp(&lhs);
+        m_rhs->DebugInterp(&rhs);
         *out = (lhs <= rhs);
     }
 
     GEN_CLASS_METHOD_SELECTOR(SelectLEqImpl, AstComparisonExpr, LEqImpl, AstTypeHelper::is_primitive_type)
 
-    virtual void SetupInterpImpl() override
+    virtual void SetupDebugInterpImpl() override
     {
         if (m_op[0] == '=')
         {
             TestAssert(m_op[1] == '=');
-            m_interpFn = SelectEqImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectEqImpl(m_lhs->GetTypeId());
         }
         else if (m_op[0] == '!')
         {
             TestAssert(m_op[1] == '=');
-            m_interpFn = SelectNeqImpl(m_lhs->GetTypeId());
+            m_debugInterpFn = SelectNeqImpl(m_lhs->GetTypeId());
         }
         else if (m_op[0] == '<')
         {
             if (m_op[1] == '\0')
             {
-                m_interpFn = SelectLtImpl(m_lhs->GetTypeId());
+                m_debugInterpFn = SelectLtImpl(m_lhs->GetTypeId());
             }
             else
             {
                 TestAssert(m_op[1] == '=');
-                m_interpFn = SelectLEqImpl(m_lhs->GetTypeId());
+                m_debugInterpFn = SelectLEqImpl(m_lhs->GetTypeId());
             }
         }
         else if (m_op[0] == '>')
         {
             if (m_op[1] == '\0')
             {
-                m_interpFn = SelectGtImpl(m_lhs->GetTypeId());
+                m_debugInterpFn = SelectGtImpl(m_lhs->GetTypeId());
             }
             else
             {
                 TestAssert(m_op[1] == '=');
-                m_interpFn = SelectGEqImpl(m_lhs->GetTypeId());
+                m_debugInterpFn = SelectGEqImpl(m_lhs->GetTypeId());
             }
         }
         else

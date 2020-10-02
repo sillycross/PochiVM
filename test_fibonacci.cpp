@@ -27,7 +27,7 @@ TEST(Sanity, FibonacciSeq)
     );
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
         FnPrototype interpFn = thread_pochiVMContext->m_curModule->

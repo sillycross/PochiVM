@@ -353,7 +353,7 @@ TEST(SanityNoError, DeclareVarCornerCaseDoesNotCrash)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("TronFn");
@@ -500,7 +500,7 @@ TEST(Sanity, BlockHasNoScopeEffect)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("GoodFn");
@@ -583,7 +583,7 @@ TEST(SanityError, NoReturnValue)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("BadFn");

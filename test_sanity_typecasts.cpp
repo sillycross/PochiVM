@@ -38,7 +38,7 @@ std::function<U(T)> GetStaticCastFn()
     fn.SetBody(Return(StaticCast<U>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
 
@@ -263,7 +263,7 @@ TEST(Sanity, ReinterpretCast_1)
     fn.SetBody(Return(ReinterpretCast<uint64_t*>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
@@ -291,7 +291,7 @@ TEST(Sanity, ReinterpretCast_2)
     fn.SetBody(Return(ReinterpretCast<uint64_t>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
@@ -314,7 +314,7 @@ TEST(Sanity, ReinterpretCast_3)
     fn.SetBody(Return(ReinterpretCast<double*>(val)));
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForInterp();
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     FnPrototype interpFn = thread_pochiVMContext->m_curModule->
                            GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
