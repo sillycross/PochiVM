@@ -41,18 +41,6 @@ SET(FASTINTERP_SOURCES
   get_fs_base_helper.cpp
 )
 
-add_library(fastinterp_tpl_obj OBJECT
-  ${FASTINTERP_TPL_SOURCES}
-)
-# important compiler flags for the object file, must not be changed. see comments in dynamic_specialization_utils.h
-# TODO: clang++ currently does not support -mlarge-data-threshold which would hurt a bit of performance
-#
-set_target_properties(fastinterp_tpl_obj PROPERTIES COMPILE_FLAGS " -mcmodel=medium -fno-pic -fno-pie -fno-exceptions ")
-
-# Unlike runtime_library_builder, it is fine we compile fastinterp_tpl twice
-# since the IR is only for extracting symbol names.
-# The only source of truth of binary data is the object file.
-#
 add_library(fastinterp_tpl_ir OBJECT
   ${FASTINTERP_TPL_SOURCES}
 )
@@ -91,7 +79,7 @@ add_custom_command(
   OUTPUT ${GENERATED_FILES_DIR}/fastinterp_fwd_declarations.generated.h
   OUTPUT ${GENERATED_FILES_DIR}/fastinterp_library.generated.h
   OUTPUT ${generated_src_list}
-  COMMAND ${PROJECT_BINARY_DIR}/fastinterp/build_fast_interp_lib '$<TARGET_OBJECTS:fastinterp_tpl_ir>' '$<TARGET_OBJECTS:fastinterp_tpl_obj>' "${GENERATED_FILES_DIR}"
-  DEPENDS $<TARGET_OBJECTS:fastinterp_tpl_ir> $<TARGET_OBJECTS:fastinterp_tpl_obj> build_fast_interp_lib 
+  COMMAND ${PROJECT_BINARY_DIR}/fastinterp/build_fast_interp_lib '$<TARGET_OBJECTS:fastinterp_tpl_ir>' "${GENERATED_FILES_DIR}"
+  DEPENDS $<TARGET_OBJECTS:fastinterp_tpl_ir> build_fast_interp_lib 
 )
 

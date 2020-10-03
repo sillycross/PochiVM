@@ -56,7 +56,11 @@ constexpr T WARN_UNUSED get_all_bits_zero_value()
 {
     static_assert(std::is_fundamental<T>::value || std::is_pointer<T>::value, "Must be primitive type");
     static_assert(sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8, "Unexpected size");
-    if constexpr(std::is_pointer<T>::value)
+    if constexpr(std::is_same<T, bool>::value)
+    {
+        return false;
+    }
+    else if constexpr(std::is_pointer<T>::value)
     {
         // Technically speaking, 'nullptr' doesn't imply its binary representation is '0',
         // but this is true on all commercial architectures, at least the ones we care.

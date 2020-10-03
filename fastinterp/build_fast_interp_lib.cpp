@@ -78,6 +78,7 @@ struct BoilerplatePack
 };
 
 static std::vector<std::pair<std::string, BoilerplatePack>> g_allBoilerplatePacks;
+static std::mutex g_allBoilerplatePacksMutex;
 
 }   // anonymous namespace
 
@@ -608,23 +609,22 @@ void Populate_X86_64_NopInstructions(uint8_t* addr, size_t length)
 class SourceFileInfo : NonCopyable, NonMovable
 {
 public:
-    void Setup(const std::string& bc_file_, const std::string& obj_file_, const std::string& generated_folder)
+    void Setup(const std::string& bc_file_, const std::string& generated_folder)
     {
-        obj_file = obj_file_;
         bc_file = bc_file_;
         should_work_on = false;
 
         // Figure out generated file names
         //
-        fwd_h_part_path = obj_file + ".fwd.h.part";
-        lib_h_part_path = obj_file + ".lib.h.part";
+        fwd_h_part_path = bc_file + ".fwd.h.part";
+        lib_h_part_path = bc_file + ".lib.h.part";
 
         {
-            ReleaseAssert(obj_file.length() > 0);
-            size_t i = obj_file.length() - 1;
-            while (i > 0 && obj_file[i] != '/') i--;
-            ReleaseAssert(obj_file[i] == '/');
-            std::string filename = obj_file.substr(i + 1);
+            ReleaseAssert(bc_file.length() > 0);
+            size_t i = bc_file.length() - 1;
+            while (i > 0 && bc_file[i] != '/') i--;
+            ReleaseAssert(bc_file[i] == '/');
+            std::string filename = bc_file.substr(i + 1);
             ReleaseAssert(filename.length() > 2);
             ReleaseAssert(filename.substr(filename.length() - 2) == ".o");
             filename = filename.substr(0, filename.length() - 2);
@@ -632,109 +632,192 @@ public:
         }
     }
 
-    // multi-thread-safe prepare phase
-    //
-    void MTSafePrepare()
+    void Work()
     {
-        SMDiagnostic llvmErr;
-        std::unique_ptr<LLVMContext> context(new LLVMContext);
-        std::unique_ptr<Module> module = parseIRFile(bc_file, llvmErr, *context.get());
+        std::set<std::string> allDefinitions, allDeclarations;
+        std::set<std::string> allNeededSymbols;
+        std::vector<std::pair<std::string, BoilerplatePack>> allBoilerplates;
+        std::unique_ptr<LLJIT> J;
 
-        if (module == nullptr)
+        using FnPrototype = void(*)();
+        FnPrototype entryPoint;
+
         {
-            fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bc_file.c_str());
-            llvmErr.print("build_fast_interp_lib" /*programName*/, errs());
-            abort();
+            SMDiagnostic llvmErr;
+            std::unique_ptr<LLVMContext> context(new LLVMContext);
+            std::unique_ptr<Module> module = parseIRFile(bc_file, llvmErr, *context.get());
+
+            if (module == nullptr)
+            {
+                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bc_file.c_str());
+                llvmErr.print("build_fast_interp_lib" /*programName*/, errs());
+                abort();
+            }
+
+            // Iterate the IR file and pick up all the function name symbols
+            //
+            for (Function& f : module->functions())
+            {
+                if (f.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
+                    f.getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+                {
+                    std::string name = f.getName();
+                    // Empty functions are declarations
+                    //
+                    if (!f.empty())
+                    {
+                        ReleaseAssert(!allDefinitions.count(name));
+                        allDefinitions.insert(name);
+                    }
+                    ReleaseAssert(!allDeclarations.count(name));
+                    allDeclarations.insert(name);
+                }
+            }
+
+            // Beyond this point the IR module is gone: we move it to the JIT
+            //
+            ExitOnError exitOnError;
+            ThreadSafeModule tsm(std::move(module), std::move(context));
+
+            // Prepare for JIT execution of function __pochivm_register_runtime_library__ to figure out
+            // which functions are needed by the runtime library, and their detailed type information
+            //
+            J = exitOnError(LLJITBuilder().create());
+
+            char Prefix = EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
+            std::unique_ptr<DynamicLibrarySearchGenerator> R = exitOnError(DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
+            ReleaseAssert(R != nullptr);
+
+            // For undefined symbol in the IR file, first try to resolve in host process (it
+            // contains symbols from system library and our hook __pochivm_report_info__).
+            // If failed, it should be a symbol implemented in other CPP files,
+            // and we should only care about its address (and never actually need to invoke it),
+            // so just resolve it to an unique address using our FakeSymbolResolver.
+            //
+            J->getMainJITDylib().addGenerator(std::move(R));
+            AddFakeSymbolResolverGenerator(J.get());
+
+            exitOnError(J->addIRModule(std::move(tsm)));
+
+            auto entryPointSym = exitOnError(J->lookup("__pochivm_build_fast_interp_library__"));
+            entryPoint = reinterpret_cast<FnPrototype>(entryPointSym.getAddress());
         }
 
-        // Iterate the IR file and pick up all the function name symbols
+        // Critical section of executing the JIT involves access to global variable g_allBoilerplatePacks
+        // So it must be executed sequentially.
         //
-        for (Function& f : module->functions())
         {
-            if (f.getLinkage() == GlobalValue::LinkageTypes::LinkOnceODRLinkage ||
-                f.getLinkage() == GlobalValue::LinkageTypes::WeakODRLinkage ||
-                f.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
-                f.getLinkage() == GlobalValue::LinkageTypes::ExternalWeakLinkage ||
-                f.getLinkage() == GlobalValue::LinkageTypes::AvailableExternallyLinkage)
+            std::lock_guard<std::mutex> lockGuard(g_allBoilerplatePacksMutex);
+
+            std::map<uintptr_t, std::string> addrToSymbol;
+            std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
+            g_allBoilerplatePacks.clear();
+            entryPoint();
+            ExitOnError exitOnError;
+            for (const std::string& symbol : allDeclarations)
             {
-                std::string name = f.getName();
-                // Empty functions are declarations
-                //
+                auto sym = exitOnError(J->lookup(symbol));
+                uintptr_t addr = sym.getAddress();
+                if (addrToSymbol.count(addr))
+                {
+                    hasMultipleSymbolsMappingToThisAddress.insert(addr);
+                }
+                addrToSymbol[addr] = symbol;
+            }
+
+            for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+            {
+                BoilerplatePack& bp = it->second;
+                for (BoilerplateInstance& inst : bp.m_instances)
+                {
+                    uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
+                    if (hasMultipleSymbolsMappingToThisAddress.count(addr))
+                    {
+                        fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
+                                        "in boilerplate for %s. Please report a bug.\n",
+                                it->first.c_str());
+                        abort();
+                    }
+                    ReleaseAssert(addrToSymbol.count(addr));
+                    inst.m_symbolName = addrToSymbol[addr];
+                    ReleaseAssert(allDefinitions.count(inst.m_symbolName));
+                    ReleaseAssert(!allNeededSymbols.count(inst.m_symbolName));
+                    allNeededSymbols.insert(inst.m_symbolName);
+                }
+            }
+            allBoilerplates = g_allBoilerplatePacks;
+        }
+        //
+        // End of critical section
+
+        std::string obj_file = bc_file + ".obj.o";
+
+        // Strip everything but the needed symbols to reduce the work of llc
+        //
+        {
+            SMDiagnostic llvmErr;
+            std::unique_ptr<LLVMContext> context(new LLVMContext);
+            std::unique_ptr<Module> module = parseIRFile(bc_file, llvmErr, *context.get());
+
+            if (module == nullptr)
+            {
+                fprintf(stderr, "[ERROR] An error occurred while parsing IR file '%s', detail:\n", bc_file.c_str());
+                llvmErr.print("build_fast_interp_lib" /*programName*/, errs());
+                abort();
+            }
+
+            for (Function& f : module->functions())
+            {
                 if (!f.empty())
                 {
-                    ReleaseAssert(!allDefinitions.count(name));
-                    allDefinitions.insert(name);
+                    std::string name = f.getName();
+                    if (!allNeededSymbols.count(name))
+                    {
+                        f.deleteBody();
+                        f.setComdat(nullptr);
+                    }
                 }
-                ReleaseAssert(!allDeclarations.count(name));
-                allDeclarations.insert(name);
             }
-        }
 
-        // Beyond this point the IR module is gone: we move it to the JIT
-        //
-        ExitOnError exitOnError;
-        ThreadSafeModule tsm(std::move(module), std::move(context));
-
-        // Prepare for JIT execution of function __pochivm_register_runtime_library__ to figure out
-        // which functions are needed by the runtime library, and their detailed type information
-        //
-        J = exitOnError(LLJITBuilder().create());
-
-        char Prefix = EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
-        std::unique_ptr<DynamicLibrarySearchGenerator> R = exitOnError(DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
-        ReleaseAssert(R != nullptr);
-
-        // For undefined symbol in the IR file, first try to resolve in host process (it
-        // contains symbols from system library and our hook __pochivm_report_info__).
-        // If failed, it should be a symbol implemented in other CPP files,
-        // and we should only care about its address (and never actually need to invoke it),
-        // so just resolve it to an unique address using our FakeSymbolResolver.
-        //
-        J->getMainJITDylib().addGenerator(std::move(R));
-        AddFakeSymbolResolverGenerator(J.get());
-
-        exitOnError(J->addIRModule(std::move(tsm)));
-
-        auto entryPointSym = exitOnError(J->lookup("__pochivm_build_fast_interp_library__"));
-        entryPoint = reinterpret_cast<FnPrototype>(entryPointSym.getAddress());
-    }
-
-    // Not MT safe
-    //
-    void PostProcess()
-    {
-        std::map<uintptr_t, std::string> addrToSymbol;
-        std::set<uintptr_t> hasMultipleSymbolsMappingToThisAddress;
-        g_allBoilerplatePacks.clear();
-        entryPoint();
-        ExitOnError exitOnError;
-        for (const std::string& symbol : allDeclarations)
-        {
-            auto sym = exitOnError(J->lookup(symbol));
-            uintptr_t addr = sym.getAddress();
-            if (addrToSymbol.count(addr))
+            // Store IR file
+            //
+            std::string outputIR = bc_file + ".stripped.bc";
             {
-                hasMultipleSymbolsMappingToThisAddress.insert(addr);
-            }
-            addrToSymbol[addr] = symbol;
-        }
-
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
-        {
-            BoilerplatePack& bp = it->second;
-            for (BoilerplateInstance& inst : bp.m_instances)
-            {
-                uintptr_t addr = reinterpret_cast<uintptr_t>(inst.m_ptr);
-                if (hasMultipleSymbolsMappingToThisAddress.count(addr))
+                int fd = creat(outputIR.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                if (fd == -1)
                 {
-                    fprintf(stderr, "[INTERNAL ERROR] A fastinterp boilerplate is resolved to an ambiguous address, "
-                                    "in boilerplate for %s. Please report a bug.\n",
-                            it->first.c_str());
+                    fprintf(stderr, "Failed to open file '%s' for write, errno = %d (%s)\n",
+                            outputIR.c_str(), errno, strerror(errno));
                     abort();
                 }
-                ReleaseAssert(addrToSymbol.count(addr));
-                inst.m_symbolName = addrToSymbol[addr];
-                ReleaseAssert(allDefinitions.count(inst.m_symbolName));
+                raw_fd_ostream fdStream(fd, true /*shouldClose*/);
+                WriteBitcodeToFile(*module.get(), fdStream);
+                if (fdStream.has_error())
+                {
+                    std::error_code ec = fdStream.error();
+                    fprintf(stderr, "Writing to file '%s' failed with errno = %d (%s)\n",
+                            outputIR.c_str(), ec.value(), ec.message().c_str());
+                    abort();
+                }
+                /* fd closed when fdStream is destructed here */
+            }
+
+            // Invoke llc to compile to object file
+            //
+            // Option '--code-model=medium --relocation-model=static' is required,
+            // see comments in dynamic_specialization_utils.h.
+            // 'exception-model=default' seems to mean that exception is disabled.
+            //
+            std::string llc_options = " -O=3 -filetype=obj --code-model=medium --relocation-model=static --exception-model=default ";
+            std::string llc_command_line = std::string("llc ") + llc_options + outputIR + " -o " + obj_file;
+            int r = system(llc_command_line.c_str());
+            if (r != 0)
+            {
+                fprintf(stderr, "Command '%s' failed with return value %d\n", llc_command_line.c_str(), r);
+                abort();
             }
         }
 
@@ -768,7 +851,7 @@ public:
 
         {
             std::map<std::string, BoilerplateInstance*> symbolToInstance;
-            for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+            for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
             {
                 BoilerplatePack& bp = it->second;
                 for (BoilerplateInstance& inst : bp.m_instances)
@@ -821,7 +904,7 @@ public:
             }
         }
 
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
         {
             BoilerplatePack& bp = it->second;
             for (BoilerplateInstance& inst : bp.m_instances)
@@ -867,12 +950,12 @@ public:
         const std::string lib_varname_prefix = "__pochivm_fastinterp_boilerplate_lib_";
         const std::string blueprint_varname_prefix = "__pochivm_fastinterp_boilerplate_blueprint_";
 
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
         {
             fprintf(fp2, "struct %s;\n", it->first.c_str());
         }
         fprintf(fp2, "\n");
-        for (auto it = g_allBoilerplatePacks.begin(); it != g_allBoilerplatePacks.end(); it++)
+        for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
         {
             int blueprint_varname_suffix = 0;
             std::string midfix = GetUniqueSymbolHash(it->first);
@@ -1309,14 +1392,13 @@ public:
         fclose(fp1);
         fclose(fp2);
         fclose(fp3);
+
+        // We are done, update md5 checksum to prevent redundant work next time.
+        //
+        PochiVMHelper::UpdateMd5Checksum(bc_file);
     }
 
-    std::set<std::string> allDefinitions, allDeclarations;
-    std::unique_ptr<LLJIT> J;
-    using FnPrototype = void(*)(void);
-    FnPrototype entryPoint;
     std::string bc_file;
-    std::string obj_file;
     std::string fwd_h_part_path;
     std::string lib_h_part_path;
     std::string lib_cpp_path;
@@ -1429,13 +1511,10 @@ int main(int argc, char** argv)
     InitializeNativeTarget();
     InitializeNativeTargetAsmPrinter();
 
-    // params: [bc_files] [obj_files] [generated_header_dir]
-
-    ReleaseAssert(argc == 4);
+    ReleaseAssert(argc == 3);
     std::string self_binary = argv[0];
     std::string bc_files = argv[1];
-    std::string obj_files = argv[2];
-    std::string output_dir = argv[3];
+    std::string output_dir = argv[2];
 
     bool selfBinaryChanged = false;
     if (!PochiVMHelper::CheckMd5Match(self_binary))
@@ -1444,25 +1523,21 @@ int main(int argc, char** argv)
     }
 
     std::vector<std::string> allBcFiles = ProcessFileList(bc_files);
-    std::vector<std::string> allObjFiles = ProcessFileList(obj_files);
-
-    ReleaseAssert(allBcFiles.size() == allObjFiles.size());
 
     std::vector<SourceFileInfo*> sfiList;
     for (size_t i = 0; i < allBcFiles.size(); i++)
     {
         SourceFileInfo* sfi = new SourceFileInfo;
-        sfi->Setup(allBcFiles[i], allObjFiles[i], output_dir);
+        sfi->Setup(allBcFiles[i], output_dir);
         sfiList.push_back(sfi);
-        bool isUnchanged = PochiVMHelper::CheckMd5Match(sfi->obj_file);
+        bool isUnchanged = PochiVMHelper::CheckMd5Match(sfi->bc_file);
         if (selfBinaryChanged || !isUnchanged)
         {
             sfi->should_work_on = true;
         }
     }
 
-    // 'jit.lookup' is the most time-consuming step. Do it parallel on all object files
-    //
+    auto parallelExecute = [](simple_mt_queue* tasks)
     {
         size_t parallelism;
         unsigned int numCPUs = std::thread::hardware_concurrency();
@@ -1480,17 +1555,6 @@ int main(int argc, char** argv)
             parallelism = numCPUs - 2;
         }
 
-        simple_mt_queue taskQueue;
-        for (SourceFileInfo* sfi : sfiList)
-        {
-            if (sfi->should_work_on)
-            {
-                taskQueue.push([sfi]() {
-                    sfi->MTSafePrepare();
-                });
-            }
-        }
-
         auto threadFn = [](simple_mt_queue* q)
         {
             while (true)
@@ -1504,22 +1568,30 @@ int main(int argc, char** argv)
         std::vector<std::thread*> workers;
         for (size_t i = 0; i < parallelism; i++)
         {
-            workers.push_back(new std::thread(threadFn, &taskQueue));
+            workers.push_back(new std::thread(threadFn, tasks));
         }
 
         for (size_t i = 0; i < parallelism; i++)
         {
             workers[i]->join();
         }
-    }
+    };
 
-    for (SourceFileInfo* sfi : sfiList)
+    // 'jit.lookup' and compiling to object files are very time-consuming steps. Do it parallel on all IR files.
+    //
     {
-        if (sfi->should_work_on)
+        simple_mt_queue taskQueue;
+        for (SourceFileInfo* sfi : sfiList)
         {
-            sfi->PostProcess();
-            PochiVMHelper::UpdateMd5Checksum(sfi->obj_file);
+            if (sfi->should_work_on)
+            {
+                taskQueue.push([sfi]() {
+                    sfi->Work();
+                });
+            }
         }
+
+        parallelExecute(&taskQueue);
     }
 
     std::string output1_name = output_dir + "/fastinterp_fwd_declarations.generated.h";
