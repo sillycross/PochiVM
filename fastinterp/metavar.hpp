@@ -16,6 +16,7 @@ static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp 
 #include "pochivm/common.h"
 #include "pochivm/reflective_stringify_helper.h"
 #include "pochivm/for_each_primitive_type.h"
+#include "fastinterp_tpl_opaque_params.h"
 #include "fastinterp_boilerplate_allowed_shapes.h"
 
 namespace PochiVM
@@ -98,6 +99,10 @@ public:
     friend TypedMetaVar<enumValueRangeExclusive> CreateEnumMetaVar(const char* name);
     friend TypedMetaVar<MetaVarType::PRIMITIVE_TYPE> CreateTypeMetaVar(const char* name);
     friend TypedMetaVar<MetaVarType::BOOL> CreateBoolMetaVar(const char* name);
+    template<int maxIntegralParamsInclusive>
+    friend TypedMetaVar<static_cast<FINumOpaqueIntegralParams>(maxIntegralParamsInclusive + 1)> CreateOpaqueIntegralParamsLimit();
+    template<int maxFloatingParamsInclusive>
+    friend TypedMetaVar<static_cast<FINumOpaqueFloatingParams>(maxFloatingParamsInclusive + 1)> CreateOpaqueFloatParamsLimit();
 
 private:
     TypedMetaVar() = default;
@@ -118,6 +123,32 @@ TypedMetaVar<enumValueRangeExclusive> CreateEnumMetaVar(const char* name)
     ret.m_enum_bound = static_cast<int>(enumValueRangeExclusive);
     ReleaseAssert(ret.m_enum_bound > 0);
     ret.m_enum_typename = __pochivm_stringify_type__<EnumType>();
+    return ret;
+}
+
+template<int maxIntegralParamsInclusive>
+TypedMetaVar<static_cast<FINumOpaqueIntegralParams>(maxIntegralParamsInclusive + 1)> CreateOpaqueIntegralParamsLimit()
+{
+    static_assert(0 <= maxIntegralParamsInclusive && maxIntegralParamsInclusive <= x_fastinterp_max_integral_params);
+    TypedMetaVar<static_cast<FINumOpaqueIntegralParams>(maxIntegralParamsInclusive + 1)> ret;
+    ret.m_type = MetaVarType::ENUM;
+    ret.m_name = "numOpaqueIntegralParams";
+    ret.m_enum_bound = maxIntegralParamsInclusive + 1;
+    ReleaseAssert(ret.m_enum_bound > 0);
+    ret.m_enum_typename = __pochivm_stringify_type__<FINumOpaqueIntegralParams>();
+    return ret;
+}
+
+template<int maxFloatingParamsInclusive>
+TypedMetaVar<static_cast<FINumOpaqueFloatingParams>(maxFloatingParamsInclusive + 1)> CreateOpaqueFloatParamsLimit()
+{
+    static_assert(0 <= maxFloatingParamsInclusive && maxFloatingParamsInclusive <= x_fastinterp_max_floating_point_params);
+    TypedMetaVar<static_cast<FINumOpaqueFloatingParams>(maxFloatingParamsInclusive + 1)> ret;
+    ret.m_type = MetaVarType::ENUM;
+    ret.m_name = "numOpaqueFloatingParams";
+    ret.m_enum_bound = maxFloatingParamsInclusive + 1;
+    ReleaseAssert(ret.m_enum_bound > 0);
+    ret.m_enum_typename = __pochivm_stringify_type__<FINumOpaqueFloatingParams>();
     return ret;
 }
 
@@ -234,10 +265,55 @@ struct metavar_prefix_cond_fn_checker
     using impl = typename impl3<VArgs...>::template impl4<void>::impl5;
 };
 
+template<typename... >
+struct type_tpl_sequence {};
+
+template<typename T, int N, typename... S>
+struct gen_type_tpl_sequence : gen_type_tpl_sequence<T, N-1, T, S...> {};
+
+template<typename T, typename... S>
+struct gen_type_tpl_sequence<T, 0, S...>
+{
+    using type = type_tpl_sequence<S...>;
+};
+
+template<typename T, int N, typename C>
+struct append_type_tpl_sequence_front;
+
+template<typename T, int N, typename... TS1>
+struct append_type_tpl_sequence_front<T, N, type_tpl_sequence<TS1...>>
+{
+    using type = typename gen_type_tpl_sequence<T, N, TS1...>::type;
+};
+
+template<typename T1, int N1, typename T2, int N2>
+using type_tpl_sequence_t = typename append_type_tpl_sequence_front<T1, N1, typename gen_type_tpl_sequence<T2, N2>::type>::type;
+
+template<typename C>
+struct metavar_get_user_fn_helper;
+
+template<typename... TSeq>
+struct metavar_get_user_fn_helper<type_tpl_sequence<TSeq...>>
+{
+    template<typename Materializer, typename... TArgs>
+    struct impl
+    {
+        template<auto... VArgs>
+        struct impl2
+        {
+            using FnType = decltype(Materializer::template f<TArgs..., VArgs..., TSeq...>);
+            static void* get()
+            {
+                return reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs..., TSeq...>);
+            }
+        };
+    };
+};
+
 template<typename Materializer, auto... metaVarTypes>
 struct metavar_materialize_helper
 {
-    template<auto... remainingMetaVarTypes>
+    template<int numBtParams, int numFpParams, auto... remainingMetaVarTypes>
     struct impl
     {
         // This class is only used for empty parameter pack
@@ -263,20 +339,26 @@ struct metavar_materialize_helper
                         std::is_same<Dummy, void>::value &&
                         std::integral_constant<bool, (Materializer::template cond<TArgs..., VArgs...>())>::value)>::type>
                 {
+
                     // This function is not performance-sensitive, but compile-time sensitive (we are going to compile
                     // tens of thousands of these but they are only executed once and at build phase), tell compiler to not optimize
                     //
                     static void __attribute__((__optnone__, __noinline__)) invoke(MetaVarMaterializedList* result,
                                                                                   const PartialMetaVarValueInstance& instance)
                     {
+                        using UserFnGetter = typename metavar_get_user_fn_helper<type_tpl_sequence_t<uint64_t, numBtParams, double, numFpParams>>
+                            ::template impl<Materializer, TArgs...>::template impl2<VArgs...>;
+
                         ReleaseAssert(instance.value.size() == result->m_metavars.size());
                         MetaVarMaterializedInstance inst;
                         inst.m_values = instance.value;
+                        /*
                         using FnType = decltype(Materializer::template f<TArgs..., VArgs...>);
                         static_assert(is_allowed_boilerplate_shape<FnType>::value,
                                 "'f' is not among the allowed shapes of boilerplate functions. "
                                 "If you need a new shape, put it in fastinterp_boilerplate_allowed_shapes.h.");
-                        inst.m_fnPtr = reinterpret_cast<void*>(Materializer::template f<TArgs..., VArgs...>);
+                        */
+                        inst.m_fnPtr = UserFnGetter::get();
                         result->m_instances.push_back(inst);
                     }
                 };
@@ -287,7 +369,7 @@ struct metavar_materialize_helper
     static void materialize(MetaVarMaterializedList* result)
     {
         PartialMetaVarValueInstance inst;
-        impl<metaVarTypes...>::template impl2<>::template impl3<>::template impl4<void>::invoke(result, inst);
+        impl<0 /*numBtParams*/, 0 /*numFpParams*/, metaVarTypes...>::template impl2<>::template impl3<>::template impl4<void>::invoke(result, inst);
     }
 };
 
@@ -302,8 +384,8 @@ FOR_EACH_PRIMITIVE_TYPE
 };
 
 template<typename Materializer, auto... metaVarTypes>
-template<auto first, auto... remainingMetaVarTypes>
-struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, remainingMetaVarTypes...>
+template<int numBtParams, int numFpParams, auto first, auto... remainingMetaVarTypes>
+struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<numBtParams, numFpParams, first, remainingMetaVarTypes...>
 {
     template<typename... TArgs>
     struct impl2
@@ -326,8 +408,21 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                     if constexpr(lb + 1 == ub)
                     {
                         constexpr T value = static_cast<T>(lb);
-                        impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
-                                    result, instance.Push(static_cast<uint64_t>(lb)));
+                        if constexpr(std::is_same<T, FINumOpaqueIntegralParams>::value)
+                        {
+                            impl<lb, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
+                                        result, instance.Push(static_cast<uint64_t>(lb)));
+                        }
+                        else if constexpr(std::is_same<T, FINumOpaqueFloatingParams>::value)
+                        {
+                            impl<numBtParams, lb, remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
+                                        result, instance.Push(static_cast<uint64_t>(lb)));
+                        }
+                        else
+                        {
+                            impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., value>::template impl4<void>::invoke(
+                                        result, instance.Push(static_cast<uint64_t>(lb)));
+                        }
                     }
                     else
                     {
@@ -351,9 +446,9 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                     {
                         if constexpr(first == MetaVarType::BOOL)
                         {
-                            impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., false>::template impl4<void>::invoke(
+                            impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., false>::template impl4<void>::invoke(
                                         result, instance.Push(false));
-                            impl<remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., true>::template impl4<void>::invoke(
+                            impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs...>::template impl3<VArgs..., true>::template impl4<void>::invoke(
                                         result, instance.Push(true));
                         }
                         else if constexpr(first == MetaVarType::PRIMITIVE_TYPE)
@@ -362,18 +457,18 @@ struct metavar_materialize_helper<Materializer, metaVarTypes...>::impl<first, re
                             //
                             constexpr uint64_t x_typeid_pointer_typeid_inc = 1000000000;
 #define F(type)                                                                                                                \
-    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type>::template impl3<VArgs...>::template impl4<void>::invoke(    \
+    impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs..., type>::template impl3<VArgs...>::template impl4<void>::invoke(    \
             result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type)));
                             F(void)
                             FOR_EACH_PRIMITIVE_TYPE
 #undef F
 #define F(type)                                                                                                                 \
-    impl<remainingMetaVarTypes...>::template impl2<TArgs..., type*>::template impl3<VArgs...>::template impl4<void>::invoke(    \
+    impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs..., type*>::template impl3<VArgs...>::template impl4<void>::invoke(    \
             result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_ ## type) + x_typeid_pointer_typeid_inc));
                              F(void)
                              FOR_EACH_PRIMITIVE_TYPE
 #undef F
-                             impl<remainingMetaVarTypes...>::template impl2<TArgs..., void**>::template impl3<VArgs...>::template impl4<void>::invoke(
+                             impl<numBtParams, numFpParams, remainingMetaVarTypes...>::template impl2<TArgs..., void**>::template impl3<VArgs...>::template impl4<void>::invoke(
                                 result, instance.Push(static_cast<uint64_t>(MVTypeIdLabelHelper::Enum_void) + 2 * x_typeid_pointer_typeid_inc));
                         }
                         else
@@ -425,11 +520,11 @@ public:
     }
 
 private:
-    template<bool>
+    template<bool, bool, bool>
     void SanityCheck()
     { }
 
-    template<bool seenValue, auto first, auto... remainingMetaVarTypes>
+    template<bool seenValue, bool seenNumIntegralParams, bool seenNumFloatParams, auto first, auto... remainingMetaVarTypes>
     void SanityCheck()
     {
         using Type = decltype(first);
@@ -439,17 +534,29 @@ private:
             {
                 static_assert(!seenValue, "All type-metavar must precede all value-metavar");
                 ReleaseAssert(!seenValue);
-                SanityCheck<seenValue, remainingMetaVarTypes...>();
+                SanityCheck<seenValue, seenNumIntegralParams, seenNumFloatParams, remainingMetaVarTypes...>();
             }
             else
             {
                 static_assert(first == MetaVarType::BOOL, "unexpected metavar param");
-                SanityCheck<true, remainingMetaVarTypes...>();
+                SanityCheck<true, seenNumIntegralParams, seenNumFloatParams, remainingMetaVarTypes...>();
             }
+        }
+        else if constexpr(std::is_same<Type, FINumOpaqueIntegralParams>::value)
+        {
+            static_assert(!seenNumIntegralParams, "can at most specify numIntegralParamsLimit once");
+            ReleaseAssert(!seenNumIntegralParams);
+            SanityCheck<true, true, seenNumFloatParams, remainingMetaVarTypes...>();
+        }
+        else if constexpr(std::is_same<Type, FINumOpaqueFloatingParams>::value)
+        {
+            static_assert(!seenNumFloatParams, "can at most specify numIntegralParamsLimit once");
+            ReleaseAssert(!seenNumFloatParams);
+            SanityCheck<true, seenNumIntegralParams, true, remainingMetaVarTypes...>();
         }
         else
         {
-            SanityCheck<true, remainingMetaVarTypes...>();
+            SanityCheck<true, seenNumIntegralParams, seenNumFloatParams, remainingMetaVarTypes...>();
         }
     }
 
@@ -465,7 +572,7 @@ private:
 
     TypedMetaVarList(TypedMetaVar<metaVarTypes>... metavars)
     {
-        SanityCheck<false, metaVarTypes...>();
+        SanityCheck<false, false, false, metaVarTypes...>();
         BuildMetaVarList(metavars...);
     }
 

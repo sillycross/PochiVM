@@ -69,6 +69,28 @@ struct Materializer2
     }
 };
 
+struct Materializer3
+{
+    template<typename T1,
+             FINumOpaqueIntegralParams numIParams,
+             FINumOpaqueFloatingParams numFParams>
+    static constexpr bool cond()
+    {
+        if (std::is_same<T1, int>::value || std::is_same<T1, double>::value) { return true; }
+        return false;
+    }
+
+    template<typename T1,
+             FINumOpaqueIntegralParams numIParams,
+             FINumOpaqueFloatingParams numFParams,
+             typename... OpaqueParams>
+    static T1 f(OpaqueParams... /*oplist*/) noexcept
+    {
+        static_assert(sizeof...(OpaqueParams) == static_cast<size_t>(numIParams) + static_cast<size_t>(numFParams));
+        return 0;
+    }
+};
+
 }   // namespace TestMetaVar
 
 using namespace TestMetaVar;
@@ -207,4 +229,69 @@ TEST(MetaVarSanity, Test2)
         ReleaseAssert(list.m_instances[i].m_values.size() == 1);
         ReleaseAssert(list.m_instances[i].m_values[0] == x.value);
     }
+}
+
+TEST(MetaVarSanity, Test3)
+{
+    MetaVarMaterializedList list = CreateMetaVarList(
+                CreateTypeMetaVar("a"),
+                CreateOpaqueIntegralParamsLimit<x_fastinterp_max_integral_params>(),
+                CreateOpaqueFloatParamsLimit<x_fastinterp_max_floating_point_params>()
+    ).Materialize<Materializer3>();
+
+    ReleaseAssert(list.m_metavars.size() == 3);
+    ReleaseAssert(list.m_metavars[0].m_name == std::string("a"));
+    ReleaseAssert(list.m_metavars[0].m_type == MetaVarType::PRIMITIVE_TYPE);
+    ReleaseAssert(list.m_metavars[1].m_type == MetaVarType::ENUM);
+    ReleaseAssert(list.m_metavars[2].m_type == MetaVarType::ENUM);
+
+    ReleaseAssert(list.m_instances.size() == 2 * static_cast<size_t>(x_fastinterp_max_integral_params + 1)
+                                               * static_cast<size_t>(x_fastinterp_max_floating_point_params + 1));
+
+    ReleaseAssert(list.m_instances.size() == 32);
+
+#define FOR_EACH_CHECKLIST  \
+    F(1, int, 0, 1, double)      \
+    F(2, int, 0, 2, double, double)      \
+    F(3, int, 0, 3, double, double, double)      \
+    F(4, int, 1, 0, uint64_t)              \
+    F(5, int, 1, 1, uint64_t, double)      \
+    F(6, int, 1, 2, uint64_t, double, double)      \
+    F(7, int, 1, 3, uint64_t, double, double, double)      \
+    F(8, int, 2, 0, uint64_t, uint64_t)              \
+    F(9, int, 2, 1, uint64_t, uint64_t, double)      \
+    F(10, int, 2, 2, uint64_t, uint64_t, double, double)      \
+    F(11, int, 2, 3, uint64_t, uint64_t, double, double, double)      \
+    F(12, int, 3, 0, uint64_t, uint64_t, uint64_t)              \
+    F(13, int, 3, 1, uint64_t, uint64_t, uint64_t, double)      \
+    F(14, int, 3, 2, uint64_t, uint64_t, uint64_t, double, double)      \
+    F(15, int, 3, 3, uint64_t, uint64_t, uint64_t, double, double, double)      \
+    F(17, double, 0, 1, double)      \
+    F(18, double, 0, 2, double, double)      \
+    F(19, double, 0, 3, double, double, double)      \
+    F(20, double, 1, 0, uint64_t)              \
+    F(21, double, 1, 1, uint64_t, double)      \
+    F(22, double, 1, 2, uint64_t, double, double)      \
+    F(23, double, 1, 3, uint64_t, double, double, double)      \
+    F(24, double, 2, 0, uint64_t, uint64_t)              \
+    F(25, double, 2, 1, uint64_t, uint64_t, double)      \
+    F(26, double, 2, 2, uint64_t, uint64_t, double, double)      \
+    F(27, double, 2, 3, uint64_t, uint64_t, double, double, double)      \
+    F(28, double, 3, 0, uint64_t, uint64_t, uint64_t)              \
+    F(29, double, 3, 1, uint64_t, uint64_t, uint64_t, double)      \
+    F(30, double, 3, 2, uint64_t, uint64_t, uint64_t, double, double)      \
+    F(31, double, 3, 3, uint64_t, uint64_t, uint64_t, double, double, double)
+
+    ReleaseAssert(list.m_instances[0].m_fnPtr == reinterpret_cast<void*>(Materializer3::f<
+        int, static_cast<FINumOpaqueIntegralParams>(0), static_cast<FINumOpaqueFloatingParams>(0)>));
+    ReleaseAssert(list.m_instances[16].m_fnPtr == reinterpret_cast<void*>(Materializer3::f<
+        double, static_cast<FINumOpaqueIntegralParams>(0), static_cast<FINumOpaqueFloatingParams>(0)>));
+
+#define F(ordinal, type1, v1, v2, ...)  \
+    ReleaseAssert(list.m_instances[ordinal].m_fnPtr == reinterpret_cast<void*>(Materializer3::f<        \
+        type1, static_cast<FINumOpaqueIntegralParams>(v1), static_cast<FINumOpaqueFloatingParams>(v2), __VA_ARGS__>));
+
+    FOR_EACH_CHECKLIST
+#undef F
+#undef FOR_EACH_CHECKLIST
 }

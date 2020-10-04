@@ -4,6 +4,7 @@
 
 using namespace PochiVM;
 
+#if 0
 TEST(TestFastInterpInternal, SanitySymbolNames)
 {
     // Sanity check 'SelectBoilerplateBluePrint' indeed selected the boilerplate we expected by checking its symbol name
@@ -2049,3 +2050,4 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
         ReleaseAssert(result == 78498);
     }
 }
+#endif
