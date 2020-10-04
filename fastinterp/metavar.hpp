@@ -550,7 +550,7 @@ private:
         }
         else if constexpr(std::is_same<Type, FINumOpaqueFloatingParams>::value)
         {
-            static_assert(!seenNumFloatParams, "can at most specify numIntegralParamsLimit once");
+            static_assert(!seenNumFloatParams, "can at most specify numFloatParamsLimit once");
             ReleaseAssert(!seenNumFloatParams);
             SanityCheck<true, seenNumIntegralParams, true, remainingMetaVarTypes...>();
         }

@@ -3,6 +3,7 @@
 #include "pochivm/ast_arithmetic_expr_type.h"
 #include "pochivm/ast_comparison_expr_type.h"
 #include "pochivm/interp_control_signal.h"
+#include "fastinterp_tpl_opaque_params.h"
 #include "fastinterp_tpl_abi_distinct_type_helper.h"
 #include "fastinterp_tpl_astblock.h"
 #include "fastinterp_tpl_astcall.h"
