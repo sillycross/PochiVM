@@ -41,7 +41,7 @@ TEST(TestFastInterpInternal, Sanity_1)
                                                                AstArithmeticExprType::ADD);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -64,7 +64,7 @@ TEST(TestFastInterpInternal, Sanity_2)
                 AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     inst->PopulateConstantPlaceholder<int>(0, 123);
     inst->PopulateConstantPlaceholder<int>(2, 45678);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -89,7 +89,7 @@ TEST(TestFastInterpInternal, Sanity_3)
                 AstArithmeticExprType::MUL);
     FastInterpCodegenEngine engine;
     FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(blueprint);
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<double>(), 233, inst);
     inst->PopulateConstantPlaceholder<double>(0, 123.456);
     inst->PopulateConstantPlaceholder<double>(2, 789.012);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -130,7 +130,7 @@ TEST(TestFastInterpInternal, Sanity_4)
                     FIOperandShapeCategory::COMPLEX,
                     FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::MUL));
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst3);
     inst1->PopulateConstantPlaceholder<int>(0, 321);
     inst1->PopulateConstantPlaceholder<int>(2, 567);
     inst2->PopulateConstantPlaceholder<int>(0, -123);
@@ -174,7 +174,7 @@ TEST(TestFastInterpInternal, Sanity_5)
                     FIOperandShapeCategory::COMPLEX,
                     FIOperandShapeCategory::COMPLEX,
                     AstArithmeticExprType::DIV));
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst3);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<double>(), 233, inst3);
     inst1->PopulateConstantPlaceholder<double>(0, 321);
     inst1->PopulateConstantPlaceholder<double>(2, 567);
     inst2->PopulateConstantPlaceholder<double>(0, -123);
@@ -196,7 +196,7 @@ TEST(TestFastInterpInternal, SanityThreadLocal_1)
     FastInterpBoilerplateInstance* inst1 = engine.InstantiateBoilerplate(
                 BoilerplateLibrary::SelectBoilerplateBluePrint(
                     TypeId::Get<int*>().GetDefaultFastInterpTypeId()));
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst1);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int*>(), 233, inst1);
     inst1->PopulateConstantPlaceholder<uint32_t>(0, 24);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
@@ -643,7 +643,7 @@ TEST(TestFastInterpInternal, SanityArithmeticExpr)
                                             arithType));
                             FillPlaceholderForArithOrCompareExpr(true /*isLhs*/, dataType, lhsIndexType, lhsOsc, &engine, inst, lhsFn);
                             FillPlaceholderForArithOrCompareExpr(false /*isLhs*/, dataType, rhsIndexType, rhsOsc, &engine, inst, rhsFn);
-                            engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+                            engine.TestOnly_RegisterUnitTestFunctionEntryPoint(dataType, 233, inst);
                             std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
                             void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
                             ReleaseAssert(fnPtrVoid != nullptr);
@@ -732,7 +732,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
                 PopulateConstantPlaceholderFn pcpFn = GetPopulateConstantPlaceholderFn(dataType);
                 pcpFn(inst, 0, dataFn);
             }
-            engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+            engine.TestOnly_RegisterUnitTestFunctionEntryPoint(dataType, 233, inst);
             std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
             void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
             ReleaseAssert(fnPtrVoid != nullptr);
@@ -749,7 +749,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
                     BoilerplateLibrary::SelectBoilerplateBluePrint(
                         TypeId::Get<void*>().GetDefaultFastInterpTypeId(), false /*isZero*/));
         inst->PopulateConstantPlaceholder<void*>(0, reinterpret_cast<void*>(2333));
-        engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+        engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void*>(), 233, inst);
         std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
         void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
         ReleaseAssert(fnPtrVoid != nullptr);
@@ -764,7 +764,7 @@ TEST(TestFastInterpInternal, SanityLiteralExpr)
         FastInterpBoilerplateInstance* inst = engine.InstantiateBoilerplate(
                     BoilerplateLibrary::SelectBoilerplateBluePrint(
                         TypeId::Get<void*>().GetDefaultFastInterpTypeId(), true /*isZero*/));
-        engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+        engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void*>(), 233, inst);
         std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
         void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
         ReleaseAssert(fnPtrVoid != nullptr);
@@ -940,7 +940,7 @@ TEST(TestFastInterpInternal, SanityComparisonExpr)
                                                 compareType));
                                 FillPlaceholderForArithOrCompareExpr(true /*isLhs*/, dataType, lhsIndexType, lhsOsc, &engine, inst, lhsFn);
                                 FillPlaceholderForArithOrCompareExpr(false /*isLhs*/, dataType, rhsIndexType, rhsOsc, &engine, inst, rhsFn);
-                                engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+                                engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<bool>(), 233, inst);
                                 std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
                                 void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
                                 ReleaseAssert(fnPtrVoid != nullptr);
@@ -1035,7 +1035,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_1)
     inst6->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
     inst6->PopulateBoilerplateFnPtrPlaceholder(2, inst4);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst6);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst6);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -1112,7 +1112,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_2)
     inst6->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
     inst6->PopulateBoilerplateFnPtrPlaceholder(2, inst4);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst6);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst6);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -1162,7 +1162,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_3)
     inst->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
     inst->PopulateCppFnPtrPlaceholder(0, cppFn);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -1212,7 +1212,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_4)
     inst->PopulateConstantPlaceholder<void*>(1, reinterpret_cast<void*>(12345));
     inst->PopulateCppFnPtrPlaceholder(1, exnHandler);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -1308,7 +1308,7 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
     inst5->PopulateBoilerplateFnPtrPlaceholder(0, inst1);
     inst5->PopulateBoilerplateFnPtrPlaceholder(1, inst3);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst5);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<bool>(), 233, inst5);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -1432,7 +1432,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
 
     fib_fn->PopulateBoilerplateFnPtrPlaceholder(0, if_stmt);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn);
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn, true /*isNoExcept*/);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     using FnProto = void(*)();
@@ -1557,10 +1557,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 
     fib_fn->PopulateBoilerplateFnPtrPlaceholder(0, if_stmt);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn);
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn, false /*isNoExcept*/);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
-    using FnProto = void(*)();
+    using FnProto = bool(*)();
     FnProto fib = reinterpret_cast<FnProto>(fnPtrVoid);
 
     {
@@ -1568,7 +1568,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
         for (size_t i = 0; i < 16; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
         *reinterpret_cast<int*>(stackFrame + 8) = 25;
         __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(stackFrame);
-        fib();
+        ReleaseAssert(fib() == false);
         uint64_t result = *reinterpret_cast<uint64_t*>(stackFrame);
         ReleaseAssert(result == 75025);
     }
@@ -1721,7 +1721,7 @@ TEST(TestFastInterpInternal, SanityCallExprParams)
 
     extraParamList3->PopulateBoilerplateFnPtrPlaceholder(0, param11);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), inst);
+    engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     ReleaseAssert(fnPtrVoid != nullptr);
@@ -2025,7 +2025,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     return_stmt->PopulateConstantPlaceholder<uint32_t>(0, 32);
     main_fn->PopulateBoilerplateFnPtrPlaceholder(3, return_stmt);
 
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), main_fn);
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), main_fn, true /*isNoExcept*/);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
     void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
     using FnProto = void(*)();

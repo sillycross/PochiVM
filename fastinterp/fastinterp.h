@@ -5,4 +5,4 @@
 
 #include "fastinterp_all_tpl_headers.h"
 #include "fastinterp_helper.h"
-#include "generated/fastinterp_library.generated.h"
+#include "fastinterp_codegen_helper.h"

@@ -46,6 +46,8 @@ using namespace llvm::object;
 
 namespace {
 
+const uint32_t MAX_PLACEHOLDER_ORD = 64;
+
 struct RelocationInfo
 {
     uint64_t offset;
@@ -268,6 +270,12 @@ bool IsBoilerplateFnPtrPlaceholder(const std::string symbol, uint32_t& placehold
         return true;
     }
     return false;
+}
+
+std::string GetBoilerplateFnPtrPlaceholderName(uint32_t placeholderOrdinal)
+{
+    std::string pref = "__pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_";
+    return pref + std::to_string(placeholderOrdinal);
 }
 
 bool IsCppFnPtrPlaceholder(const std::string symbol, uint32_t& placeholderOrd /*out*/)
@@ -755,8 +763,6 @@ public:
 
         std::string obj_file = bc_file + ".obj.o";
 
-        // Strip everything but the needed symbols to reduce the work of llc
-        //
         {
             SMDiagnostic llvmErr;
             std::unique_ptr<LLVMContext> context(new LLVMContext);
@@ -769,6 +775,8 @@ public:
                 abort();
             }
 
+            // Strip everything but the needed symbols to reduce the work of llc
+            //
             for (Function& f : module->functions())
             {
                 if (!f.empty())
@@ -780,6 +788,108 @@ public:
                         f.setComdat(nullptr);
                     }
                 }
+            }
+
+            // Convert calling convention to GHC
+            //
+            const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
+
+            // Step 1: change all calls to boilerplate placeholders to GHC
+            //
+            for (uint32_t i = 0; i < MAX_PLACEHOLDER_ORD; i++)
+            {
+                std::string phname = GetBoilerplateFnPtrPlaceholderName(i);
+                Function* phFn = module->getFunction(phname);
+                if (phFn != nullptr)
+                {
+                    phFn->setCallingConv(CallingConv::GHC);
+                    for (User* fnUser : phFn->users())
+                    {
+                        Value* value = fnUser;
+                        if (isa<Instruction>(value))
+                        {
+                            Instruction* inst = dyn_cast<Instruction>(value);
+                            if (isa<CallInst>(inst))
+                            {
+                                CallInst* callInst = dyn_cast<CallInst>(inst);
+                                ReleaseAssert(!callInst->isIndirectCall());
+                                ReleaseAssert(callInst->getCalledFunction() == phFn);
+                                callInst->setCallingConv(CallingConv::GHC);
+                            }
+                            else
+                            {
+                                ReleaseAssert(false && "unexpected");
+                            }
+                        }
+                        else if (isa<GlobalValue>(value))
+                        {
+                            ReleaseAssert(false && "unexpected");
+                        }
+                        else if (isa<Constant>(value))
+                        {
+                            if (isa<ConstantExpr>(value))
+                            {
+                                ConstantExpr* expr = dyn_cast<ConstantExpr>(value);
+                                ReleaseAssert(expr->isCast());
+                                ReleaseAssert(expr->getOpcode() == Instruction::BitCast);
+                                ReleaseAssert(expr->getOperand(0) == phFn);
+                                for (User* opUser : expr->users())
+                                {
+                                    if (isa<CallInst>(opUser))
+                                    {
+                                        CallInst* callInst = dyn_cast<CallInst>(opUser);
+                                        ReleaseAssert(!callInst->isIndirectCall());
+                                        ReleaseAssert(callInst->getCalledOperand() == expr);
+                                        callInst->setCallingConv(CallingConv::GHC);
+                                    }
+                                    else
+                                    {
+                                        ReleaseAssert(false && "unexpected");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                ReleaseAssert(false && "unexpected");
+                            }
+                        }
+                        else if (isa<Operator>(value))
+                        {
+                            ReleaseAssert(false && "unexpected");
+                        }
+                        else
+                        {
+                            ReleaseAssert(false && "unhandled type");
+                        }
+                    }
+                }
+            }
+
+            // Step 2: change all boilerplates (except the special cdecl ones) to GHC
+            //
+            std::set<std::string> nonGhcSymbols;
+            for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
+            {
+                if (it->first == cdeclInterfaceName)
+                {
+                    BoilerplatePack& bp = it->second;
+                    for (BoilerplateInstance& inst : bp.m_instances)
+                    {
+                        ReleaseAssert(!nonGhcSymbols.count(inst.m_symbolName));
+                        nonGhcSymbols.insert(inst.m_symbolName);
+                    }
+                }
+            }
+
+            for (const std::string& symbolName : allNeededSymbols)
+            {
+                if (nonGhcSymbols.count(symbolName))
+                {
+                    continue;
+                }
+                Function* func = module->getFunction(symbolName);
+                ReleaseAssert(func != nullptr && !func->empty());
+                func->setCallingConv(CallingConv::GHC);
             }
 
             // Store IR file

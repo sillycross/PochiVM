@@ -1,4 +1,4 @@
-#include "fastinterp_helper.h"
+#include "fastinterp_codegen_helper.h"
 #include "llvm/Support/Memory.h"
 
 namespace PochiVM

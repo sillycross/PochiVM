@@ -34,10 +34,11 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astblock.cpp
   fastinterp_tpl_assign_arith_expr.cpp
   fastinterp_tpl_assign_common.cpp
+  fastinterp_tpl_cdecl_interface.cpp
 )
 
 SET(FASTINTERP_SOURCES
-  fastinterp_helper.cpp
+  fastinterp_codegen_helper.cpp
   get_fs_base_helper.cpp
 )
 
