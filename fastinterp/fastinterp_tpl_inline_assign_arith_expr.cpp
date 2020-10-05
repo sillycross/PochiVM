@@ -31,6 +31,15 @@ struct FIFullyInlineAssignArithExprImpl
 
     template<typename OperandType,
              typename LhsIndexType,
+             typename RhsIndexType>
+    static constexpr bool cond()
+    {
+        if (!is_valid_index_type<RhsIndexType>()) { return false; }
+        return true;
+    }
+
+    template<typename OperandType,
+             typename LhsIndexType,
              typename RhsIndexType,
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()

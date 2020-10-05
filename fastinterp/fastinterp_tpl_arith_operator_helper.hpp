@@ -7,7 +7,7 @@ namespace PochiVM
 {
 
 template<typename OperandType, AstArithmeticExprType operatorType>
-OperandType WARN_UNUSED __attribute__((__always_inline__)) EvaluateArithmeticExpression(OperandType lhs, OperandType rhs)
+OperandType WARN_UNUSED __attribute__((__always_inline__)) EvaluateArithmeticExpression(OperandType lhs, OperandType rhs) noexcept
 {
     OperandType result;
     if constexpr(operatorType == AstArithmeticExprType::ADD) {
