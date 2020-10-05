@@ -108,36 +108,7 @@ struct FIPartialInlineAssignExprImpl
             rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
         }
 
-        OperandType* lhs;
-        if constexpr(lhsShapeCategory == FIOperandShapeCategory::VARIABLE)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            lhs = GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
-        }
-        else if constexpr(lhsShapeCategory == FIOperandShapeCategory::VARPTR_DEREF)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            lhs = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_1);
-        }
-        else if constexpr(lhsShapeCategory == FIOperandShapeCategory::VARPTR_VAR)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_1);
-            LhsIndexType index = *GetLocalVarAddress<LhsIndexType>(stackframe, CONSTANT_PLACEHOLDER_2);
-            lhs = varPtr + index;
-        }
-        else if constexpr(lhsShapeCategory == FIOperandShapeCategory::VARPTR_LIT_NONZERO)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_2(LhsIndexType);
-            OperandType* varPtr = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_1);
-            lhs = varPtr + CONSTANT_PLACEHOLDER_2;
-        }
-        else
-        {
-            static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");
-        }
+        OperandType* lhs = FIOperandShapeCategoryHelper::get_address_1_2<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
 
         *lhs = rhs;
 
