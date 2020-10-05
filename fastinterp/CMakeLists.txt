@@ -35,6 +35,10 @@ SET(FASTINTERP_TPL_SOURCES
   #fastinterp_tpl_assign_arith_expr.cpp
   #fastinterp_tpl_assign_common.cpp
   fastinterp_tpl_cdecl_interface.cpp
+  fastinterp_tpl_partial_inline_assign.cpp
+  fastinterp_tpl_inline_arith_expr.cpp
+  fastinterp_tpl_outlined_arith_expr.cpp
+  fastinterp_tpl_terminator_operator.cpp
 )
 
 SET(FASTINTERP_SOURCES

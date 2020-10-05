@@ -44,4 +44,35 @@ enum class FINumOpaqueFloatingParams
     X_END_OF_ENUM = x_fastinterp_max_floating_point_params + 1
 };
 
+struct FIOpaqueParamsHelper
+{
+    static constexpr bool CanPush(FINumOpaqueIntegralParams size, int num = 1)
+    {
+        return static_cast<int>(size) + num <= x_fastinterp_max_integral_params;
+    }
+
+    static constexpr bool CanPush(FINumOpaqueFloatingParams size, int num = 1)
+    {
+        return static_cast<int>(size) + num <= x_fastinterp_max_floating_point_params;
+    }
+
+    static constexpr bool IsEmpty(FINumOpaqueIntegralParams size)
+    {
+        return static_cast<int>(size) == 0;
+    }
+
+    static constexpr bool IsEmpty(FINumOpaqueFloatingParams size)
+    {
+        return static_cast<int>(size) == 0;
+    }
+};
+
+enum FIBinaryOpNumQuickAccessParams
+{
+    ZERO,
+    ONE,
+    TWO,
+    X_END_OF_ENUM
+};
+
 }   // namespace PochiVM

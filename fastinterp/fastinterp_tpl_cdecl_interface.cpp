@@ -32,10 +32,10 @@ struct FICdeclInterfaceImpl
     // and tail call from cdecl to GHC does not work. C++ compiler is not aware of this of course, so disable it.
     //
     template<typename T>
-    static T f() noexcept __attribute__((disable_tail_calls))
+    static T f(uintptr_t stackframe) noexcept __attribute__((disable_tail_calls))
     {
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(T(*)() noexcept);
-        return BOILERPLATE_FNPTR_PLACEHOLDER_0();
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(T(*)(uintptr_t) noexcept);
+        return BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
     }
 
     static auto metavars()

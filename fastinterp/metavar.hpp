@@ -126,7 +126,7 @@ TypedMetaVar<enumValueRangeExclusive> CreateEnumMetaVar(const char* name)
     return ret;
 }
 
-template<int maxIntegralParamsInclusive>
+template<int maxIntegralParamsInclusive = x_fastinterp_max_integral_params>
 TypedMetaVar<static_cast<FINumOpaqueIntegralParams>(maxIntegralParamsInclusive + 1)> CreateOpaqueIntegralParamsLimit()
 {
     static_assert(0 <= maxIntegralParamsInclusive && maxIntegralParamsInclusive <= x_fastinterp_max_integral_params);
@@ -139,7 +139,7 @@ TypedMetaVar<static_cast<FINumOpaqueIntegralParams>(maxIntegralParamsInclusive +
     return ret;
 }
 
-template<int maxFloatingParamsInclusive>
+template<int maxFloatingParamsInclusive = x_fastinterp_max_floating_point_params>
 TypedMetaVar<static_cast<FINumOpaqueFloatingParams>(maxFloatingParamsInclusive + 1)> CreateOpaqueFloatParamsLimit()
 {
     static_assert(0 <= maxFloatingParamsInclusive && maxFloatingParamsInclusive <= x_fastinterp_max_floating_point_params);

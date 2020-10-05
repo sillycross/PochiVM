@@ -7,6 +7,14 @@
 namespace PochiVM
 {
 
+enum class FISimpleOperandShapeCategory
+{
+    VARIABLE,
+    LITERAL_NONZERO,
+    ZERO,
+    X_END_OF_ENUM
+};
+
 // Fast interp aggregation optimization for operands.
 // In interp, every operator becomes a function call.
 // We want to aggregate simple and common shapes to reduce the number of function calls.
@@ -34,9 +42,6 @@ enum class FIOperandShapeCategory
     // Literal (zero)
     //
     ZERO,
-    // A complex shape not belong to any simple shape above
-    //
-    COMPLEX,
     X_END_OF_ENUM
 };
 

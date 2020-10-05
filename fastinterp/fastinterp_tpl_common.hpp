@@ -73,9 +73,9 @@ using builtin_sjlj_env_t = void*[5];
 // so if the caller accidentally did this, it would trigger a narrowing-conversion warning.
 //
 template<typename LocalVarType>
-inline LocalVarType* __attribute__((__always_inline__)) GetLocalVarAddress(uint32_t offset) noexcept
+inline LocalVarType* __attribute__((__always_inline__)) GetLocalVarAddress(uintptr_t stackframe, uint32_t offset) noexcept
 {
-    return reinterpret_cast<LocalVarType*>(__pochivm_thread_fastinterp_context.m_stackFrame + offset);
+    return reinterpret_cast<LocalVarType*>(stackframe + offset);
 }
 
 // Whether a type is suitable to be used as an array index

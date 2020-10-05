@@ -6,6 +6,39 @@
 namespace PochiVM
 {
 
+struct FISimpleOperandShapeCategoryHelper
+{
+#define OSCHELPER_GENERATE_METHOD(meth_name, placeholder1)                                                      \
+    template<typename OperandType, FISimpleOperandShapeCategory osc>                                            \
+    static OperandType WARN_UNUSED __attribute__((__always_inline__)) meth_name(uintptr_t stackframe) noexcept  \
+    {                                                                                                           \
+        if constexpr(osc == FISimpleOperandShapeCategory::LITERAL_NONZERO)                                      \
+        {                                                                                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, OperandType);                                    \
+            return CONSTANT_PLACEHOLDER_ ## placeholder1;                                                       \
+        }                                                                                                       \
+        else if constexpr(osc == FISimpleOperandShapeCategory::ZERO)                                            \
+        {                                                                                                       \
+            constexpr OperandType v = PochiVM::get_all_bits_zero_value<OperandType>();                          \
+            return v;                                                                                           \
+        }                                                                                                       \
+        else if constexpr(osc == FISimpleOperandShapeCategory::VARIABLE)                                        \
+        {                                                                                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            return *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_ ## placeholder1);         \
+        }                                                                                                       \
+        else                                                                                                    \
+        {                                                                                                       \
+            static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");             \
+        }                                                                                                       \
+    }
+
+    OSCHELPER_GENERATE_METHOD(get_0, 0)
+    OSCHELPER_GENERATE_METHOD(get_1, 1)
+
+#undef OSCHELPER_GENERATE_METHOD
+};
+
 struct FIOperandShapeCategoryHelper
 {
     template<typename OscIndexType, FIOperandShapeCategory osc>
@@ -25,7 +58,7 @@ struct FIOperandShapeCategoryHelper
         }
         return true;
     }
-
+#if 0
     // Generate a method which get the operand using a pair of placeholders of specified ordinals
     // As is all helprs in fastinterp_tpl, always_inline is required.
     //
@@ -86,6 +119,7 @@ struct FIOperandShapeCategoryHelper
     OSCHELPER_GENERATE_METHOD(get_3_4, 3, 4)
 
 #undef OSCHELPER_GENERATE_METHOD
+#endif
 };
 
 }   // namespace PochiVM
