@@ -33,8 +33,8 @@ struct FISimpleOperandShapeCategoryHelper
         }                                                                                                       \
     }
 
-    OSCHELPER_GENERATE_METHOD(get_0, 0)
     OSCHELPER_GENERATE_METHOD(get_1, 1)
+    OSCHELPER_GENERATE_METHOD(get_2, 2)
 
 #undef OSCHELPER_GENERATE_METHOD
 };

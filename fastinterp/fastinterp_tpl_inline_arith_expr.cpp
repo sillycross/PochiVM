@@ -40,12 +40,16 @@ struct FIFullyInlinedArithmeticExprImpl
              FISimpleOperandShapeCategory lhsShapeCategory,
              FISimpleOperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType,
+             bool spillOutput,
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
         if (!std::is_floating_point<OperandType>::value)
         {
-            if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+            if (!spillOutput)
+            {
+                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+            }
         }
         return true;
     }
@@ -54,32 +58,37 @@ struct FIFullyInlinedArithmeticExprImpl
              FISimpleOperandShapeCategory lhsShapeCategory,
              FISimpleOperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType,
+             bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
         if (std::is_floating_point<OperandType>::value)
         {
-            if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+            if (!spillOutput)
+            {
+                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+            }
         }
         return true;
     }
 
     // Placeholder rules:
-    // constant placeholder 0 for LHS
-    // constant placeholder 1 for RHS
+    // constant placeholder 1 for LHS
+    // constant placeholder 2 for RHS
     //
     template<typename OperandType,
              FISimpleOperandShapeCategory lhsShapeCategory,
              FISimpleOperandShapeCategory rhsShapeCategory,
              AstArithmeticExprType arithType,
+             bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
     {
-        OperandType lhs = FISimpleOperandShapeCategoryHelper::get_0<OperandType, lhsShapeCategory>(stackframe);
-        OperandType rhs = FISimpleOperandShapeCategoryHelper::get_1<OperandType, rhsShapeCategory>(stackframe);
+        OperandType lhs = FISimpleOperandShapeCategoryHelper::get_1<OperandType, lhsShapeCategory>(stackframe);
+        OperandType rhs = FISimpleOperandShapeCategoryHelper::get_2<OperandType, rhsShapeCategory>(stackframe);
 
         OperandType result;
         if constexpr(arithType == AstArithmeticExprType::ADD) {
@@ -101,8 +110,19 @@ struct FIFullyInlinedArithmeticExprImpl
             static_assert(type_dependent_false<OperandType>::value, "Unexpected AstArithmeticExprType");
         }
 
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., OperandType) noexcept);
-        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+        if constexpr(!spillOutput)
+        {
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., OperandType) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+        }
+        else
+        {
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
+
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+        }
     }
 
     static auto metavars()
@@ -112,6 +132,7 @@ struct FIFullyInlinedArithmeticExprImpl
                     CreateEnumMetaVar<FISimpleOperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
                     CreateEnumMetaVar<FISimpleOperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
                     CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType"),
+                    CreateBoolMetaVar("spillOutput"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit()
         );
