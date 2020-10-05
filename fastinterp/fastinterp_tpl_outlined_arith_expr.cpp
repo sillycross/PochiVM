@@ -66,7 +66,7 @@ struct FIOutlinedArithmeticExprImpl
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
-        if (!std::is_floating_point<OperandType>::value)
+        if (std::is_floating_point<OperandType>::value)
         {
             // Check space for input
             //
@@ -89,7 +89,7 @@ struct FIOutlinedArithmeticExprImpl
     }
 
     // Placeholder rules:
-    // constant placeholder 0/1 for LHS/RHS if not quickaccess
+    // constant placeholder 1/2 for LHS/RHS if not quickaccess
     //
     template<typename OperandType,
              AstArithmeticExprType arithType,

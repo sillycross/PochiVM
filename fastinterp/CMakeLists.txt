@@ -42,6 +42,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_partial_inline_arith_expr.cpp
   fastinterp_tpl_inline_assign.cpp
   fastinterp_tpl_inline_assign_arith_expr.cpp
+  fastinterp_tpl_outlined_assign.cpp
 )
 
 SET(FASTINTERP_SOURCES
