@@ -2,14 +2,15 @@
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_tpl_operandshape.hpp"
+#include "pochivm/ast_arithmetic_expr_type.h"
 
 namespace PochiVM
 {
 
-// Partially inlined assign expression
-// Takes 1 operand (RHS), outputs 0 operand
+// Fully inlined assign
+// var[var/lit] = var[var/lit]
 //
-struct FIPartialInlineAssignImpl
+struct FIFullyInlineAssignImpl
 {
     template<typename OperandType>
     static constexpr bool cond()
@@ -28,6 +29,7 @@ struct FIPartialInlineAssignImpl
 
     template<typename OperandType,
              typename LhsIndexType,
+             typename RhsIndexType,
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
@@ -42,73 +44,56 @@ struct FIPartialInlineAssignImpl
 
     template<typename OperandType,
              typename LhsIndexType,
+             typename RhsIndexType,
              FIOperandShapeCategory lhsShapeCategory,
-             bool isQuickAccessOperand,
-             FINumOpaqueIntegralParams numOIP>
+             FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!std::is_floating_point<OperandType>::value)
-        {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOIP)) { return false; }
-            }
-        }
+        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
         return true;
     }
 
     template<typename OperandType,
              typename LhsIndexType,
+             typename RhsIndexType,
              FIOperandShapeCategory lhsShapeCategory,
-             bool isQuickAccessOperand,
+             FIOperandShapeCategory rhsShapeCategory,
+             FINumOpaqueIntegralParams numOIP>
+    static constexpr bool cond()
+    {
+        if (FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+        return true;
+    }
+
+    template<typename OperandType,
+             typename LhsIndexType,
+             typename RhsIndexType,
+             FIOperandShapeCategory lhsShapeCategory,
+             FIOperandShapeCategory rhsShapeCategory,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
-        if (std::is_floating_point<OperandType>::value)
-        {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOFP)) { return false; }
-            }
-        }
+        if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         return true;
     }
 
     // placeholder rules:
-    // constant placeholder 0: RHS operand, if not quickaccess
-    // constant placeholder 1/2: LHS shape
+    // constant placeholder 0/1: LHS shape
+    // constant placeholder 2/3: RHS shape
     //
     template<typename OperandType,
              typename LhsIndexType,
+             typename RhsIndexType,
              FIOperandShapeCategory lhsShapeCategory,
-             bool isQuickAccessOperand,
+             FIOperandShapeCategory rhsShapeCategory,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType qaOperand) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
     {
-        OperandType rhs;
-        if constexpr(isQuickAccessOperand)
-        {
-            rhs = qaOperand;
-        }
-        else
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
-            rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
-        }
-
-        OperandType* lhs = FIOperandShapeCategoryHelper::get_address_1_2<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
-
+        OperandType* lhs = FIOperandShapeCategoryHelper::get_address_0_1<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
+        OperandType rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
         *lhs = rhs;
 
         DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -120,8 +105,9 @@ struct FIPartialInlineAssignImpl
         return CreateMetaVarList(
                     CreateTypeMetaVar("operandType"),
                     CreateTypeMetaVar("lhsIndexType"),
+                    CreateTypeMetaVar("rhsIndexType"),
                     CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("lhsShapeCategory"),
-                    CreateBoolMetaVar("isQuickAccessOperand"),
+                    CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit()
         );
@@ -136,5 +122,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIPartialInlineAssignImpl>();
+    RegisterBoilerplate<FIFullyInlineAssignImpl>();
 }

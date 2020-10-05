@@ -2,7 +2,7 @@
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_tpl_operandshape.hpp"
-#include "pochivm/ast_arithmetic_expr_type.h"
+#include "fastinterp_tpl_arith_operator_helper.hpp"
 
 namespace PochiVM
 {
@@ -168,25 +168,7 @@ struct FIPartialInlineArithmeticExprImpl
             }
         }
 
-        OperandType result;
-        if constexpr(operatorType == AstArithmeticExprType::ADD) {
-            result = lhs + rhs;
-        }
-        else if constexpr(operatorType == AstArithmeticExprType::SUB) {
-            result = lhs - rhs;
-        }
-        else if constexpr(operatorType == AstArithmeticExprType::MUL) {
-            result = lhs * rhs;
-        }
-        else if constexpr(operatorType == AstArithmeticExprType::DIV) {
-            result = lhs / rhs;
-        }
-        else if constexpr(operatorType == AstArithmeticExprType::MOD) {
-            result = lhs % rhs;
-        }
-        else {
-            static_assert(type_dependent_false<OperandType>::value, "Unexpected AstArithmeticExprType");
-        }
+        OperandType result = EvaluateArithmeticExpression<OperandType, operatorType>(lhs, rhs);
 
         if constexpr(!spillOutput)
         {

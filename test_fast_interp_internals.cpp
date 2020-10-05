@@ -1905,7 +1905,7 @@ TEST(TestFastInterpInternal, Sanity_1)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
@@ -1945,7 +1945,7 @@ TEST(TestFastInterpInternal, Sanity_2)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
@@ -1987,7 +1987,7 @@ TEST(TestFastInterpInternal, Sanity_3)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
@@ -2049,7 +2049,7 @@ TEST(TestFastInterpInternal, Sanity_4)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
@@ -2114,7 +2114,7 @@ TEST(TestFastInterpInternal, Sanity_5)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
@@ -2179,7 +2179,7 @@ TEST(TestFastInterpInternal, Sanity_6)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignExprImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
