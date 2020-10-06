@@ -38,6 +38,7 @@ public:
           , uint16_t highestUInt64PlaceholderOrdinal
           , uint16_t numCppFnPtrPlaceholders
           , const std::array<uint16_t, highestCppFnptrPlaceholderOrdinal>& cppFnPtrPlaceholderOrdinalToId
+          , int lastInstructionTailCallOrd
 #ifdef TESTBUILD
           , uint64_t usedBoilerplateFnPtrPlaceholderMask
           , uint64_t usedCppFnptrPlaceholderMask
@@ -59,6 +60,7 @@ public:
               , highestCppFnptrPlaceholderOrdinal
               , highestUInt64PlaceholderOrdinal
               , numCppFnPtrPlaceholders
+              , lastInstructionTailCallOrd
 #ifdef TESTBUILD
               , usedBoilerplateFnPtrPlaceholderMask
               , usedCppFnptrPlaceholderMask

@@ -684,6 +684,9 @@ public:
         std::vector<std::pair<std::string, BoilerplatePack>> allBoilerplates;
         std::unique_ptr<LLJIT> J;
 
+        const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
+        const std::string terminatorOperatorName = "FITerminatorOperatorImpl";
+
         using FnPrototype = void(*)();
         FnPrototype entryPoint;
 
@@ -829,7 +832,6 @@ public:
 
             // Convert calling convention to GHC
             //
-            const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
 
             // Step 1: change all calls to boilerplate placeholders to GHC
             //
@@ -1215,6 +1217,7 @@ public:
                 uint64_t usedBpfpMask = 0;
                 uint64_t usedCfpMask = 0;
                 uint64_t usedU64Mask = 0;
+                int lastInstructionTailCallOrd = -1;
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {
                     ReleaseAssert(rinfo.offset < preAlignedSize);
@@ -1263,6 +1266,13 @@ public:
                                             static_cast<int>(x86_64_inst_opcode),
                                             it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
                                     abort();
+                                }
+                                // If this is a tail call at the end of function, record it.
+                                //
+                                if (rinfo.offset + 4 == preAlignedSize)
+                                {
+                                    ReleaseAssert(lastInstructionTailCallOrd == -1);
+                                    lastInstructionTailCallOrd = static_cast<int>(ord);
                                 }
                             }
                             else
@@ -1313,6 +1323,23 @@ public:
                         fprintf(stderr, "%s %s\n", rinfo.typeHumanReadableName.c_str(), rinfo.symbol.c_str());
                         ReleaseAssert(false);
                     }
+                }
+
+                if (it->first != terminatorOperatorName &&
+                    it->first != cdeclInterfaceName &&
+                    PochiVM::x_fastinterp_function_alignment == 1)
+                {
+                    if (lastInstructionTailCallOrd == -1)
+                    {
+                        fprintf(stderr, "[INTERNAL ERROR] Boilerplate %s from boilerpack %s does not end with a tail call\n",
+                                inst.m_symbolName.c_str(), it->first.c_str());
+                        abort();
+                    }
+                }
+
+                if (PochiVM::x_fastinterp_function_alignment != 1)
+                {
+                    lastInstructionTailCallOrd = -1;
                 }
 
                 for (std::pair<uint32_t, uint32_t>& p : cfpList64)
@@ -1465,7 +1492,8 @@ public:
                         fprintf(fp3, ", ");
                     }
                 }
-                fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/\n");
+                fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/,\n");
+                fprintf(fp3, "%d /*lastInstructionTailCallOrd*/\n", lastInstructionTailCallOrd);
 
                 fprintf(fp3, "#ifdef TESTBUILD\n");
                 fprintf(fp3, ", %lluULL /*usedBoilerplateFnPtrPlaceholderMask*/\n", static_cast<unsigned long long>(usedBpfpMask));

@@ -6,6 +6,7 @@
 #include "pochivm/common.h"
 #include "pochivm/cxx2a_bit_cast_helper.h"
 #include "fastinterp_function_alignment.h"
+#include "x86_64_asm_helper.h"
 
 namespace PochiVM
 {
@@ -115,6 +116,7 @@ protected:
           , uint16_t highestCppFnptrPlaceholderOrdinal
           , uint16_t highestUInt64PlaceholderOrdinal
           , uint16_t numCppFnPtrPlaceholders
+          , int lastInstructionTailCallOrd
 #ifdef TESTBUILD
           , uint64_t usedBoilerplateFnPtrPlaceholderMask
           , uint64_t usedCppFnptrPlaceholderMask
@@ -135,6 +137,7 @@ protected:
         , m_highestCppFnptrPlaceholderOrdinal(highestCppFnptrPlaceholderOrdinal)
         , m_highestUInt64PlaceholderOrdinal(highestUInt64PlaceholderOrdinal)
         , m_numCppFnPtrPlaceholders(numCppFnPtrPlaceholders)
+        , m_lastInstructionTailCallOrd(lastInstructionTailCallOrd)
 #ifdef TESTBUILD
         , m_usedBoilerplateFnPtrPlaceholderMask(usedBoilerplateFnPtrPlaceholderMask)
         , m_usedCppFnptrPlaceholderMask(usedCppFnptrPlaceholderMask)
@@ -144,27 +147,50 @@ protected:
     { }
 
 private:
-    void MaterializeCodeSection(uint8_t* destAddr, uint64_t* fixupValues) const
+    void MaterializeCodeSection(uint8_t* destAddr, uint64_t* fixupValues, bool shouldStripLITC) const
     {
         TestAssert(reinterpret_cast<uint64_t>(destAddr) % x_fastinterp_function_alignment == 0);
-        memcpy(destAddr, m_content, m_contentLength);
+        uint32_t trueContentLength = m_contentLength;
+        if (shouldStripLITC)
+        {
+            trueContentLength -= x86_64_rip_relative_jmp_instruction_len;
+        }
+        memcpy(destAddr, m_content, trueContentLength);
 
         {
-            uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(reinterpret_cast<uint64_t>(destAddr))));
-            for (uint32_t i = 0; i < m_addr32FixupArrayLength; i++)
+            uint32_t limit = m_addr32FixupArrayLength;
+            if (shouldStripLITC)
             {
+                TestAssert(limit > 0 && m_addr32FixupArray[limit - 1] == trueContentLength + x86_64_jmp_opcode_num_bytes);
+                limit--;
+            }
+            uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(reinterpret_cast<uint64_t>(destAddr))));
+            for (uint32_t i = 0; i < limit; i++)
+            {
+                TestAssert(m_addr32FixupArray[i] + sizeof(uint32_t) <= trueContentLength);
                 UnalignedAddAndWriteback<uint32_t>(destAddr + m_addr32FixupArray[i], addend);
             }
         }
 
-        for (uint32_t i = 0; i < m_symbol32FixupArrayLength; i++)
         {
-            uint32_t addend = static_cast<uint32_t>(fixupValues[m_symbol32FixupArray[i].m_ordinalIntoPlaceholderArray]);
-            UnalignedAddAndWriteback<uint32_t>(destAddr + m_symbol32FixupArray[i].m_offset, addend);
+            uint32_t limit = m_symbol32FixupArrayLength;
+            if (shouldStripLITC)
+            {
+                TestAssert(limit > 0 && m_symbol32FixupArray[limit - 1].m_offset == trueContentLength + x86_64_jmp_opcode_num_bytes);
+                limit--;
+            }
+            for (uint32_t i = 0; i < limit; i++)
+            {
+                TestAssert(m_symbol32FixupArray[i].m_offset + sizeof(uint32_t) <= trueContentLength);
+                uint32_t addend = static_cast<uint32_t>(fixupValues[m_symbol32FixupArray[i].m_ordinalIntoPlaceholderArray]);
+                UnalignedAddAndWriteback<uint32_t>(destAddr + m_symbol32FixupArray[i].m_offset, addend);
+            }
         }
+
 
         for (uint32_t i = 0; i < m_symbol64FixupArrayLength; i++)
         {
+            TestAssert(m_symbol64FixupArray[i].m_offset + sizeof(uint64_t) <= trueContentLength);
             uint64_t addend = static_cast<uint64_t>(fixupValues[m_symbol64FixupArray[i].m_ordinalIntoPlaceholderArray]);
             UnalignedAddAndWriteback<uint64_t>(destAddr + m_symbol64FixupArray[i].m_offset, addend);
         }
@@ -197,6 +223,7 @@ private:
     uint16_t m_highestCppFnptrPlaceholderOrdinal;
     uint16_t m_highestUInt64PlaceholderOrdinal;
     uint16_t m_numCppFnPtrPlaceholders;
+    int m_lastInstructionTailCallOrd;
 
 #ifdef TESTBUILD
     // bitmask denoting which placeholder ordinals are used, for test assertion purpose
