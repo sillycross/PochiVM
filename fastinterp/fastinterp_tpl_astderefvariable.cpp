@@ -57,7 +57,7 @@ struct FIDerefVariableImpl
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
     {
-        DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
+        DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
         VarType result = *GetLocalVarAddress<VarType>(stackframe, CONSTANT_PLACEHOLDER_1);
 
         if constexpr(!spillOutput)
@@ -67,7 +67,7 @@ struct FIDerefVariableImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             *GetLocalVarAddress<VarType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

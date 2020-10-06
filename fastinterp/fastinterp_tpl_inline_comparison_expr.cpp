@@ -92,7 +92,7 @@ struct FIFullyInlinedComparisonExprImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

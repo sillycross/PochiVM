@@ -103,8 +103,8 @@ struct FIOutlinedArithmeticExprImpl
         OperandType lhs, rhs;
         if constexpr(static_cast<int>(numQAP) == 0)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+            DEFINE_CONSTANT_PLACEHOLDER_2(uint64_t);
             lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
             rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_2);
         }
@@ -112,7 +112,7 @@ struct FIOutlinedArithmeticExprImpl
         {
             // We always evaluate LHS before RHS, so the QAP is always RHS
             //
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
             lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
             // 'qa1' is not a typo: 'qa2' simply doesn't exist, 'qa1' is top of stack.
             //
@@ -137,7 +137,7 @@ struct FIOutlinedArithmeticExprImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

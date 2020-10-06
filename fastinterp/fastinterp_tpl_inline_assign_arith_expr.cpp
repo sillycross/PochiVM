@@ -120,7 +120,7 @@ struct FIFullyInlineAssignArithExprImpl
         OperandType rhs = FIOperandShapeCategoryHelper::get_3_4<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
         OperandType result = EvaluateArithmeticExpression<OperandType, operatorType>(lhs, rhs);
 
-        DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+        DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
         *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
         DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

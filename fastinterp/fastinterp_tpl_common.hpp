@@ -69,11 +69,8 @@ using builtin_sjlj_env_t = void*[5];
 // this function must be always inlined FOR CORRECTNESS, otherwise it would become an
 // unexpected external symbol and fire an assert in build_fast_interp_lib.cpp.
 //
-// Offset is uint32_t is also intentional --  we cannot pass uint64_t '0' using constant placeholders,
-// so if the caller accidentally did this, it would trigger a narrowing-conversion warning.
-//
 template<typename LocalVarType>
-inline LocalVarType* __attribute__((__always_inline__)) GetLocalVarAddress(uintptr_t stackframe, uint32_t offset) noexcept
+inline LocalVarType* __attribute__((__always_inline__)) GetLocalVarAddress(uintptr_t stackframe, uint64_t offset) noexcept
 {
     return reinterpret_cast<LocalVarType*>(stackframe + offset);
 }

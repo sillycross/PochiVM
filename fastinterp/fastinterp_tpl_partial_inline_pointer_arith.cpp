@@ -91,7 +91,7 @@ struct FIPartialInlineLhsPointerArithmeticImpl
     {
         uintptr_t base;
         {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_2(uint64_t);
             base = *GetLocalVarAddress<uintptr_t>(stackframe, CONSTANT_PLACEHOLDER_2);
         }
 
@@ -113,7 +113,7 @@ struct FIPartialInlineLhsPointerArithmeticImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
             offset = *GetLocalVarAddress<IndexType>(stackframe, CONSTANT_PLACEHOLDER_1);
         }
 
@@ -135,7 +135,7 @@ struct FIPartialInlineLhsPointerArithmeticImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             *GetLocalVarAddress<uintptr_t>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

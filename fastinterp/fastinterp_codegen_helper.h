@@ -50,13 +50,13 @@ public:
     // The constant type must match what is defined in the boilerplate
     //
     template<typename T>
-    void PopulateConstantPlaceholder(uint32_t ordinal, T value)
+    void PopulateConstantPlaceholder(uint32_t ordinal, T value, [[maybe_unused]] bool silenceZeroWarning = false)
     {
         static_assert(sizeof(T) <= 8 && (std::is_fundamental<T>::value || std::is_pointer<T>::value) &&
                 (!std::is_function<typename std::remove_pointer<T>::type>::value), "must be a primitive type");
         // If T is 8-byte long, it is not allowed to pass in 0
         //
-        TestAssertImp(sizeof(T) == 8, !is_all_underlying_bits_zero(value));
+        TestAssertImp(!silenceZeroWarning && sizeof(T) == 8, !is_all_underlying_bits_zero(value));
         // It is possible that we populate a constant placeholder that does not exist in boilerplate:
         // the compiler might have optimized it out. For example, comparison of literal >= 0 of unsigned type,
         // which is trivially true so the compiler may have optimized out the constant 'literal'.

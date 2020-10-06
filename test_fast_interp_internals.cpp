@@ -1600,7 +1600,7 @@ TEST(TestFastInterpInternal, Sanity_1)
                 FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1642,7 +1642,7 @@ TEST(TestFastInterpInternal, Sanity_2)
     inst->PopulateConstantPlaceholder<int>(1, 123);
     inst->PopulateConstantPlaceholder<int>(2, 45678);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1684,7 +1684,7 @@ TEST(TestFastInterpInternal, Sanity_3)
     inst->PopulateConstantPlaceholder<double>(1, 123.456);
     inst->PopulateConstantPlaceholder<double>(2, 789.012);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1751,7 +1751,7 @@ TEST(TestFastInterpInternal, Sanity_4)
     inst->PopulateConstantPlaceholder<int>(2, 567);
     inst2->PopulateConstantPlaceholder<int>(1, -123);
     inst2->PopulateConstantPlaceholder<int>(2, -89);
-    inst4->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1816,7 +1816,7 @@ TEST(TestFastInterpInternal, Sanity_5)
     inst->PopulateConstantPlaceholder<double>(2, 567.23);
     inst2->PopulateConstantPlaceholder<double>(1, -123.12);
     inst2->PopulateConstantPlaceholder<double>(2, -89.8);
-    inst4->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1877,17 +1877,17 @@ TEST(TestFastInterpInternal, Sanity_6)
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst4);
     inst4->PopulateBoilerplateFnPtrPlaceholder(0, inst5);
 
-    inst->PopulateConstantPlaceholder<uint32_t>(0, 8);
+    inst->PopulateConstantPlaceholder<uint64_t>(0, 8);
     inst->PopulateConstantPlaceholder<double>(1, 321.09);
     inst->PopulateConstantPlaceholder<double>(2, 567.23);
-    inst2->PopulateConstantPlaceholder<uint32_t>(0, 16);
+    inst2->PopulateConstantPlaceholder<uint64_t>(0, 16);
     inst2->PopulateConstantPlaceholder<double>(1, -123.12);
     inst2->PopulateConstantPlaceholder<double>(2, -89.8);
-    inst3->PopulateConstantPlaceholder<uint32_t>(1, 8);
-    inst3->PopulateConstantPlaceholder<uint32_t>(2, 16);
-    inst3->PopulateConstantPlaceholder<uint32_t>(0, 24);
-    inst4->PopulateConstantPlaceholder<uint32_t>(0, 24);
-    inst4->PopulateConstantPlaceholder<uint32_t>(1, 0);
+    inst3->PopulateConstantPlaceholder<uint64_t>(1, 8);
+    inst3->PopulateConstantPlaceholder<uint64_t>(2, 16);
+    inst3->PopulateConstantPlaceholder<uint64_t>(0, 24);
+    inst4->PopulateConstantPlaceholder<uint64_t>(0, 24);
+    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<int>(), 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1921,7 +1921,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::ZERO,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    main_stmt1->PopulateConstantPlaceholder<uint32_t>(0, 32);
+    main_stmt1->PopulateConstantPlaceholder<uint64_t>(0, 32);
 
     // int i = 2;
     //
@@ -1934,7 +1934,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::LITERAL_NONZERO,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    main_stmt2->PopulateConstantPlaceholder<uint32_t>(0, 36);
+    main_stmt2->PopulateConstantPlaceholder<uint64_t>(0, 36);
     main_stmt2->PopulateConstantPlaceholder<int>(2, 2);
     main_stmt1->PopulateBoilerplateFnPtrPlaceholder(0, main_stmt2);
 
@@ -1951,8 +1951,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_EQUAL,
                     false /*putFalseBranchAtEnd*/));
-    outer_for_loop->PopulateConstantPlaceholder<uint32_t>(0, 36);
-    outer_for_loop->PopulateConstantPlaceholder<uint32_t>(2, 8);
+    outer_for_loop->PopulateConstantPlaceholder<uint64_t>(0, 36);
+    outer_for_loop->PopulateConstantPlaceholder<uint64_t>(2, 8);
     main_stmt2->PopulateBoilerplateFnPtrPlaceholder(0, outer_for_loop);
 
     // if (lp[i] == 0) ...
@@ -1968,8 +1968,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::EQUAL,
                     false /*putFalseBranchAtEnd*/));
-    if_cond->PopulateConstantPlaceholder<uint32_t>(0, 16);
-    if_cond->PopulateConstantPlaceholder<uint32_t>(1, 36);
+    if_cond->PopulateConstantPlaceholder<uint64_t>(0, 16);
+    if_cond->PopulateConstantPlaceholder<uint64_t>(1, 36);
     outer_for_loop->PopulateBoilerplateFnPtrPlaceholder(0, if_cond);
 
     // lp[i] = i
@@ -1983,9 +1983,9 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARIABLE,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    true_br_stmt_1->PopulateConstantPlaceholder<uint32_t>(0, 16);
-    true_br_stmt_1->PopulateConstantPlaceholder<uint32_t>(1, 36);
-    true_br_stmt_1->PopulateConstantPlaceholder<uint32_t>(2, 36);
+    true_br_stmt_1->PopulateConstantPlaceholder<uint64_t>(0, 16);
+    true_br_stmt_1->PopulateConstantPlaceholder<uint64_t>(1, 36);
+    true_br_stmt_1->PopulateConstantPlaceholder<uint64_t>(2, 36);
     if_cond->PopulateBoilerplateFnPtrPlaceholder(0, true_br_stmt_1);
 
     // pr[cnt] = i
@@ -1999,9 +1999,9 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARIABLE,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    true_br_stmt_2->PopulateConstantPlaceholder<uint32_t>(0, 24);
-    true_br_stmt_2->PopulateConstantPlaceholder<uint32_t>(1, 32);
-    true_br_stmt_2->PopulateConstantPlaceholder<uint32_t>(2, 36);
+    true_br_stmt_2->PopulateConstantPlaceholder<uint64_t>(0, 24);
+    true_br_stmt_2->PopulateConstantPlaceholder<uint64_t>(1, 32);
+    true_br_stmt_2->PopulateConstantPlaceholder<uint64_t>(2, 36);
     true_br_stmt_1->PopulateBoilerplateFnPtrPlaceholder(0, true_br_stmt_2);
 
     // cnt++
@@ -2016,8 +2016,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::ADD));
-    true_br_stmt_3->PopulateConstantPlaceholder<uint32_t>(0, 32);
-    true_br_stmt_3->PopulateConstantPlaceholder<uint32_t>(1, 32);
+    true_br_stmt_3->PopulateConstantPlaceholder<uint64_t>(0, 32);
+    true_br_stmt_3->PopulateConstantPlaceholder<uint64_t>(1, 32);
     true_br_stmt_3->PopulateConstantPlaceholder<int>(3, 1);
     true_br_stmt_2->PopulateBoilerplateFnPtrPlaceholder(0, true_br_stmt_3);
 
@@ -2032,7 +2032,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::ZERO,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    outer_loop_stmt_2->PopulateConstantPlaceholder<uint32_t>(0, 40);
+    outer_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(0, 40);
     true_br_stmt_3->PopulateBoilerplateFnPtrPlaceholder(0, outer_loop_stmt_2);
     if_cond->PopulateBoilerplateFnPtrPlaceholder(1, outer_loop_stmt_2);
 
@@ -2049,8 +2049,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_THAN,
                     false /*putFalseBranchAtEnd*/));
-    inner_loop_cond_1->PopulateConstantPlaceholder<uint32_t>(0, 40);
-    inner_loop_cond_1->PopulateConstantPlaceholder<uint32_t>(2, 32);
+    inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(0, 40);
+    inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(2, 32);
     outer_loop_stmt_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_1);
 
     // pr[j] <= lp[i]
@@ -2066,10 +2066,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_EQUAL,
                     false /*putFalseBranchAtEnd*/));
-    inner_loop_cond_2->PopulateConstantPlaceholder<uint32_t>(0, 24);
-    inner_loop_cond_2->PopulateConstantPlaceholder<uint32_t>(1, 40);
-    inner_loop_cond_2->PopulateConstantPlaceholder<uint32_t>(2, 16);
-    inner_loop_cond_2->PopulateConstantPlaceholder<uint32_t>(3, 36);
+    inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(0, 24);
+    inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(1, 40);
+    inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(2, 16);
+    inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(3, 36);
     inner_loop_cond_1->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_2);
 
     // 'i'
@@ -2080,7 +2080,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
-    value_of_i->PopulateConstantPlaceholder<uint32_t>(1, 36);
+    value_of_i->PopulateConstantPlaceholder<uint64_t>(1, 36);
     inner_loop_cond_2->PopulateBoilerplateFnPtrPlaceholder(0, value_of_i);
 
     // i * pr[j]
@@ -2096,8 +2096,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::MUL));
-    ixprj->PopulateConstantPlaceholder<uint32_t>(2, 24);
-    ixprj->PopulateConstantPlaceholder<uint32_t>(3, 40);
+    ixprj->PopulateConstantPlaceholder<uint64_t>(2, 24);
+    ixprj->PopulateConstantPlaceholder<uint64_t>(3, 40);
     value_of_i->PopulateBoilerplateFnPtrPlaceholder(0, ixprj);
 
     // i * pr[j] <= n
@@ -2113,7 +2113,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_EQUAL,
                     false /*putFalseBranchAtEnd*/));
-    inner_loop_cond_3->PopulateConstantPlaceholder<uint32_t>(1, 8);
+    inner_loop_cond_3->PopulateConstantPlaceholder<uint64_t>(1, 8);
     ixprj->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_3);
 
     // 'i'
@@ -2124,7 +2124,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
-    value_of_i_2->PopulateConstantPlaceholder<uint32_t>(1, 36);
+    value_of_i_2->PopulateConstantPlaceholder<uint64_t>(1, 36);
     inner_loop_cond_3->PopulateBoilerplateFnPtrPlaceholder(0, value_of_i_2);
 
     // i * pr[j]
@@ -2140,8 +2140,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::MUL));
-    ixprj_2->PopulateConstantPlaceholder<uint32_t>(2, 24);
-    ixprj_2->PopulateConstantPlaceholder<uint32_t>(3, 40);
+    ixprj_2->PopulateConstantPlaceholder<uint64_t>(2, 24);
+    ixprj_2->PopulateConstantPlaceholder<uint64_t>(3, 40);
     value_of_i_2->PopulateBoilerplateFnPtrPlaceholder(0, ixprj_2);
 
     // lp + i * pr[j]
@@ -2155,7 +2155,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     static_cast<FIPowerOfTwoObjectSize>(2) /*int is 2^2 bytes*/));
-    inner_loop_stmt_1->PopulateConstantPlaceholder<uint32_t>(2, 16);
+    inner_loop_stmt_1->PopulateConstantPlaceholder<uint64_t>(2, 16);
     ixprj_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_stmt_1);
 
     // *... = pr[j]
@@ -2168,8 +2168,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    inner_loop_stmt_2->PopulateConstantPlaceholder<uint32_t>(1, 24);
-    inner_loop_stmt_2->PopulateConstantPlaceholder<uint32_t>(2, 40);
+    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(1, 24);
+    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(2, 40);
     inner_loop_stmt_1->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_stmt_2);
 
     // j++
@@ -2184,8 +2184,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::ADD));
-    inner_loop_step_stmt->PopulateConstantPlaceholder<uint32_t>(0, 40);
-    inner_loop_step_stmt->PopulateConstantPlaceholder<uint32_t>(1, 40);
+    inner_loop_step_stmt->PopulateConstantPlaceholder<uint64_t>(0, 40);
+    inner_loop_step_stmt->PopulateConstantPlaceholder<uint64_t>(1, 40);
     inner_loop_step_stmt->PopulateConstantPlaceholder<int>(3, 1);
     inner_loop_stmt_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_step_stmt);
     inner_loop_step_stmt->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_1);
@@ -2202,8 +2202,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::ADD));
-    outer_loop_step_stmt->PopulateConstantPlaceholder<uint32_t>(0, 36);
-    outer_loop_step_stmt->PopulateConstantPlaceholder<uint32_t>(1, 36);
+    outer_loop_step_stmt->PopulateConstantPlaceholder<uint64_t>(0, 36);
+    outer_loop_step_stmt->PopulateConstantPlaceholder<uint64_t>(1, 36);
     outer_loop_step_stmt->PopulateConstantPlaceholder<int>(3, 1);
     inner_loop_cond_1->PopulateBoilerplateFnPtrPlaceholder(1, outer_loop_step_stmt);
     inner_loop_cond_2->PopulateBoilerplateFnPtrPlaceholder(1, outer_loop_step_stmt);
@@ -2221,8 +2221,8 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARIABLE,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    return_stmt->PopulateConstantPlaceholder<uint32_t>(0, 0);
-    return_stmt->PopulateConstantPlaceholder<uint32_t>(2, 32);
+    return_stmt->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
+    return_stmt->PopulateConstantPlaceholder<uint64_t>(2, 32);
     outer_for_loop->PopulateBoilerplateFnPtrPlaceholder(1, return_stmt);
     return_stmt->PopulateBoilerplateFnPtrPlaceholder(0, terminal);
 

@@ -131,7 +131,7 @@ struct FIPartialInlinedComparisonBranchImpl
             }
             else
             {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+                DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
                 rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
             }
         }
@@ -144,7 +144,7 @@ struct FIPartialInlinedComparisonBranchImpl
             }
             else
             {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+                DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
                 lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
             }
         }

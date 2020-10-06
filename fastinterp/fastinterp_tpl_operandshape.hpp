@@ -24,7 +24,7 @@ struct FISimpleOperandShapeCategoryHelper
         }                                                                                                       \
         else if constexpr(osc == FISimpleOperandShapeCategory::VARIABLE)                                        \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             return *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_ ## placeholder1);         \
         }                                                                                                       \
         else                                                                                                    \
@@ -78,25 +78,25 @@ struct FIOperandShapeCategoryHelper
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARIABLE)                                              \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             return *GetLocalVarAddress<OperandType>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);                 \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_DEREF)                                          \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             return **GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);               \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_VAR)                                            \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint64_t);                                       \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             OscIndexType index = *GetLocalVarAddress<OscIndexType>(sf, CONSTANT_PLACEHOLDER_ ## placeholder2);  \
             return varPtr[index];                                                                               \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_LIT_NONZERO)                                    \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, OscIndexType);                                   \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             return varPtr[CONSTANT_PLACEHOLDER_ ## placeholder2];                                               \
@@ -123,25 +123,25 @@ struct FIOperandShapeCategoryHelper
     {                                                                                                           \
         if constexpr(osc == FIOperandShapeCategory::VARIABLE)                                                   \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             return GetLocalVarAddress<OperandType>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);                  \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_DEREF)                                          \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             return *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);                \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_VAR)                                            \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, uint64_t);                                       \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             OscIndexType index = *GetLocalVarAddress<OscIndexType>(sf, CONSTANT_PLACEHOLDER_ ## placeholder2);  \
             return varPtr + index;                                                                              \
         }                                                                                                       \
         else if constexpr(osc == FIOperandShapeCategory::VARPTR_LIT_NONZERO)                                    \
         {                                                                                                       \
-            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint32_t);                                       \
+            INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder1, uint64_t);                                       \
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, OscIndexType);                                   \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             return varPtr + CONSTANT_PLACEHOLDER_ ## placeholder2;                                              \

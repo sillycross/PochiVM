@@ -189,7 +189,6 @@ private:
             }
         }
 
-
         for (uint32_t i = 0; i < m_symbol64FixupArrayLength; i++)
         {
             TestAssert(m_symbol64FixupArray[i].m_offset + sizeof(uint64_t) <= trueContentLength);

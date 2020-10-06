@@ -79,7 +79,7 @@ struct FIOutlinedAssignLhsQapImpl
         OperandType rhs;
         if constexpr(!isRhsQAP)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
         }
         else
@@ -168,13 +168,13 @@ struct FIOutlinedAssignLhsNotQapImpl
     {
         OperandType* lhs;
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             lhs = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_0);
         }
         OperandType rhs;
         if constexpr(!isRhsQAP)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint32_t);
+            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
             rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
         }
         else
