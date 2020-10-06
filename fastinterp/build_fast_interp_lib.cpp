@@ -13,6 +13,7 @@
 #include "x86_64_asm_helper.h"
 #include "fastinterp_function_alignment.h"
 #include "metavar.hpp"
+#include "x86_64_populate_nop_instruction_helper.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -618,39 +619,6 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     }
 }
 
-// It seems like clang++ populates multi-byte nop in function padding.
-// Of course this is not a correctness issue, since those paddings are never executed.
-// However, probably clang++ didn't do this without a reason. Maybe it helps with CPU pipelining..?
-// Anyway, it doesn't hurt for us to do that as well. At least it helps with gdb assembly dump.
-//
-void Populate_X86_64_NopInstructions(uint8_t* addr, size_t length)
-{
-    // From Intel's Manual:
-    //    https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-2b-manual.pdf
-    //    Page 165, table 4-12, "Recommended Multi-Byte Sequence of NOP Instruction"
-    //
-    static constexpr uint8_t nop1[] = { 0x90 };
-    static constexpr uint8_t nop2[] = { 0x66, 0x90 };
-    static constexpr uint8_t nop3[] = { 0x0F, 0x1F, 0x00 };
-    static constexpr uint8_t nop4[] = { 0x0F, 0x1F, 0x40, 0x00 };
-    static constexpr uint8_t nop5[] = { 0x0F, 0x1F, 0x44, 0x00, 0x00 };
-    static constexpr uint8_t nop6[] = { 0x66, 0x0F, 0x1F, 0x44, 0x00, 0x00 };
-    static constexpr uint8_t nop7[] = { 0x0F, 0x1F, 0x80, 0x00, 0x00, 0x00, 0x00 };
-    static constexpr uint8_t nop8[] = { 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    static constexpr uint8_t nop9[] = { 0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00 };
-    static constexpr const uint8_t* nops[10] = {
-        nullptr, nop1, nop2, nop3, nop4, nop5, nop6, nop7, nop8, nop9
-    };
-    while (length > 0)
-    {
-        size_t choice = 9;
-        choice = std::min(choice, length);
-        memcpy(addr, nops[choice], choice);
-        length -= choice;
-        addr += choice;
-    }
-}
-
 class SourceFileInfo : NonCopyable, NonMovable
 {
 public:
@@ -994,14 +962,7 @@ public:
             // 'exception-model=default' seems to mean that exception is disabled.
             //
             std::string llc_options = " -O=3 -filetype=obj --code-model=medium --relocation-model=static --exception-model=default ";
-            int log2FnAlignment;
-            {
-                log2FnAlignment = 0;
-                size_t tmp = PochiVM::x_fastinterp_function_alignment;
-                while (tmp != 1) { tmp /= 2; log2FnAlignment++; }
-                ReleaseAssert((1ULL << log2FnAlignment) == PochiVM::x_fastinterp_function_alignment);
-            }
-            llc_options += std::string(" --align-all-functions=") + std::to_string(log2FnAlignment) + " ";
+            llc_options += std::string(" --align-all-functions=") + std::to_string(PochiVM::x_fastinterp_log2_function_alignment) + " ";
             std::string llc_command_line = std::string("llc ") + llc_options + outputIR + " -o " + obj_file;
             int r = system(llc_command_line.c_str());
             if (r != 0)
@@ -1171,7 +1132,13 @@ public:
                 uint8_t* data = new uint8_t[alignedSize];
                 Auto(delete [] data);
                 memcpy(data, sr.data(), preAlignedSize);
-                Populate_X86_64_NopInstructions(data + preAlignedSize, alignedSize - preAlignedSize);
+
+                // It seems like clang++ populates multi-byte nop in function padding.
+                // Of course this is not a correctness issue, since those paddings are never executed.
+                // However, probably clang++ didn't do this without a reason. Maybe it helps with CPU pipelining..?
+                // Anyway, it doesn't hurt for us to do that as well. At least it helps with gdb assembly dump.
+                //
+                PochiVM::x86_64_populate_NOP_instructions(data + preAlignedSize, alignedSize - preAlignedSize);
 
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {

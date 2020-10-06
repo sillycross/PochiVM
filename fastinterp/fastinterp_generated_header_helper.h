@@ -1,7 +1,7 @@
 #pragma once
 
 #include "fastinterp_helper.h"
-#include "get_fs_base_helper.h"
+#include "x86_64_get_fs_base_helper.h"
 #include "fastinterp_context.h"
 
 namespace PochiVM

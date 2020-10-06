@@ -3,6 +3,7 @@
 #include "fastinterp_helper.h"
 #include "generated/fastinterp_library.generated.h"
 #include "x86_64_asm_helper.h"
+#include "x86_64_populate_nop_instruction_helper.h"
 
 namespace PochiVM
 {
@@ -44,7 +45,8 @@ public:
 #endif
         m_dataValues[m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal]] = reinterpret_cast<uint64_t>(value);
         m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal + ordinal] = static_cast<uint64_t>(
-                    m_relativeDataAddr + m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal] * sizeof(uint64_t));
+                    static_cast<uint64_t>(static_cast<int64_t>(m_relativeDataAddr)) +
+                    m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal] * sizeof(uint64_t));
     }
 
     // The constant type must match what is defined in the boilerplate
@@ -87,22 +89,26 @@ public:
 
 private:
     FastInterpBoilerplateInstance(const FastInterpBoilerplateBluePrint* owner,
-                                  uintptr_t relativeDataAddr,
-                                  uint32_t ordinalInArray)
-        : m_relativeDataAddr(relativeDataAddr)
-        , m_owner(owner)
+                                  int32_t relativeDataAddr,
+                                  uint32_t ordinalInArray,
+                                  uint16_t log2CodeSectionAlignment)
+        : m_owner(owner)
+        , m_relativeDataAddr(relativeDataAddr)
+        , m_log2CodeSectionAlignment(log2CodeSectionAlignment)
+        , m_codeSectionPaddingRequired(0)
         , m_ordinalInArray(ordinalInArray)
         , m_litcInstanceOrd(static_cast<uint32_t>(-1))
         , m_isContinuationOfAnotherInstance(false)
         , m_populatedRelativeCodeAddress(false)
         , m_shouldStripLITC(false)
-        , m_isInstantiated(false)
 #ifdef TESTBUILD
         , m_populatedBoilerplateFnPtrPlaceholderMask(0)
         , m_populatedUInt64PlaceholderMask(0)
         , m_populatedCppFnptrPlaceholderMask(0)
+        , m_isInstantiated(false)
 #endif
     {
+        TestAssert(m_log2CodeSectionAlignment >= x_fastinterp_log2_function_alignment && m_log2CodeSectionAlignment <= 6);
         m_fixupValues = new uint64_t[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
                 m_owner->m_highestUInt64PlaceholderOrdinal + m_owner->m_highestCppFnptrPlaceholderOrdinal];
         for (uint32_t i = 0; i < m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal; i++)
@@ -117,12 +123,16 @@ private:
     void Materialize(uintptr_t baseAddress)
     {
         TestAssert(!m_isInstantiated && m_populatedRelativeCodeAddress);
-        TestAssert(baseAddress % x_fastinterp_function_alignment == 0);
+        TestAssert(m_relativeCodeAddr % (1 << m_log2CodeSectionAlignment) == 0);
+        TestAssert(m_relativeCodeAddr >= m_codeSectionPaddingRequired && m_codeSectionPaddingRequired < (1U << m_log2CodeSectionAlignment));
+        TestAssert(baseAddress % 4096 == 0);
         TestAssert(m_populatedBoilerplateFnPtrPlaceholderMask == m_owner->m_usedBoilerplateFnPtrPlaceholderMask);
         TestAssert((m_populatedUInt64PlaceholderMask & m_owner->m_usedUInt64PlaceholderMask) == m_owner->m_usedUInt64PlaceholderMask);
         TestAssert(m_populatedCppFnptrPlaceholderMask == m_owner->m_usedCppFnptrPlaceholderMask);
         TestAssertImp(m_shouldStripLITC, m_litcInstanceOrd != static_cast<uint32_t>(-1));
+#ifdef TESTBUILD
         m_isInstantiated = true;
+#endif
         // The 'boilerplate' fixups is storing the pointer to the instance.
         // At this point the instance is already placed (its relative code address is known), so fixup the value
         //
@@ -144,14 +154,18 @@ private:
             m_fixupValues[i] += baseAddress;
         }
         uint8_t* trueCodeBaseAddress = reinterpret_cast<uint8_t*>(baseAddress + static_cast<uint64_t>(static_cast<int64_t>(m_relativeCodeAddr)));
-        uint8_t* trueDataBaseAddress = reinterpret_cast<uint8_t*>(baseAddress + m_relativeDataAddr);
+        uint8_t* trueDataBaseAddress = reinterpret_cast<uint8_t*>(baseAddress + static_cast<uint64_t>(static_cast<int64_t>(m_relativeDataAddr)));
         memcpy(trueDataBaseAddress, m_dataValues, m_owner->GetDataSectionLength());
+        x86_64_populate_NOP_instructions(trueCodeBaseAddress - m_codeSectionPaddingRequired, m_codeSectionPaddingRequired);
         m_owner->MaterializeCodeSection(trueCodeBaseAddress, m_fixupValues, m_shouldStripLITC);
     }
 
-    uintptr_t m_relativeDataAddr;
-
     const FastInterpBoilerplateBluePrint* m_owner;
+
+    int32_t m_relativeDataAddr;
+
+    uint16_t m_log2CodeSectionAlignment;
+    uint16_t m_codeSectionPaddingRequired;
 
     // Populated in PlaceBoilerplate() phase
     //
@@ -177,10 +191,6 @@ private:
     //
     bool m_shouldStripLITC;
 
-    // Whether this instance has been instantiated
-    //
-    bool m_isInstantiated;
-
     // An array of length m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
     // m_owner->m_highestUInt64PlaceholderOrdinal + m_owner->m_highestCppFnptrPlaceholderOrdinal
     //
@@ -194,6 +204,7 @@ private:
     uint64_t m_populatedBoilerplateFnPtrPlaceholderMask;
     uint64_t m_populatedUInt64PlaceholderMask;
     uint64_t m_populatedCppFnptrPlaceholderMask;
+    bool m_isInstantiated;
 #endif
 };
 
@@ -246,15 +257,20 @@ public:
 #endif
     { }
 
-    FastInterpBoilerplateInstance* WARN_UNUSED InstantiateBoilerplate(const FastInterpBoilerplateBluePrint* boilerplate)
+    FastInterpBoilerplateInstance* WARN_UNUSED InstantiateBoilerplate(
+            const FastInterpBoilerplateBluePrint* boilerplate,
+            size_t log2CodeSectionAlignment = x_fastinterp_log2_function_alignment)
     {
         // Data section grows down from base address,
         // its data section range is [-(oldDSLength + thisDsLength), -oldDsLength)
         //
+        TestAssert(log2CodeSectionAlignment <= 6);
         m_dataSectionLength += boilerplate->GetDataSectionLength();
-        uintptr_t relativeDataSectionBase = static_cast<uintptr_t>(-static_cast<ssize_t>(m_dataSectionLength));
+        int32_t relativeDataSectionBase = static_cast<int32_t>(-static_cast<ssize_t>(m_dataSectionLength));
         FastInterpBoilerplateInstance* inst = new FastInterpBoilerplateInstance(
-                    boilerplate, relativeDataSectionBase, static_cast<uint32_t>(m_allBoilerplateInstances.size()));
+                    boilerplate, relativeDataSectionBase,
+                    static_cast<uint32_t>(m_allBoilerplateInstances.size()),
+                    static_cast<uint16_t>(log2CodeSectionAlignment));
         m_allBoilerplateInstances.push_back(inst);
         return inst;
     }
@@ -321,7 +337,11 @@ public:
             }
             while (true)
             {
+                int padding = codeSectionLength & ((1 << instance->m_log2CodeSectionAlignment) - 1);
+                if (padding != 0) { padding = (1 << instance->m_log2CodeSectionAlignment) - padding; }
+                codeSectionLength += padding;
                 instance->m_relativeCodeAddr = codeSectionLength;
+                instance->m_codeSectionPaddingRequired = static_cast<uint16_t>(padding);
                 codeSectionLength += static_cast<int32_t>(instance->m_owner->GetCodeSectionLength());
                 instance->m_populatedRelativeCodeAddress = true;
                 if (instance->m_litcInstanceOrd == static_cast<uint32_t>(-1))

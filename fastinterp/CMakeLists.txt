@@ -53,7 +53,7 @@ SET(FASTINTERP_TPL_SOURCES
 
 SET(FASTINTERP_SOURCES
   fastinterp_codegen_helper.cpp
-  get_fs_base_helper.cpp
+  x86_64_get_fs_base_helper.cpp
 )
 
 add_library(fastinterp_tpl_ir OBJECT

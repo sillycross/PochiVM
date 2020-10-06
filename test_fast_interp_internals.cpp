@@ -1950,7 +1950,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_EQUAL,
-                    false /*putFalseBranchAtEnd*/));
+                    false /*putFalseBranchAtEnd*/), 4 /*log2FunctionAlignment*/);
     outer_for_loop->PopulateConstantPlaceholder<uint64_t>(0, 36);
     outer_for_loop->PopulateConstantPlaceholder<uint64_t>(2, 8);
     main_stmt2->PopulateBoilerplateFnPtrPlaceholder(0, outer_for_loop);
@@ -2048,7 +2048,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_THAN,
-                    false /*putFalseBranchAtEnd*/));
+                    false /*putFalseBranchAtEnd*/), 4 /*log2FunctionAlignment*/);
     inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(0, 40);
     inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(2, 32);
     outer_loop_stmt_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_1);
