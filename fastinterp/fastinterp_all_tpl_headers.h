@@ -9,3 +9,4 @@
 #include "fastinterp_tpl_astfunction.h"
 #include "fastinterp_tpl_operandshape.h"
 #include "fastinterp_tpl_condition_shape.h"
+#include "fastinterp_tpl_object_size_kind.h"

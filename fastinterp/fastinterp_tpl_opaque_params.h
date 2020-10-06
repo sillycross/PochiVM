@@ -65,6 +65,16 @@ struct FIOpaqueParamsHelper
     {
         return static_cast<int>(size) == 0;
     }
+
+    static constexpr FINumOpaqueIntegralParams GetMaxOIP()
+    {
+        return static_cast<FINumOpaqueIntegralParams>(x_fastinterp_max_integral_params);
+    }
+
+    static constexpr FINumOpaqueFloatingParams GetMaxOFP()
+    {
+        return static_cast<FINumOpaqueFloatingParams>(x_fastinterp_max_floating_point_params);
+    }
 };
 
 enum FIBinaryOpNumQuickAccessParams
