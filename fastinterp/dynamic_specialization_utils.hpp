@@ -77,7 +77,8 @@
 // The following macro creates necessary dummy symbol declarations for PLACEHOLDER_ordinal
 //
 #define INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(ordinal)                                                                             \
-    extern "C" void __pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_ ## ordinal();                      \
+    extern "C" void __pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_ ## ordinal();             \
+    extern "C" void __pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_ ## ordinal();               \
     extern char __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal [1048576] __attribute__ ((__aligned__(1))); \
     extern uint64_t __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal;
 
@@ -102,7 +103,7 @@ INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(14)
 template<typename T> struct __pochivm_is_noexcept_fnptr_helper : std::false_type {};
 template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper<R(*)(Args...) noexcept> : std::true_type {};
 
-#define INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(ordinal, ...)                                             \
+#define INTERNAL_INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(symprefix, ordinal, ...)                         \
     using _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                        \
     static_assert(std::is_pointer<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                    \
         is_allowed_boilerplate_shape<typename std::remove_pointer<                                              \
@@ -110,7 +111,17 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         "not among the allowed shapes of boilerplate function pointer, did you forget noexcept?");              \
     const _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal BOILERPLATE_FNPTR_PLACEHOLDER_ ## ordinal =           \
         reinterpret_cast<_BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                      \
-            __pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_ ## ordinal)
+            symprefix ## ordinal)
+
+#define INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(ordinal, ...)                                             \
+    INTERNAL_INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(                                                     \
+        __pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_,                \
+        ordinal, __VA_ARGS__)
+
+#define INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(ordinal, ...)                                 \
+    INTERNAL_INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(                                                     \
+        __pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_,                  \
+        ordinal, __VA_ARGS__)
 
 #define INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(ordinal, ...)                                                      \
     using _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                 \
@@ -136,6 +147,22 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
     const _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal CPP_FNPTR_PLACEHOLDER_ ## ordinal =                           \
         reinterpret_cast<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
             __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal)
+
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(0, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(1, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_2_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(2, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_3_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(3, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_4_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(4, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_5_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(5, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_6_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(6, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_7_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(7, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_8_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(8, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_9_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(9, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_10_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(10, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_11_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(11, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_12_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(12, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_13_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(13, __VA_ARGS__)
+#define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_14_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(14, __VA_ARGS__)
 
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(1, __VA_ARGS__)

@@ -10,6 +10,7 @@
 #include "runtime_lib_builder/symbol_list_util.h"
 #include "runtime_lib_builder/check_file_md5.h"
 
+#include "x86_64_asm_helper.h"
 #include "fastinterp_function_alignment.h"
 #include "metavar.hpp"
 
@@ -261,20 +262,56 @@ uint32_t StringToIntHelper(const std::string& s)
     return res;
 }
 
-bool IsBoilerplateFnPtrPlaceholder(const std::string symbol, uint32_t& placeholderOrd /*out*/)
+bool IsMustTailBoilerplateFnPtrPlaceholder(const std::string symbol)
 {
-    std::string pref = "__pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_";
+    std::string pref = "__pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_";
     if (symbol.length() > pref.length() && symbol.substr(0, pref.length()) == pref)
     {
-        placeholderOrd = StringToIntHelper(symbol.substr(pref.length()));
         return true;
     }
     return false;
 }
 
-std::string GetBoilerplateFnPtrPlaceholderName(uint32_t placeholderOrdinal)
+bool IsNoTailBoilerplateFnPtrPlaceholder(const std::string symbol)
 {
-    std::string pref = "__pochivm_fast_interp_dynamic_specialization_boilerplate_function_placeholder_";
+    std::string pref = "__pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_";
+    if (symbol.length() > pref.length() && symbol.substr(0, pref.length()) == pref)
+    {
+        return true;
+    }
+    return false;
+}
+
+bool IsBoilerplateFnPtrPlaceholder(const std::string symbol, uint32_t& placeholderOrd /*out*/)
+{
+    {
+        std::string pref = "__pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_";
+        if (symbol.length() > pref.length() && symbol.substr(0, pref.length()) == pref)
+        {
+            placeholderOrd = StringToIntHelper(symbol.substr(pref.length()));
+            return true;
+        }
+    }
+    {
+        std::string pref = "__pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_";
+        if (symbol.length() > pref.length() && symbol.substr(0, pref.length()) == pref)
+        {
+            placeholderOrd = StringToIntHelper(symbol.substr(pref.length()));
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string GetBoilerplateFnPtrPlaceholderName_MustTail(uint32_t placeholderOrdinal)
+{
+    std::string pref = "__pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_";
+    return pref + std::to_string(placeholderOrdinal);
+}
+
+std::string GetBoilerplateFnPtrPlaceholderName_NoTail(uint32_t placeholderOrdinal)
+{
+    std::string pref = "__pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_";
     return pref + std::to_string(placeholderOrdinal);
 }
 
@@ -796,9 +833,31 @@ public:
 
             // Step 1: change all calls to boilerplate placeholders to GHC
             //
-            for (uint32_t i = 0; i < MAX_PLACEHOLDER_ORD; i++)
+            auto processFunctionCall = [&](std::string phname, CallInst* callInst, bool isMustTail)
             {
-                std::string phname = GetBoilerplateFnPtrPlaceholderName(i);
+                callInst->setCallingConv(CallingConv::GHC);
+                if (isMustTail)
+                {
+                    if (!callInst->isTailCall())
+                    {
+                        fprintf(stderr, "[INTERNAL ERROR] Unexpected non-tailcall in function %s placeholder %s\n",
+                                callInst->getParent()->getParent()->getName().str().c_str(), phname.c_str());
+                        abort();
+                    }
+                    // clang guaranteed-musttail-verifier cannot recognize bitcast, and complains about mismatching prototype.
+                    // Here we don't set MustTail, instead we directly check the target assembly instruction in the end.
+                    //
+                    // callInst->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
+                }
+                else
+                {
+                    // We don't have an "intermediate" thing: either a call must be tail call, or it must not.
+                    //
+                    callInst->setTailCallKind(CallInst::TailCallKind::TCK_NoTail);
+                }
+            };
+            auto processFunction = [&](std::string phname, bool isMustTail)
+            {
                 Function* phFn = module->getFunction(phname);
                 if (phFn != nullptr)
                 {
@@ -814,7 +873,7 @@ public:
                                 CallInst* callInst = dyn_cast<CallInst>(inst);
                                 ReleaseAssert(!callInst->isIndirectCall());
                                 ReleaseAssert(callInst->getCalledFunction() == phFn);
-                                callInst->setCallingConv(CallingConv::GHC);
+                                processFunctionCall(phname, callInst, isMustTail);
                             }
                             else
                             {
@@ -840,7 +899,7 @@ public:
                                         CallInst* callInst = dyn_cast<CallInst>(opUser);
                                         ReleaseAssert(!callInst->isIndirectCall());
                                         ReleaseAssert(callInst->getCalledOperand() == expr);
-                                        callInst->setCallingConv(CallingConv::GHC);
+                                        processFunctionCall(phname, callInst, isMustTail);
                                     }
                                     else
                                     {
@@ -862,6 +921,17 @@ public:
                             ReleaseAssert(false && "unhandled type");
                         }
                     }
+                }
+            };
+            for (uint32_t i = 0; i < MAX_PLACEHOLDER_ORD; i++)
+            {
+                {
+                    std::string phname = GetBoilerplateFnPtrPlaceholderName_MustTail(i);
+                    processFunction(phname, true /*mustTail*/);
+                }
+                {
+                    std::string phname = GetBoilerplateFnPtrPlaceholderName_NoTail(i);
+                    processFunction(phname, false /*mustTail*/);
                 }
             }
 
@@ -922,6 +992,14 @@ public:
             // 'exception-model=default' seems to mean that exception is disabled.
             //
             std::string llc_options = " -O=3 -filetype=obj --code-model=medium --relocation-model=static --exception-model=default ";
+            int log2FnAlignment;
+            {
+                log2FnAlignment = 0;
+                size_t tmp = PochiVM::x_fastinterp_function_alignment;
+                while (tmp != 1) { tmp /= 2; log2FnAlignment++; }
+                ReleaseAssert((1ULL << log2FnAlignment) == PochiVM::x_fastinterp_function_alignment);
+            }
+            llc_options += std::string(" --align-all-functions=") + std::to_string(log2FnAlignment) + " ";
             std::string llc_command_line = std::string("llc ") + llc_options + outputIR + " -o " + obj_file;
             int r = system(llc_command_line.c_str());
             if (r != 0)
@@ -1172,6 +1250,35 @@ public:
                         highestBPFPOrdinal = std::max(highestBPFPOrdinal, ord + 1);
                         if (rinfo.type == ELF::R_X86_64_PLT32)
                         {
+                            ReleaseAssert(rinfo.offset > 0);
+                            uint8_t x86_64_inst_opcode = data[rinfo.offset - 1];
+                            if (IsMustTailBoilerplateFnPtrPlaceholder(rinfo.symbol))
+                            {
+                                if (x86_64_inst_opcode != PochiVM::x86_64_jmp_instruction_opcode)
+                                {
+                                    // We expected a tail call (i.e. a 'jmp' instruction)
+                                    //
+                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected jmp, got %d."
+                                                    "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
+                                            static_cast<int>(x86_64_inst_opcode),
+                                            it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                                    abort();
+                                }
+                            }
+                            else
+                            {
+                                ReleaseAssert(IsNoTailBoilerplateFnPtrPlaceholder(rinfo.symbol));
+                                if (x86_64_inst_opcode != PochiVM::x86_64_call_instruction_opcode)
+                                {
+                                    // We expected a non-tail call (i.e. a 'call' instruction)
+                                    //
+                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected call, got %d."
+                                                    "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
+                                            static_cast<int>(x86_64_inst_opcode),
+                                            it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                                    abort();
+                                }
+                            }
                             bpfpList32.push_back(std::make_pair(rinfo.offset, ord));
                         }
                         else if (rinfo.type == ELF::R_X86_64_64)

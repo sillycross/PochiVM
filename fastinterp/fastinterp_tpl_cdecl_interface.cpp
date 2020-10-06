@@ -27,14 +27,12 @@ struct FICdeclInterfaceImpl
         return true;
     }
 
-    // "disable_tail_calls" is required for this function: the compiler must not optimize the call to a tail-call:
-    // the call will actually be later (at LLVM IR level) modified to use GHC convention,
-    // and tail call from cdecl to GHC does not work. C++ compiler is not aware of this of course, so disable it.
-    //
     template<typename T>
-    static T f(uintptr_t stackframe) noexcept __attribute__((disable_tail_calls))
+    static T f(uintptr_t stackframe) noexcept
     {
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(T(*)(uintptr_t) noexcept);
+        // "no tailcall" is required: tail call from cdecl to GHC does not work.
+        //
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0_NO_TAILCALL(T(*)(uintptr_t) noexcept);
         return BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
     }
 

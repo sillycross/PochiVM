@@ -6,9 +6,8 @@ namespace PochiVM
 {
 
 // The function alignment of the generated fastinterp functions
-// This must at least the function alignment used to compile fastinterp_tpl_*.cpp
-// Default clang++ function alignment is 16.
+// Currently eliminate-tail-call optimization is only possible when the function alignment is 1.
 //
-constexpr size_t x_fastinterp_function_alignment = 16;
+constexpr size_t x_fastinterp_function_alignment = 1;
 
 }   // namespace PochiVM
