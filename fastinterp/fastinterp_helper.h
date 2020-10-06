@@ -153,6 +153,8 @@ private:
         uint32_t trueContentLength = m_contentLength;
         if (shouldStripLITC)
         {
+            TestAssert(trueContentLength >= x86_64_rip_relative_jmp_instruction_len &&
+                       m_content[trueContentLength - x86_64_rip_relative_jmp_instruction_len] == x86_64_jmp_instruction_opcode);
             trueContentLength -= x86_64_rip_relative_jmp_instruction_len;
         }
         memcpy(destAddr, m_content, trueContentLength);
