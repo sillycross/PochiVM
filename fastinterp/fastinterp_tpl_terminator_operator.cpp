@@ -9,21 +9,29 @@ namespace PochiVM
 
 struct FITerminatorOperatorImpl
 {
-    template<bool dummy>
+    template<bool isNoExcept,
+             bool exceptionThrown>
     static constexpr bool cond()
     {
+        if (isNoExcept && exceptionThrown) { return false; }
         return true;
     }
 
-    template<bool dummy>
-    static void f(uintptr_t /*stackframe*/) noexcept
+    template<bool isNoExcept,
+             bool exceptionThrown>
+    static typename std::conditional<isNoExcept, void, bool>::type f(uintptr_t /*stackframe*/) noexcept
     {
+        if constexpr(!isNoExcept)
+        {
+            return exceptionThrown;
+        }
     }
 
     static auto metavars()
     {
         return CreateMetaVarList(
-                    CreateBoolMetaVar("dummy")
+                    CreateBoolMetaVar("isNoExcept"),
+                    CreateBoolMetaVar("exceptionThrown")
         );
     }
 };

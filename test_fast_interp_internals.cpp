@@ -1176,118 +1176,6 @@ TEST(TestFastInterpInternal, SanityCallExpr_5)
     }
 }
 
-TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
-{
-    // This test handrolls fibonacci sequence using FastInterp, just as a more complex sanity test
-    //
-    FastInterpCodegenEngine engine;
-    FastInterpBoilerplateInstance* fib_fn = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIFunctionImpl>::SelectBoilerplateBluePrint(
-                    true /*isNoExcept*/,
-                    static_cast<FIFunctionNumStatements>(1) /*numStmts*/,
-                    static_cast<FIFunctionStmtsMayReturnMask>(1) /*mayReturnMask*/));
-
-    FastInterpBoilerplateInstance* if_stmt = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIIfStatementImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    static_cast<FIIfStmtNumStatements>(1) /*trueBranchNumStmts*/,
-                    static_cast<FIIfStmtMayCFRMask>(1) /*trueBranchMayCFRMask*/,
-                    static_cast<FIIfStmtNumStatements>(1) /*falseBranchNumStmts*/,
-                    static_cast<FIIfStmtMayCFRMask>(1) /*falseBranchMayCFRMask*/,
-                    FIConditionShapeCategory::SIMPLE_COMPARISON,
-                    AstComparisonExprType::LESS_EQUAL,
-                    FIConditionOperandShapeCategory::VARIABLE,
-                    FIConditionOperandShapeCategory::LITERAL_NONZERO_OR_32BIT));
-
-    if_stmt->PopulateConstantPlaceholder<uint32_t>(0, 8);
-    if_stmt->PopulateConstantPlaceholder<int>(1, 2);
-
-    FastInterpBoilerplateInstance* true_br = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FISimpleReturnImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    FIOperandShapeCategory::LITERAL_NONZERO));
-    true_br->PopulateConstantPlaceholder<uint64_t>(0, 1);
-    if_stmt->PopulateBoilerplateFnPtrPlaceholder(1, true_br);
-
-    FastInterpBoilerplateInstance* false_br = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIReturnArithmeticExprImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    FIOperandShapeCategory::COMPLEX,
-                    FIOperandShapeCategory::COMPLEX,
-                    AstArithmeticExprType::ADD));
-
-    FastInterpBoilerplateInstance* call1 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FICallGeneratedFnImpl>::SelectBoilerplateBluePrint(
-                    false /*isReturnTypeVoid*/,
-                    FIABIDistinctType::INT_64,
-                    true /*isNoExcept*/,
-                    static_cast<FICallExprNumParameters>(1),
-                    static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_32))));
-    call1->PopulateConstantPlaceholder(0, 16 /*stackFrameSize*/);
-    call1->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);
-
-    FastInterpBoilerplateInstance* call1_param = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIArithmeticExprImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    FIOperandShapeCategory::VARIABLE,
-                    FIOperandShapeCategory::LITERAL_NONZERO,
-                    AstArithmeticExprType::SUB));
-    call1_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
-    call1_param->PopulateConstantPlaceholder<int>(2, 1);
-    call1->PopulateBoilerplateFnPtrPlaceholder(1, call1_param);
-
-    false_br->PopulateBoilerplateFnPtrPlaceholder(0, call1);
-
-    FastInterpBoilerplateInstance* call2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FICallGeneratedFnImpl>::SelectBoilerplateBluePrint(
-                    false /*isReturnTypeVoid*/,
-                    FIABIDistinctType::INT_64,
-                    true /*isNoExcept*/,
-                    static_cast<FICallExprNumParameters>(1),
-                    static_cast<FICallExprParamTypeMask>(static_cast<int>(FIABIDistinctType::INT_32))));
-    call2->PopulateConstantPlaceholder(0, 16 /*stackFrameSize*/);
-    call2->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);
-
-    FastInterpBoilerplateInstance* call2_param = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIArithmeticExprImpl>::SelectBoilerplateBluePrint(
-                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    FIOperandShapeCategory::VARIABLE,
-                    FIOperandShapeCategory::LITERAL_NONZERO,
-                    AstArithmeticExprType::SUB));
-    call2_param->PopulateConstantPlaceholder<uint32_t>(0, 8 /*varOffset*/);
-    call2_param->PopulateConstantPlaceholder<int>(2, 2);
-    call2->PopulateBoilerplateFnPtrPlaceholder(1, call2_param);
-
-    false_br->PopulateBoilerplateFnPtrPlaceholder(2, call2);
-
-    if_stmt->PopulateBoilerplateFnPtrPlaceholder(6, false_br);
-
-    fib_fn->PopulateBoilerplateFnPtrPlaceholder(0, if_stmt);
-
-    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn, true /*isNoExcept*/);
-    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
-    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
-    using FnProto = void(*)();
-    FnProto fib = reinterpret_cast<FnProto>(fnPtrVoid);
-
-    {
-        uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(16));
-        for (size_t i = 0; i < 16; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
-        *reinterpret_cast<int*>(stackFrame + 8) = 25;
-        __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(stackFrame);
-        fib();
-        uint64_t result = *reinterpret_cast<uint64_t*>(stackFrame);
-        ReleaseAssert(result == 75025);
-    }
-}
-
 TEST(TestFastInterpInternal, SanityHandwrittenFibonacci_2)
 {
     // Same logic as the previous test, but now the function is not noexcept (but does not actually throw either)
@@ -1597,7 +1485,7 @@ TEST(TestFastInterpInternal, Sanity_1)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
     inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
@@ -1637,7 +1525,7 @@ TEST(TestFastInterpInternal, Sanity_2)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst->PopulateConstantPlaceholder<int>(1, 123);
     inst->PopulateConstantPlaceholder<int>(2, 45678);
@@ -1679,7 +1567,7 @@ TEST(TestFastInterpInternal, Sanity_3)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst->PopulateConstantPlaceholder<double>(1, 123.456);
     inst->PopulateConstantPlaceholder<double>(2, 789.012);
@@ -1741,7 +1629,7 @@ TEST(TestFastInterpInternal, Sanity_4)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst4);
@@ -1806,7 +1694,7 @@ TEST(TestFastInterpInternal, Sanity_5)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst4);
@@ -1871,7 +1759,7 @@ TEST(TestFastInterpInternal, Sanity_6)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
     inst3->PopulateBoilerplateFnPtrPlaceholder(0, inst4);
@@ -1907,7 +1795,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     FastInterpCodegenEngine engine;
 
     FastInterpBoilerplateInstance* terminal = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(false));
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
 
     // Stack frame: n @ 8, lp @ 16, pr @ 24, cnt @ 32, i @ 36, j @ 40, k @ 44
     // int cnt = 0;
@@ -2232,14 +2120,13 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     using FnProto = void(*)(uintptr_t);
     FnProto fnPtr = reinterpret_cast<FnProto>(fnPtrVoid);
 
-    int n = 100000000;
+    int n = 1000000;
     int* lp = new int[static_cast<size_t>(n + 10)];
     memset(lp, 0, sizeof(int) * static_cast<size_t>(n + 10));
     int* pr = new int[static_cast<size_t>(n + 10)];
     memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
 
     {
-        AutoTimer t;
         uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(48));
         for (size_t i = 0; i < 48; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
         *reinterpret_cast<int*>(stackFrame + 8) = n;
@@ -2248,6 +2135,148 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
         __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(stackFrame);
         fnPtr(reinterpret_cast<uintptr_t>(stackFrame));
         int result = *reinterpret_cast<int*>(stackFrame);
-        printf("%d\n", result);
+        ReleaseAssert(result == 78498);
+    }
+}
+
+TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
+{
+    // This test handrolls fibonacci sequence using FastInterp, just as a more complex sanity test
+    //
+    FastInterpCodegenEngine engine;
+
+    // stack frame: n @ 8, tmp @ 16
+    //
+    FastInterpBoilerplateInstance* fib_fn = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIFullyInlinedComparisonBranchImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOpaqueParamsHelper::GetMaxOIP(),
+                    FIOpaqueParamsHelper::GetMaxOFP(),
+                    AstComparisonExprType::LESS_EQUAL,
+                    true /*putFalseBranchAtEnd*/), 4);
+    fib_fn->PopulateConstantPlaceholder<uint64_t>(0, 8);
+    fib_fn->PopulateConstantPlaceholder<int>(2, 2);
+
+    FastInterpBoilerplateInstance* true_br = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIFullyInlineAssignImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    FIOperandShapeCategory::VARIABLE,
+                    FIOperandShapeCategory::LITERAL_NONZERO,
+                    FIOpaqueParamsHelper::GetMaxOIP(),
+                    FIOpaqueParamsHelper::GetMaxOFP()));
+    true_br->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
+    true_br->PopulateConstantPlaceholder<uint64_t>(2, 1);
+    fib_fn->PopulateBoilerplateFnPtrPlaceholder(0, true_br);
+
+    FastInterpBoilerplateInstance* ret_node1 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
+    true_br->PopulateBoilerplateFnPtrPlaceholder(0, ret_node1);
+
+    FastInterpBoilerplateInstance* compute_lhs = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    true /*spillReturnValue*/,
+                    true /*isCalleeNoExcept*/,
+                    FIStackframeSizeCategoryHelper::SelectCategory(24)));
+    compute_lhs->PopulateConstantPlaceholder<uint64_t>(0, 16);
+    fib_fn->PopulateBoilerplateFnPtrPlaceholder(1, compute_lhs);
+
+    FastInterpBoilerplateInstance* compute_lhs_param = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIFullyInlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    FISimpleOperandShapeCategory::VARIABLE,
+                    FISimpleOperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::SUB,
+                    false /*spillOutput*/,
+                    static_cast<FINumOpaqueIntegralParams>(1),
+                    FIOpaqueParamsHelper::GetMaxOFP()));
+    compute_lhs_param->PopulateConstantPlaceholder<uint64_t>(1, 8);
+    compute_lhs_param->PopulateConstantPlaceholder<int>(2, 1);
+    compute_lhs->PopulateBoilerplateFnPtrPlaceholder(1, compute_lhs_param);
+
+    FastInterpBoilerplateInstance* populate_lhs_param = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    true /*isQuickAccess*/,
+                    false /*hasMore*/));
+    populate_lhs_param->PopulateConstantPlaceholder<uint64_t>(0, 8);
+    populate_lhs_param->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);
+    compute_lhs_param->PopulateBoilerplateFnPtrPlaceholder(0, populate_lhs_param);
+
+    FastInterpBoilerplateInstance* compute_rhs = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    false /*spillReturnValue*/,
+                    true /*isCalleeNoExcept*/,
+                    FIStackframeSizeCategoryHelper::SelectCategory(24)));
+    compute_lhs->PopulateBoilerplateFnPtrPlaceholder(0, compute_rhs);
+
+    FastInterpBoilerplateInstance* compute_rhs_param = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIFullyInlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    FISimpleOperandShapeCategory::VARIABLE,
+                    FISimpleOperandShapeCategory::LITERAL_NONZERO,
+                    AstArithmeticExprType::SUB,
+                    false /*spillOutput*/,
+                    static_cast<FINumOpaqueIntegralParams>(1),
+                    FIOpaqueParamsHelper::GetMaxOFP()));
+    compute_rhs_param->PopulateConstantPlaceholder<uint64_t>(1, 8);
+    compute_rhs_param->PopulateConstantPlaceholder<int>(2, 2);
+    compute_rhs->PopulateBoilerplateFnPtrPlaceholder(1, compute_rhs_param);
+
+    FastInterpBoilerplateInstance* populate_rhs_param = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<int>().GetDefaultFastInterpTypeId(),
+                    true /*isQuickAccess*/,
+                    false /*hasMore*/));
+    populate_rhs_param->PopulateConstantPlaceholder<uint64_t>(0, 8);
+    populate_rhs_param->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);
+    compute_rhs_param->PopulateBoilerplateFnPtrPlaceholder(0, populate_rhs_param);
+
+    FastInterpBoilerplateInstance* compute_sum = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    AstArithmeticExprType::ADD,
+                    static_cast<FIBinaryOpNumQuickAccessParams>(1) /*numQAP*/,
+                    false /*spillOutput*/,
+                    static_cast<FINumOpaqueIntegralParams>(0),
+                    static_cast<FINumOpaqueFloatingParams>(0)));
+    compute_sum->PopulateConstantPlaceholder<uint64_t>(1, 16);
+    compute_rhs->PopulateBoilerplateFnPtrPlaceholder(0, compute_sum);
+
+    FastInterpBoilerplateInstance* populate_ret = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                    FIOperandShapeCategory::VARIABLE,
+                    true /*isQAP*/,
+                    static_cast<FINumOpaqueIntegralParams>(0),
+                    static_cast<FINumOpaqueFloatingParams>(0)));
+    populate_ret->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    compute_sum->PopulateBoilerplateFnPtrPlaceholder(0, populate_ret);
+
+    FastInterpBoilerplateInstance* ret_node2 = engine.InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(true, false));
+    populate_ret->PopulateBoilerplateFnPtrPlaceholder(0, ret_node2);
+
+    engine.RegisterGeneratedFunctionEntryPoint(reinterpret_cast<AstFunction*>(233), fib_fn, true /*isNoExcept*/);
+    std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
+    void* fnPtrVoid = gp->GetGeneratedFunctionAddress(reinterpret_cast<AstFunction*>(233));
+    using FnProto = void(*)(uintptr_t);
+    FnProto fib = reinterpret_cast<FnProto>(fnPtrVoid);
+
+    {
+        uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(24));
+        for (size_t i = 0; i < 24; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
+        *reinterpret_cast<int*>(stackFrame + 8) = 25;
+        fib(reinterpret_cast<uintptr_t>(stackFrame));
+        uint64_t result = *reinterpret_cast<uint64_t*>(stackFrame);
+        ReleaseAssert(result == 75025);
     }
 }

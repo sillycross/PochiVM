@@ -49,6 +49,10 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_astderefvariable.cpp
   fastinterp_tpl_partial_inline_pointer_arith.cpp
   fastinterp_tpl_partial_inline_rhs_assign.cpp
+  fastinterp_tpl_call_expr.cpp
+  fastinterp_tpl_call_expr_check_exception.cpp
+  fastinterp_tpl_call_expr_store_param.cpp
+  fastinterp_tpl_call_expr_spill_stackaddr.cpp
 )
 
 SET(FASTINTERP_SOURCES
@@ -59,7 +63,10 @@ SET(FASTINTERP_SOURCES
 add_library(fastinterp_tpl_ir OBJECT
   ${FASTINTERP_TPL_SOURCES}
 )
-set_target_properties(fastinterp_tpl_ir PROPERTIES COMPILE_FLAGS " -emit-llvm -fno-exceptions ")
+# "-Walloca" is required: LLVM seems to generate buggy assembly in GHC calling convention 
+# if variable-sized alloca is used. It failed to recognize that rbp is garbaged by the call.
+# 
+set_target_properties(fastinterp_tpl_ir PROPERTIES COMPILE_FLAGS " -emit-llvm -fno-exceptions -Walloca ")
 
 set(generated_src_list "")
 foreach(cur_src ${FASTINTERP_TPL_SOURCES})

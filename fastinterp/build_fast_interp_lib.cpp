@@ -814,7 +814,7 @@ public:
                                 callInst->getParent()->getParent()->getName().str().c_str(), phname.c_str());
                         abort();
                     }
-                    // clang guaranteed-musttail-verifier cannot recognize bitcast, and complains about mismatching prototype.
+                    // clang guaranteed-musttail-verifier has a weird requirement that caller and callee prototype must match.
                     // Here we don't set MustTail, instead we directly check the target assembly instruction in the end.
                     //
                     // callInst->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
@@ -963,6 +963,7 @@ public:
             //
             std::string llc_options = " -O=3 -filetype=obj --code-model=medium --relocation-model=static --exception-model=default ";
             llc_options += std::string(" --align-all-functions=") + std::to_string(PochiVM::x_fastinterp_log2_function_alignment) + " ";
+            llc_options += std::string(" --stack-alignment=") + std::to_string(PochiVM::x_fastinterp_function_stack_alignment) + " ";
             std::string llc_command_line = std::string("llc ") + llc_options + outputIR + " -o " + obj_file;
             int r = system(llc_command_line.c_str());
             if (r != 0)
@@ -1228,7 +1229,8 @@ public:
                                 {
                                     // We expected a tail call (i.e. a 'jmp' instruction)
                                     //
-                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected jmp, got %d."
+                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected jmp, got 0x%x. "
+                                                    "Tail call optimization did not apply? "
                                                     "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
                                             static_cast<int>(x86_64_inst_opcode),
                                             it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
@@ -1249,7 +1251,7 @@ public:
                                 {
                                     // We expected a non-tail call (i.e. a 'call' instruction)
                                     //
-                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected call, got %d."
+                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected call, got 0x%x. "
                                                     "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
                                             static_cast<int>(x86_64_inst_opcode),
                                             it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
