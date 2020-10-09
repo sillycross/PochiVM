@@ -4,6 +4,7 @@
 #include "generated/fastinterp_library.generated.h"
 #include "x86_64_asm_helper.h"
 #include "x86_64_populate_nop_instruction_helper.h"
+#include "pochivm/function_proto.h"
 
 namespace PochiVM
 {
@@ -208,8 +209,6 @@ private:
 #endif
 };
 
-class AstFunction;
-
 // A owning generated program.
 // When this class is destructed, the program is gone.
 // So it is undefined behavior if this class is destructed while the program is still running.
@@ -280,18 +279,19 @@ public:
         TestAssert(!m_functionEntryPoint.count(fn));
         FastInterpBoilerplateInstance* cdeclWrapper = InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICdeclInterfaceImpl>::SelectBoilerplateBluePrint(
-                        isNoExcept ? TypeId::Get<void>().GetDefaultFastInterpTypeId() : TypeId::Get<bool>().GetDefaultFastInterpTypeId()));
+                        fn->GetReturnType().GetDefaultFastInterpTypeId(),
+                        isNoExcept));
         cdeclWrapper->PopulateBoilerplateFnPtrPlaceholder(0, inst);
         m_functionEntryPoint[fn] = std::make_pair(inst, cdeclWrapper);
     }
 
-    void TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId returnType, uintptr_t fakeId, FastInterpBoilerplateInstance* inst)
+    void TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId returnType, bool isNoExcept, uintptr_t fakeId, FastInterpBoilerplateInstance* inst)
     {
         AstFunction* fn = reinterpret_cast<AstFunction*>(fakeId);
         TestAssert(!m_functionEntryPoint.count(fn));
         FastInterpBoilerplateInstance* cdeclWrapper = InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICdeclInterfaceImpl>::SelectBoilerplateBluePrint(
-                        returnType.GetDefaultFastInterpTypeId()));
+                        returnType.GetDefaultFastInterpTypeId(), isNoExcept));
         cdeclWrapper->PopulateBoilerplateFnPtrPlaceholder(0, inst);
         m_functionEntryPoint[fn] = std::make_pair(inst, cdeclWrapper);
     }
@@ -365,7 +365,7 @@ public:
         }
 
 #ifdef TESTBUILD
-        // Just to make sure we have placed every placeholder
+        // Just to make sure we have placed every boilerplate instance
         //
         for (size_t i = 0; i < m_allBoilerplateInstances.size(); i++)
         {

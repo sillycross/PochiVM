@@ -1,6 +1,7 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
 
 #include "fastinterp_tpl_common.hpp"
+#include "fastinterp_tpl_return_type.h"
 
 namespace PochiVM
 {
@@ -21,25 +22,28 @@ namespace PochiVM
 //
 struct FICdeclInterfaceImpl
 {
-    template<typename T>
+    template<typename T,
+             bool isNoExcept>
     static constexpr bool cond()
     {
         return true;
     }
 
-    template<typename T>
-    static T f(uintptr_t stackframe) noexcept
+    template<typename T,
+             bool isNoExcept>
+    static FIReturnType<T, isNoExcept> f(uintptr_t stackframe) noexcept
     {
         // "no tailcall" is required: tail call from cdecl to GHC does not work.
         //
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0_NO_TAILCALL(T(*)(uintptr_t) noexcept);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0_NO_TAILCALL(FIReturnType<T, isNoExcept>(*)(uintptr_t) noexcept);
         return BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
     }
 
     static auto metavars()
     {
         return CreateMetaVarList(
-                    CreateTypeMetaVar("returnType")
+                    CreateTypeMetaVar("returnType"),
+                    CreateBoolMetaVar("isNoExcept")
         );
     }
 };

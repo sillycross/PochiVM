@@ -3,6 +3,7 @@
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
 #include "fastinterp_tpl_stackframe_category.h"
+#include "fastinterp_tpl_return_type.h"
 
 namespace PochiVM
 {
@@ -35,6 +36,9 @@ struct FICallExprImpl
         return true;
     }
 
+    template<typename T>
+    using WorkaroundVoidType = typename std::conditional<std::is_same<T, void>::value, void*, T>::type;
+
     // Unlike most of the other operators, this operator allows no OpaqueParams.
     // GHC has no callee-saved registers, all registers are invalidated after a call.
     // Therefore, it is always a waste to have register-pinned opaque parameters:
@@ -55,20 +59,25 @@ struct FICallExprImpl
                     static_cast<int>(stackframeSizeCategoryEnum));
         alignas(x_fastinterp_function_stack_alignment) uint8_t newStackframe[newStackframeSize];
 
-        [[maybe_unused]] bool hasException;
+        [[maybe_unused]] WorkaroundVoidType<FIReturnType<ReturnType, isCalleeNoExcept>> returnValue;
 
-        // "noescape" is required, otherwise the compiler may assume that "newStackframe" could escape the function,
-        // preventing tail call optimization on our continuation.
-        //
-        if constexpr(isCalleeNoExcept)
+        if constexpr(std::is_same<FIReturnType<ReturnType, isCalleeNoExcept>, void>::value)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(void(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
+            // "noescape" is required, otherwise the compiler may assume that "newStackframe" could escape the function,
+            // preventing tail call optimization on our continuation.
+            //
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(
+                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
             BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, newStackframe);
         }
         else
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(bool(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
-            hasException = BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, newStackframe);
+            // "noescape" is required, otherwise the compiler may assume that "newStackframe" could escape the function,
+            // preventing tail call optimization on our continuation.
+            //
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(
+                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
+            returnValue = BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, newStackframe);
         }
 
         if constexpr(std::is_same<ReturnType, void>::value)
@@ -81,14 +90,14 @@ struct FICallExprImpl
             else
             {
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, bool) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, hasException);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
         else if constexpr(spillReturnValue)
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
             *GetLocalVarAddress<ReturnType>(stackframe, CONSTANT_PLACEHOLDER_0) =
-                    *reinterpret_cast<ReturnType*>(newStackframe);
+                    FIReturnValueHelper::GetReturnValue<ReturnType, isCalleeNoExcept>(returnValue);
 
             if constexpr(isCalleeNoExcept)
             {
@@ -98,21 +107,21 @@ struct FICallExprImpl
             else
             {
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, bool) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, hasException);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
         else
         {
-            ReturnType returnValue = *reinterpret_cast<ReturnType*>(newStackframe);
+            ReturnType ret = FIReturnValueHelper::GetReturnValue<ReturnType, isCalleeNoExcept>(returnValue);
             if constexpr(isCalleeNoExcept)
             {
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, returnValue);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, ret);
             }
             else
             {
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType, bool) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, returnValue, hasException);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, ret, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
     }
