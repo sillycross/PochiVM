@@ -2319,3 +2319,70 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
         ReleaseAssert(result == 75025);
     }
 }
+
+// Test StackFrameManager
+//
+TEST(TestFastInterpInternal, SanityStackFrameManager_1)
+{
+    FIStackFrameManager sfm;
+    ReleaseAssert(sfm.PushLocalVar(TypeId::Get<int>()) == 8);
+    ReleaseAssert(sfm.PushLocalVar(TypeId::Get<uint64_t>()) == 16);
+
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<float>());
+    sfm.PushTemp(TypeId::Get<double>());
+    sfm.PushTemp(TypeId::Get<double>());
+    sfm.PushTemp(TypeId::Get<double>());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    sfm.PushTemp(TypeId::Get<double>());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    sfm.PushTemp(TypeId::Get<int>());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).IsNoSpill());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<float>()).GetSpillLocation() == 24);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).IsNoSpill());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).IsNoSpill());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).GetSpillLocation() == 32);
+
+    sfm.PopLocalVar(TypeId::Get<uint64_t>());
+    sfm.PopLocalVar(TypeId::Get<int>());
+
+    ReleaseAssert(sfm.GetFinalStackFrameSize() == 40);
+}
+
+TEST(TestFastInterpInternal, SanityStackFrameManager_2)
+{
+    FIStackFrameManager sfm;
+    ReleaseAssert(sfm.PushLocalVar(TypeId::Get<int>()) == 8);
+    ReleaseAssert(sfm.PushLocalVar(TypeId::Get<uint64_t>()) == 16);
+
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<int>());
+    sfm.PushTemp(TypeId::Get<float>());
+    sfm.PushTemp(TypeId::Get<double>());
+    sfm.PushTemp(TypeId::Get<double>());
+    sfm.PushTemp(TypeId::Get<double>());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    sfm.PushTemp(TypeId::Get<double>());
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).IsNoSpill());
+    sfm.PushTemp(TypeId::Get<int>());
+
+    sfm.ForceSpillAll();
+
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).GetSpillLocation() == 56);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).GetSpillLocation() == 72);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<double>()).GetSpillLocation() == 64);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<float>()).GetSpillLocation() == 24);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).GetSpillLocation() == 48);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).GetSpillLocation() == 40);
+    ReleaseAssert(sfm.PopTemp(TypeId::Get<int>()).GetSpillLocation() == 32);
+
+    sfm.PopLocalVar(TypeId::Get<uint64_t>());
+    sfm.PopLocalVar(TypeId::Get<int>());
+
+    ReleaseAssert(sfm.GetFinalStackFrameSize() == 80);
+}

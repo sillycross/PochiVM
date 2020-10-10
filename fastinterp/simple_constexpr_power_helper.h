@@ -12,5 +12,10 @@ constexpr int power(int base, int exp)
     return result;
 }
 
+constexpr int is_power_of_2(int value)
+{
+    return value > 0 && (value & -value) == value;
+}
+
 }   // namespace math
 }   // namespace PochiVM
