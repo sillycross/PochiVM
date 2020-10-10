@@ -20,6 +20,7 @@ public:
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
         TestAssert(m_lhs->GetTypeId().IsPrimitiveType());
         TestAssert(!m_lhs->GetTypeId().IsBool());
+        TestAssertImp(m_lhs->GetTypeId().IsFloatingPoint(), m_op != AstArithmeticExprType::MOD);
     }
 
     // Interp implementations
@@ -110,7 +111,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
 private:
     AstArithmeticExprType m_op;

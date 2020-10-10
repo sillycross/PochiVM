@@ -11,6 +11,7 @@ add_library(pochivm
   exception_helper.cpp
   ast_catch_throw.cpp
   codegen_context.cpp
+  arith_expr_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

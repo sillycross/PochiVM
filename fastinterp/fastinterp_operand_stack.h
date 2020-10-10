@@ -4,36 +4,10 @@
 #include "simple_constexpr_power_helper.h"
 #include "fastinterp_tpl_opaque_params.h"
 #include "pochivm/ast_type_helper.h"
+#include "fastinterp_spill_location.h"
 
 namespace PochiVM
 {
-
-class FISpillLocation
-{
-public:
-    FISpillLocation() : m_location(x_nospill) {}
-
-    bool IsNoSpill() const
-    {
-        return m_location == x_nospill;
-    }
-
-    void SetSpillLocation(uint32_t loc)
-    {
-        TestAssert(IsNoSpill() && loc != x_nospill);
-        m_location = loc;
-    }
-
-    uint32_t GetSpillLocation() const
-    {
-        TestAssert(!IsNoSpill());
-        return m_location;
-    }
-
-private:
-    static constexpr uint32_t x_nospill = static_cast<uint32_t>(-1);
-    uint32_t m_location;
-};
 
 struct FITempOperand
 {
@@ -178,7 +152,7 @@ public:
         if (m_firstNoSpill > m_stack.size()) { m_firstNoSpill--; assert(m_firstNoSpill == m_stack.size()); }
         if (!spillLoc.IsNoSpill())
         {
-            m_sfPlanner->FreeTemp(spillLoc.GetSpillLocation());
+            m_sfPlanner->FreeTemp(static_cast<uint32_t>(spillLoc.GetSpillLocation()));
         }
         return spillLoc;
     }
@@ -252,6 +226,14 @@ public:
         {
             return m_integralOperandStack.Pop();
         }
+    }
+
+    void ReserveTemp(TypeId typeId)
+    {
+        PushTemp(typeId);
+        FISpillLocation result = PopTemp(typeId);
+        TestAssert(result.IsNoSpill());
+        std::ignore = result;
     }
 
     uint32_t WARN_UNUSED PushLocalVar(TypeId typeId)

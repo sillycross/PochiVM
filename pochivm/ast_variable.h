@@ -31,6 +31,7 @@ public:
         , m_varnameSuffix(varnameSuffix)
         , m_storageSize(static_cast<uint32_t>(typeId.RemovePointer().Size()))
         , m_debugInterpOffset(static_cast<uint32_t>(-1))
+        , m_fastInterpOffset(static_cast<uint32_t>(-1))
     {
         TestAssert(GetTypeId().IsPointerType());
     }
@@ -79,6 +80,12 @@ public:
         return m_debugInterpOffset;
     }
 
+    uint64_t GetFastInterpOffset() const
+    {
+        assert(m_fastInterpOffset != static_cast<uint32_t>(-1));
+        return m_fastInterpOffset;
+    }
+
 private:
     // name of the variable
     //
@@ -97,9 +104,12 @@ private:
     // This is useful for C++ class variables
     //
     uint32_t m_storageSize;
-    // The offset in stackframe that stores the value of this variable, in interp mode
+    // The offset in stackframe that stores the value of this variable, in debug interp mode
     //
     uint32_t m_debugInterpOffset;
+    // The offset in stackframe in fastinterp mode
+    //
+    uint32_t m_fastInterpOffset;
 };
 
 }   // namespace PochiVM

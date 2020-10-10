@@ -54,6 +54,11 @@ public:
         fn(m_operand);
     }
 
+    AstVariable* GetOperand() const
+    {
+        return m_operand;
+    }
+
 private:
     AstVariable* m_operand;
 };

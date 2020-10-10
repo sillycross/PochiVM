@@ -31,36 +31,21 @@ struct FIOutlinedArithmeticExprImpl
 
     template<typename OperandType,
              AstArithmeticExprType arithType,
-             FIBinaryOpNumQuickAccessParams numQAP,
+             bool isLhsQAP,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
         if (!std::is_floating_point<OperandType>::value)
         {
-            // Check space for input
-            //
-            if (static_cast<int>(numQAP) == 0)
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOIP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP, static_cast<int>(numQAP))) { return false; }
-            }
-            // Check space for output (1 operand)
-            //
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOIP, 1 + (isLhsQAP ? 1 : 0))) { return false; }
         }
         return true;
     }
 
     template<typename OperandType,
              AstArithmeticExprType arithType,
-             FIBinaryOpNumQuickAccessParams numQAP,
+             bool isLhsQAP,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
@@ -68,47 +53,25 @@ struct FIOutlinedArithmeticExprImpl
     {
         if (std::is_floating_point<OperandType>::value)
         {
-            // Check space for input
-            //
-            if (static_cast<int>(numQAP) == 0)
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOFP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP, static_cast<int>(numQAP))) { return false; }
-            }
-            // Check space for output (1 operand)
-            //
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOFP, 1 + (isLhsQAP ? 1 : 0))) { return false; }
         }
         return true;
     }
 
     // Placeholder rules:
-    // constant placeholder 1/2 for LHS/RHS if not quickaccess
+    // constant placeholder 1 if LHS is not QAP
     //
     template<typename OperandType,
              AstArithmeticExprType arithType,
-             FIBinaryOpNumQuickAccessParams numQAP,
+             bool isLhsQAP,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType qa1, [[maybe_unused]] OperandType qa2) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType qa1, [[maybe_unused]] OperandType qa2) noexcept
     {
         OperandType lhs, rhs;
-        if constexpr(static_cast<int>(numQAP) == 0)
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint64_t);
-            lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
-            rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_2);
-        }
-        else if constexpr(static_cast<int>(numQAP) == 1)
+        if constexpr(!isLhsQAP)
         {
             // We always evaluate LHS before RHS, so the QAP is always RHS
             //
@@ -118,14 +81,10 @@ struct FIOutlinedArithmeticExprImpl
             //
             rhs = qa1;
         }
-        else if constexpr(static_cast<int>(numQAP) == 2)
+        else
         {
             lhs = qa1;
             rhs = qa2;
-        }
-        else
-        {
-            static_assert(type_dependent_false<OperandType>::value, "Unexpected numQAP");
         }
 
         OperandType result = EvaluateArithmeticExpression<OperandType, arithType>(lhs, rhs);
@@ -150,7 +109,7 @@ struct FIOutlinedArithmeticExprImpl
         return CreateMetaVarList(
                     CreateTypeMetaVar("operandType"),
                     CreateEnumMetaVar<AstArithmeticExprType::X_END_OF_ENUM>("operatorType"),
-                    CreateEnumMetaVar<FIBinaryOpNumQuickAccessParams::X_END_OF_ENUM>("numQAP"),
+                    CreateBoolMetaVar("isLhsQAP"),
                     CreateBoolMetaVar("spillOutput"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit()

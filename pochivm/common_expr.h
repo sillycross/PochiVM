@@ -90,6 +90,32 @@ public:
     //
     void HijackPointerValueLLVM(llvm::Value* value);
 
+    bool IsAllBitsZero() const
+    {
+        if (GetTypeId().Size() == 1)
+        {
+            return m_as_uint8_t == 0;
+        }
+        else if (GetTypeId().Size() == 2)
+        {
+            return m_as_uint16_t == 0;
+        }
+        else if (GetTypeId().Size() == 4)
+        {
+            return m_as_uint32_t == 0;
+        }
+        else
+        {
+            TestAssert(GetTypeId().Size() == 8);
+            return m_as_uint64_t == 0;
+        }
+    }
+
+    uint64_t GetAsU64()
+    {
+        return m_as_uint64_t;
+    }
+
 private:
     // Stores the literal value with a union of all possible primitive types
     //
@@ -107,6 +133,7 @@ FOR_EACH_PRIMITIVE_TYPE
 
     void InitLiteralValue(TypeId typeId, void* valuePtr)
     {
+        m_as_uint64_t = 0;
 #define F(type) if (typeId.IsType<type>()) { m_as_ ## type = *reinterpret_cast<type*>(valuePtr); return; }
 FOR_EACH_PRIMITIVE_TYPE
 #undef F

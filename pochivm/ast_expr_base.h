@@ -4,6 +4,8 @@
 #include "interp_control_signal.h"
 #include "ast_type_helper.h"
 #include "ast_misc_helper.h"
+#include "fastinterp/fastinterp_spill_location.h"
+#include "fastinterp_snippet.h"
 
 namespace llvm
 {
@@ -89,20 +91,6 @@ private:
     _EnumType m_value;
 };
 
-class FastInterpBoilerplateInstance;
-
-struct FastInterpSnippet
-{
-    // The entry point of the code snippet
-    //
-    FastInterpBoilerplateInstance* m_entry;
-
-    // The tail to which continuation shall be attached
-    // nullptr if a continuation is not possible (due to a guaranteed ret)
-    //
-    FastInterpBoilerplateInstance* m_tail;
-};
-
 // The base class of all expressions
 // WARNING: All derived classes must have this class as the first base class! Or DebugInterp() breaks!
 //
@@ -148,7 +136,10 @@ public:
     //
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() = 0;
 
-    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() = 0;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/)
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
 
     // For each of the children c of this node, invoke fn(c)
     //

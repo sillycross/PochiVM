@@ -2,12 +2,15 @@
 
 #include "common.h"
 
+
 namespace PochiVM
 {
 
 class AstScope;
 class AstVariable;
 class AstModule;
+class FIStackFrameManager;
+class FastInterpCodegenEngine;
 
 struct PochiVMContext
 {
@@ -32,6 +35,9 @@ struct PochiVMContext
     // Current interp stack frame base
     //
     uintptr_t m_debugInterpStackFrameBase;
+
+    FIStackFrameManager* m_fastInterpStackFrameManager;
+    FastInterpCodegenEngine* m_fastInterpEngine;
 
     // Current module
     //

@@ -121,6 +121,7 @@ struct TypeId
     bool IsPrimitiveIntType() const { return 1 <= value && value <= x_num_primitive_int_types; }
     bool IsFloat() const { return IsType<float>(); }
     bool IsDouble() const { return IsType<double>(); }
+    bool IsFloatingPoint() const { return IsFloat() || IsDouble(); }
     bool IsPrimitiveFloatType() const {
         return x_num_primitive_int_types < value && value <= x_num_primitive_int_types + x_num_primitive_float_types;
     }

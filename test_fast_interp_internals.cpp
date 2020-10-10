@@ -1637,7 +1637,7 @@ TEST(TestFastInterpInternal, Sanity_4)
                 FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::MUL,
-                    static_cast<FIBinaryOpNumQuickAccessParams>(2),
+                    true /*isLhsQAP*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
@@ -1709,7 +1709,7 @@ TEST(TestFastInterpInternal, Sanity_5)
                 FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::DIV,
-                    static_cast<FIBinaryOpNumQuickAccessParams>(2),
+                    true /*isLhsQAP*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
@@ -1773,7 +1773,7 @@ TEST(TestFastInterpInternal, Sanity_6)
                     FISimpleOperandShapeCategory::LITERAL_NONZERO,
                     FISimpleOperandShapeCategory::LITERAL_NONZERO,
                     AstArithmeticExprType::SUB,
-                    true /*spillOutput*/,
+                    false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     // 'div'
@@ -1781,7 +1781,7 @@ TEST(TestFastInterpInternal, Sanity_6)
                 FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::DIV,
-                    static_cast<FIBinaryOpNumQuickAccessParams>(0),
+                    false /*isLhsQAP*/,
                     true /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
@@ -1814,7 +1814,6 @@ TEST(TestFastInterpInternal, Sanity_6)
     inst2->PopulateConstantPlaceholder<double>(1, -123.12);
     inst2->PopulateConstantPlaceholder<double>(2, -89.8);
     inst3->PopulateConstantPlaceholder<uint64_t>(1, 8);
-    inst3->PopulateConstantPlaceholder<uint64_t>(2, 16);
     inst3->PopulateConstantPlaceholder<uint64_t>(0, 24);
     inst4->PopulateConstantPlaceholder<uint64_t>(0, 24);
     inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
@@ -2028,13 +2027,12 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARPTR_VAR,
                     false /*isInlinedSideLhs*/,
-                    true /*isQuickAccessOperand*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::MUL));
-    ixprj->PopulateConstantPlaceholder<uint64_t>(2, 24);
-    ixprj->PopulateConstantPlaceholder<uint64_t>(3, 40);
+    ixprj->PopulateConstantPlaceholder<uint64_t>(1, 24);
+    ixprj->PopulateConstantPlaceholder<uint64_t>(2, 40);
     value_of_i->PopulateBoilerplateFnPtrPlaceholder(0, ixprj);
 
     // i * pr[j] <= n
@@ -2072,13 +2070,12 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARPTR_VAR,
                     false /*isInlinedSideLhs*/,
-                    true /*isQuickAccessOperand*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstArithmeticExprType::MUL));
-    ixprj_2->PopulateConstantPlaceholder<uint64_t>(2, 24);
-    ixprj_2->PopulateConstantPlaceholder<uint64_t>(3, 40);
+    ixprj_2->PopulateConstantPlaceholder<uint64_t>(1, 24);
+    ixprj_2->PopulateConstantPlaceholder<uint64_t>(2, 40);
     value_of_i_2->PopulateBoilerplateFnPtrPlaceholder(0, ixprj_2);
 
     // lp + i * pr[j]
@@ -2287,7 +2284,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                 FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::ADD,
-                    static_cast<FIBinaryOpNumQuickAccessParams>(1) /*numQAP*/,
+                    false /*isLhsQAP*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));

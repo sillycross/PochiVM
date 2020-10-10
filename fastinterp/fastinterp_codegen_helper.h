@@ -250,11 +250,19 @@ class FastInterpCodegenEngine : NonCopyable, NonMovable
 {
 public:
     FastInterpCodegenEngine()
-        : m_dataSectionLength(0)
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        m_dataSectionLength = 0;
+        m_functionEntryPoint.clear();
+        m_allBoilerplateInstances.clear();
 #ifdef TESTBUILD
-        , m_materialized(false)
+        m_materialized = false;
 #endif
-    { }
+    }
 
     FastInterpBoilerplateInstance* WARN_UNUSED InstantiateBoilerplate(
             const FastInterpBoilerplateBluePrint* boilerplate,

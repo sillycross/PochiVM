@@ -43,25 +43,13 @@ struct FIPartialInlineArithmeticExprImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
         if (!std::is_floating_point<OperandType>::value)
         {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOIP)) { return false; }
-            }
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
         }
         else
         {
@@ -76,7 +64,6 @@ struct FIPartialInlineArithmeticExprImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
@@ -84,18 +71,7 @@ struct FIPartialInlineArithmeticExprImpl
     {
         if (std::is_floating_point<OperandType>::value)
         {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOFP)) { return false; }
-            }
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         }
         else
         {
@@ -110,7 +86,6 @@ struct FIPartialInlineArithmeticExprImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
@@ -125,47 +100,29 @@ struct FIPartialInlineArithmeticExprImpl
 
     // placeholder rules:
     // constant placeholder 0: spill position, if spillOutput
-    // constant placeholder 1: outlined operand position, if not quickaccess
-    // constant placeholder 2/3: inlined operand shape
+    // constant placeholder 1/2: inlined operand shape
     //
     template<typename OperandType,
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              bool spillOutput,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              AstArithmeticExprType operatorType,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType qaOperand) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType qaOperand) noexcept
     {
         OperandType lhs, rhs;
         if constexpr(isInlinedSideLhs)
         {
-            lhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, IndexType, shapeCategory>(stackframe);
-            if constexpr(isQuickAccessOperand)
-            {
-                rhs = qaOperand;
-            }
-            else
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
-                rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
-            }
+            lhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, IndexType, shapeCategory>(stackframe);
+            rhs = qaOperand;
         }
         else
         {
-            rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, IndexType, shapeCategory>(stackframe);
-            if constexpr(isQuickAccessOperand)
-            {
-                lhs = qaOperand;
-            }
-            else
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
-                lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_1);
-            }
+            rhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, IndexType, shapeCategory>(stackframe);
+            lhs = qaOperand;
         }
 
         OperandType result = EvaluateArithmeticExpression<OperandType, operatorType>(lhs, rhs);
@@ -192,7 +149,6 @@ struct FIPartialInlineArithmeticExprImpl
                     CreateTypeMetaVar("indexType"),
                     CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("shapeCategory"),
                     CreateBoolMetaVar("isInlinedSideLhs"),
-                    CreateBoolMetaVar("isQuickAccessOperand"),
                     CreateBoolMetaVar("spillOutput"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit(),
