@@ -89,6 +89,20 @@ private:
     _EnumType m_value;
 };
 
+class FastInterpBoilerplateInstance;
+
+struct FastInterpSnippet
+{
+    // The entry point of the code snippet
+    //
+    FastInterpBoilerplateInstance* m_entry;
+
+    // The tail to which continuation shall be attached
+    // nullptr if a continuation is not possible (due to a guaranteed ret)
+    //
+    FastInterpBoilerplateInstance* m_tail;
+};
+
 // The base class of all expressions
 // WARNING: All derived classes must have this class as the first base class! Or DebugInterp() breaks!
 //
@@ -133,6 +147,8 @@ public:
     // Since EmitIR() has done the type asserts, the implementation do not need to do it again.
     //
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() = 0;
+
+    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() = 0;
 
     // For each of the children c of this node, invoke fn(c)
     //

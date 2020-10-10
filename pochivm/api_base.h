@@ -107,35 +107,35 @@ template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
 Value<T> operator+(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('+' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::ADD, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::SUB>::value> >
 Value<T> operator-(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('-' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::SUB, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MUL>::value> >
 Value<T> operator*(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('*' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MUL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::DIV>::value> >
 Value<T> operator/(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('/' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::DIV, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MODULO>::value> >
 Value<T> operator%(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<T>(new AstArithmeticExpr('%' /*op*/, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MOD, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 // Comparison ops convenience operator overloading
@@ -144,28 +144,28 @@ template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
 Value<bool> operator==(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("==", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::EQUAL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
 Value<bool> operator!=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("!=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::NOT_EQUAL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
 Value<bool> operator<(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("<", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_THAN, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
              AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
 Value<bool> operator>(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr(">", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_THAN, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
@@ -173,7 +173,7 @@ template<typename T, typename = std::enable_if_t<
           && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
 Value<bool> operator<=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr("<=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_EQUAL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
@@ -181,7 +181,7 @@ template<typename T, typename = std::enable_if_t<
           && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
 Value<bool> operator>=(const Value<T>& lhs, const Value<T>& rhs)
 {
-    return Value<bool>(new AstComparisonExpr(">=", lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_EQUAL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 inline Value<bool> operator&&(const Value<bool>& lhs, const Value<bool>& rhs)

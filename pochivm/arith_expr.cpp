@@ -16,7 +16,7 @@ Value* WARN_UNUSED AstArithmeticExpr::EmitIRImpl()
 
     Value* inst = nullptr;
     TypeId typeId = GetTypeId();
-    if (m_op == '+')
+    if (m_op == AstArithmeticExprType::ADD)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -27,7 +27,7 @@ Value* WARN_UNUSED AstArithmeticExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFAdd(lhs, rhs);
         }
     }
-    else if (m_op == '-')
+    else if (m_op == AstArithmeticExprType::SUB)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -38,7 +38,7 @@ Value* WARN_UNUSED AstArithmeticExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFSub(lhs, rhs);
         }
     }
-    else if (m_op == '*')
+    else if (m_op == AstArithmeticExprType::MUL)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -49,7 +49,7 @@ Value* WARN_UNUSED AstArithmeticExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFMul(lhs, rhs);
         }
     }
-    else if (m_op == '/')
+    else if (m_op == AstArithmeticExprType::DIV)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -67,7 +67,7 @@ Value* WARN_UNUSED AstArithmeticExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFDiv(lhs, rhs);
         }
     }
-    else if (m_op == '%')
+    else if (m_op == AstArithmeticExprType::MOD)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -98,7 +98,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
 
     Value* inst = nullptr;
     TypeId typeId = m_lhs->GetTypeId();
-    if (m_op[0] == '=' && m_op[1] == '=')
+    if (m_op == AstComparisonExprType::EQUAL)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -109,7 +109,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFCmpUEQ(lhs, rhs);
         }
     }
-    else if (m_op[0] == '!' && m_op[1] == '=')
+    else if (m_op == AstComparisonExprType::NOT_EQUAL)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -120,7 +120,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFCmpUNE(lhs, rhs);
         }
     }
-    else if (m_op[0] == '<' && m_op[1] == '\0')
+    else if (m_op == AstComparisonExprType::LESS_THAN)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -142,7 +142,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFCmpULT(lhs, rhs);
         }
     }
-    else if (m_op[0] == '>' && m_op[1] == '\0')
+    else if (m_op == AstComparisonExprType::GREATER_THAN)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -161,7 +161,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFCmpUGT(lhs, rhs);
         }
     }
-    else if (m_op[0] == '<' && m_op[1] == '=')
+    else if (m_op == AstComparisonExprType::LESS_EQUAL)
     {
         if (typeId.IsPrimitiveIntType())
         {
@@ -180,7 +180,7 @@ Value* WARN_UNUSED AstComparisonExpr::EmitIRImpl()
             inst = thread_llvmContext->m_builder->CreateFCmpULE(lhs, rhs);
         }
     }
-    else if (m_op[0] == '>' && m_op[1] == '=')
+    else if (m_op == AstComparisonExprType::GREATER_EQUAL)
     {
         if (typeId.IsPrimitiveIntType())
         {

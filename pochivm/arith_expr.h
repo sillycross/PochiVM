@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ast_expr_base.h"
+#include "ast_arithmetic_expr_type.h"
+#include "ast_comparison_expr_type.h"
 
 namespace PochiVM
 {
@@ -11,7 +13,7 @@ namespace PochiVM
 class AstArithmeticExpr : public AstNodeBase
 {
 public:
-    AstArithmeticExpr(char op, AstNodeBase* lhs, AstNodeBase* rhs)
+    AstArithmeticExpr(AstArithmeticExprType op, AstNodeBase* lhs, AstNodeBase* rhs)
         : AstNodeBase(AstNodeType::AstArithmeticExpr, lhs->GetTypeId())
         , m_op(op), m_lhs(lhs), m_rhs(rhs)
     {
@@ -80,19 +82,19 @@ public:
 
     virtual void SetupDebugInterpImpl() override
     {
-        if (m_op == '+') {
+        if (m_op == AstArithmeticExprType::ADD) {
             m_debugInterpFn = SelectAddImpl(m_lhs->GetTypeId());
         }
-        else if (m_op == '-') {
+        else if (m_op == AstArithmeticExprType::SUB) {
             m_debugInterpFn = SelectSubImpl(m_lhs->GetTypeId());
         }
-        else if (m_op == '*') {
+        else if (m_op == AstArithmeticExprType::MUL) {
             m_debugInterpFn = SelectMulImpl(m_lhs->GetTypeId());
         }
-        else if (m_op == '/') {
+        else if (m_op == AstArithmeticExprType::DIV) {
             m_debugInterpFn = SelectDivImpl(m_lhs->GetTypeId());
         }
-        else if (m_op == '%') {
+        else if (m_op == AstArithmeticExprType::MOD) {
             m_debugInterpFn = SelectModImpl(m_lhs->GetTypeId());
         }
         else {
@@ -108,8 +110,10 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
+    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() override;
+
 private:
-    char m_op;
+    AstArithmeticExprType m_op;
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };
@@ -120,13 +124,10 @@ private:
 class AstComparisonExpr : public AstNodeBase
 {
 public:
-    AstComparisonExpr(const char* op, AstNodeBase* lhs, AstNodeBase* rhs)
+    AstComparisonExpr(AstComparisonExprType op, AstNodeBase* lhs, AstNodeBase* rhs)
         : AstNodeBase(AstNodeType::AstComparisonExpr, TypeId::Get<bool>())
-        , m_lhs(lhs), m_rhs(rhs)
+        , m_op(op), m_lhs(lhs), m_rhs(rhs)
     {
-        assert(op[0] != '\0');
-        m_op[0] = op[0];
-        m_op[1] = op[1];
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
         TestAssert(m_lhs->GetTypeId().IsPrimitiveType());
     }
@@ -210,39 +211,29 @@ public:
 
     virtual void SetupDebugInterpImpl() override
     {
-        if (m_op[0] == '=')
+        if (m_op == AstComparisonExprType::EQUAL)
         {
-            TestAssert(m_op[1] == '=');
             m_debugInterpFn = SelectEqImpl(m_lhs->GetTypeId());
         }
-        else if (m_op[0] == '!')
+        else if (m_op == AstComparisonExprType::NOT_EQUAL)
         {
-            TestAssert(m_op[1] == '=');
             m_debugInterpFn = SelectNeqImpl(m_lhs->GetTypeId());
         }
-        else if (m_op[0] == '<')
+        else if (m_op == AstComparisonExprType::LESS_THAN)
         {
-            if (m_op[1] == '\0')
-            {
-                m_debugInterpFn = SelectLtImpl(m_lhs->GetTypeId());
-            }
-            else
-            {
-                TestAssert(m_op[1] == '=');
-                m_debugInterpFn = SelectLEqImpl(m_lhs->GetTypeId());
-            }
+            m_debugInterpFn = SelectLtImpl(m_lhs->GetTypeId());
         }
-        else if (m_op[0] == '>')
+        else if (m_op == AstComparisonExprType::LESS_EQUAL)
         {
-            if (m_op[1] == '\0')
-            {
-                m_debugInterpFn = SelectGtImpl(m_lhs->GetTypeId());
-            }
-            else
-            {
-                TestAssert(m_op[1] == '=');
-                m_debugInterpFn = SelectGEqImpl(m_lhs->GetTypeId());
-            }
+            m_debugInterpFn = SelectLEqImpl(m_lhs->GetTypeId());
+        }
+        else if (m_op == AstComparisonExprType::GREATER_THAN)
+        {
+            m_debugInterpFn = SelectGtImpl(m_lhs->GetTypeId());
+        }
+        else if (m_op == AstComparisonExprType::GREATER_EQUAL)
+        {
+            m_debugInterpFn = SelectGEqImpl(m_lhs->GetTypeId());
         }
         else
         {
@@ -258,8 +249,10 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
+    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() override;
+
 private:
-    char m_op[2];
+    AstComparisonExprType m_op;
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };
