@@ -12,6 +12,7 @@ add_library(pochivm
   ast_catch_throw_llvm.cpp
   codegen_context_llvm.cpp
   arith_expr_fastinterp.cpp
+  ast_variable_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 
