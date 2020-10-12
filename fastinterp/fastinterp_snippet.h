@@ -9,6 +9,14 @@ class FastInterpBoilerplateInstance;
 
 struct FastInterpSnippet
 {
+    FastInterpSnippet(FastInterpBoilerplateInstance* entry, FastInterpBoilerplateInstance* tail)
+        : m_entry(entry), m_tail(tail)
+    { }
+
+    // No-op snippet
+    //
+    FastInterpSnippet() : m_entry(nullptr), m_tail(nullptr) { }
+
     // The entry point of the code snippet
     //
     FastInterpBoilerplateInstance* m_entry;

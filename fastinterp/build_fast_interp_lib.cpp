@@ -653,7 +653,8 @@ public:
         std::unique_ptr<LLJIT> J;
 
         const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
-        const std::string terminatorOperatorName = "FITerminatorOperatorImpl";
+        const std::string terminatorOperatorName1 = "FIOutlinedReturnImpl";
+        const std::string terminatorOperatorName2 = "FIInlinedReturnImpl";
 
         using FnPrototype = void(*)();
         FnPrototype entryPoint;
@@ -1294,7 +1295,8 @@ public:
                     }
                 }
 
-                if (it->first != terminatorOperatorName &&
+                if (it->first != terminatorOperatorName1 &&
+                    it->first != terminatorOperatorName2 &&
                     it->first != cdeclInterfaceName &&
                     PochiVM::x_fastinterp_function_alignment == 1)
                 {

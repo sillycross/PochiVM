@@ -278,6 +278,10 @@ struct TypeId
     //
     FastInterpTypeId GetDefaultFastInterpTypeId();
 
+    // same as above, except that >=1 level of pointer => void*
+    //
+    FastInterpTypeId GetOneLevelPtrFastInterpTypeId();
+
     // TypeId::Get<T>() return TypeId for T
     //
     template<typename T>
@@ -1248,6 +1252,19 @@ inline FastInterpTypeId TypeId::GetDefaultFastInterpTypeId()
         {
             return FastInterpTypeId(*this);
         }
+    }
+    else
+    {
+        TestAssert(IsVoid() || IsPrimitiveType());
+        return FastInterpTypeId(*this);
+    }
+}
+
+inline FastInterpTypeId TypeId::GetOneLevelPtrFastInterpTypeId()
+{
+    if (NumLayersOfPointers() >= 1)
+    {
+        return FastInterpTypeId(TypeId::Get<void*>());
     }
     else
     {

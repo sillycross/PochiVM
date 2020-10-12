@@ -236,7 +236,7 @@ public:
         std::ignore = result;
     }
 
-    uint32_t WARN_UNUSED PushLocalVar(TypeId typeId)
+    uint64_t WARN_UNUSED PushLocalVar(TypeId typeId)
     {
         TestAssert(!typeId.IsVoid());
         TestAssert(m_tempStack.size() == 0);

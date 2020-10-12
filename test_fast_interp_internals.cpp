@@ -1485,12 +1485,10 @@ TEST(TestFastInterpInternal, Sanity_1)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1532,12 +1530,10 @@ TEST(TestFastInterpInternal, Sanity_2)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1581,12 +1577,10 @@ TEST(TestFastInterpInternal, Sanity_3)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1650,12 +1644,10 @@ TEST(TestFastInterpInternal, Sanity_4)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1722,12 +1714,10 @@ TEST(TestFastInterpInternal, Sanity_5)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1794,12 +1784,10 @@ TEST(TestFastInterpInternal, Sanity_6)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
@@ -1836,12 +1824,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     FastInterpCodegenEngine engine;
 
     FastInterpBoilerplateInstance* terminal = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    false /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
 
@@ -2208,14 +2194,11 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
     fib_fn->PopulateConstantPlaceholder<int>(2, 2);
 
     FastInterpBoilerplateInstance* ret_node1 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIInlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
-                    false /*exceptionThrown*/,
-                    true /*isLiteral*/,
-                    false /*isQuickAccess*/,
-                    static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOperandShapeCategory::LITERAL_NONZERO));
     ret_node1->PopulateConstantPlaceholder<uint64_t>(0, 1);
     fib_fn->PopulateBoilerplateFnPtrPlaceholder(0, ret_node1);
 
@@ -2292,12 +2275,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
     compute_rhs->PopulateBoilerplateFnPtrPlaceholder(0, compute_sum);
 
     FastInterpBoilerplateInstance* ret_node2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FITerminatorOperatorImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
                     true /*isNoExcept*/,
                     false /*exceptionThrown*/,
-                    false /*isLiteral*/,
-                    true /*isQuickAccess*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     compute_sum->PopulateBoilerplateFnPtrPlaceholder(0, ret_node2);

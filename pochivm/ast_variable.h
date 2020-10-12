@@ -82,6 +82,12 @@ public:
         return m_debugInterpOffset;
     }
 
+    void SetFastInterpOffset(uint64_t offset)
+    {
+        assert(m_fastInterpOffset == static_cast<uint32_t>(-1) && offset != static_cast<uint64_t>(-1));
+        m_fastInterpOffset = static_cast<uint32_t>(offset);
+    }
+
     uint64_t GetFastInterpOffset() const
     {
         assert(m_fastInterpOffset != static_cast<uint32_t>(-1));

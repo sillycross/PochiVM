@@ -37,7 +37,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_partial_inline_assign.cpp
   fastinterp_tpl_inline_arith_expr.cpp
   fastinterp_tpl_outlined_arith_expr.cpp
-  fastinterp_tpl_terminator_operator.cpp
+  fastinterp_tpl_outlined_return.cpp
+  fastinterp_tpl_inline_return.cpp
   fastinterp_tpl_partial_inline_arith_expr.cpp
   fastinterp_tpl_inline_assign.cpp
   fastinterp_tpl_inline_assign_arith_expr.cpp

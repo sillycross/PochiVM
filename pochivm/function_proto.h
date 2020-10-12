@@ -547,6 +547,7 @@ public:
         , m_interpFunction(nullptr)
         , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
+        , m_fastInterpSretVar(nullptr)
     { }
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
@@ -559,6 +560,7 @@ public:
         , m_interpFunction(nullptr)
         , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
+        , m_fastInterpSretVar(nullptr)
     {
         assert(m_cppFunctionMd != nullptr);
         TestAssert(params.size() == static_cast<size_t>(m_cppFunctionMd->m_numParams));
@@ -664,6 +666,14 @@ public:
 
     void SetSretAddress(llvm::Value* address);
 
+    void SetFastInterpSretVariable(AstVariable* variable)
+    {
+        TestAssert(m_isCppFunction && m_cppFunctionMd->m_isUsingSret);
+        TestAssert(m_fastInterpSretVar == nullptr && variable != nullptr);
+        TestAssert(m_cppFunctionMd->m_returnType.AddPointer() == variable->GetTypeId());
+        m_fastInterpSretVar = variable;
+    }
+
     virtual void SetupDebugInterpImpl() override
     {
         if (!m_isCppFunction)
@@ -709,6 +719,7 @@ private:
     // In LLVM mode, for function using sret, the position to which its return value shall be stored
     //
     llvm::Value* m_sretAddress;
+    AstVariable* m_fastInterpSretVar;
 };
 
 class AstDeclareVariable : public AstNodeBase
@@ -721,7 +732,7 @@ public:
         , m_variable(variable)
         , m_isCtor(false)
     {
-        TestAssert(m_variable->GetTypeId().IsPrimitiveType() || m_variable->GetTypeId().IsPointerType());
+        TestAssert(m_variable->GetTypeId().IsPointerType());
     }
 
     AstDeclareVariable(AstVariable* variable, AstAssignExpr* assignExpr)
@@ -801,6 +812,8 @@ public:
         fn(m_variable);
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
     // An assign statement for primitive type variable initialization.
     //
     AstAssignExpr* m_assignExpr;
@@ -859,6 +872,8 @@ public:
             fn(m_retVal);
         }
     }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
     AstNodeBase* m_retVal;
 };
