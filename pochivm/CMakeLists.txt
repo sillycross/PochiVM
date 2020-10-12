@@ -1,16 +1,16 @@
 add_library(pochivm 
-  arith_expr.cpp  
-  common_expr.cpp     
+  arith_expr_llvm.cpp  
+  common_expr_llvm.cpp     
   dummy_hook.cpp      
-  logical_operator.cpp
-  cast_expr.cpp   
-  function_proto.cpp  
-  lang_constructs.cpp
-  ast_variable.cpp
-  destructor_helper.cpp
-  exception_helper.cpp
-  ast_catch_throw.cpp
-  codegen_context.cpp
+  logical_operator_llvm.cpp
+  cast_expr_llvm.cpp   
+  function_proto_llvm.cpp  
+  lang_constructs_llvm.cpp
+  ast_variable_llvm.cpp
+  destructor_helper_llvm.cpp
+  exception_helper_llvm.cpp
+  ast_catch_throw_llvm.cpp
+  codegen_context_llvm.cpp
   arith_expr_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
