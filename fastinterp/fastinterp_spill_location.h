@@ -5,6 +5,8 @@
 namespace PochiVM
 {
 
+class FastInterpBoilerplateInstance;
+
 class FISpillLocation
 {
 public:
@@ -26,6 +28,8 @@ public:
         TestAssert(!IsNoSpill());
         return m_location;
     }
+
+    void PopulatePlaceholderIfSpill(FastInterpBoilerplateInstance* inst, uint32_t ph1);
 
 private:
     static constexpr uint32_t x_nospill = static_cast<uint32_t>(-1);

@@ -250,7 +250,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
 private:
     AstComparisonExprType m_op;

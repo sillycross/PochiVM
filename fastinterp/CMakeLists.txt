@@ -53,6 +53,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_call_expr_check_exception.cpp
   fastinterp_tpl_call_expr_store_param.cpp
   fastinterp_tpl_call_expr_spill_stackaddr.cpp
+  fastinterp_tpl_partial_inline_comparison_expr.cpp
+  fastinterp_tpl_outlined_comparison_expr.cpp
 )
 
 SET(FASTINTERP_SOURCES

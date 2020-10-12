@@ -2,6 +2,7 @@
 #include "fastinterp/fastinterp.h"
 #include "fastinterp_ast_helper.h"
 #include "fastinterp_snippet.hpp"
+#include "fastinterp/fastinterp_spill_location.hpp"
 
 namespace PochiVM
 {
@@ -43,17 +44,14 @@ FastInterpSnippet WARN_UNUSED AstArithmeticExpr::PrepareForFastInterp(FISpillLoc
                         numOFP));
         lhs.PopulatePlaceholder(inst, 1);
         rhs.PopulatePlaceholder(inst, 2);
-        if (!spillLoc.IsNoSpill())
-        {
-            inst->PopulateConstantPlaceholder<uint64_t>(0, spillLoc.GetSpillLocation());
-        }
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
         return FastInterpSnippet {
             inst, inst
         };
     }
 
 match_case2:;
-    // Case 2: partially inline shape (LHS)
+    // Case 2: partially inline shape (LHS/RHS)
     // FIPartialInlineArithmeticExprImpl
     //
     {
@@ -66,7 +64,8 @@ match_case2:;
         else
         {
             matchSide = AstFIOperandShape::TryMatch(m_rhs);
-            if (matchSide.MatchOK())
+            if (matchSide.MatchOK() && !(matchSide.m_kind == FIOperandShapeCategory::ZERO &&
+                                         (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)))
             {
                 isInlineSideLhs = false;
             }
@@ -74,6 +73,17 @@ match_case2:;
             {
                 goto match_case3;
             }
+        }
+
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        FastInterpSnippet outlineSide;
+        if (isInlineSideLhs)
+        {
+            outlineSide = m_rhs->PrepareForFastInterp(x_FINoSpill);
+        }
+        else
+        {
+            outlineSide = m_lhs->PrepareForFastInterp(x_FINoSpill);
         }
 
         FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
@@ -90,17 +100,6 @@ match_case2:;
             numOFP = FIOpaqueParamsHelper::GetMaxOFP();
         }
 
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
-        FastInterpSnippet outlineSide;
-        if (isInlineSideLhs)
-        {
-            outlineSide = m_rhs->PrepareForFastInterp(x_FINoSpill);
-        }
-        else
-        {
-            outlineSide = m_lhs->PrepareForFastInterp(x_FINoSpill);
-        }
-
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIPartialInlineArithmeticExprImpl>::SelectBoilerplateBluePrint(
                         GetTypeId().GetDefaultFastInterpTypeId(),
@@ -112,10 +111,7 @@ match_case2:;
                         numOFP,
                         m_op));
         matchSide.PopulatePlaceholder(inst, 1, 2);
-        if (!spillLoc.IsNoSpill())
-        {
-            inst->PopulateConstantPlaceholder<uint64_t>(0, spillLoc.GetSpillLocation());
-        }
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
         return outlineSide.AddContinuation(inst);
     }
 
@@ -143,14 +139,142 @@ match_case3:;
                         !spillLoc.IsNoSpill(),
                         numOIP,
                         numOFP));
-        if (!lhsSpillLoc.IsNoSpill())
+        lhsSpillLoc.PopulatePlaceholderIfSpill(inst, 1);
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        return lhs.AddContinuation(rhs).AddContinuation(inst);
+    }
+}
+
+FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    // Case 1: fully inline shape
+    // FIFullyInlinedComparisonExprImpl
+    //
+    {
+        AstFISimpleOperandShape lhs = AstFISimpleOperandShape::TryMatch(m_lhs);
+        if (!lhs.MatchOK())
         {
-            inst->PopulateConstantPlaceholder<uint64_t>(1, lhsSpillLoc.GetSpillLocation());
+            goto match_case2;
         }
-        if (!spillLoc.IsNoSpill())
+        AstFISimpleOperandShape rhs = AstFISimpleOperandShape::TryMatch(m_rhs);
+        if (!rhs.MatchOK())
         {
-            inst->PopulateConstantPlaceholder<uint64_t>(0, spillLoc.GetSpillLocation());
+            goto match_case2;
         }
+        if (lhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO &&
+            rhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO)
+        {
+            goto match_case2;
+        }
+
+        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
+
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIFullyInlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        lhs.m_kind,
+                        rhs.m_kind,
+                        m_op,
+                        !spillLoc.IsNoSpill(),
+                        numOIP,
+                        FIOpaqueParamsHelper::GetMaxOFP()));
+        lhs.PopulatePlaceholder(inst, 1);
+        rhs.PopulatePlaceholder(inst, 2);
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        return FastInterpSnippet {
+            inst, inst
+        };
+    }
+
+match_case2:;
+    // Case 2: partially inline shape (LHS/RHS)
+    // FIPartialInlinedComparisonExprImpl
+    //
+    {
+        bool isInlineSideLhs;
+        AstFIOperandShape matchSide = AstFIOperandShape::TryMatch(m_lhs);
+        if (matchSide.MatchOK())
+        {
+            isInlineSideLhs = true;
+        }
+        else
+        {
+            matchSide = AstFIOperandShape::TryMatch(m_rhs);
+            if (matchSide.MatchOK())
+            {
+                isInlineSideLhs = false;
+            }
+            else
+            {
+                goto match_case3;
+            }
+        }
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        FastInterpSnippet outlineSide;
+        if (isInlineSideLhs)
+        {
+            outlineSide = m_rhs->PrepareForFastInterp(x_FINoSpill);
+        }
+        else
+        {
+            outlineSide = m_lhs->PrepareForFastInterp(x_FINoSpill);
+        }
+
+        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
+        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        if (!GetTypeId().IsFloatingPoint())
+        {
+            numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+        }
+
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIPartialInlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        matchSide.m_indexType,
+                        matchSide.m_kind,
+                        !spillLoc.IsNoSpill(),
+                        isInlineSideLhs,
+                        numOIP,
+                        numOFP,
+                        m_op));
+       matchSide.PopulatePlaceholder(inst, 1, 2);
+       spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+       return outlineSide.AddContinuation(inst);
+    }
+
+match_case3:;
+    // Case default: fully outlined shape
+    // FIOutlinedComparisonExprImpl
+    //
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        FastInterpSnippet rhs = m_rhs->PrepareForFastInterp(x_FINoSpill);
+        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
+
+        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
+        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        if (!GetTypeId().IsFloatingPoint())
+        {
+            numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+        }
+
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIOutlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        m_op,
+                        lhsSpillLoc.IsNoSpill(),
+                        !spillLoc.IsNoSpill(),
+                        numOIP,
+                        numOFP));
+        lhsSpillLoc.PopulatePlaceholderIfSpill(inst, 1);
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
         return lhs.AddContinuation(rhs).AddContinuation(inst);
     }
 }
