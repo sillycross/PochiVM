@@ -1,9 +1,10 @@
 #pragma once
 
-#include "fastinterp/fastinterp.h"
+#include "fastinterp/fastinterp.hpp"
 #include "ast_expr_base.h"
 #include "ast_variable.h"
 #include "common_expr.h"
+#include "lang_constructs.h"
 
 namespace PochiVM
 {

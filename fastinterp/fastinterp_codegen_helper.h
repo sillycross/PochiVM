@@ -4,7 +4,6 @@
 #include "generated/fastinterp_library.generated.h"
 #include "x86_64_asm_helper.h"
 #include "x86_64_populate_nop_instruction_helper.h"
-#include "pochivm/function_proto.h"
 
 namespace PochiVM
 {
@@ -209,6 +208,8 @@ private:
 #endif
 };
 
+class AstFunction;
+
 // A owning generated program.
 // When this class is destructed, the program is gone.
 // So it is undefined behavior if this class is destructed while the program is still running.
@@ -282,27 +283,10 @@ public:
         return inst;
     }
 
-    void RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst, bool isNoExcept)
-    {
-        TestAssert(!m_functionEntryPoint.count(fn));
-        FastInterpBoilerplateInstance* cdeclWrapper = InstantiateBoilerplate(
-                    FastInterpBoilerplateLibrary<FICdeclInterfaceImpl>::SelectBoilerplateBluePrint(
-                        fn->GetReturnType().GetDefaultFastInterpTypeId(),
-                        isNoExcept));
-        cdeclWrapper->PopulateBoilerplateFnPtrPlaceholder(0, inst);
-        m_functionEntryPoint[fn] = std::make_pair(inst, cdeclWrapper);
-    }
+    void RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst, bool isNoExcept);
 
-    void TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId returnType, bool isNoExcept, uintptr_t fakeId, FastInterpBoilerplateInstance* inst)
-    {
-        AstFunction* fn = reinterpret_cast<AstFunction*>(fakeId);
-        TestAssert(!m_functionEntryPoint.count(fn));
-        FastInterpBoilerplateInstance* cdeclWrapper = InstantiateBoilerplate(
-                    FastInterpBoilerplateLibrary<FICdeclInterfaceImpl>::SelectBoilerplateBluePrint(
-                        returnType.GetDefaultFastInterpTypeId(), isNoExcept));
-        cdeclWrapper->PopulateBoilerplateFnPtrPlaceholder(0, inst);
-        m_functionEntryPoint[fn] = std::make_pair(inst, cdeclWrapper);
-    }
+    void TestOnly_RegisterUnitTestFunctionEntryPoint(
+            FastInterpTypeId returnType, bool isNoExcept, uintptr_t fakeId, FastInterpBoilerplateInstance* inst);
 
     FastInterpBoilerplateInstance* WARN_UNUSED GetGeneratedFunctionEntryPoint(AstFunction* fn)
     {

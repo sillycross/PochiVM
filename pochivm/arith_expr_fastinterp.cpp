@@ -1,8 +1,5 @@
 #include "arith_expr.h"
-#include "fastinterp/fastinterp.h"
-#include "fastinterp_ast_helper.h"
-#include "fastinterp_snippet.hpp"
-#include "fastinterp/fastinterp_spill_location.hpp"
+#include "fastinterp_ast_helper.hpp"
 
 namespace PochiVM
 {

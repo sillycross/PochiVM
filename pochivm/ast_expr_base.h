@@ -5,7 +5,7 @@
 #include "ast_type_helper.h"
 #include "ast_misc_helper.h"
 #include "fastinterp/fastinterp_spill_location.h"
-#include "fastinterp_snippet.h"
+#include "fastinterp/fastinterp_snippet.h"
 
 namespace llvm
 {

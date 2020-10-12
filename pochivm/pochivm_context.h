@@ -2,7 +2,6 @@
 
 #include "common.h"
 
-
 namespace PochiVM
 {
 
