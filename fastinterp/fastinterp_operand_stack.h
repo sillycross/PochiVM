@@ -265,14 +265,14 @@ public:
         m_floatOperandStack.ForceSpillAll();
     }
 
-    size_t GetNumNoSpillIntegral() const
+    FINumOpaqueIntegralParams GetNumNoSpillIntegral() const
     {
-        return m_integralOperandStack.GetNumNoSpill();
+        return static_cast<FINumOpaqueIntegralParams>(m_integralOperandStack.GetNumNoSpill());
     }
 
-    size_t GetNumNoSpillFloat() const
+    FINumOpaqueFloatingParams GetNumNoSpillFloat() const
     {
-        return m_floatOperandStack.GetNumNoSpill();
+        return static_cast<FINumOpaqueFloatingParams>(m_floatOperandStack.GetNumNoSpill());
     }
 
     uint32_t GetFinalStackFrameSize() const

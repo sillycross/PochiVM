@@ -26,10 +26,8 @@ FastInterpSnippet WARN_UNUSED AstArithmeticExpr::PrepareForFastInterp(FISpillLoc
             goto match_case2;
         }
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIFullyInlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
                         GetTypeId().GetDefaultFastInterpTypeId(),
@@ -83,10 +81,8 @@ match_case2:;
             outlineSide = m_lhs->PrepareForFastInterp(x_FINoSpill);
         }
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
 
         if (GetTypeId().IsFloatingPoint())
         {
@@ -123,10 +119,8 @@ match_case3:;
         FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
         FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
 
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIOutlinedArithmeticExprImpl>::SelectBoilerplateBluePrint(
@@ -164,8 +158,7 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
             goto match_case2;
         }
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
 
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIFullyInlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
@@ -218,10 +211,8 @@ match_case2:;
             outlineSide = m_lhs->PrepareForFastInterp(x_FINoSpill);
         }
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
         if (!GetTypeId().IsFloatingPoint())
         {
             numOFP = FIOpaqueParamsHelper::GetMaxOFP();
@@ -253,10 +244,8 @@ match_case3:;
         FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
         FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
 
-        FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-        FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
         if (!GetTypeId().IsFloatingPoint())
         {
             numOFP = FIOpaqueParamsHelper::GetMaxOFP();

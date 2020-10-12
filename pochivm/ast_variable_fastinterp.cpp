@@ -5,10 +5,8 @@ namespace PochiVM
 
 FastInterpSnippet WARN_UNUSED AstVariable::PrepareForFastInterp(FISpillLocation spillLoc)
 {
-    FINumOpaqueIntegralParams numOIP = static_cast<FINumOpaqueIntegralParams>(
-                thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral());
-    FINumOpaqueFloatingParams numOFP = static_cast<FINumOpaqueFloatingParams>(
-                thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat());
+    FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
     FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIVariableImpl>::SelectBoilerplateBluePrint(
                     GetTypeId().GetDefaultFastInterpTypeId(),
