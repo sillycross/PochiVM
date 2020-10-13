@@ -12,12 +12,16 @@ class FIStackFrameManager;
 class FastInterpCodegenEngine;
 class AstFunction;
 class AstCallExpr;
+class FastInterpGeneratedProgram;
 
 struct PochiVMContext
 {
     PochiVMContext()
         : m_astTraverseColorMark(1)
         , m_debugInterpStackFrameBase(0)
+        , m_fastInterpStackFrameManager(nullptr)
+        , m_fastInterpEngine(nullptr)
+        , m_fastInterpGeneratedProgram(nullptr)
         , m_curModule(nullptr)
     { }
 
@@ -40,6 +44,7 @@ struct PochiVMContext
     FIStackFrameManager* m_fastInterpStackFrameManager;
     FastInterpCodegenEngine* m_fastInterpEngine;
     std::vector<std::pair<AstFunction*, AstCallExpr*>> m_fastInterpFnCallFixList;
+    FastInterpGeneratedProgram* m_fastInterpGeneratedProgram;
 
     // Current module
     //

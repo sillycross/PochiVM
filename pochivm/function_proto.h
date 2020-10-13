@@ -64,6 +64,7 @@ private:
         , m_debugInterpStoreRetValFn(nullptr)
         , m_llvmEntryBlock(nullptr)
         , m_isNoExcept(false)
+        , m_fastInterpStackFrameSize(static_cast<uint32_t>(-1))
     { }
 
 public:
@@ -192,6 +193,12 @@ public:
         return m_isNoExcept;
     }
 
+    uint32_t GetFastInterpStackFrameSize() const
+    {
+        TestAssert(m_fastInterpStackFrameSize != static_cast<uint32_t>(-1));
+        return m_fastInterpStackFrameSize;
+    }
+
     // Below are methods for interp mode
     //
     // Interp execute the function
@@ -257,6 +264,8 @@ public:
     //
     void PrepareForDebugInterp();
 
+    void PrepareForFastInterp();
+
 private:
 
     void DebugInterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
@@ -303,6 +312,7 @@ private:
     llvm::BasicBlock* m_llvmEntryBlock;
 
     bool m_isNoExcept;
+    uint32_t m_fastInterpStackFrameSize;
 };
 
 // A module, consists of a list of functions
@@ -319,6 +329,7 @@ public:
 #ifdef TESTBUILD
         , m_validated(false)
         , m_debugInterpPrepared(false)
+        , m_fastInterpPrepared(false)
         , m_irEmitted(false)
         , m_irOptimized(false)
 #endif
@@ -359,6 +370,8 @@ public:
             fn->PrepareForDebugInterp();
         }
     }
+
+    void PrepareForFastInterp();
 
     void EmitIR();
     void OptimizeIR();
@@ -539,6 +552,7 @@ private:
 #ifdef TESTBUILD
     bool m_validated;
     bool m_debugInterpPrepared;
+    bool m_fastInterpPrepared;
     bool m_irEmitted;
     bool m_irOptimized;
 #endif
@@ -716,6 +730,8 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
+    void FastInterpFixStackFrameSize(AstFunction* target);
 
 private:
     std::string m_fnName;

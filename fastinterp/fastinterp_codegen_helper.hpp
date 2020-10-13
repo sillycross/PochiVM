@@ -6,13 +6,13 @@
 namespace PochiVM
 {
 
-inline void FastInterpCodegenEngine::RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst, bool isNoExcept)
+inline void FastInterpCodegenEngine::RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst)
 {
     TestAssert(!m_functionEntryPoint.count(fn));
     FastInterpBoilerplateInstance* cdeclWrapper = InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FICdeclInterfaceImpl>::SelectBoilerplateBluePrint(
                     fn->GetReturnType().GetDefaultFastInterpTypeId(),
-                    isNoExcept));
+                    fn->GetIsNoExcept()));
     cdeclWrapper->PopulateBoilerplateFnPtrPlaceholder(0, inst);
     m_functionEntryPoint[fn] = std::make_pair(inst, cdeclWrapper);
 }

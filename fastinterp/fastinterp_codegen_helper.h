@@ -87,6 +87,18 @@ public:
         }
     }
 
+    void ReplaceBluePrint(const FastInterpBoilerplateBluePrint* newBluePrint)
+    {
+        TestAssert(m_owner->m_highestUInt64PlaceholderOrdinal == newBluePrint->m_highestUInt64PlaceholderOrdinal);
+        TestAssert(m_owner->m_highestCppFnptrPlaceholderOrdinal == newBluePrint->m_highestCppFnptrPlaceholderOrdinal);
+        TestAssert(m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal == newBluePrint->m_highestBoilerplateFnptrPlaceholderOrdinal);
+        TestAssert(m_owner->m_usedBoilerplateFnPtrPlaceholderMask == newBluePrint->m_usedBoilerplateFnPtrPlaceholderMask);
+        TestAssert(m_owner->m_usedCppFnptrPlaceholderMask == newBluePrint->m_usedCppFnptrPlaceholderMask);
+        TestAssert(m_owner->m_usedUInt64PlaceholderMask == newBluePrint->m_usedUInt64PlaceholderMask);
+        TestAssert(m_owner->GetDataSectionLength() == newBluePrint->GetDataSectionLength());
+        m_owner = newBluePrint;
+    }
+
 private:
     FastInterpBoilerplateInstance(const FastInterpBoilerplateBluePrint* owner,
                                   int32_t relativeDataAddr,
@@ -289,7 +301,7 @@ public:
         m_boilerplateFnEntryPointPlaceholders.push_back(std::make_pair(inst, std::make_pair(fn, ord)));
     }
 
-    void RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst, bool isNoExcept);
+    void RegisterGeneratedFunctionEntryPoint(AstFunction* fn, FastInterpBoilerplateInstance* inst);
 
     void TestOnly_RegisterUnitTestFunctionEntryPoint(
             FastInterpTypeId returnType, bool isNoExcept, uintptr_t fakeId, FastInterpBoilerplateInstance* inst);

@@ -251,4 +251,85 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     return result;
 }
 
+void AstFunction::PrepareForFastInterp()
+{
+    TestAssert(thread_llvmContext->m_curFunction == nullptr);
+    thread_llvmContext->m_scopeStack.clear();
+    thread_pochiVMContext->m_fastInterpStackFrameManager->Reset(static_cast<uint32_t>(m_params.size() + 1) * 8);
+    thread_llvmContext->m_curFunction = this;
+
+    for (size_t index = 0; index < m_params.size(); index++)
+    {
+        m_params[index]->SetFastInterpOffset((index + 1) * 8);
+    }
+
+    FastInterpSnippet body = m_body->PrepareForFastInterp(x_FINoSpill);
+    TestAssert(body.m_tail == nullptr);
+
+    thread_pochiVMContext->m_fastInterpEngine->RegisterGeneratedFunctionEntryPoint(this, body.m_entry);
+
+    TestAssert(m_fastInterpStackFrameSize == static_cast<uint32_t>(-1));
+    m_fastInterpStackFrameSize = thread_pochiVMContext->m_fastInterpStackFrameManager->GetFinalStackFrameSize();
+
+    thread_llvmContext->m_curFunction = nullptr;
+}
+
+// The final stack frame size cannot be known until a function is generated.
+// Therefore, for recursion or mutual recursion, we cannot select the correct boilerplate instance at generation time.
+// We fix them here after all functions have been generated.
+//
+void AstCallExpr::FastInterpFixStackFrameSize(AstFunction* target)
+{
+    FIStackframeSizeCategory sfsCat = FIStackframeSizeCategoryHelper::SelectCategory(target->GetFastInterpStackFrameSize());
+    m_fastInterpInst->ReplaceBluePrint(
+                FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
+                    target->GetReturnType().GetOneLevelPtrFastInterpTypeId(),
+                    !m_fastInterpSpillLoc.IsNoSpill(),
+                    target->GetIsNoExcept(),
+                    sfsCat));
+}
+
+void AstModule::PrepareForFastInterp()
+{
+    TestAssert(!m_fastInterpPrepared);
+#ifdef TESTBUILD
+    m_fastInterpPrepared = true;
+#endif
+
+    if (thread_pochiVMContext->m_fastInterpStackFrameManager == nullptr)
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager = new FIStackFrameManager();
+    }
+    if (thread_pochiVMContext->m_fastInterpEngine == nullptr)
+    {
+        thread_pochiVMContext->m_fastInterpEngine = new FastInterpCodegenEngine();
+    }
+
+    thread_pochiVMContext->m_fastInterpEngine->Reset();
+    thread_pochiVMContext->m_fastInterpFnCallFixList.clear();
+    thread_llvmContext->m_scopeStack.clear();
+
+    for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
+    {
+        AstFunction* fn = iter->second;
+        fn->PrepareForFastInterp();
+    }
+
+    for (auto iter = thread_pochiVMContext->m_fastInterpFnCallFixList.begin();
+         iter != thread_pochiVMContext->m_fastInterpFnCallFixList.end(); iter++)
+    {
+        AstFunction* fn = iter->first;
+        AstCallExpr* callExpr = iter->second;
+        callExpr->FastInterpFixStackFrameSize(fn);
+    }
+
+    std::unique_ptr<FastInterpGeneratedProgram> gp = thread_pochiVMContext->m_fastInterpEngine->Materialize();
+    if (thread_pochiVMContext->m_fastInterpGeneratedProgram != nullptr)
+    {
+        delete thread_pochiVMContext->m_fastInterpGeneratedProgram;
+        thread_pochiVMContext->m_fastInterpGeneratedProgram = nullptr;
+    }
+    thread_pochiVMContext->m_fastInterpGeneratedProgram = gp.release();
+}
+
 }   // namespace PochiVM

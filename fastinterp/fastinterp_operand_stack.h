@@ -25,10 +25,19 @@ class FIStackFramePlanner
 {
 public:
     FIStackFramePlanner()
-        : m_baseOffset(8)
-        , m_topOffset(8)
-        , m_maxOffsetEver(8)
-    { }
+    {
+        Reset(8);
+    }
+
+    void Reset(uint32_t startOffset)
+    {
+        TestAssert(startOffset % 8 == 0);
+        m_baseOffset = startOffset;
+        m_topOffset = startOffset;
+        m_maxOffsetEver = startOffset;
+        m_freeList.clear();
+        m_oldAddress.clear();
+    }
 
     // Get a 8-byte temporary space
     //
@@ -130,8 +139,16 @@ class FITempOperandStack
 {
 public:
     FITempOperandStack(FIStackFramePlanner* sfPlanner, size_t nospillLimit)
-        : m_sfPlanner(sfPlanner), m_stack(), m_firstNoSpill(0), m_nospillLimit(nospillLimit)
-    { }
+        : m_sfPlanner(sfPlanner), m_nospillLimit(nospillLimit)
+    {
+        Reset();
+    }
+
+    void Reset()
+    {
+        m_stack.clear();
+        m_firstNoSpill = 0;
+    }
 
     bool IsEmpty() const { return m_stack.empty(); }
 
@@ -201,6 +218,17 @@ public:
         , m_integralOperandStack(&m_planner, x_fastinterp_max_integral_params)
         , m_floatOperandStack(&m_planner, x_fastinterp_max_floating_point_params)
     { }
+
+    void Reset(uint32_t startOffset)
+    {
+        m_planner.Reset(startOffset);
+        m_integralOperandStack.Reset();
+        m_floatOperandStack.Reset();
+#ifdef TESTBUILD
+        m_tempStack.clear();
+        m_localVarStack.clear();
+#endif
+    }
 
     void PushTemp(TypeId typeId)
     {
