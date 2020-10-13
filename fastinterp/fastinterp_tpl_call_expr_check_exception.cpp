@@ -18,10 +18,10 @@ struct FICallExprCheckExceptionImpl
     }
 
     // Placeholder rules:
-    // boilerplate placeholder 0: exception catch clause
+    // boilerplate placeholder 1: exception catch clause
     // CPP placeholder 0: exception soft-emulator
     // constant placeholder 0: program position indicator
-    // boilerplate placeholder 1: no-exception case continuation
+    // boilerplate placeholder 0: no-exception case continuation
     //
     template<FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
@@ -41,15 +41,15 @@ struct FICallExprCheckExceptionImpl
 
             // Transfer control to catch block
             //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
         }
         else
         {
             // Transfer control to normal block
             //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
         }
     }
 

@@ -1015,6 +1015,29 @@ template<typename R, typename... Args>
 struct is_function_prototype< std::function<R(Args...)> > : std::true_type
 { };
 
+template<typename R, typename... Args>
+struct is_function_prototype<R(*)(Args...) noexcept> : std::true_type
+{ };
+
+template<typename R, typename... Args>
+struct is_function_prototype< std::function<R(Args...) noexcept> > : std::true_type
+{ };
+
+// is_function_prototype<T>
+// true_type if T is a noexcept C-style function pointer or a std::function object
+//
+template<typename T>
+struct is_noexcept_function_prototype : std::false_type
+{ };
+
+template<typename R, typename... Args>
+struct is_noexcept_function_prototype<R(*)(Args...) noexcept> : std::true_type
+{ };
+
+template<typename R, typename... Args>
+struct is_noexcept_function_prototype< std::function<R(Args...) noexcept> > : std::true_type
+{ };
+
 // function_addr_to_callable<T>::get(void* addr):
 //    Converts addr to a callable of type T, which may be a C-style function pointer or a std::function object.
 //

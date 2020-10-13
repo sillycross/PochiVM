@@ -12,7 +12,6 @@ namespace PochiVM
 struct FICallExprStoreParamImpl
 {
     template<typename ParamType,
-             bool isQuickAccess,
              bool hasMore>
     static constexpr bool cond()
     {
@@ -22,28 +21,15 @@ struct FICallExprStoreParamImpl
     }
 
     // Placeholder rules:
-    // constant placeholder 1: offset if not quickaccess
     // constant placeholder 0: offset in newStackFrame to store param
     //
     template<typename ParamType,
-             bool isQuickAccess,
              bool hasMore>
-    static void f([[maybe_unused]] uintptr_t oldStackframe, uintptr_t newStackFrame, [[maybe_unused]] ParamType qa) noexcept
+    static void f([[maybe_unused]] uintptr_t oldStackframe, uintptr_t newStackFrame, ParamType qa) noexcept
     {
-        ParamType param;
-        if constexpr(isQuickAccess)
-        {
-            param = qa;
-        }
-        else
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
-            param = *GetLocalVarAddress<ParamType>(oldStackframe, CONSTANT_PLACEHOLDER_1);
-        }
-
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = param;
+            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = qa;
         }
 
         if constexpr(hasMore)
@@ -62,7 +48,6 @@ struct FICallExprStoreParamImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("paramType"),
-                    CreateBoolMetaVar("isQuickAccess"),
                     CreateBoolMetaVar("hasMore")
         );
     }
@@ -71,7 +56,6 @@ struct FICallExprStoreParamImpl
 struct FICallExprStoreParamNewSfSpilledImpl
 {
     template<typename ParamType,
-             bool isQuickAccess,
              bool hasMore>
     static constexpr bool cond()
     {
@@ -81,26 +65,13 @@ struct FICallExprStoreParamNewSfSpilledImpl
     }
 
     // Placeholder rules:
-    // constant placeholder 2: offset if not quickaccess
     // constant placeholder 1: spilled newstackframe offset
     // constant placeholder 0: offset in newStackFrame to store param
     //
     template<typename ParamType,
-             bool isQuickAccess,
              bool hasMore>
-    static void f([[maybe_unused]] uintptr_t oldStackframe, [[maybe_unused]] ParamType qa) noexcept
+    static void f([[maybe_unused]] uintptr_t oldStackframe, ParamType qa) noexcept
     {
-        ParamType param;
-        if constexpr(isQuickAccess)
-        {
-            param = qa;
-        }
-        else
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
-            param = *GetLocalVarAddress<ParamType>(oldStackframe, CONSTANT_PLACEHOLDER_1);
-        }
-
         uintptr_t newStackFrame;
         {
             DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
@@ -109,7 +80,7 @@ struct FICallExprStoreParamNewSfSpilledImpl
 
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = param;
+            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = qa;
         }
 
         if constexpr(hasMore)
@@ -128,7 +99,6 @@ struct FICallExprStoreParamNewSfSpilledImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("paramType"),
-                    CreateBoolMetaVar("isQuickAccess"),
                     CreateBoolMetaVar("hasMore")
         );
     }

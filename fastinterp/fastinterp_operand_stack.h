@@ -144,6 +144,12 @@ public:
         }
     }
 
+    FISpillLocation Peek() const
+    {
+        TestAssert(!IsEmpty());
+        return m_stack.back().m_spillLoc;
+    }
+
     FISpillLocation Pop()
     {
         TestAssert(!IsEmpty());
@@ -202,7 +208,7 @@ public:
 #ifdef TESTBUILD
         m_tempStack.push_back(typeId);
 #endif
-        if (typeId.IsFloat() || typeId.IsDouble())
+        if (typeId.IsFloatingPoint())
         {
             m_floatOperandStack.Push(static_cast<uint32_t>(typeId.Size()));
         }
@@ -218,13 +224,26 @@ public:
 #ifdef TESTBUILD
         m_tempStack.pop_back();
 #endif
-        if (typeId.IsFloat() || typeId.IsDouble())
+        if (typeId.IsFloatingPoint())
         {
             return m_floatOperandStack.Pop();
         }
         else
         {
             return m_integralOperandStack.Pop();
+        }
+    }
+
+    FISpillLocation WARN_UNUSED PeekTopTemp(TypeId typeId) const
+    {
+        TestAssert(m_tempStack.size() > 0 && m_tempStack.back() == typeId);
+        if (typeId.IsFloatingPoint())
+        {
+            return m_floatOperandStack.Peek();
+        }
+        else
+        {
+            return m_integralOperandStack.Peek();
         }
     }
 

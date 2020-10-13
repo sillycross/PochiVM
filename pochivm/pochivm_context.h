@@ -10,6 +10,8 @@ class AstVariable;
 class AstModule;
 class FIStackFrameManager;
 class FastInterpCodegenEngine;
+class AstFunction;
+class AstCallExpr;
 
 struct PochiVMContext
 {
@@ -37,6 +39,7 @@ struct PochiVMContext
 
     FIStackFrameManager* m_fastInterpStackFrameManager;
     FastInterpCodegenEngine* m_fastInterpEngine;
+    std::vector<std::pair<AstFunction*, AstCallExpr*>> m_fastInterpFnCallFixList;
 
     // Current module
     //

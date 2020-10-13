@@ -2227,7 +2227,6 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
     FastInterpBoilerplateInstance* populate_lhs_param = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    true /*isQuickAccess*/,
                     false /*hasMore*/));
     populate_lhs_param->PopulateConstantPlaceholder<uint64_t>(0, 8);
     populate_lhs_param->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);
@@ -2257,7 +2256,6 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
     FastInterpBoilerplateInstance* populate_rhs_param = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
-                    true /*isQuickAccess*/,
                     false /*hasMore*/));
     populate_rhs_param->PopulateConstantPlaceholder<uint64_t>(0, 8);
     populate_rhs_param->PopulateBoilerplateFnPtrPlaceholder(0, fib_fn);

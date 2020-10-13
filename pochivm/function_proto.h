@@ -63,6 +63,7 @@ private:
         , m_debugInterpStoreParamFns()
         , m_debugInterpStoreRetValFn(nullptr)
         , m_llvmEntryBlock(nullptr)
+        , m_isNoExcept(false)
     { }
 
 public:
@@ -181,6 +182,16 @@ public:
         m_returnType = returnType;
     }
 
+    void SetIsNoExcept(bool isNoExcept)
+    {
+        m_isNoExcept = isNoExcept;
+    }
+
+    bool GetIsNoExcept() const
+    {
+        return m_isNoExcept;
+    }
+
     // Below are methods for interp mode
     //
     // Interp execute the function
@@ -290,6 +301,8 @@ private:
     // llvm data
     //
     llvm::BasicBlock* m_llvmEntryBlock;
+
+    bool m_isNoExcept;
 };
 
 // A module, consists of a list of functions
@@ -702,6 +715,8 @@ public:
         }
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
 private:
     std::string m_fnName;
     std::vector<AstNodeBase*> m_params;
@@ -720,6 +735,8 @@ private:
     //
     llvm::Value* m_sretAddress;
     AstVariable* m_fastInterpSretVar;
+    FISpillLocation m_fastInterpSpillLoc;
+    FastInterpBoilerplateInstance* m_fastInterpInst;
 };
 
 class AstDeclareVariable : public AstNodeBase

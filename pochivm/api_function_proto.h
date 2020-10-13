@@ -71,6 +71,12 @@ public:
         m_ptr->SetParamName(i, name);
     }
 
+    void SetIsNoExcept(bool isNoExcept)
+    {
+        assert(!m_prototypeFrozen);
+        m_ptr->SetIsNoExcept(isNoExcept);
+    }
+
     template<typename T>
     Variable<T> NewVariable(const char* name = "var")
     {
@@ -189,6 +195,7 @@ FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramN
         internal::NewFunctionSetParamNamesHelper(fn, 0, paramNames...);
     }
     fn.SetReturnType(FnInfo::returnTypeId);
+    fn.SetIsNoExcept(AstTypeHelper::is_noexcept_function_prototype<T>::value);
     fn.FreezePrototype();
     return internal::params_user_tuple<T>::build(fn, fn.GetPtr()->GetParamsVector());
 }

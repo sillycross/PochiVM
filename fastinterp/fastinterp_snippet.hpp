@@ -12,6 +12,10 @@ inline FastInterpSnippet WARN_UNUSED FastInterpSnippet::AddContinuation(FastInte
     {
         return *this;
     }
+    if (m_entry == nullptr && m_tail == nullptr)
+    {
+        return other;
+    }
     TestAssert(m_tail != nullptr && other.m_entry != nullptr);
     m_tail->PopulateBoilerplateFnPtrPlaceholder(0, other.m_entry);
     return FastInterpSnippet {
@@ -22,6 +26,11 @@ inline FastInterpSnippet WARN_UNUSED FastInterpSnippet::AddContinuation(FastInte
 inline FastInterpSnippet WARN_UNUSED FastInterpSnippet::AddContinuation(FastInterpBoilerplateInstance* other)
 {
     TestAssert(other != nullptr);
+    if (m_entry == nullptr && m_tail == nullptr)
+    {
+        return FastInterpSnippet { other, other };
+    }
+    TestAssert(m_tail != nullptr);
     m_tail->PopulateBoilerplateFnPtrPlaceholder(0, other);
     return FastInterpSnippet {
         m_entry, other
