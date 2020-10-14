@@ -21,7 +21,6 @@ SET(FASTINTERP_TPL_SOURCES
   #fastinterp_tpl_for_loop.cpp
   #fastinterp_tpl_if_stmt.cpp
   #fastinterp_tpl_arithmetic_expr.cpp
-  #fastinterp_tpl_astliteral.cpp
   #fastinterp_tpl_comparison_expr.cpp
   #fastinterp_tpl_astcall_generatedfn.cpp
   #fastinterp_tpl_astcall_cppfn.cpp
@@ -34,7 +33,7 @@ SET(FASTINTERP_TPL_SOURCES
   #fastinterp_tpl_assign_arith_expr.cpp
   #fastinterp_tpl_assign_common.cpp
   fastinterp_tpl_cdecl_interface.cpp
-  fastinterp_tpl_partial_inline_assign.cpp
+  fastinterp_tpl_partial_inline_lhs_assign.cpp
   fastinterp_tpl_inline_arith_expr.cpp
   fastinterp_tpl_outlined_arith_expr.cpp
   fastinterp_tpl_outlined_return.cpp
@@ -56,6 +55,12 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_call_expr_spill_stackaddr.cpp
   fastinterp_tpl_partial_inline_comparison_expr.cpp
   fastinterp_tpl_outlined_comparison_expr.cpp
+  fastinterp_tpl_abort_trap.cpp
+  fastinterp_tpl_inline_dereference.cpp
+  fastinterp_tpl_partial_inline_rhs_deref.cpp
+  fastinterp_tpl_partial_inline_lhs_deref.cpp
+  fastinterp_tpl_outlined_deref.cpp
+  fastinterp_tpl_astliteral.cpp
 )
 
 SET(FASTINTERP_SOURCES

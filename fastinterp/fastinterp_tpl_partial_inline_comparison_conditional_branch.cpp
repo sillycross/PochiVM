@@ -98,8 +98,7 @@ struct FIPartialInlinedComparisonBranchImpl
              bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
-             AstComparisonExprType operatorType,
-             bool putFalseBranchAtEnd>
+             AstComparisonExprType operatorType>
     static constexpr bool cond()
     {
         return true;
@@ -117,7 +116,6 @@ struct FIPartialInlinedComparisonBranchImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              AstComparisonExprType operatorType,
-             bool putFalseBranchAtEnd,
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType qaOperand) noexcept
     {
@@ -150,7 +148,7 @@ struct FIPartialInlinedComparisonBranchImpl
         }
 
         bool result = EvaluateComparisonExpression<OperandType, operatorType>(lhs, rhs);
-        FIConditionalJumpHelper::execute_0_1<putFalseBranchAtEnd, OpaqueParams...>(result, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<false /*putFalseBranchAtEnd*/, OpaqueParams...>(result, stackframe, opaqueParams...);
     }
 
     static auto metavars()
@@ -163,8 +161,7 @@ struct FIPartialInlinedComparisonBranchImpl
                     CreateBoolMetaVar("isQAP"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit(),
-                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType"),
-                    CreateBoolMetaVar("putFalseBranchAtEnd")
+                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType")
         );
     }
 };

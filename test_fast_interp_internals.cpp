@@ -1477,13 +1477,12 @@ TEST(TestFastInterpInternal, Sanity_1)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOpaqueParamsHelper::GetMaxOFP()));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
@@ -1493,7 +1492,7 @@ TEST(TestFastInterpInternal, Sanity_1)
                     static_cast<FINumOpaqueFloatingParams>(0)));
     inst->PopulateBoilerplateFnPtrPlaceholder(0, inst2);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst2->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1522,13 +1521,12 @@ TEST(TestFastInterpInternal, Sanity_2)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOpaqueParamsHelper::GetMaxOFP()));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
@@ -1540,7 +1538,7 @@ TEST(TestFastInterpInternal, Sanity_2)
     inst->PopulateConstantPlaceholder<int>(1, 123);
     inst->PopulateConstantPlaceholder<int>(2, 45678);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst2->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1569,12 +1567,11 @@ TEST(TestFastInterpInternal, Sanity_3)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst2 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    true /*isQAP*/,
-                    static_cast<FINumOpaqueIntegralParams>(0),
+                    FIOpaqueParamsHelper::GetMaxOIP(),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst3 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
@@ -1587,7 +1584,7 @@ TEST(TestFastInterpInternal, Sanity_3)
     inst->PopulateConstantPlaceholder<double>(1, 123.456);
     inst->PopulateConstantPlaceholder<double>(2, 789.012);
     inst2->PopulateBoilerplateFnPtrPlaceholder(0, inst3);
-    inst2->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst2->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1636,13 +1633,12 @@ TEST(TestFastInterpInternal, Sanity_4)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOpaqueParamsHelper::GetMaxOFP()));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<void>().GetDefaultFastInterpTypeId(),
@@ -1659,7 +1655,7 @@ TEST(TestFastInterpInternal, Sanity_4)
     inst->PopulateConstantPlaceholder<int>(2, 567);
     inst2->PopulateConstantPlaceholder<int>(1, -123);
     inst2->PopulateConstantPlaceholder<int>(2, -89);
-    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst4->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1706,12 +1702,11 @@ TEST(TestFastInterpInternal, Sanity_5)
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    true /*isQAP*/,
-                    static_cast<FINumOpaqueIntegralParams>(0),
+                    FIOpaqueParamsHelper::GetMaxOIP(),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
@@ -1729,7 +1724,7 @@ TEST(TestFastInterpInternal, Sanity_5)
     inst->PopulateConstantPlaceholder<double>(2, 567.23);
     inst2->PopulateConstantPlaceholder<double>(1, -123.12);
     inst2->PopulateConstantPlaceholder<double>(2, -89.8);
-    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst4->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1772,16 +1767,15 @@ TEST(TestFastInterpInternal, Sanity_6)
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::DIV,
                     false /*isLhsQAP*/,
-                    true /*spillOutput*/,
+                    false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst4 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineAssignImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIPartialInlineLhsAssignImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<double>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
-                    false /*isQAP*/,
-                    static_cast<FINumOpaqueIntegralParams>(0),
+                    FIOpaqueParamsHelper::GetMaxOIP(),
                     static_cast<FINumOpaqueFloatingParams>(0)));
     FastInterpBoilerplateInstance* inst5 = engine.InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
@@ -1802,9 +1796,7 @@ TEST(TestFastInterpInternal, Sanity_6)
     inst2->PopulateConstantPlaceholder<double>(1, -123.12);
     inst2->PopulateConstantPlaceholder<double>(2, -89.8);
     inst3->PopulateConstantPlaceholder<uint64_t>(1, 8);
-    inst3->PopulateConstantPlaceholder<uint64_t>(0, 24);
-    inst4->PopulateConstantPlaceholder<uint64_t>(0, 24);
-    inst4->PopulateConstantPlaceholder<uint64_t>(1, 0, true);
+    inst4->PopulateConstantPlaceholder<uint64_t>(0, 0, true);
 
     engine.TestOnly_RegisterUnitTestFunctionEntryPoint(TypeId::Get<void>().GetDefaultFastInterpTypeId(), true, 233, inst);
     std::unique_ptr<FastInterpGeneratedProgram> gp = engine.Materialize();
@@ -1871,8 +1863,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARIABLE,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::LESS_EQUAL,
-                    false /*putFalseBranchAtEnd*/), 4 /*log2FunctionAlignment*/);
+                    AstComparisonExprType::LESS_EQUAL), 4 /*log2FunctionAlignment*/);
     outer_for_loop->PopulateConstantPlaceholder<uint64_t>(0, 36);
     outer_for_loop->PopulateConstantPlaceholder<uint64_t>(2, 8);
     main_stmt2->PopulateBoilerplateFnPtrPlaceholder(0, outer_for_loop);
@@ -1888,8 +1879,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::ZERO,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::EQUAL,
-                    false /*putFalseBranchAtEnd*/));
+                    AstComparisonExprType::EQUAL));
     if_cond->PopulateConstantPlaceholder<uint64_t>(0, 16);
     if_cond->PopulateConstantPlaceholder<uint64_t>(1, 36);
     outer_for_loop->PopulateBoilerplateFnPtrPlaceholder(0, if_cond);
@@ -1969,8 +1959,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARIABLE,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::LESS_THAN,
-                    false /*putFalseBranchAtEnd*/), 4 /*log2FunctionAlignment*/);
+                    AstComparisonExprType::LESS_THAN), 4 /*log2FunctionAlignment*/);
     inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(0, 40);
     inner_loop_cond_1->PopulateConstantPlaceholder<uint64_t>(2, 32);
     outer_loop_stmt_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_1);
@@ -1986,8 +1975,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     FIOperandShapeCategory::VARPTR_VAR,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::LESS_EQUAL,
-                    false /*putFalseBranchAtEnd*/));
+                    AstComparisonExprType::LESS_EQUAL));
     inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(0, 24);
     inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(1, 40);
     inner_loop_cond_2->PopulateConstantPlaceholder<uint64_t>(2, 16);
@@ -2032,8 +2020,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::LESS_EQUAL,
-                    false /*putFalseBranchAtEnd*/));
+                    AstComparisonExprType::LESS_EQUAL));
     inner_loop_cond_3->PopulateConstantPlaceholder<uint64_t>(1, 8);
     ixprj->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_3);
 
@@ -2085,11 +2072,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARPTR_VAR,
-                    true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP()));
-    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(1, 24);
-    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(2, 40);
+    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(0, 24);
+    inner_loop_stmt_2->PopulateConstantPlaceholder<uint64_t>(1, 40);
     inner_loop_stmt_1->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_stmt_2);
 
     // j++
@@ -2188,8 +2174,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
                     FIOperandShapeCategory::LITERAL_NONZERO,
                     FIOpaqueParamsHelper::GetMaxOIP(),
                     FIOpaqueParamsHelper::GetMaxOFP(),
-                    AstComparisonExprType::LESS_EQUAL,
-                    true /*putFalseBranchAtEnd*/), 4);
+                    AstComparisonExprType::LESS_EQUAL), 4);
     fib_fn->PopulateConstantPlaceholder<uint64_t>(0, 8);
     fib_fn->PopulateConstantPlaceholder<int>(2, 2);
 

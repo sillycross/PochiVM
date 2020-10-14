@@ -264,7 +264,31 @@ void AstFunction::PrepareForFastInterp()
     }
 
     FastInterpSnippet body = m_body->PrepareForFastInterp(x_FINoSpill);
-    TestAssert(body.m_tail == nullptr);
+    if (body.m_tail != nullptr)
+    {
+        // We may reach end of control flow without an explicit return.
+        // If the function returns void, we are good: it's just a normal return.
+        // Otherwise, it means the function has a return value but user did not set it,
+        // we fire an assert at execution time if the control flow actually hit the branch.
+        //
+        if (GetReturnType().IsVoid())
+        {
+            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
+                            TypeId::Get<void>().GetDefaultFastInterpTypeId(),
+                            GetIsNoExcept(),
+                            false /*exceptionThrown*/,
+                            FIOpaqueParamsHelper::GetMaxOIP(),
+                            FIOpaqueParamsHelper::GetMaxOFP()));
+            body = body.AddContinuation(FastInterpSnippet { inst, nullptr });
+        }
+        else
+        {
+            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIAbortTrapImpl>::SelectBoilerplateBluePrint(true));
+            body = body.AddContinuation(FastInterpSnippet { inst, nullptr });
+        }
+    }
 
     thread_pochiVMContext->m_fastInterpEngine->RegisterGeneratedFunctionEntryPoint(this, body.m_entry);
 

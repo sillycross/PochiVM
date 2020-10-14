@@ -10,10 +10,11 @@ add_library(pochivm
   destructor_helper_llvm.cpp
   exception_helper_llvm.cpp
   ast_catch_throw_llvm.cpp
-  codegen_context_llvm.cpp
+  codegen_context.cpp
   arith_expr_fastinterp.cpp
   ast_variable_fastinterp.cpp
   function_proto_fastinterp.cpp
+  common_expr_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

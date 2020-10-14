@@ -9,26 +9,67 @@ struct FILiteralImpl
 {
     // Only allow primitive type and 'void*'
     //
-    template<typename LiteralType, bool isAllUnderlyingBitsZero>
+    template<typename LiteralType,
+             bool isAllUnderlyingBitsZero,
+             bool spillOutput,
+             FINumOpaqueIntegralParams numOIP,
+             FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
         if (std::is_same<LiteralType, void>::value) { return false; }
         if (std::is_pointer<LiteralType>::value && !std::is_same<LiteralType, void*>::value) { return false; }
-        return true;
-    }
-
-    template<typename LiteralType, bool isAllUnderlyingBitsZero>
-    static LiteralType f() noexcept
-    {
-        if constexpr(isAllUnderlyingBitsZero)
+        if (!spillOutput)
         {
-            constexpr LiteralType v = PochiVM::get_all_bits_zero_value<LiteralType>();
-            return v;
+            if (std::is_floating_point<LiteralType>::value)
+            {
+                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+                if (FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+            }
+            else
+            {
+                if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+            }
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(LiteralType);
-            return CONSTANT_PLACEHOLDER_0;
+            if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+            if (FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+        }
+        return true;
+    }
+
+    template<typename LiteralType,
+             bool isAllUnderlyingBitsZero,
+             bool spillOutput,
+             FINumOpaqueIntegralParams numOIP,
+             FINumOpaqueFloatingParams numOFP,
+             typename... OpaqueParams>
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
+    {
+        LiteralType result;
+        if constexpr(isAllUnderlyingBitsZero)
+        {
+            result = PochiVM::get_all_bits_zero_value<LiteralType>();
+        }
+        else
+        {
+            DEFINE_CONSTANT_PLACEHOLDER_1(LiteralType);
+            result = CONSTANT_PLACEHOLDER_1;
+        }
+
+        if constexpr(!spillOutput)
+        {
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., LiteralType) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+        }
+        else
+        {
+            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            *GetLocalVarAddress<LiteralType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
+
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
         }
     }
 
@@ -36,7 +77,10 @@ struct FILiteralImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("literalType"),
-                    CreateBoolMetaVar("isAllUnderlyingBitsZero")
+                    CreateBoolMetaVar("isAllUnderlyingBitsZero"),
+                    CreateBoolMetaVar("spillOutput"),
+                    CreateOpaqueIntegralParamsLimit(),
+                    CreateOpaqueFloatParamsLimit()
         );
     }
 };

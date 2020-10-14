@@ -43,6 +43,8 @@ public:
         fn(m_operand);
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
 private:
     AstNodeBase* m_operand;
 };
@@ -110,6 +112,8 @@ public:
             return m_as_uint64_t == 0;
         }
     }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
     uint64_t GetAsU64()
     {
@@ -211,6 +215,8 @@ public:
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
 private:
     AstNodeBase* m_dst;

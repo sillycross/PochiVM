@@ -103,28 +103,6 @@ struct FIFullyInlinedComparisonBranchImpl
              AstComparisonExprType operatorType>
     static constexpr bool cond()
     {
-        // This boilerplate pack is a bit too large. Expect caller to do mirroring.
-        //
-        if (operatorType == AstComparisonExprType::NOT_EQUAL ||
-            operatorType == AstComparisonExprType::GREATER_THAN ||
-            operatorType == AstComparisonExprType::GREATER_EQUAL)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    template<typename OperandType,
-             typename LhsIndexType,
-             typename RhsIndexType,
-             FIOperandShapeCategory lhsShapeCategory,
-             FIOperandShapeCategory rhsShapeCategory,
-             FINumOpaqueIntegralParams numOIP,
-             FINumOpaqueFloatingParams numOFP,
-             AstComparisonExprType operatorType,
-             bool putFalseBranchAtEnd>
-    static constexpr bool cond()
-    {
         return true;
     }
 
@@ -140,14 +118,13 @@ struct FIFullyInlinedComparisonBranchImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              AstComparisonExprType operatorType,
-             bool putFalseBranchAtEnd,
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
     {
         OperandType lhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
         OperandType rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
         bool result = EvaluateComparisonExpression<OperandType, operatorType>(lhs, rhs);
-        FIConditionalJumpHelper::execute_0_1<putFalseBranchAtEnd, OpaqueParams...>(result, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<false /*putFalseBranchAtEnd*/, OpaqueParams...>(result, stackframe, opaqueParams...);
     }
 
     static auto metavars()
@@ -160,8 +137,7 @@ struct FIFullyInlinedComparisonBranchImpl
                     CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("rhsShapeCategory"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit(),
-                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType"),
-                    CreateBoolMetaVar("putFalseBranchAtEnd")
+                    CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType")
         );
     }
 };

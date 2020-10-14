@@ -655,6 +655,7 @@ public:
         const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
         const std::string terminatorOperatorName1 = "FIOutlinedReturnImpl";
         const std::string terminatorOperatorName2 = "FIInlinedReturnImpl";
+        const std::string terminatorOperatorName3 = "FIAbortTrapImpl";
 
         using FnPrototype = void(*)();
         FnPrototype entryPoint;
@@ -1297,6 +1298,7 @@ public:
 
                 if (it->first != terminatorOperatorName1 &&
                     it->first != terminatorOperatorName2 &&
+                    it->first != terminatorOperatorName3 &&
                     it->first != cdeclInterfaceName &&
                     PochiVM::x_fastinterp_function_alignment == 1)
                 {

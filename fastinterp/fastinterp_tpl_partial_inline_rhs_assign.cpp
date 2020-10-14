@@ -39,25 +39,16 @@ struct FIPartialInlineRhsAssignImpl
     template<typename OperandType,
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
-        if (isQuickAccessOperand)
-        {
-            if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-        }
-        else
-        {
-            if (!FIOpaqueParamsHelper::IsEmpty(numOIP)) { return false; }
-        }
+        if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
         return true;
     }
 
     template<typename OperandType,
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
@@ -67,31 +58,18 @@ struct FIPartialInlineRhsAssignImpl
     }
 
     // placeholder rules:
-    // constant placeholder 0: LHS operand, if not quickaccess
-    // constant placeholder 1/2: RHS shape
+    // constant placeholder 0/1: RHS shape
     //
     template<typename OperandType,
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType* qaOperand) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType* qaOperand) noexcept
     {
-        OperandType* lhs;
-        if constexpr(isQuickAccessOperand)
-        {
-            lhs = qaOperand;
-        }
-        else
-        {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-            lhs = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_0);
-        }
-
-        OperandType rhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, IndexType, shapeCategory>(stackframe);
-        *lhs = rhs;
+        OperandType rhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, IndexType, shapeCategory>(stackframe);
+        *qaOperand = rhs;
 
         DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
         BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
@@ -103,7 +81,6 @@ struct FIPartialInlineRhsAssignImpl
                     CreateTypeMetaVar("operandType"),
                     CreateTypeMetaVar("IndexType"),
                     CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("shapeCategory"),
-                    CreateBoolMetaVar("isQuickAccessOperand"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit()
         );
