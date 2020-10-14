@@ -137,6 +137,10 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
                     baseAddress + static_cast<uint64_t>(static_cast<int64_t>(it->second.second->m_relativeCodeAddr)));
     }
 
+    // TODO: consider only do this in test build
+    // TLB shootdown is a bit costly
+    //
+    if (dataSectionSize > 0)
     {
         int r = mprotect(mmapResult, dataSectionSize, PROT_READ);
         if (r != 0) {

@@ -151,6 +151,7 @@ add_executable(main
   test_catch_throw.cpp
   test_metavar_framework.cpp
   test_fast_interp_internals.cpp
+  test_fast_interp.cpp
 )
 
 # Important to link runtime using '--whole-archive'

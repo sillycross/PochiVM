@@ -45,6 +45,11 @@ public:
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
+    AstNodeBase* GetOperand() const
+    {
+        return m_operand;
+    }
+
 private:
     AstNodeBase* m_operand;
 };

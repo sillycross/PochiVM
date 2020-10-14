@@ -347,13 +347,21 @@ void AstModule::PrepareForFastInterp()
         callExpr->FastInterpFixStackFrameSize(fn);
     }
 
-    std::unique_ptr<FastInterpGeneratedProgram> gp = thread_pochiVMContext->m_fastInterpEngine->Materialize();
-    if (thread_pochiVMContext->m_fastInterpGeneratedProgram != nullptr)
     {
-        delete thread_pochiVMContext->m_fastInterpGeneratedProgram;
-        thread_pochiVMContext->m_fastInterpGeneratedProgram = nullptr;
+        std::unique_ptr<FastInterpGeneratedProgram> gp = thread_pochiVMContext->m_fastInterpEngine->Materialize();
+        if (thread_pochiVMContext->m_fastInterpGeneratedProgram != nullptr)
+        {
+            delete thread_pochiVMContext->m_fastInterpGeneratedProgram;
+            thread_pochiVMContext->m_fastInterpGeneratedProgram = nullptr;
+        }
+        thread_pochiVMContext->m_fastInterpGeneratedProgram = gp.release();
     }
-    thread_pochiVMContext->m_fastInterpGeneratedProgram = gp.release();
+
+    for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
+    {
+        AstFunction* fn = iter->second;
+        fn->SetFastInterpCppEntryPoint(thread_pochiVMContext->m_fastInterpGeneratedProgram->GetGeneratedFunctionAddress(fn));
+    }
 }
 
 }   // namespace PochiVM

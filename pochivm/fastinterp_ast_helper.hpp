@@ -19,10 +19,10 @@ struct AstFISimpleOperandShape
     static AstFISimpleOperandShape WARN_UNUSED TryMatch(AstNodeBase* expr)
     {
         AstFISimpleOperandShape ret;
-        if (expr->GetAstNodeType() == AstNodeType::AstVariable)
+        if (expr->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
         {
             ret.m_kind = FISimpleOperandShapeCategory::VARIABLE;
-            ret.m_variable = assert_cast<AstVariable*>(expr);
+            ret.m_variable = assert_cast<AstDereferenceVariableExpr*>(expr)->GetOperand();
         }
         else if (expr->GetAstNodeType() == AstNodeType::AstLiteralExpr)
         {
@@ -71,11 +71,11 @@ struct AstFIOperandShape
     static AstFIOperandShape WARN_UNUSED TryMatch(AstNodeBase* expr)
     {
         AstFIOperandShape ret;
-        if (expr->GetAstNodeType() == AstNodeType::AstVariable)
+        if (expr->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
         {
             ret.m_kind = FIOperandShapeCategory::VARIABLE;
             ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
-            ret.m_mainVariable = assert_cast<AstVariable*>(expr);
+            ret.m_mainVariable = assert_cast<AstDereferenceVariableExpr*>(expr)->GetOperand();
         }
         else if (expr->GetAstNodeType() == AstNodeType::AstLiteralExpr)
         {
@@ -91,9 +91,11 @@ struct AstFIOperandShape
                 ret.m_mainLiteral = lit;
             }
         }
-        else if (expr->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+        else if (expr->GetAstNodeType() == AstNodeType::AstDereferenceExpr &&
+                 assert_cast<AstDereferenceExpr*>(expr)->GetOperand()->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
         {
-            AstDereferenceVariableExpr* derefExpr = assert_cast<AstDereferenceVariableExpr*>(expr);
+            AstDereferenceVariableExpr* derefExpr = assert_cast<AstDereferenceVariableExpr*>(
+                        assert_cast<AstDereferenceExpr*>(expr)->GetOperand());
             ret.m_kind = FIOperandShapeCategory::VARPTR_DEREF;
             ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
             ret.m_mainVariable = derefExpr->GetOperand();

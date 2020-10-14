@@ -54,6 +54,8 @@ public:
         fn(m_operand);
     }
 
+    virtual FastInterpSnippet PrepareForFastInterp(FISpillLocation spillLoc) override;
+
     AstVariable* GetOperand() const
     {
         return m_operand;
@@ -111,6 +113,8 @@ public:
             fn(stmt);
         }
     }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
@@ -180,6 +184,8 @@ public:
             fn(stmt);
         }
     }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
     void Append(AstNodeBase* stmt)
     {

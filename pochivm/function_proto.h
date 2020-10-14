@@ -4,6 +4,7 @@
 #include "lang_constructs.h"
 #include "error_context.h"
 #include "bitcode_data.h"
+#include "fastinterp/fastinterp_tpl_return_type.h"
 
 #include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
 
@@ -65,6 +66,7 @@ private:
         , m_llvmEntryBlock(nullptr)
         , m_isNoExcept(false)
         , m_fastInterpStackFrameSize(static_cast<uint32_t>(-1))
+        , m_fastInterpCppEntryPoint(nullptr)
     { }
 
 public:
@@ -266,6 +268,17 @@ public:
 
     void PrepareForFastInterp();
 
+    void SetFastInterpCppEntryPoint(void* entryPoint)
+    {
+        TestAssert(m_fastInterpCppEntryPoint == nullptr && entryPoint != nullptr);
+        m_fastInterpCppEntryPoint = entryPoint;
+    }
+
+    void* GetFastInterpCppEntryPoint() const
+    {
+        return m_fastInterpCppEntryPoint;
+    }
+
 private:
 
     void DebugInterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
@@ -313,6 +326,96 @@ private:
 
     bool m_isNoExcept;
     uint32_t m_fastInterpStackFrameSize;
+    void* m_fastInterpCppEntryPoint;
+};
+
+template<typename T>
+class FastInterpFunction
+{
+    static_assert(sizeof(T) == 0, "T must be a C function pointer");
+};
+
+template<typename R, typename... Args>
+class FastInterpFunction<R(*)(Args...) noexcept>
+{
+public:
+    FastInterpFunction() : m_fnPtr(nullptr) {}
+    FastInterpFunction(void* fnPtr, uint32_t stackframeSize)
+        : m_fnPtr(fnPtr), m_stackframeSize(stackframeSize)
+    { }
+
+    explicit operator bool() const { return m_fnPtr != nullptr; }
+
+    R operator()(Args... args) noexcept
+    {
+        TestAssert(m_fnPtr != nullptr);
+        uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
+        PopulateParams(sf + 8, args...);
+        return reinterpret_cast<R(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
+    }
+
+private:
+    static void PopulateParams(uintptr_t /*sf*/) noexcept { }
+
+    template<typename T, typename... TArgs>
+    static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
+    {
+        *reinterpret_cast<T*>(sf) = arg;
+        PopulateParams(sf + 8, more...);
+    }
+
+    void* m_fnPtr;
+    uint32_t m_stackframeSize;
+};
+
+template<typename R, typename... Args>
+class FastInterpFunction<R(*)(Args...)>
+{
+public:
+    FastInterpFunction() : m_fnPtr(nullptr) {}
+    FastInterpFunction(void* fnPtr, uint32_t stackframeSize, bool isNoExcept)
+        : m_stackframeSize(stackframeSize), m_fnPtr(fnPtr), m_isNoExcept(isNoExcept)
+    { }
+
+    explicit operator bool() const { return m_fnPtr != nullptr; }
+
+    R operator()(Args... args)
+    {
+        TestAssert(m_fnPtr != nullptr);
+        uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
+        PopulateParams(sf + 8, args...);
+        if (m_isNoExcept)
+        {
+            return reinterpret_cast<R(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
+        }
+        else
+        {
+            using RetOrExn = FIReturnType<R, false /*isNoExcept*/>;
+            RetOrExn r = reinterpret_cast<RetOrExn(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
+            if (unlikely(FIReturnValueHelper::HasException(r)))
+            {
+                throw 233;  // TODO: throw real exception
+            }
+            else
+            {
+                return FIReturnValueHelper::GetReturnValue(r);
+            }
+        }
+    }
+
+private:
+    static void PopulateParams(uintptr_t /*sf*/) noexcept { }
+
+    template<typename T, typename... TArgs>
+    static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
+    {
+        *reinterpret_cast<T*>(sf) = arg;
+        PopulateParams(sf + 8, more...);
+    }
+
+    void* m_fnPtr;
+    uint32_t m_stackframeSize;
+    bool m_isNoExcept;
 };
 
 // A module, consists of a list of functions
@@ -408,7 +511,7 @@ private:
     template<typename T> struct InterpCallFunction;
 
 public:
-    // Get a std::function object that invokes a generated function in interp mode
+    // Get a std::function object that invokes a generated function in debug interp mode
     //
     // T must be a std::function that matches the prototype of the generated function
     // Return the std::function object that calls the generated function in interp mode,
@@ -430,6 +533,22 @@ public:
         }
         TestAssert(InterpCallFunction<T>::check_prototype_ok(fn));
         return InterpCallFunction<T>::get(fn);
+    }
+
+    // T must be a C style function pointer
+    // returns FastInterpFunction which contextually converts to false if function not found
+    //
+    template<typename T>
+    FastInterpFunction<T> GetFastInterpGeneratedFunction(const std::string& name)
+    {
+        assert(m_fastInterpPrepared);
+        AstFunction* fn = GetAstFunction(name);
+        if (fn == nullptr)
+        {
+            return FastInterpFunction<T>();
+        }
+        TestAssert(FastInterpCallFunction<T>::check_prototype_ok(fn));
+        return FastInterpCallFunction<T>::get(fn);
     }
 
     // Check that the function with specified name exists and its prototype matches T
@@ -538,6 +657,71 @@ private:
             return [fn](Args... args) -> R {
                 return InterpCallFunctionImpl<R, Args...>::call(fn, args...);
             };
+        }
+    };
+
+    template<typename T>
+    struct FastInterpCallFunction
+    {
+        static_assert(sizeof(T) == 0, "T must be a std::function type!");
+    };
+
+    template<typename R, typename... Args>
+    struct FastInterpCallFunction<R(*)(Args...)>
+    {
+        using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
+
+        static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
+        {
+            CHECK(FnInfo::numArgs == fn->GetNumParams());
+            CHECK(TypeId::Get<R>() == fn->GetReturnType());
+            for (size_t i = 0; i < FnInfo::numArgs; i++)
+            {
+                CHECK(fn->GetParamType(i) == FnInfo::argTypeId[i]);
+            }
+            return true;
+        }
+
+        static FastInterpFunction<R(*)(Args...)> get(AstFunction* fn)
+        {
+            return FastInterpFunction<R(*)(Args...)>(
+                        fn->GetFastInterpCppEntryPoint(),
+                        fn->GetFastInterpStackFrameSize(),
+                        fn->GetIsNoExcept());
+        }
+    };
+
+    template<typename R, typename... Args>
+    struct FastInterpCallFunction<R(*)(Args...) noexcept>
+    {
+        using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
+
+        static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
+        {
+            CHECK(FnInfo::numArgs == fn->GetNumParams());
+            CHECK(TypeId::Get<R>() == fn->GetReturnType());
+            for (size_t i = 0; i < FnInfo::numArgs; i++)
+            {
+                CHECK(fn->GetParamType(i) == FnInfo::argTypeId[i]);
+            }
+            CHECK(fn->GetIsNoExcept());
+            return true;
+        }
+
+        static void PopulateParams(uintptr_t /*sf*/) noexcept { }
+
+        template<typename T, typename... TArgs>
+        static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
+        {
+            *reinterpret_cast<T*>(sf) = arg;
+            PopulateParams(sf + 8, more...);
+        }
+
+        static FastInterpFunction<R(*)(Args...) noexcept> get(AstFunction* fn)
+        {
+            return FastInterpFunction<R(*)(Args...) noexcept>(
+                        fn->GetFastInterpCppEntryPoint(),
+                        fn->GetFastInterpStackFrameSize());
         }
     };
 

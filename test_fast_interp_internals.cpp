@@ -1989,7 +1989,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOpaqueParamsHelper::GetMaxOFP()));
     value_of_i->PopulateConstantPlaceholder<uint64_t>(1, 36);
     inner_loop_cond_2->PopulateBoilerplateFnPtrPlaceholder(0, value_of_i);
 
@@ -2031,7 +2031,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
-                    static_cast<FINumOpaqueFloatingParams>(0)));
+                    FIOpaqueParamsHelper::GetMaxOFP()));
     value_of_i_2->PopulateConstantPlaceholder<uint64_t>(1, 36);
     inner_loop_cond_3->PopulateBoilerplateFnPtrPlaceholder(0, value_of_i_2);
 

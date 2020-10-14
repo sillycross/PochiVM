@@ -20,12 +20,13 @@ struct FIDerefVariableImpl
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
-        if (!std::is_floating_point<VarType>::value)
+        if (!spillOutput && !std::is_floating_point<VarType>::value)
         {
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+        }
+        else
+        {
+            if (FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
         }
         return true;
     }
@@ -36,12 +37,13 @@ struct FIDerefVariableImpl
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
-        if (std::is_floating_point<VarType>::value)
+        if (!spillOutput && std::is_floating_point<VarType>::value)
         {
-            if (!spillOutput)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+        }
+        else
+        {
+            if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         }
         return true;
     }
