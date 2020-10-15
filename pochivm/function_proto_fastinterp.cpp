@@ -163,6 +163,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
                     FastInterpBoilerplateInstance* spillOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                                 FastInterpBoilerplateLibrary<FICallExprSpillStackAddrImpl>::SelectBoilerplateBluePrint(
                                     false /*isFakeSpillForNoParamsCase*/));
+                    newsfSpillLoc.PopulatePlaceholderIfSpill(spillOp, 0);
                     callOp = callOp.AddContinuation(spillOp);
                 }
             }
