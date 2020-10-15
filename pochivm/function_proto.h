@@ -559,8 +559,8 @@ public:
     {
         AstFunction* fn = GetAstFunction(name);
         CHECK(fn != nullptr);
-        using _StdFunctionType = typename AstTypeHelper::callable_to_std_function_type<T>::type;
-        CHECK(InterpCallFunction<_StdFunctionType>::check_prototype_ok(fn));
+        using _CFunctionType = typename AstTypeHelper::callable_to_c_style_fnptr_type<T>::type;
+        CHECK(FastInterpCallFunction<_CFunctionType>::check_prototype_ok(fn));
         return true;
     }
 

@@ -188,6 +188,8 @@ void AstModule::EmitIR()
     m_irEmitted = true;
 #endif
 
+    AstTraverseColorMark::ClearAll();
+
     // Setup the LLVM codegen context
     // TODO: OOM error handling
     //

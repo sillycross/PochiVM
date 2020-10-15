@@ -671,3 +671,36 @@ TEST(TestFastInterp, Sanity_19)
          ReleaseAssert(ret == 2 * -12345 + 123);
     }
 }
+
+TEST(TestFastInterp, Sanity_20)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, a, b] = NewFunction<FnPrototype>("testfn");
+
+        fn.SetBody();
+        for (int i = 0; i < 10000; i++)
+        {
+            fn.GetBody().Append(Assign(a, a + b));
+        }
+        fn.GetBody().Append(Return(a));
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int x = 123;
+        int y = 45;
+        int ret = interpFn(x, y);
+         ReleaseAssert(ret == x + y * 10000);
+    }
+}

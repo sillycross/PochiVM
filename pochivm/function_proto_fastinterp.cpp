@@ -334,6 +334,7 @@ void AstModule::PrepareForFastInterp()
     thread_pochiVMContext->m_fastInterpFnCallFixList.clear();
     thread_llvmContext->m_scopeStack.clear();
 
+    AstTraverseColorMark::ClearAll();
     for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)
     {
         AstFunction* fn = iter->second;
