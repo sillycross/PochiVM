@@ -152,6 +152,7 @@ add_executable(main
   test_metavar_framework.cpp
   test_fast_interp_internals.cpp
   test_fast_interp.cpp
+  test_paper_microbenchmarks.cpp
 )
 
 # Important to link runtime using '--whole-archive'

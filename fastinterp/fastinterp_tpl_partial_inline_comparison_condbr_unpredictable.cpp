@@ -11,7 +11,7 @@ namespace PochiVM
 // Partially inlined conditional branch based on comparison
 // if (var[var/lit] op %) ....
 //
-struct FIPartialInlinedComparisonFavourTrueBranchImpl
+struct FIPartialInlinedComparisonUnpredictableBranchImpl
 {
     template<typename OperandType>
     static constexpr bool cond()
@@ -113,7 +113,7 @@ struct FIPartialInlinedComparisonFavourTrueBranchImpl
         }
 
         bool result = EvaluateComparisonExpression<OperandType, operatorType>(lhs, rhs);
-        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::UnlikelyMode, OpaqueParams...>(result, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::OptForSizeMode, OpaqueParams...>(result, stackframe, opaqueParams...);
     }
 
     static auto metavars()
@@ -138,5 +138,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIPartialInlinedComparisonFavourTrueBranchImpl>();
+    RegisterBoilerplate<FIPartialInlinedComparisonUnpredictableBranchImpl>(FIAttribute::OptSize);
 }

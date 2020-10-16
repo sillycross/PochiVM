@@ -911,15 +911,21 @@ public:
             // Step 2: change all boilerplates (except the special cdecl ones) to GHC
             //
             std::set<std::string> nonGhcSymbols;
+            std::set<std::string> optForSizeSymbols;
             for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
             {
                 BoilerplatePack& bp = it->second;
-                if (bp.m_attr.HasAttribute(PochiVM::FIAttribute::CDecl))
+                for (BoilerplateInstance& inst : bp.m_instances)
                 {
-                    for (BoilerplateInstance& inst : bp.m_instances)
+                    if (bp.m_attr.HasAttribute(PochiVM::FIAttribute::CDecl))
                     {
                         ReleaseAssert(!nonGhcSymbols.count(inst.m_symbolName));
                         nonGhcSymbols.insert(inst.m_symbolName);
+                    }
+                    if (bp.m_attr.HasAttribute(PochiVM::FIAttribute::OptSize))
+                    {
+                        ReleaseAssert(!optForSizeSymbols.count(inst.m_symbolName));
+                        optForSizeSymbols.insert(inst.m_symbolName);
                     }
                 }
             }
@@ -933,6 +939,18 @@ public:
                 Function* func = module->getFunction(symbolName);
                 ReleaseAssert(func != nullptr && !func->empty());
                 func->setCallingConv(CallingConv::GHC);
+            }
+
+            // Add 'optforsize' attribute accordingly
+            //
+            for (const std::string& symbolName : allNeededSymbols)
+            {
+                if (optForSizeSymbols.count(symbolName))
+                {
+                    Function* func = module->getFunction(symbolName);
+                    ReleaseAssert(func != nullptr && !func->empty());
+                    func->addFnAttr(Attribute::OptimizeForSize);
+                }
             }
 
             // Store IR file
@@ -1149,7 +1167,8 @@ public:
                     // TODO: support more types as we see them.
                     // Reference: https://refspecs.linuxbase.org/elf/x86_64-abi-0.98.pdf Page 69
                     //
-                    if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_TPOFF32))
+                    if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 ||
+                          rinfo.type == ELF::R_X86_64_PC32 || rinfo.type == ELF::R_X86_64_TPOFF32))
                     {
                         fprintf(stderr, "[INTERNAL] Unhandled relocation type %s(%d) in symbol %s. "
                                         "We haven't taken care of this case. Please report a bug.\n",
@@ -1157,7 +1176,7 @@ public:
                         abort();
                     }
 
-                    if (rinfo.type == ELF::R_X86_64_PLT32)
+                    if (rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_PC32)
                     {
                         ReleaseAssert(UnalignedRead<uint32_t>(data + rinfo.offset) == 0);
                     }
@@ -1167,6 +1186,7 @@ public:
                     }
                     else if (rinfo.type == ELF::R_X86_64_TPOFF32)
                     {
+                        ReleaseAssert(UnalignedRead<uint32_t>(data + rinfo.offset) == 0);
                         if (rinfo.symbol != "__pochivm_thread_fastinterp_context")
                         {
                             fprintf(stderr, "Unknown use of thread-local variable in symbol %s, "
@@ -1192,7 +1212,7 @@ public:
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {
                     ReleaseAssert(rinfo.offset < preAlignedSize);
-                    if (rinfo.type == ELF::R_X86_64_PLT32)
+                    if (rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_PC32)
                     {
                         ReleaseAssert(rinfo.offset + 4 <= preAlignedSize);
                         uint32_t addend = static_cast<uint32_t>(-static_cast<int32_t>(static_cast<uint32_t>(rinfo.offset)));
@@ -1222,27 +1242,56 @@ public:
                     {
                         ReleaseAssert(ord < 64);
                         highestBPFPOrdinal = std::max(highestBPFPOrdinal, ord + 1);
-                        if (rinfo.type == ELF::R_X86_64_PLT32)
+                        if (rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_PC32)
                         {
                             ReleaseAssert(rinfo.offset > 0);
                             uint8_t x86_64_inst_opcode = data[rinfo.offset - 1];
                             if (IsMustTailBoilerplateFnPtrPlaceholder(rinfo.symbol))
                             {
+                                // Assert that LLVM indeed generated a tail call,
+                                // which should be either a jmp, or a jcc instruction
+                                //
                                 if (x86_64_inst_opcode != PochiVM::x86_64_jmp_instruction_opcode)
                                 {
-                                    // We expected a tail call (i.e. a 'jmp' instruction)
+                                    // x86-64 jcc instructions has opcode '0F 80' - '0F 8F' (inclusive)
+                                    // https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
+                                    // Page 585 - 588
                                     //
-                                    fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected jmp, got 0x%x. "
-                                                    "Tail call optimization did not apply? "
-                                                    "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
-                                            static_cast<int>(x86_64_inst_opcode),
-                                            it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
-                                    abort();
+                                    bool isJcc = false;
+                                    if (rinfo.offset >= 2 && data[rinfo.offset - 2] == 0x0F &&
+                                        (0x80 <= x86_64_inst_opcode && x86_64_inst_opcode <= 0x8F))
+                                    {
+                                        isJcc = true;
+                                    }
+                                    if (!isJcc)
+                                    {
+                                        // We expected a jmp instruction or jcc instruction
+                                        //
+                                        fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, expected jmp or jcc, got 0x%x. "
+                                                        "Tail call optimization did not apply? "
+                                                        "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
+                                                static_cast<int>(x86_64_inst_opcode),
+                                                it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                                        abort();
+                                    }
                                 }
                                 // If this is a tail call at the end of function, record it.
                                 //
                                 if (rinfo.offset + 4 == preAlignedSize)
                                 {
+                                    // tail call must be an unconditional jmp, assert this.
+                                    //
+                                    if (x86_64_inst_opcode != PochiVM::x86_64_jmp_instruction_opcode)
+                                    {
+                                        fprintf(stderr, "[INTERNAL ERROR] Unexpected instruction, last instruction tail call is not an "
+                                                        "unconditional jmp instruction. Expected unconditional jmp, got 0x%x. "
+                                                        "Tail call optimization did not apply? "
+                                                        "BoilerpackName = %s, function name = %s, placeholder name = %s\n",
+                                                static_cast<int>(x86_64_inst_opcode),
+                                                it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
+                                        abort();
+                                    }
+
                                     ReleaseAssert(lastInstructionTailCallOrd == -1);
                                     lastInstructionTailCallOrd = static_cast<int>(ord);
                                 }

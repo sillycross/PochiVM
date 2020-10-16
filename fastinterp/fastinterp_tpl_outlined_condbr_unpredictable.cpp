@@ -10,7 +10,7 @@ namespace PochiVM
 
 // Outlined conditional branch
 //
-struct FIOutlinedConditionalFavourTrueBranchImpl
+struct FIOutlinedConditionalUnpredictableBranchImpl
 {
     template<FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
@@ -26,7 +26,7 @@ struct FIOutlinedConditionalFavourTrueBranchImpl
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool cond) noexcept
     {
-        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::UnlikelyMode, OpaqueParams...>(cond, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::OptForSizeMode, OpaqueParams...>(cond, stackframe, opaqueParams...);
     }
 
     static auto metavars()
@@ -46,5 +46,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIOutlinedConditionalFavourTrueBranchImpl>();
+    RegisterBoilerplate<FIOutlinedConditionalUnpredictableBranchImpl>(FIAttribute::OptSize);
 }

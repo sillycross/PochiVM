@@ -80,6 +80,11 @@ FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TES
 // with all placeholders except the two branches populated.
 // placeholder 0 is for true branch, placeholder 1 is for false branch.
 //
+// If 'isFavourTrueBranch' is true, it generates code that would be more efficient
+// if the true branch is likely to be taken.
+// Otherwise, it generates code that does not bias toward true or false branch.
+//
+template<bool isFavourTrueBranch>
 static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBase* cond)
 {
     TestAssert(cond->GetTypeId().IsBool());
@@ -89,7 +94,8 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
     if (cond->GetAstNodeType() == AstNodeType::AstComparisonExpr)
     {
         // Check for simple shape
-        // FIFullyInlinedComparisonBranchImpl
+        // FIFullyInlinedComparisonFavourTrueBranchImpl
+        // FIFullyInlinedComparisonUnpredictableBranchImpl
         //
         AstComparisonExpr* expr = assert_cast<AstComparisonExpr*>(cond);
         TypeId cmpType = expr->m_lhs->GetTypeId();
@@ -105,8 +111,11 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                         if (!(lhs.m_kind == FIOperandShapeCategory::LITERAL_NONZERO &&
                               rhs.m_kind == FIOperandShapeCategory::LITERAL_NONZERO))
                         {
+                            using BoilerplateName = typename std::conditional<isFavourTrueBranch,
+                                    FIFullyInlinedComparisonFavourTrueBranchImpl,
+                                    FIFullyInlinedComparisonUnpredictableBranchImpl>::type;
                             FastInterpBoilerplateInstance* condBrInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                                        FastInterpBoilerplateLibrary<FIFullyInlinedComparisonBranchImpl>::SelectBoilerplateBluePrint(
+                                        FastInterpBoilerplateLibrary<BoilerplateName>::SelectBoilerplateBluePrint(
                                             cmpType.GetOneLevelPtrFastInterpTypeId(),
                                             lhs.m_indexType,
                                             rhs.m_indexType,
@@ -122,7 +131,8 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                     }
                 }
 
-                // FIPartialInlinedComparisonBranchImpl
+                // FIPartialInlinedComparisonFavourTrueBranchImpl
+                // FIPartialInlinedComparisonUnpredictableBranchImpl
                 //
                 thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
                 FastInterpSnippet snippet = expr->m_rhs->PrepareForFastInterp(x_FINoSpill);
@@ -137,8 +147,11 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                 {
                     numOFP = FIOpaqueParamsHelper::GetMaxOFP();
                 }
+                using BoilerplateName = typename std::conditional<isFavourTrueBranch,
+                        FIPartialInlinedComparisonFavourTrueBranchImpl,
+                        FIPartialInlinedComparisonUnpredictableBranchImpl>::type;
                 FastInterpBoilerplateInstance* condBrInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                            FastInterpBoilerplateLibrary<FIPartialInlinedComparisonBranchImpl>::SelectBoilerplateBluePrint(
+                            FastInterpBoilerplateLibrary<BoilerplateName>::SelectBoilerplateBluePrint(
                                 cmpType.GetOneLevelPtrFastInterpTypeId(),
                                 lhs.m_indexType,
                                 lhs.m_kind,
@@ -154,7 +167,8 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
         AstFIOperandShape rhs = AstFIOperandShape::TryMatch(expr->m_rhs);
         if (rhs.MatchOK())
         {
-            // FIPartialInlinedComparisonBranchImpl
+            // FIPartialInlinedComparisonFavourTrueBranchImpl
+            // FIPartialInlinedComparisonUnpredictableBranchImpl
             //
             thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
             FastInterpSnippet snippet = expr->m_lhs->PrepareForFastInterp(x_FINoSpill);
@@ -169,8 +183,11 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
             {
                 numOFP = FIOpaqueParamsHelper::GetMaxOFP();
             }
+            using BoilerplateName = typename std::conditional<isFavourTrueBranch,
+                    FIPartialInlinedComparisonFavourTrueBranchImpl,
+                    FIPartialInlinedComparisonUnpredictableBranchImpl>::type;
             FastInterpBoilerplateInstance* condBrInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                        FastInterpBoilerplateLibrary<FIPartialInlinedComparisonBranchImpl>::SelectBoilerplateBluePrint(
+                        FastInterpBoilerplateLibrary<BoilerplateName>::SelectBoilerplateBluePrint(
                             cmpType.GetOneLevelPtrFastInterpTypeId(),
                             rhs.m_indexType,
                             rhs.m_kind,
@@ -184,13 +201,18 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
     }
 
     // General case: outlined conditional branch
-    // FIOutlinedConditionalBranchImpl
+    // FIOutlinedConditionalFavourTrueBranchImpl
+    // FIOutlinedConditionalUnpredictableBranchImpl
     //
     {
         thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(TypeId::Get<bool>());
         FastInterpSnippet snippet = cond->PrepareForFastInterp(x_FINoSpill);
+
+        using BoilerplateName = typename std::conditional<isFavourTrueBranch,
+                FIOutlinedConditionalFavourTrueBranchImpl,
+                FIOutlinedConditionalUnpredictableBranchImpl>::type;
         FastInterpBoilerplateInstance* condBrInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                    FastInterpBoilerplateLibrary<FIOutlinedConditionalBranchImpl>::SelectBoilerplateBluePrint(
+                    FastInterpBoilerplateLibrary<BoilerplateName>::SelectBoilerplateBluePrint(
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         FIOpaqueParamsHelper::GetMaxOFP()));
         return snippet.AddContinuation(condBrInst);
@@ -201,7 +223,7 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
 {
     TestAssert(spillLoc.IsNoSpill());
 
-    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper(m_condClause);
+    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(m_condClause);
     TestAssert(!condBrSnippet.IsEmpty());
     FastInterpBoilerplateInstance* condBrInst = condBrSnippet.m_tail;
     TestAssert(condBrInst != nullptr);
@@ -255,7 +277,7 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
 {
     TestAssert(spillLoc.IsNoSpill());
 
-    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper(m_condClause);
+    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(m_condClause);
     TestAssert(condBrSnippet.m_entry != nullptr);
 
     FastInterpBoilerplateInstance* afterLoop = FIGetNoopBoilerplate();
@@ -313,7 +335,7 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     size_t numVarsInInitBlock = thread_llvmContext->m_scopeStack.back().second.size();
 #endif
 
-    FastInterpSnippet condClause = FIGenerateConditionalBranchHelper(m_condClause);
+    FastInterpSnippet condClause = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(m_condClause);
 
     TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
     TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
