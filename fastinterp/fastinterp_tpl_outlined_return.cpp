@@ -87,5 +87,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIOutlinedReturnImpl>();
+    RegisterBoilerplate<FIOutlinedReturnImpl>(FIAttribute::NoContinuation);
 }

@@ -10,6 +10,7 @@ static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp"
 #include "dynamic_specialization_utils.hpp"
 #include "fastinterp_context.h"
 #include "pochivm/cxx2a_bit_cast_helper.h"
+#include "fastinterp_tpl_boilerplate_attributes.hpp"
 
 // fastinterp_tpl
 //
@@ -39,31 +40,19 @@ static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp"
 //    Since the function binary is copied to elsewhere before execution and we don't want to fix
 //    the exception frames (for both engineering complexity and performance reasons), there is no
 //    native C++ exception support. We soft-emulate C++ exception using a combination of C++ code
-//    stubs (which reside outside this file and does not use placeholders), soft-implemented
-//    destructor sequence logic and C setjmp/longjmp.
+//    stubs (which reside outside this file and does not use placeholders) and soft-implemented
+//    destructor sequence logic.
 //
 
 // Communication interface with build_fast_interp_lib.cpp
 // This is used to obtain the symbol names of all the boilerplates, similar to the trick we used in dump_symbols.cpp
 //
-void __pochivm_register_fast_interp_boilerplate__(const char* /*stringified_name*/, PochiVM::MetaVarMaterializedList* /*list*/);
+void __pochivm_register_fast_interp_boilerplate__(const char* /*stringified_name*/,
+                                                  PochiVM::MetaVarMaterializedList* /*list*/,
+                                                  PochiVM::FIAttribute* /*attr*/);
 
 namespace PochiVM
 {
-
-// We use __builtin_setjmp/__builtin_longjmp instead of glibc setjmp/longjmp.
-// The reason is that glibc setjmp/longjmp is an external symbol in glibc, which address may be more than +/- 2GB away
-// from our code, thus must be called using an indirect call, which is slower.
-//
-// setjmp() is actually very performance sensitive to us: it is called at the start of every function that may throw,
-// and at the start of every try-catch block. So we don't want to take the cost of the indirect call.
-//
-// The __builtin_setjmp/__builtin_longjmp builtins provides the same utilities without incurring such external function calls.
-//
-// Below is the 'env' type definition required by __builtin_setjmp/__builtin_longjmp, as documented in
-//     https://gcc.gnu.org/onlinedocs/gcc/Nonlocal-Gotos.html
-//
-using builtin_sjlj_env_t = void*[5];
 
 // Helper function to get local variable address
 // this function must be always inlined FOR CORRECTNESS, otherwise it would become an
@@ -90,10 +79,10 @@ constexpr bool is_valid_index_type()
 }
 
 template<typename T>
-void RegisterBoilerplate()
+void RegisterBoilerplate(FIAttribute attr = FIAttribute())
 {
     MetaVarMaterializedList list = T::metavars().template Materialize<T>();
-    __pochivm_register_fast_interp_boilerplate__(__pochivm_stringify_type__<T>(), &list);
+    __pochivm_register_fast_interp_boilerplate__(__pochivm_stringify_type__<T>(), &list, &attr);
 }
 
 }   // namespace PochiVM

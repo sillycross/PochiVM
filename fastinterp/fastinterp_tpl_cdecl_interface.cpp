@@ -14,12 +14,6 @@ namespace PochiVM
 //
 // GHC calling convention: https://releases.llvm.org/10.0.0/docs/LangRef.html#calling-conventions
 //
-// ***WARNING***:
-//     DO NOT CHANGE THE STRUCT NAME BELOW.
-//     This struct name is hardcoded in build_fast_interp_lib.cpp.
-//     build_fast_interp_lib.cpp special-cases this struct name, keeping the cdecl calling convention
-//     only for this struct, and changes everything else to use GHC convention.
-//
 struct FICdeclInterfaceImpl
 {
     template<typename T,
@@ -56,5 +50,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FICdeclInterfaceImpl>();
+    RegisterBoilerplate<FICdeclInterfaceImpl>(FIAttribute::CDecl | FIAttribute::NoContinuation);
 }

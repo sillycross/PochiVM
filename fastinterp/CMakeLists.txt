@@ -17,21 +17,6 @@ string(REPLACE " -g " " " CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fconstexpr-steps=100000000 -fconstexpr-depth=131072 -ftemplate-depth=131072 ")
 
 SET(FASTINTERP_TPL_SOURCES
-  #fastinterp_tpl_while_loop.cpp
-  #fastinterp_tpl_for_loop.cpp
-  #fastinterp_tpl_if_stmt.cpp
-  #fastinterp_tpl_arithmetic_expr.cpp
-  #fastinterp_tpl_comparison_expr.cpp
-  #fastinterp_tpl_astcall_generatedfn.cpp
-  #fastinterp_tpl_astcall_cppfn.cpp
-  #fastinterp_tpl_astcall_extraparams.cpp
-  #fastinterp_tpl_astreturn.cpp
-  #fastinterp_tpl_astfunction.cpp
-  #fastinterp_tpl_return_arith_expr.cpp
-  #fastinterp_tpl_logical_expr.cpp
-  #fastinterp_tpl_astblock.cpp
-  #fastinterp_tpl_assign_arith_expr.cpp
-  #fastinterp_tpl_assign_common.cpp
   fastinterp_tpl_cdecl_interface.cpp
   fastinterp_tpl_partial_inline_lhs_assign.cpp
   fastinterp_tpl_inline_arith_expr.cpp

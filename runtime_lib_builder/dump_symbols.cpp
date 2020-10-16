@@ -2314,7 +2314,10 @@ int main(int argc, char** argv)
         J->getMainJITDylib().addGenerator(std::move(R));
         AddFakeSymbolResolverGenerator(J.get());
 
+        CtorDtorRunner RR(J->getMainJITDylib());
+        RR.add(getConstructors(*tsm.getModuleUnlocked()));
         exitOnError(J->addIRModule(std::move(tsm)));
+        exitOnError(RR.run());
 
         auto entryPointSym = exitOnError(J->lookup("__pochivm_register_runtime_library__"));
         using _FnPrototype = void(*)(void);

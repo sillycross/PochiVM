@@ -14,6 +14,7 @@
 #include "fastinterp_function_alignment.h"
 #include "metavar.hpp"
 #include "x86_64_populate_nop_instruction_helper.h"
+#include "fastinterp_tpl_boilerplate_attributes.hpp"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -77,6 +78,7 @@ struct BoilerplateInstance
 
 struct BoilerplatePack
 {
+    PochiVM::FIAttribute m_attr;
     std::vector<BoilerplateParam> m_params;
     std::vector<BoilerplateInstance> m_instances;
 };
@@ -86,9 +88,10 @@ static std::mutex g_allBoilerplatePacksMutex;
 
 }   // anonymous namespace
 
-void __pochivm_register_fast_interp_boilerplate__(const char* stringified_typename, PochiVM::MetaVarMaterializedList* list)
+void __pochivm_register_fast_interp_boilerplate__(const char* stringified_typename, PochiVM::MetaVarMaterializedList* list, PochiVM::FIAttribute* attr)
 {
     BoilerplatePack p;
+    p.m_attr = *attr;
     for (const PochiVM::MetaVar& var : list->m_metavars)
     {
         BoilerplateParam bvar;
@@ -652,11 +655,6 @@ public:
         std::vector<std::pair<std::string, BoilerplatePack>> allBoilerplates;
         std::unique_ptr<LLJIT> J;
 
-        const std::string cdeclInterfaceName = "FICdeclInterfaceImpl";
-        const std::string terminatorOperatorName1 = "FIOutlinedReturnImpl";
-        const std::string terminatorOperatorName2 = "FIInlinedReturnImpl";
-        const std::string terminatorOperatorName3 = "FIAbortTrapImpl";
-
         using FnPrototype = void(*)();
         FnPrototype entryPoint;
 
@@ -718,7 +716,10 @@ public:
             J->getMainJITDylib().addGenerator(std::move(R));
             AddFakeSymbolResolverGenerator(J.get());
 
+            CtorDtorRunner RR(J->getMainJITDylib());
+            RR.add(getConstructors(*tsm.getModuleUnlocked()));
             exitOnError(J->addIRModule(std::move(tsm)));
+            exitOnError(RR.run());
 
             auto entryPointSym = exitOnError(J->lookup("__pochivm_build_fast_interp_library__"));
             entryPoint = reinterpret_cast<FnPrototype>(entryPointSym.getAddress());
@@ -912,9 +913,9 @@ public:
             std::set<std::string> nonGhcSymbols;
             for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
             {
-                if (it->first == cdeclInterfaceName)
+                BoilerplatePack& bp = it->second;
+                if (bp.m_attr.HasAttribute(PochiVM::FIAttribute::CDecl))
                 {
-                    BoilerplatePack& bp = it->second;
                     for (BoilerplateInstance& inst : bp.m_instances)
                     {
                         ReleaseAssert(!nonGhcSymbols.count(inst.m_symbolName));
@@ -1296,10 +1297,7 @@ public:
                     }
                 }
 
-                if (it->first != terminatorOperatorName1 &&
-                    it->first != terminatorOperatorName2 &&
-                    it->first != terminatorOperatorName3 &&
-                    it->first != cdeclInterfaceName &&
+                if (!bp.m_attr.HasAttribute(PochiVM::FIAttribute::NoContinuation) &&
                     PochiVM::x_fastinterp_function_alignment == 1)
                 {
                     if (lastInstructionTailCallOrd == -1)
