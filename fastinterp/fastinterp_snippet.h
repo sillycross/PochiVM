@@ -23,7 +23,7 @@ struct FastInterpSnippet
         return m_entry == nullptr;
     }
 
-    bool IsMustReturn() const
+    bool IsUncontinuable() const
     {
         return m_entry != nullptr && m_tail == nullptr;
     }
@@ -33,7 +33,7 @@ struct FastInterpSnippet
     FastInterpBoilerplateInstance* m_entry;
 
     // The tail to which continuation shall be attached
-    // nullptr if a continuation is not possible (since the tail is a ret)
+    // nullptr if a continuation is not possible, since the tail is a control flow redirection (return/break/continue/throw)
     //
     FastInterpBoilerplateInstance* m_tail;
 

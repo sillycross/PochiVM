@@ -29,6 +29,7 @@ class DestructorIREmitter;
 class AstNodeBase;
 class AstVariable;
 class AstFunction;
+class FastInterpBoilerplateInstance;
 
 struct LLVMCodegenContext
 {
@@ -139,6 +140,9 @@ struct LLVMCodegenContext
     //
     std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_breakStmtTarget;
     std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_continueStmtTarget;
+
+    std::vector<std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scope*/>> m_fiBreakStmtTarget;
+    std::vector<std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scope*/>> m_fiContinueStmtTarget;
 
     // Current stack of variable scopes and declared variables in each scope
     //

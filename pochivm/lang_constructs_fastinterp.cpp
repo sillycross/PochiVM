@@ -45,6 +45,12 @@ FastInterpSnippet WARN_UNUSED AstBlock::PrepareForFastInterp(FISpillLocation TES
     return result;
 }
 
+static FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstNodeBase* /*target*/)
+{
+    // TODO: implement
+    return FastInterpSnippet();
+}
+
 FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
@@ -57,30 +63,35 @@ FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TES
         result = result.AddContinuation(snippet);
     }
 
-    // TODO: call destructors
-    //
+    FastInterpSnippet dtorSequence = FIGenerateDestructorSequenceUntilScope(this);
+    result = result.AddContinuation(dtorSequence);
 
+    std::vector<DestructorIREmitter*>& list = thread_llvmContext->m_scopeStack.back().second;
+    for (auto rit = list.rbegin(); rit != list.rend(); rit++)
+    {
+        AstVariable* var = assert_cast<AstVariable*>(*rit);
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
+    }
     thread_llvmContext->PopVariableScope(this);
     return result;
 }
 
-FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
+// Returns a snippet where m_tail is a conditional branch instance,
+// with all placeholders except the two branches populated.
+// placeholder 0 is for true branch, placeholder 1 is for false branch.
+//
+static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBase* cond)
 {
-    TestAssert(spillLoc.IsNoSpill());
-
-    // After evaluating condition (at label 'after_eval_cond'), the m_tail should be a conditional branch instance,
-    // with all placeholders except the two branches populated
-    //
-    FastInterpSnippet condBrSnippet;
+    TestAssert(cond->GetTypeId().IsBool());
 
     // Evaluate condition
     //
-    if (m_condClause->GetAstNodeType() == AstNodeType::AstComparisonExpr)
+    if (cond->GetAstNodeType() == AstNodeType::AstComparisonExpr)
     {
         // Check for simple shape
         // FIFullyInlinedComparisonBranchImpl
         //
-        AstComparisonExpr* expr = assert_cast<AstComparisonExpr*>(m_condClause);
+        AstComparisonExpr* expr = assert_cast<AstComparisonExpr*>(cond);
         TypeId cmpType = expr->m_lhs->GetTypeId();
 
         {
@@ -106,8 +117,7 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
                                             expr->m_op));
                             lhs.PopulatePlaceholder(condBrInst, 0, 1);
                             rhs.PopulatePlaceholder(condBrInst, 2, 3);
-                            condBrSnippet = FastInterpSnippet { condBrInst, condBrInst };
-                            goto after_eval_cond;
+                            return FastInterpSnippet { condBrInst, condBrInst };
                         }
                     }
                 }
@@ -137,8 +147,7 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
                                 numOFP,
                                 expr->m_op));
                 lhs.PopulatePlaceholder(condBrInst, 0, 1);
-                condBrSnippet = snippet.AddContinuation(condBrInst);
-                goto after_eval_cond;
+                return snippet.AddContinuation(condBrInst);
             }
         }
 
@@ -170,8 +179,7 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
                             numOFP,
                             expr->m_op));
             rhs.PopulatePlaceholder(condBrInst, 0, 1);
-            condBrSnippet = snippet.AddContinuation(condBrInst);
-            goto after_eval_cond;
+            return snippet.AddContinuation(condBrInst);
         }
     }
 
@@ -180,18 +188,20 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
     //
     {
         thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(TypeId::Get<bool>());
-        FastInterpSnippet snippet = m_condClause->PrepareForFastInterp(x_FINoSpill);
+        FastInterpSnippet snippet = cond->PrepareForFastInterp(x_FINoSpill);
         FastInterpBoilerplateInstance* condBrInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIOutlinedConditionalBranchImpl>::SelectBoilerplateBluePrint(
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         FIOpaqueParamsHelper::GetMaxOFP()));
-        condBrSnippet = snippet.AddContinuation(condBrInst);
+        return snippet.AddContinuation(condBrInst);
     }
+}
 
-after_eval_cond:;
+FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
+{
+    TestAssert(spillLoc.IsNoSpill());
 
-    // placeholder 0 is true branch, 1 is false branch
-    //
+    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper(m_condClause);
     TestAssert(!condBrSnippet.IsEmpty());
     FastInterpBoilerplateInstance* condBrInst = condBrSnippet.m_tail;
     TestAssert(condBrInst != nullptr);
@@ -204,16 +214,16 @@ after_eval_cond:;
     }
 
     FastInterpBoilerplateInstance* join;
-    bool needNoop = !thenClause.IsMustReturn() && !elseClause.IsMustReturn();
+    bool needNoop = !thenClause.IsUncontinuable() && !elseClause.IsUncontinuable();
     needNoop |= thenClause.IsEmpty() || elseClause.IsEmpty();
     if (needNoop)
     {
         FastInterpBoilerplateInstance* noop = FIGetNoopBoilerplate();
-        if (!thenClause.IsMustReturn())
+        if (!thenClause.IsUncontinuable())
         {
             thenClause = thenClause.AddContinuation(noop);
         }
-        if (!elseClause.IsMustReturn())
+        if (!elseClause.IsUncontinuable())
         {
             elseClause = elseClause.AddContinuation(noop);
         }
@@ -221,14 +231,14 @@ after_eval_cond:;
     }
     else
     {
-        if (thenClause.IsMustReturn())
+        if (thenClause.IsUncontinuable())
         {
             TestAssert(!elseClause.IsEmpty());
             join = elseClause.m_tail;
         }
         else
         {
-            TestAssert(elseClause.IsMustReturn() && !thenClause.IsEmpty());
+            TestAssert(elseClause.IsUncontinuable() && !thenClause.IsEmpty());
             join = thenClause.m_tail;
         }
     }
@@ -238,6 +248,163 @@ after_eval_cond:;
     condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, elseClause.m_entry);
     return FastInterpSnippet {
         condBrSnippet.m_entry, join
+    };
+}
+
+FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
+{
+    TestAssert(spillLoc.IsNoSpill());
+
+    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper(m_condClause);
+    TestAssert(condBrSnippet.m_entry != nullptr);
+
+    FastInterpBoilerplateInstance* afterLoop = FIGetNoopBoilerplate();
+
+    thread_llvmContext->m_fiContinueStmtTarget.push_back(std::make_pair(condBrSnippet.m_entry, m_body));
+    Auto(thread_llvmContext->m_fiContinueStmtTarget.pop_back());
+
+    thread_llvmContext->m_fiBreakStmtTarget.push_back(std::make_pair(afterLoop, m_body));
+    Auto(thread_llvmContext->m_fiBreakStmtTarget.pop_back());
+
+    FastInterpSnippet loopBody = m_body->PrepareForFastInterp(x_FINoSpill);
+    if (loopBody.IsEmpty())
+    {
+        loopBody = loopBody.AddContinuation(FIGetNoopBoilerplate());
+    }
+
+    condBrSnippet.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopBody.m_entry);
+    condBrSnippet.m_tail->PopulateBoilerplateFnPtrPlaceholder(1, afterLoop);
+    if (!loopBody.IsUncontinuable())
+    {
+        loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condBrSnippet.m_entry);
+    }
+
+    return FastInterpSnippet {
+        condBrSnippet.m_entry, afterLoop
+    };
+}
+
+FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
+{
+    TestAssert(spillLoc.IsNoSpill());
+
+    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
+
+    FastInterpBoilerplateInstance* loopStepHead = FIGetNoopBoilerplate();
+    FastInterpBoilerplateInstance* afterLoopHead = FIGetNoopBoilerplate();
+
+    thread_llvmContext->m_fiContinueStmtTarget.push_back(std::make_pair(loopStepHead, m_body));
+    Auto(thread_llvmContext->m_fiContinueStmtTarget.pop_back());
+
+    thread_llvmContext->m_fiBreakStmtTarget.push_back(std::make_pair(afterLoopHead, m_body));
+    Auto(thread_llvmContext->m_fiBreakStmtTarget.pop_back());
+
+    FastInterpSnippet startClause = m_startClause->PrepareForFastInterp(x_FINoSpill);
+    // We disallow break/continue/return in for-loop init-block
+    //
+    TestAssert(!startClause.IsUncontinuable());
+
+#ifdef TESTBUILD
+    // for-loop init-block is the only place that we allow declaring variables in the for-header
+    // (the for-body is a separate scope). Although we have checked this condition in Validate(),
+    // for sanity, here we assert again that no additional variables are declared since then.
+    //
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    size_t numVarsInInitBlock = thread_llvmContext->m_scopeStack.back().second.size();
+#endif
+
+    FastInterpSnippet condClause = FIGenerateConditionalBranchHelper(m_condClause);
+
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+
+    FastInterpSnippet loopBody = m_body->PrepareForFastInterp(x_FINoSpill);
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    if (loopBody.IsEmpty())
+    {
+        loopBody = loopBody.AddContinuation(FIGetNoopBoilerplate());
+    }
+
+    FastInterpSnippet loopStep = m_stepClause->PrepareForFastInterp(x_FINoSpill);
+    // We disallow break/continue/return in for-loop step-block
+    //
+    TestAssert(!loopStep.IsUncontinuable());
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    loopStep = FastInterpSnippet(loopStepHead, loopStepHead).AddContinuation(loopStep);
+
+    // Call destructors for variables declared in for-loop init-block
+    //
+    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    FastInterpSnippet afterLoop = FIGenerateDestructorSequenceUntilScope(this);
+    afterLoop = FastInterpSnippet(afterLoopHead, afterLoopHead).AddContinuation(afterLoop);
+
+    // Pop off the variable scope
+    //
+    std::vector<DestructorIREmitter*>& list = thread_llvmContext->m_scopeStack.back().second;
+    for (auto rit = list.rbegin(); rit != list.rend(); rit++)
+    {
+        AstVariable* var = assert_cast<AstVariable*>(*rit);
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
+    }
+    thread_llvmContext->PopVariableScope(this);
+
+    // Now link everything together
+    //
+    TestAssert(!startClause.IsUncontinuable());
+    TestAssert(!condClause.IsEmpty() && !condClause.IsUncontinuable());
+    TestAssert(!loopBody.IsEmpty());
+    TestAssert(!loopStep.IsEmpty() && !loopStep.IsUncontinuable());
+    TestAssert(!afterLoop.IsEmpty() && !afterLoop.IsUncontinuable());
+    condClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopBody.m_entry);
+    condClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(1, afterLoop.m_entry);
+    if (!loopBody.IsUncontinuable())
+    {
+        loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopStep.m_entry);
+    }
+    loopStep.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClause.m_entry);
+
+    if (startClause.IsEmpty())
+    {
+        return FastInterpSnippet {
+            condClause.m_entry, afterLoop.m_tail
+        };
+    }
+    else
+    {
+        startClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClause.m_entry);
+        return FastInterpSnippet {
+            startClause.m_entry, afterLoop.m_tail
+        };
+    }
+}
+
+FastInterpSnippet WARN_UNUSED AstBreakOrContinueStmt::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
+{
+    TestAssert(spillLoc.IsNoSpill());
+    TestAssert(thread_llvmContext->m_fiBreakStmtTarget.size() > 0);
+    TestAssert(thread_llvmContext->m_fiContinueStmtTarget.size() > 0);
+
+    std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scopeBoundary*/> target;
+    if (IsBreakStatement())
+    {
+        target = thread_llvmContext->m_fiBreakStmtTarget.back();
+    }
+    else
+    {
+        target = thread_llvmContext->m_fiContinueStmtTarget.back();
+    }
+
+    FastInterpSnippet snippet = FIGenerateDestructorSequenceUntilScope(target.second);
+    TestAssert(!snippet.IsUncontinuable());
+    if (snippet.IsEmpty())
+    {
+        snippet = snippet.AddContinuation(FIGetNoopBoilerplate());
+    }
+    snippet.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, target.first);
+    return FastInterpSnippet {
+        snippet.m_entry, nullptr
     };
 }
 

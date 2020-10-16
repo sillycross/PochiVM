@@ -327,6 +327,8 @@ public:
         fn(m_body);
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
 private:
     AstNodeBase* m_condClause;
     AstScope* m_body;
@@ -419,6 +421,8 @@ public:
         fn(m_stepClause);
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
     AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
     AstBlock* GetStepBlock() const { return m_stepClause; }
@@ -463,6 +467,8 @@ public:
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
 private:
     // whether it is a break statement or a continue statement

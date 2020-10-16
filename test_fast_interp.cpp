@@ -377,7 +377,7 @@ TEST(TestFastInterp, Sanity_12)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 3 * 123 - 456 + 3);
+        ReleaseAssert(ret == 3 * 123 - 456 + 3);
     }
 }
 
@@ -415,7 +415,7 @@ TEST(TestFastInterp, Sanity_13)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 3 * (123 - 456) + 8);
+        ReleaseAssert(ret == 3 * (123 - 456) + 8);
     }
 }
 
@@ -454,7 +454,7 @@ TEST(TestFastInterp, Sanity_14)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 6 * (123 - 456) + 8);
+        ReleaseAssert(ret == 6 * (123 - 456) + 8);
     }
 }
 
@@ -493,7 +493,7 @@ TEST(TestFastInterp, Sanity_15)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 3 * (123 - 456) + 8);
+        ReleaseAssert(ret == 3 * (123 - 456) + 8);
     }
 }
 
@@ -535,7 +535,7 @@ TEST(TestFastInterp, Sanity_16)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 7 * (123 - 456) + 12);
+        ReleaseAssert(ret == 7 * (123 - 456) + 12);
     }
 }
 
@@ -583,7 +583,7 @@ TEST(TestFastInterp, Sanity_17)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 35 * (123 - 456));
+        ReleaseAssert(ret == 35 * (123 - 456));
     }
 }
 
@@ -631,7 +631,7 @@ TEST(TestFastInterp, Sanity_18)
         int x = 123;
         int y = -456;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == 35 * (123 - 456));
+        ReleaseAssert(ret == 35 * (123 - 456));
     }
 }
 
@@ -668,7 +668,7 @@ TEST(TestFastInterp, Sanity_19)
                                 GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         int x = 123;
         int ret = interpFn(x);
-         ReleaseAssert(ret == 2 * -12345 + 123);
+        ReleaseAssert(ret == 2 * -12345 + 123);
     }
 }
 
@@ -701,6 +701,185 @@ TEST(TestFastInterp, Sanity_20)
         int x = 123;
         int y = 45;
         int ret = interpFn(x, y);
-         ReleaseAssert(ret == x + y * 10000);
+        ReleaseAssert(ret == x + y * 10000);
+    }
+}
+
+TEST(TestFastInterp, Sanity_21)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int) noexcept;
+    {
+        auto [fn, n] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto sum = fn.NewVariable<int>();
+        fn.SetBody(
+                Declare(i, 0),
+                Declare(sum, 0),
+                While(i < n).Do(
+                    Assign(sum, sum + i),
+                    Assign(i, i + Literal<int>(1))
+                ),
+                Return(sum)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int ret = interpFn(100);
+        ReleaseAssert(ret == 100 * 99 / 2);
+    }
+}
+
+TEST(TestFastInterp, Sanity_22)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int) noexcept;
+    {
+        auto [fn, n] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto sum = fn.NewVariable<int>();
+        fn.SetBody(
+                Declare(sum, 0),
+                For(Declare(i, 0), i < n, Assign(i, i + Literal<int>(1))).Do(
+                    Assign(sum, sum + i)
+                ),
+                Return(sum)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int ret = interpFn(100);
+        ReleaseAssert(ret == 100 * 99 / 2);
+    }
+}
+
+TEST(TestFastInterp, Sanity_23)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, n, m] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto sum = fn.NewVariable<int>();
+        fn.SetBody(
+                Declare(i, 0),
+                Declare(sum, 0),
+                While(i < n).Do(
+                    If(i == m).Then(Break()),
+                    Assign(sum, sum + i),
+                    Assign(i, i + Literal<int>(1))
+                ),
+                Return(sum)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int ret = interpFn(100, 200);
+        ReleaseAssert(ret == 100 * 99 / 2);
+        ret = interpFn(100, 50);
+        ReleaseAssert(ret == 50 * 49 / 2);
+    }
+}
+
+TEST(TestFastInterp, Sanity_24)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, n, m] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto sum = fn.NewVariable<int>();
+        fn.SetBody(
+                Declare(sum, 0),
+                For(Declare(i, 0), i < n, Assign(i, i + Literal<int>(1))).Do(
+                    If(i == m).Then(Break()),
+                    Assign(sum, sum + i)
+                ),
+                Return(sum)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int ret = interpFn(100, 200);
+        ReleaseAssert(ret == 100 * 99 / 2);
+        ret = interpFn(100, 50);
+        ReleaseAssert(ret == 50 * 49 / 2);
+    }
+}
+
+TEST(TestFastInterp, Sanity_25)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, n, m] = NewFunction<FnPrototype>("testfn");
+        auto i = fn.NewVariable<int>();
+        auto sum = fn.NewVariable<int>();
+        fn.SetBody(
+                Declare(sum, 0),
+                For(Declare(i, 0), i < n, Assign(i, i + Literal<int>(1))).Do(
+                    Assign(sum, sum + i),
+                    If(i >= m).Then(Continue()),
+                    Assign(sum, sum + i)
+                ),
+                Return(sum)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int ret = interpFn(100, 200);
+        ReleaseAssert(ret == 100 * 99);
+        ret = interpFn(100, 50);
+        ReleaseAssert(ret == 100 * 99 / 2 + 50 * 49 / 2);
     }
 }

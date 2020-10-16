@@ -258,6 +258,8 @@ void AstFunction::PrepareForFastInterp()
     thread_llvmContext->m_scopeStack.clear();
     thread_pochiVMContext->m_fastInterpStackFrameManager->Reset(static_cast<uint32_t>(m_params.size() + 1) * 8);
     thread_llvmContext->m_curFunction = this;
+    thread_llvmContext->m_fiBreakStmtTarget.clear();
+    thread_llvmContext->m_fiContinueStmtTarget.clear();
 
     for (size_t index = 0; index < m_params.size(); index++)
     {
@@ -301,6 +303,9 @@ void AstFunction::PrepareForFastInterp()
     TestAssert(m_fastInterpStackFrameSize == static_cast<uint32_t>(-1));
     m_fastInterpStackFrameSize = thread_pochiVMContext->m_fastInterpStackFrameManager->GetFinalStackFrameSize();
 
+    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
+    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
+    TestAssert(thread_llvmContext->m_scopeStack.size() == 0);
     thread_llvmContext->m_curFunction = nullptr;
 }
 
