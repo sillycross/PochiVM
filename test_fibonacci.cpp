@@ -14,7 +14,7 @@ TEST(Sanity, FibonacciSeq)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<uint64_t(int)>;
+    using FnPrototype = uint64_t(*)(int) noexcept;
     auto [fn, n] = NewFunction<FnPrototype>("fib_nth", "n");
 
     fn.SetBody(
@@ -30,8 +30,19 @@ TEST(Sanity, FibonacciSeq)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("fib_nth");
+        std::function<uint64_t(int)> interpFn = thread_pochiVMContext->m_curModule->
+                               GetGeneratedFunctionInterpMode<std::function<uint64_t(int)>>("fib_nth");
+        uint64_t ret = interpFn(20);
+        ReleaseAssert(ret == 6765);
+    }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        AutoTimer timer;
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("fib_nth");
+
         uint64_t ret = interpFn(20);
         ReleaseAssert(ret == 6765);
     }

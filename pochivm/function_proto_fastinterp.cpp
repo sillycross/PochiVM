@@ -291,6 +291,11 @@ void AstFunction::PrepareForFastInterp()
         }
     }
 
+    // Align the entry point of the function to 16 bytes
+    //
+    TestAssert(!body.IsEmpty());
+    body.m_entry->SetAlignmentLog2(4);
+
     thread_pochiVMContext->m_fastInterpEngine->RegisterGeneratedFunctionEntryPoint(this, body.m_entry);
 
     TestAssert(m_fastInterpStackFrameSize == static_cast<uint32_t>(-1));

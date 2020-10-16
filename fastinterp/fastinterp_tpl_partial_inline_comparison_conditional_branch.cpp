@@ -8,8 +8,8 @@
 namespace PochiVM
 {
 
-// Fully inlined conditional branch based to comparison
-// if (var[var/lit] op var[var/lit]) ....
+// Partially inlined conditional branch based on comparison
+// if (var[var/lit] op %) ....
 //
 struct FIPartialInlinedComparisonBranchImpl
 {
@@ -42,20 +42,12 @@ struct FIPartialInlinedComparisonBranchImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
         if (!std::is_floating_point<OperandType>::value)
         {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOIP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
         }
         else
         {
@@ -68,21 +60,13 @@ struct FIPartialInlinedComparisonBranchImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
         if (std::is_floating_point<OperandType>::value)
         {
-            if (isQuickAccessOperand)
-            {
-                if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
-            }
-            else
-            {
-                if (!FIOpaqueParamsHelper::IsEmpty(numOFP)) { return false; }
-            }
+            if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         }
         else
         {
@@ -95,7 +79,6 @@ struct FIPartialInlinedComparisonBranchImpl
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              AstComparisonExprType operatorType>
@@ -105,46 +88,28 @@ struct FIPartialInlinedComparisonBranchImpl
     }
 
     // Placeholder rules:
-    // constant placeholder 0 for outlined side, if not quickaccess
-    // constant placeholder 1/2 for inline side
+    // constant placeholder 0/1 for inline side
     //
     template<typename OperandType,
              typename IndexType,
              FIOperandShapeCategory shapeCategory,
              bool isInlinedSideLhs,
-             bool isQuickAccessOperand,
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              AstComparisonExprType operatorType,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, [[maybe_unused]] OperandType qaOperand) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType qaOperand) noexcept
     {
         OperandType lhs, rhs;
         if constexpr(isInlinedSideLhs)
         {
-            lhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, IndexType, shapeCategory>(stackframe);
-            if constexpr(isQuickAccessOperand)
-            {
-                rhs = qaOperand;
-            }
-            else
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-                rhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
-            }
+            lhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, IndexType, shapeCategory>(stackframe);
+            rhs = qaOperand;
         }
         else
         {
-            rhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, IndexType, shapeCategory>(stackframe);
-            if constexpr(isQuickAccessOperand)
-            {
-                lhs = qaOperand;
-            }
-            else
-            {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-                lhs = *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0);
-            }
+            rhs = FIOperandShapeCategoryHelper::get_0_1<OperandType, IndexType, shapeCategory>(stackframe);
+            lhs = qaOperand;
         }
 
         bool result = EvaluateComparisonExpression<OperandType, operatorType>(lhs, rhs);
@@ -158,7 +123,6 @@ struct FIPartialInlinedComparisonBranchImpl
                     CreateTypeMetaVar("indexType"),
                     CreateEnumMetaVar<FIOperandShapeCategory::X_END_OF_ENUM>("shapeCategory"),
                     CreateBoolMetaVar("isInlinedSideLhs"),
-                    CreateBoolMetaVar("isQAP"),
                     CreateOpaqueIntegralParamsLimit(),
                     CreateOpaqueFloatParamsLimit(),
                     CreateEnumMetaVar<AstComparisonExprType::X_END_OF_ENUM>("operatorType")

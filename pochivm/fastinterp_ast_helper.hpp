@@ -151,4 +151,12 @@ struct AstFIOperandShape
     AstLiteralExpr* m_indexLiteral;
 };
 
+inline FastInterpBoilerplateInstance* WARN_UNUSED FIGetNoopBoilerplate()
+{
+    return thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FINoopImpl>::SelectBoilerplateBluePrint(
+                    FIOpaqueParamsHelper::GetMaxOIP(),
+                    FIOpaqueParamsHelper::GetMaxOFP()));
+}
+
 }   // namespace PochiVM

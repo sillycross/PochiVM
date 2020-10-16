@@ -2017,11 +2017,10 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
                     FIOperandShapeCategory::VARIABLE,
                     false /*isInlinedSideLhs*/,
-                    true /*isQAP*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     AstComparisonExprType::LESS_EQUAL));
-    inner_loop_cond_3->PopulateConstantPlaceholder<uint64_t>(1, 8);
+    inner_loop_cond_3->PopulateConstantPlaceholder<uint64_t>(0, 8);
     ixprj->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_cond_3);
 
     // 'i'

@@ -253,6 +253,8 @@ public:
         if (m_elseClause != nullptr) { fn(m_elseClause); }
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
 private:
     AstNodeBase* m_condClause;
     AstScope* m_thenClause;

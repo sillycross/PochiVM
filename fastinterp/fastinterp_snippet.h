@@ -17,6 +17,17 @@ struct FastInterpSnippet
     //
     FastInterpSnippet() : m_entry(nullptr), m_tail(nullptr) { }
 
+    bool IsEmpty() const
+    {
+        AssertImp(m_entry == nullptr, m_tail == nullptr);
+        return m_entry == nullptr;
+    }
+
+    bool IsMustReturn() const
+    {
+        return m_entry != nullptr && m_tail == nullptr;
+    }
+
     // The entry point of the code snippet
     //
     FastInterpBoilerplateInstance* m_entry;

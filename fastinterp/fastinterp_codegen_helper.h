@@ -99,6 +99,12 @@ public:
         m_owner = newBluePrint;
     }
 
+    void SetAlignmentLog2(uint16_t log2CodeSectionAlignment)
+    {
+        TestAssert(log2CodeSectionAlignment <= 6);
+        m_log2CodeSectionAlignment = log2CodeSectionAlignment;
+    }
+
 private:
     FastInterpBoilerplateInstance(const FastInterpBoilerplateBluePrint* owner,
                                   int32_t relativeDataAddr,

@@ -251,7 +251,6 @@ public:
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
-private:
     AstComparisonExprType m_op;
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
