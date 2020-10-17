@@ -716,6 +716,9 @@ public:
             J->getMainJITDylib().addGenerator(std::move(R));
             AddFakeSymbolResolverGenerator(J.get());
 
+            // LLVM 10 has a bug that LLJIT's runConstructors() does not work
+            // This bug has been fixed in LLVM 11, but for now we have to manually run constructors
+            //
             CtorDtorRunner RR(J->getMainJITDylib());
             RR.add(getConstructors(*tsm.getModuleUnlocked()));
             exitOnError(J->addIRModule(std::move(tsm)));
