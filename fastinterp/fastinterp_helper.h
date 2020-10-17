@@ -7,6 +7,8 @@
 #include "pochivm/cxx2a_bit_cast_helper.h"
 #include "fastinterp_function_alignment.h"
 #include "x86_64_asm_helper.h"
+#include "unaligned_memaccess_helper.h"
+#include "x86_64_rewrite_jmp_jcc_instruction_helper.h"
 
 namespace PochiVM
 {
@@ -56,29 +58,6 @@ struct FastInterpSymbolFixupRecord
     uint32_t m_ordinalIntoPlaceholderArray;
 };
 
-// Safe unaligned memory read/write.
-//
-template<typename T>
-T WARN_UNUSED UnalignedRead(uint8_t* src)
-{
-    T ret;
-    memcpy(&ret, src, sizeof(T));
-    return ret;
-}
-
-template<typename T>
-void UnalignedWrite(uint8_t* dst, T value)
-{
-    memcpy(dst, &value, sizeof(T));
-}
-
-template<typename T>
-void UnalignedAddAndWriteback(uint8_t* addr, T value)
-{
-    T old = UnalignedRead<T>(addr);
-    UnalignedWrite<T>(addr, old + value);
-}
-
 class FastInterpBoilerplateBluePrint : NonCopyable, NonMovable
 {
 public:
@@ -117,6 +96,10 @@ protected:
           , uint16_t highestUInt64PlaceholderOrdinal
           , uint16_t numCppFnPtrPlaceholders
           , int lastInstructionTailCallOrd
+          , uint32_t jmp32ArrayLength
+          , const uint32_t* jmp32Offsets
+          , uint32_t jcc32ArrayLength
+          , const uint32_t* jcc32Offsets
 #ifdef TESTBUILD
           , uint64_t usedBoilerplateFnPtrPlaceholderMask
           , uint64_t usedCppFnptrPlaceholderMask
@@ -128,6 +111,8 @@ protected:
         , m_addr32FixupArray(addr32FixupArray)
         , m_symbol32FixupArray(symbol32FixupArray)
         , m_symbol64FixupArray(symbol64FixupArray)
+        , m_jmp32OffsetArray(jmp32Offsets)
+        , m_jcc32OffsetArray(jcc32Offsets)
         , m_cppFnPtrPlaceholderOrdinalToId(cppFnPtrPlaceholderOrdinalToId)
         , m_contentLength(contentLength)
         , m_addr32FixupArrayLength(addr32FixupArrayLength)
@@ -138,6 +123,8 @@ protected:
         , m_highestUInt64PlaceholderOrdinal(highestUInt64PlaceholderOrdinal)
         , m_numCppFnPtrPlaceholders(numCppFnPtrPlaceholders)
         , m_lastInstructionTailCallOrd(lastInstructionTailCallOrd)
+        , m_jmp32ArrayLength(jmp32ArrayLength)
+        , m_jcc32ArrayLength(jcc32ArrayLength)
 #ifdef TESTBUILD
         , m_usedBoilerplateFnPtrPlaceholderMask(usedBoilerplateFnPtrPlaceholderMask)
         , m_usedCppFnptrPlaceholderMask(usedCppFnptrPlaceholderMask)
@@ -195,6 +182,28 @@ private:
             uint64_t addend = static_cast<uint64_t>(fixupValues[m_symbol64FixupArray[i].m_ordinalIntoPlaceholderArray]);
             UnalignedAddAndWriteback<uint64_t>(destAddr + m_symbol64FixupArray[i].m_offset, addend);
         }
+
+        // Rewrite jmp and jcc instructions if possible
+        //
+        {
+            uint32_t limit = m_jmp32ArrayLength;
+            if (shouldStripLITC)
+            {
+                TestAssert(limit > 0 && m_jmp32OffsetArray[limit - 1] == trueContentLength + x86_64_jmp_opcode_num_bytes);
+                limit--;
+            }
+            for (uint32_t i = 0; i < limit; i++)
+            {
+                x86_64_try_rewrite_jmp_instruction(destAddr + m_jmp32OffsetArray[i]);
+            }
+        }
+
+        {
+            for (uint32_t i = 0; i < m_jcc32ArrayLength; i++)
+            {
+                x86_64_try_rewrite_jcc_instruction(destAddr + m_jcc32OffsetArray[i]);
+            }
+        }
     }
 
     // The pre-fixup binary content
@@ -213,6 +222,9 @@ private:
     //
     const FastInterpSymbolFixupRecord* m_symbol64FixupArray;
 
+    const uint32_t* m_jmp32OffsetArray;
+    const uint32_t* m_jcc32OffsetArray;
+
     const uint16_t* m_cppFnPtrPlaceholderOrdinalToId;
 
     uint32_t m_contentLength;
@@ -225,6 +237,8 @@ private:
     uint16_t m_highestUInt64PlaceholderOrdinal;
     uint16_t m_numCppFnPtrPlaceholders;
     int m_lastInstructionTailCallOrd;
+    uint32_t m_jmp32ArrayLength;
+    uint32_t m_jcc32ArrayLength;
 
 #ifdef TESTBUILD
     // bitmask denoting which placeholder ordinals are used, for test assertion purpose

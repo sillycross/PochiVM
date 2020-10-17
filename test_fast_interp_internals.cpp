@@ -1871,7 +1871,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     // if (lp[i] == 0) ...
     //
     FastInterpBoilerplateInstance* if_cond = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIFullyInlinedComparisonUnpredictableBranchImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FIFullyInlinedComparisonFavourTrueBranchImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
@@ -2137,14 +2137,13 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
     using FnProto = void(*)(uintptr_t);
     FnProto fnPtr = reinterpret_cast<FnProto>(fnPtrVoid);
 
-    int n = 100000000;
+    int n = 1000000;
     int* lp = new int[static_cast<size_t>(n + 10)];
     memset(lp, 0, sizeof(int) * static_cast<size_t>(n + 10));
     int* pr = new int[static_cast<size_t>(n + 10)];
     memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
 
     {
-        AutoTimer t;
         uint8_t* stackFrame = reinterpret_cast<uint8_t*>(alloca(48));
         for (size_t i = 0; i < 48; i++) { stackFrame[i] = static_cast<uint8_t>(rand() % 256); }
         *reinterpret_cast<int*>(stackFrame + 8) = n;
@@ -2153,8 +2152,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
         __pochivm_thread_fastinterp_context.m_stackFrame = reinterpret_cast<uintptr_t>(stackFrame);
         fnPtr(reinterpret_cast<uintptr_t>(stackFrame));
         int result = *reinterpret_cast<int*>(stackFrame);
-        // ReleaseAssert(result == 78498);
-        printf("%d\n", result);
+        ReleaseAssert(result == 78498);
     }
 }
 

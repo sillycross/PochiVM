@@ -1202,6 +1202,7 @@ public:
 
                 std::vector<uint32_t> minusAddrOffsets32;
                 std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64, tpoff32List;
+                std::vector<uint32_t> jmp32, jcc32;
                 uint32_t highestBPFPOrdinal = 0;
                 uint32_t highestCFPOrdinal = 0;
                 uint32_t highestU64Ordinal = 0;
@@ -1274,6 +1275,11 @@ public:
                                                 it->first.c_str(), inst.m_symbolName.c_str(), rinfo.symbol.c_str());
                                         abort();
                                     }
+                                    jcc32.push_back(static_cast<uint32_t>(rinfo.offset));
+                                }
+                                else
+                                {
+                                    jmp32.push_back(static_cast<uint32_t>(rinfo.offset));
                                 }
                                 // If this is a tail call at the end of function, record it.
                                 //
@@ -1395,6 +1401,8 @@ public:
                 std::sort(allList32.begin(), allList32.end());
                 std::sort(allList64.begin(), allList64.end());
                 std::sort(minusAddrOffsets32.begin(), minusAddrOffsets32.end());
+                std::sort(jmp32.begin(), jmp32.end());
+                std::sort(jcc32.begin(), jcc32.end());
 
                 int usedCfpOrdinalCnt = 0;
                 std::vector<int> cfpOrdinalMap;
@@ -1457,11 +1465,13 @@ public:
                     fprintf(fp3, "\n    } /*fixupSites*/);\n");
                 }
 
-                fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d> %s%s_%d(\n",
+                fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d, %d, %d> %s%s_%d(\n",
                         static_cast<int>(minusAddrOffsets32.size()),
                         static_cast<int>(allList32.size()),
                         static_cast<int>(allList64.size()),
                         static_cast<int>(highestCFPOrdinal),
+                        static_cast<int>(jmp32.size()),
+                        static_cast<int>(jcc32.size()),
                         blueprint_varname_prefix.c_str(),
                         midfix.c_str(),
                         blueprint_varname_suffix);
@@ -1513,7 +1523,27 @@ public:
                     }
                 }
                 fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/,\n");
-                fprintf(fp3, "%d /*lastInstructionTailCallOrd*/\n", lastInstructionTailCallOrd);
+                fprintf(fp3, "%d /*lastInstructionTailCallOrd*/,\n", lastInstructionTailCallOrd);
+
+                fprintf(fp3, "std::array<uint32_t, %d>{", static_cast<int>(jmp32.size()));
+                for (size_t i = 0; i < jmp32.size(); i++)
+                {
+                    fprintf(fp3, "%d", static_cast<int>(jmp32[i]));
+                    if (i + 1 < jmp32.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                }
+                fprintf(fp3, "} /*jmp32Array*/,\n");
+
+                fprintf(fp3, "std::array<uint32_t, %d>{", static_cast<int>(jcc32.size()));
+                for (size_t i = 0; i < jcc32.size(); i++)
+                {
+                    fprintf(fp3, "%d", static_cast<int>(jcc32[i]));
+                    if (i + 1 < jcc32.size()) {
+                        fprintf(fp3, ", ");
+                    }
+                }
+                fprintf(fp3, "} /*jcc32Array*/\n");
 
                 fprintf(fp3, "#ifdef TESTBUILD\n");
                 fprintf(fp3, ", %lluULL /*usedBoilerplateFnPtrPlaceholderMask*/\n", static_cast<unsigned long long>(usedBpfpMask));

@@ -6,7 +6,7 @@
 
 using namespace PochiVM;
 
-TEST(PaperMicrobenchmark, FibonacciSeq)
+TEST(DISABLED_PaperMicrobenchmark, FibonacciSeq)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
