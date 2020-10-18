@@ -5,6 +5,13 @@
 namespace PochiVM
 {
 
+enum class AstFiLogicalOpPrediction
+{
+    PREDICT_TRUE,
+    PREDICT_FALSE,
+    NO_PREDICTION
+};
+
 // Logical && and || operation, with short circuiting behavior as in C
 //
 class AstLogicalAndOrExpr : public AstNodeBase
@@ -12,7 +19,7 @@ class AstLogicalAndOrExpr : public AstNodeBase
 public:
     AstLogicalAndOrExpr(bool isAnd, AstNodeBase* lhs, AstNodeBase* rhs)
         : AstNodeBase(AstNodeType::AstLogicalAndOrExpr, TypeId::Get<bool>())
-        , m_isAnd(isAnd), m_lhs(lhs), m_rhs(rhs)
+        , m_isAnd(isAnd), m_fiPrediction(AstFiLogicalOpPrediction::NO_PREDICTION), m_lhs(lhs), m_rhs(rhs)
     {
         TestAssert(m_lhs->GetTypeId().IsBool());
         TestAssert(m_rhs->GetTypeId().IsBool());
@@ -56,10 +63,12 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-private:
+    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
     // whether this operator is '&&' or '||'
     //
     bool m_isAnd;
+    AstFiLogicalOpPrediction m_fiPrediction;
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };
@@ -71,6 +80,7 @@ class AstLogicalNotExpr : public AstNodeBase
 public:
     AstLogicalNotExpr(AstNodeBase* op)
         : AstNodeBase(AstNodeType::AstLogicalNotExpr, TypeId::Get<bool>())
+        , m_fiPrediction(AstFiLogicalOpPrediction::NO_PREDICTION)
         , m_op(op)
     {
         TestAssert(m_op->GetTypeId().IsBool());
@@ -94,7 +104,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-private:
+    AstFiLogicalOpPrediction m_fiPrediction;
     AstNodeBase* m_op;
 };
 

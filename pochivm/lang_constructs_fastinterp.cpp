@@ -1,6 +1,7 @@
 #include "fastinterp_ast_helper.hpp"
 #include "codegen_context.hpp"
 #include "arith_expr.h"
+#include "logical_operator.h"
 
 namespace PochiVM
 {
@@ -205,6 +206,25 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
     // FIOutlinedConditionalUnpredictableBranchImpl
     //
     {
+        // If we predict the branch to be true, and the operator is a logical operator, populate the prediction
+        //
+        if (isFavourTrueBranch)
+        {
+            if (cond->GetAstNodeType() == AstNodeType::AstLogicalAndOrExpr)
+            {
+                AstLogicalAndOrExpr* expr = assert_cast<AstLogicalAndOrExpr*>(cond);
+                if (expr->m_isAnd)
+                {
+                    expr->m_fiPrediction = AstFiLogicalOpPrediction::PREDICT_TRUE;
+                }
+            }
+            else if (cond->GetAstNodeType() == AstNodeType::AstLogicalNotExpr)
+            {
+                AstLogicalNotExpr* expr = assert_cast<AstLogicalNotExpr*>(cond);
+                expr->m_fiPrediction = AstFiLogicalOpPrediction::PREDICT_FALSE;
+            }
+        }
+
         thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(TypeId::Get<bool>());
         FastInterpSnippet snippet = cond->PrepareForFastInterp(x_FINoSpill);
 
