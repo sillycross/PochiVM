@@ -52,6 +52,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_partial_inline_comparison_condbr_unpredictable.cpp
   fastinterp_tpl_outlined_condbr_unpredictable.cpp
   fastinterp_tpl_logical_and_or.cpp
+  fastinterp_tpl_logical_not.cpp
+  fastinterp_tpl_pointer_cast.cpp
 )
 
 SET(FASTINTERP_SOURCES

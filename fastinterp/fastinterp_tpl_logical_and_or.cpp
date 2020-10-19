@@ -22,7 +22,7 @@ struct FIUnpredictableLogicalAndOrImpl
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
-        if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+        if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         return true;
     }
 
@@ -134,7 +134,7 @@ struct FIPredictableLogicalAndOrImpl
              FINumOpaqueFloatingParams numOFP>
     static constexpr bool cond()
     {
-        if (!FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
+        if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
         return true;
     }
 

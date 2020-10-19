@@ -16,6 +16,8 @@ add_library(pochivm
   function_proto_fastinterp.cpp
   lang_constructs_fastinterp.cpp
   common_expr_fastinterp.cpp
+  logical_operator_fastinterp.cpp
+  cast_expr_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

@@ -62,7 +62,8 @@ Build(Value<int32_t*> dst, Value<bool>* vars, int numVars, uint64_t& cnt)
 }
 
 const static int x_numVars = 10;
-using GeneratedFn = std::function<bool(int32_t*, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool)>;
+using GeneratedFn = bool(*)(int32_t*, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool) noexcept;
+using InterpGeneratedFn = std::function<bool(int32_t*, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool)>;
 
 void CheckOnce()
 {
@@ -72,7 +73,7 @@ void CheckOnce()
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using SideEffectFn = std::function<bool(bool, int32_t*, uint64_t)>;
+    using SideEffectFn = bool(*)(bool, int32_t*, uint64_t) noexcept;
 
     {
         auto [fn, r, dst, offset] = NewFunction<SideEffectFn>("f", "r", "dst", "offset");
@@ -95,11 +96,15 @@ void CheckOnce()
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
 
-    GeneratedFn interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<GeneratedFn>("testFn");
+    InterpGeneratedFn interpFn = thread_pochiVMContext->m_curModule->
+                           GetGeneratedFunctionInterpMode<InterpGeneratedFn>("testFn");
+
+    FastInterpFunction<GeneratedFn> fastinterpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<GeneratedFn>("testFn");
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -111,21 +116,27 @@ void CheckOnce()
     Auto(delete [] d2);
     int32_t* d3 = new int32_t[cnt + 1];
     Auto(delete [] d3);
+    int32_t* d4 = new int32_t[cnt + 1];
+    Auto(delete [] d4);
 
-    auto CompareResults = [&simFn, &interpFn, &jitFn, d1, d2, d3, cnt](bool* input)
+    auto CompareResults = [&simFn, &interpFn, &jitFn, &fastinterpFn, d1, d2, d3, d4, cnt](bool* input)
     {
         memset(d1, 0, sizeof(int32_t) * (cnt + 1));
         memset(d2, 0, sizeof(int32_t) * (cnt + 1));
         memset(d3, 0, sizeof(int32_t) * (cnt + 1));
+        memset(d4, 0, sizeof(int32_t) * (cnt + 1));
         bool r1 = simFn(d1, input);
         bool r2 = interpFn(d2, input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8], input[9]);
         bool r3 = jitFn(d3, input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8], input[9]);
+        bool r4 = fastinterpFn(d4, input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7], input[8], input[9]);
         ReleaseAssert(r1 == r2);
         ReleaseAssert(r1 == r3);
+        ReleaseAssert(r1 == r4);
         for (uint64_t i = 0; i <= cnt; i++)
         {
             ReleaseAssert(d1[i] == d2[i]);
             ReleaseAssert(d1[i] == d3[i]);
+            ReleaseAssert(d1[i] == d4[i]);
         }
     };
 

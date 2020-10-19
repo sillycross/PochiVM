@@ -68,6 +68,30 @@ struct AstFIOperandShape
         return m_kind != FIOperandShapeCategory::X_END_OF_ENUM;
     }
 
+    static AstFIOperandShape WARN_UNUSED TryMatchAddress(AstNodeBase* expr)
+    {
+        AstFIOperandShape ret;
+        if (expr->GetAstNodeType() == AstNodeType::AstVariable)
+        {
+            ret.m_kind = FIOperandShapeCategory::VARIABLE;
+            ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
+            ret.m_mainVariable = assert_cast<AstVariable*>(expr);
+        }
+        else if (expr->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+        {
+            ret.m_kind = FIOperandShapeCategory::VARPTR_DEREF;
+            ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
+            ret.m_mainVariable = assert_cast<AstDereferenceVariableExpr*>(expr)->GetOperand();
+        }
+        else
+        {
+            // TODO: handle index type
+            //
+            ret.m_kind = FIOperandShapeCategory::X_END_OF_ENUM;
+        }
+        return ret;
+    }
+
     static AstFIOperandShape WARN_UNUSED TryMatch(AstNodeBase* expr)
     {
         AstFIOperandShape ret;

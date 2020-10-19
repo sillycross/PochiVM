@@ -63,7 +63,8 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
-    // virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     // whether this operator is '&&' or '||'
     //
@@ -103,6 +104,9 @@ public:
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     AstFiLogicalOpPrediction m_fiPrediction;
     AstNodeBase* m_op;

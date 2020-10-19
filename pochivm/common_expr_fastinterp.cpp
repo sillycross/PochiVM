@@ -1,4 +1,4 @@
-#include "fastinterp_ast_helper.hpp"
+﻿#include "fastinterp_ast_helper.hpp"
 #include "arith_expr.h"
 
 namespace PochiVM
@@ -97,18 +97,17 @@ void AstAssignExpr::FastInterpSetupSpillLocation()
     // Other cases
     //
     {
-        AstFIOperandShape lhs = AstFIOperandShape::TryMatch(m_dst);
-        bool lhsMatchOk = lhs.MatchOK() && lhs.m_kind != FIOperandShapeCategory::ZERO && lhs.m_kind != FIOperandShapeCategory::LITERAL_NONZERO;
+        AstFIOperandShape lhs = AstFIOperandShape::TryMatchAddress(m_dst);
         AstFIOperandShape rhs = AstFIOperandShape::TryMatch(m_src);
 
-        if (lhsMatchOk && rhs.MatchOK())
+        if (lhs.MatchOK() && rhs.MatchOK())
         {
             // FIFullyInlineAssignImpl
             //
             m_fiInlineShape = FIShape::INLINE_BOTH;
             return;
         }
-        else if (lhsMatchOk)
+        else if (lhs.MatchOK())
         {
             // FIPartialInlineLhsAssignImpl
             //
@@ -179,8 +178,8 @@ FastInterpSnippet WARN_UNUSED AstAssignExpr::PrepareForFastInterp(FISpillLocatio
     }
     else if (m_fiInlineShape == FIShape::INLINE_BOTH)
     {
-        AstFIOperandShape lhs = AstFIOperandShape::TryMatch(m_dst);
-        TestAssert(lhs.MatchOK() && lhs.m_kind != FIOperandShapeCategory::ZERO && lhs.m_kind != FIOperandShapeCategory::LITERAL_NONZERO);
+        AstFIOperandShape lhs = AstFIOperandShape::TryMatchAddress(m_dst);
+        TestAssert(lhs.MatchOK());
         AstFIOperandShape rhs = AstFIOperandShape::TryMatch(m_src);
         TestAssert(rhs.MatchOK());
 
@@ -205,8 +204,8 @@ FastInterpSnippet WARN_UNUSED AstAssignExpr::PrepareForFastInterp(FISpillLocatio
     {
         // FIPartialInlineLhsAssignImpl
         //
-        AstFIOperandShape lhs = AstFIOperandShape::TryMatch(m_dst);
-        TestAssert(lhs.MatchOK() && lhs.m_kind != FIOperandShapeCategory::ZERO && lhs.m_kind != FIOperandShapeCategory::LITERAL_NONZERO);
+        AstFIOperandShape lhs = AstFIOperandShape::TryMatchAddress(m_dst);
+        TestAssert(lhs.MatchOK());
 
         TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_src->GetTypeId()));
         FastInterpSnippet snippet = m_src->PrepareForFastInterp(x_FINoSpill);
