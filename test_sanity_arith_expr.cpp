@@ -44,9 +44,13 @@ std::function<void(T, T)> fnName()                                              
     fn.SetBody(Return(val1 opName val2));                                        \
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());               \
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();                 \
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();                  \
     auto interpFn = thread_pochiVMContext->m_curModule->                         \
                            GetDebugInterpGeneratedFunction<FnPrototype>("MyFn"); \
     ReleaseAssert(interpFn);                                                     \
+    auto fastinterpFn = thread_pochiVMContext->m_curModule->                     \
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");  \
+    ReleaseAssert(fastinterpFn);                                                 \
                                                                                  \
     thread_pochiVMContext->m_curModule->EmitIR();                                \
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();              \
@@ -58,9 +62,11 @@ std::function<void(T, T)> fnName()                                              
     auto gold = [](T v1, T v2) -> retType {                                      \
         return v1 opName v2;                                                     \
     };                                                                           \
-    std::function<void(T,T)> compare = [gold, interpFn, jitFn](T v1, T v2) {     \
+    std::function<void(T,T)> compare = [gold, interpFn, jitFn, fastinterpFn]     \
+                                       (T v1, T v2) {                            \
         CompareResults<T, retType>(v1, v2, gold(v1, v2), interpFn(v1,v2));       \
         CompareResults<T, retType>(v1, v2, gold(v1, v2), jitFn(v1,v2));          \
+        CompareResults<T, retType>(v1, v2, gold(v1, v2), fastinterpFn(v1,v2));   \
     };                                                                           \
     return compare;                                                              \
 }

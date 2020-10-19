@@ -187,6 +187,8 @@ void AstComparisonExpr::FastInterpSetupSpillLocation()
     TestAssert(m_fiInlineShape == FIShape::INVALID);
     Auto(TestAssert(m_fiInlineShape != FIShape::INVALID));
 
+    TypeId cmpType = m_lhs->GetTypeId();
+
     // Case 1: fully inline shape
     // FIFullyInlinedComparisonExprImpl
     //
@@ -215,7 +217,7 @@ void AstComparisonExpr::FastInterpSetupSpillLocation()
         if (matchSide.MatchOK())
         {
             m_fiInlineShape = FIShape::INLINE_LHS;
-            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
             m_rhs->FastInterpSetupSpillLocation();
             return;
         }
@@ -225,7 +227,7 @@ void AstComparisonExpr::FastInterpSetupSpillLocation()
         if (matchSide.MatchOK())
         {
             m_fiInlineShape = FIShape::INLINE_RHS;
-            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
             m_lhs->FastInterpSetupSpillLocation();
             return;
         }
@@ -236,10 +238,10 @@ void AstComparisonExpr::FastInterpSetupSpillLocation()
     //
     {
         m_fiInlineShape = FIShape::OUTLINE;
-        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(cmpType);
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
         m_rhs->FastInterpSetupSpillLocation();
-        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(cmpType);
         m_fiIsLhsSpill = !lhsSpillLoc.IsNoSpill();
         m_lhs->FastInterpSetupSpillLocation();
     }
@@ -248,6 +250,8 @@ void AstComparisonExpr::FastInterpSetupSpillLocation()
 FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLocation spillLoc)
 {
     TestAssert(m_fiInlineShape != FIShape::INVALID);
+
+    TypeId cmpType = m_lhs->GetTypeId();
 
     if (m_fiInlineShape == FIShape::INLINE_BOTH)
     {
@@ -265,7 +269,7 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
 
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIFullyInlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
-                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        cmpType.GetDefaultFastInterpTypeId(),
                         lhs.m_kind,
                         rhs.m_kind,
                         m_op,
@@ -297,7 +301,7 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
             TestAssert(matchSide.MatchOK());
         }
 
-        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(cmpType));
         FastInterpSnippet outlineSide;
         if (isInlineSideLhs)
         {
@@ -310,14 +314,14 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
         FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
-        if (!GetTypeId().IsFloatingPoint())
+        if (!cmpType.IsFloatingPoint())
         {
             numOFP = FIOpaqueParamsHelper::GetMaxOFP();
         }
 
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIPartialInlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
-                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        cmpType.GetDefaultFastInterpTypeId(),
                         matchSide.m_indexType,
                         matchSide.m_kind,
                         !spillLoc.IsNoSpill(),
@@ -336,23 +340,23 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
         //
         TestAssert(m_fiInlineShape == FIShape::OUTLINE);
 
-        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId(), m_fiIsLhsSpill);
-        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(cmpType, m_fiIsLhsSpill);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(cmpType));
         FastInterpSnippet rhs = m_rhs->PrepareForFastInterp(x_FINoSpill);
-        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(cmpType);
         TestAssertIff(m_fiIsLhsSpill, !lhsSpillLoc.IsNoSpill());
         FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
         FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
-        if (!GetTypeId().IsFloatingPoint())
+        if (!cmpType.IsFloatingPoint())
         {
             numOFP = FIOpaqueParamsHelper::GetMaxOFP();
         }
 
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIOutlinedComparisonExprImpl>::SelectBoilerplateBluePrint(
-                        GetTypeId().GetDefaultFastInterpTypeId(),
+                        cmpType.GetDefaultFastInterpTypeId(),
                         m_op,
                         lhsSpillLoc.IsNoSpill(),
                         !spillLoc.IsNoSpill(),

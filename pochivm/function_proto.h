@@ -374,7 +374,7 @@ class FastInterpFunction<R(*)(Args...)>
 public:
     FastInterpFunction() : m_fnPtr(nullptr) {}
     FastInterpFunction(void* fnPtr, uint32_t stackframeSize, bool isNoExcept)
-        : m_stackframeSize(stackframeSize), m_fnPtr(fnPtr), m_isNoExcept(isNoExcept)
+        : m_fnPtr(fnPtr), m_stackframeSize(stackframeSize), m_isNoExcept(isNoExcept)
     { }
 
     explicit operator bool() const { return m_fnPtr != nullptr; }
@@ -392,13 +392,13 @@ public:
         {
             using RetOrExn = FIReturnType<R, false /*isNoExcept*/>;
             RetOrExn r = reinterpret_cast<RetOrExn(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
-            if (unlikely(FIReturnValueHelper::HasException(r)))
+            if (unlikely(FIReturnValueHelper::HasException<R>(r)))
             {
                 throw 233;  // TODO: throw real exception
             }
             else
             {
-                return FIReturnValueHelper::GetReturnValue(r);
+                return FIReturnValueHelper::GetReturnValue<R, false /*isNoExcept*/>(r);
             }
         }
     }

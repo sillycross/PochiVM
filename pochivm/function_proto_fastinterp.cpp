@@ -78,13 +78,14 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
 {
     TestAssert(spillLoc.IsNoSpill());
 
-    bool isNoExcept = true /*TODO FIXME*/;
+    bool isNoExcept = thread_llvmContext->m_curFunction->GetIsNoExcept();
 
     // Case 1: return void
     //
     {
         if (m_retVal == nullptr)
         {
+            TestAssert(thread_llvmContext->m_curFunction->GetReturnType().IsVoid());
             FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                         FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
                             TypeId::Get<void>().GetDefaultFastInterpTypeId(),
@@ -97,6 +98,8 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
             };
         }
     }
+
+    TestAssert(thread_llvmContext->m_curFunction->GetReturnType() == m_retVal->GetTypeId() && !m_retVal->GetTypeId().IsVoid());
 
     // Case 2: matches operand shape
     // FIInlinedReturnImpl
