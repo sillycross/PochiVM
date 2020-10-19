@@ -346,7 +346,7 @@ public:
 
     explicit operator bool() const { return m_fnPtr != nullptr; }
 
-    R operator()(Args... args) noexcept
+    R operator()(Args... args) const noexcept
     {
         TestAssert(m_fnPtr != nullptr);
         uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
@@ -379,7 +379,7 @@ public:
 
     explicit operator bool() const { return m_fnPtr != nullptr; }
 
-    R operator()(Args... args)
+    R operator()(Args... args) const
     {
         TestAssert(m_fnPtr != nullptr);
         uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
@@ -416,6 +416,119 @@ private:
     void* m_fnPtr;
     uint32_t m_stackframeSize;
     bool m_isNoExcept;
+};
+
+namespace internal
+{
+
+template<typename R, typename... Args>
+struct DebugInterpCallFunctionImplImpl
+{
+    static const size_t numArgs = sizeof...(Args);
+
+    static void construct_params(AstLiteralExpr* /*memoryOwner*/)
+    { }
+
+    template<typename F, typename... T>
+    static void construct_params(AstLiteralExpr* memoryOwner,
+                                 F first, T... args)
+    {
+        // Construct AstLiteralExpr by in-place new
+        //
+        new (memoryOwner) AstLiteralExpr(TypeId::Get<F>(), &first);
+        memoryOwner->SetupDebugInterpImpl();
+        construct_params(memoryOwner + 1, args...);
+    }
+
+    static void call_impl(AstFunction* fn, R* ret /*out*/, Args... args)
+    {
+        // It is important that we not use any CodeGenAllocator
+        //
+        // Avoid alloca(0)
+        //
+        size_t arrSize = numArgs;
+        if (arrSize < 1) { arrSize = 1; }
+        // Construct the parameter vector
+        // Intentionally uninitialized, we will use in-place new to individually initialize in construct_params
+        //
+        AstLiteralExpr* paramsMem = reinterpret_cast<AstLiteralExpr*>(alloca(sizeof(AstLiteralExpr) * arrSize));
+        construct_params(paramsMem, args...);
+
+        AstNodeBase** params = reinterpret_cast<AstNodeBase**>(alloca(sizeof(AstNodeBase*) * arrSize));
+        for (size_t i = 0; i < numArgs; i++) { params[i] = paramsMem + i; }
+
+        // Interp the function, fill in return value at 'ret'
+        //
+        fn->DebugInterp(params, ret);
+    }
+};
+
+// avoid compile error due to declaring a void type variable
+//
+template<typename R, typename... Args>
+struct DebugInterpCallFunctionImpl
+{
+    static R call(AstFunction* fn, Args... args)
+    {
+        R ret;
+        DebugInterpCallFunctionImplImpl<R, Args...>::call_impl(fn, &ret, args...);
+        return ret;
+    }
+};
+
+template<typename... Args>
+struct DebugInterpCallFunctionImpl<void, Args...>
+{
+    static void call(AstFunction* fn, Args... args)
+    {
+        DebugInterpCallFunctionImplImpl<void, Args...>::call_impl(fn, nullptr, args...);
+    }
+};
+
+}   // namespace internal
+
+template<typename T>
+class DebugInterpFunction
+{
+    static_assert(sizeof(T) == 0, "T must be a C function pointer");
+};
+
+template<typename R, typename... Args>
+class DebugInterpFunction<R(*)(Args...) noexcept>
+{
+public:
+    DebugInterpFunction() : m_fn(nullptr) { }
+    DebugInterpFunction(AstFunction* fn) : m_fn(fn) { }
+
+    explicit operator bool() const { return m_fn != nullptr; }
+
+    R operator()(Args... args) const
+    {
+        TestAssert(m_fn != nullptr);
+        return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
+    }
+
+private:
+    AstFunction* m_fn;
+};
+
+template<typename R, typename... Args>
+class DebugInterpFunction<R(*)(Args...)>
+{
+public:
+    DebugInterpFunction() : m_fn(nullptr) { }
+    DebugInterpFunction(AstFunction* fn) : m_fn(fn) { }
+
+    explicit operator bool() const { return m_fn != nullptr; }
+
+    R operator()(Args... args) const
+    {
+        TestAssert(m_fn != nullptr);
+        return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
+    }
+
+private:
+    AstFunction* m_fn;
 };
 
 // A module, consists of a list of functions
@@ -507,32 +620,28 @@ public:
         return m_llvmModule;
     }
 
-private:
-    template<typename T> struct InterpCallFunction;
-
-public:
-    // Get a std::function object that invokes a generated function in debug interp mode
+    // Get a callable object that invokes a generated function in debug interp mode
     //
-    // T must be a std::function that matches the prototype of the generated function
-    // Return the std::function object that calls the generated function in interp mode,
-    //    or nullptr if no function with given name exist.
+    // T must be a C-style function pointer that matches the prototype of the generated function
+    // Return the callable object that calls the generated function in interp mode,
+    //    or an object that contextually evaluates to false if no function with given name exist.
     //
     // Example:
-    //    using FnType = std::function<void(int, double)>;
-    //    FnType fn = GetGeneratedFunctionInterpMode<FnType>("generated_fn_name");
+    //    using FnType = void(*)(int, double);
+    //    auto fn = GetGeneratedFunctionInterpMode<FnType>("generated_fn_name");
     //    fn(12, 3.45);
     //
     template<typename T>
-    T GetGeneratedFunctionInterpMode(const std::string& name)
+    DebugInterpFunction<T> GetDebugInterpGeneratedFunction(const std::string& name)
     {
         assert(m_debugInterpPrepared);
         AstFunction* fn = GetAstFunction(name);
         if (fn == nullptr)
         {
-            return nullptr;
+            return DebugInterpFunction<T>();
         }
-        TestAssert(InterpCallFunction<T>::check_prototype_ok(fn));
-        return InterpCallFunction<T>::get(fn);
+        TestAssert(FastInterpCallFunction<T>::check_prototype_ok(fn));
+        return DebugInterpFunction<T>(fn);
     }
 
     // T must be a C style function pointer
@@ -552,113 +661,18 @@ public:
     }
 
     // Check that the function with specified name exists and its prototype matches T
-    // T may be either a C-style function pointer or a std::function object
+    // T must be a C-style function pointer
     //
     template<typename T>
     bool WARN_UNUSED CheckFunctionExistsAndPrototypeMatches(const std::string& name)
     {
         AstFunction* fn = GetAstFunction(name);
         CHECK(fn != nullptr);
-        using _CFunctionType = typename AstTypeHelper::callable_to_c_style_fnptr_type<T>::type;
-        CHECK(FastInterpCallFunction<_CFunctionType>::check_prototype_ok(fn));
+        CHECK(FastInterpCallFunction<T>::check_prototype_ok(fn));
         return true;
     }
 
 private:
-
-    template<typename R, typename... Args>
-    struct InterpCallFunctionImplImpl
-    {
-        static const size_t numArgs = sizeof...(Args);
-
-        static void construct_params(AstLiteralExpr* /*memoryOwner*/)
-        { }
-
-        template<typename F, typename... T>
-        static void construct_params(AstLiteralExpr* memoryOwner,
-                                     F first, T... args)
-        {
-            // Construct AstLiteralExpr by in-place new
-            //
-            new (memoryOwner) AstLiteralExpr(TypeId::Get<F>(), &first);
-            memoryOwner->SetupDebugInterpImpl();
-            construct_params(memoryOwner + 1, args...);
-        }
-
-        static void call_impl(AstFunction* fn, R* ret /*out*/, Args... args)
-        {
-            // It is important that we not use any CodeGenAllocator
-            //
-            // Avoid alloca(0)
-            //
-            size_t arrSize = numArgs;
-            if (arrSize < 1) { arrSize = 1; }
-            // Construct the parameter vector
-            // Intentionally uninitialized, we will use in-place new to individually initialize in construct_params
-            //
-            AstLiteralExpr* paramsMem = reinterpret_cast<AstLiteralExpr*>(alloca(sizeof(AstLiteralExpr) * arrSize));
-            construct_params(paramsMem, args...);
-
-            AstNodeBase** params = reinterpret_cast<AstNodeBase**>(alloca(sizeof(AstNodeBase*) * arrSize));
-            for (size_t i = 0; i < numArgs; i++) { params[i] = paramsMem + i; }
-
-            // Interp the function, fill in return value at 'ret'
-            //
-            fn->DebugInterp(params, ret);
-        }
-    };
-
-    // avoid compile error due to declaring a void type variable
-    //
-    template<typename R, typename... Args>
-    struct InterpCallFunctionImpl
-    {
-        static R call(AstFunction* fn, Args... args)
-        {
-            R ret;
-            InterpCallFunctionImplImpl<R, Args...>::call_impl(fn, &ret, args...);
-            return ret;
-        }
-    };
-
-    template<typename... Args>
-    struct InterpCallFunctionImpl<void, Args...>
-    {
-        static void call(AstFunction* fn, Args... args)
-        {
-            InterpCallFunctionImplImpl<void, Args...>::call_impl(fn, nullptr, args...);
-        }
-    };
-
-    template<typename T>
-    struct InterpCallFunction
-    {
-        static_assert(sizeof(T) == 0, "T must be a std::function type!");
-    };
-
-    template<typename R, typename... Args>
-    struct InterpCallFunction<std::function<R(Args...)>>
-    {
-        using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
-
-        static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
-        {
-            CHECK(FnInfo::numArgs == fn->GetNumParams());
-            CHECK(TypeId::Get<R>() == fn->GetReturnType());
-            for (size_t i = 0; i < FnInfo::numArgs; i++)
-            {
-                CHECK(fn->GetParamType(i) == FnInfo::argTypeId[i]);
-            }
-            return true;
-        }
-
-        static std::function<R(Args...)> get(AstFunction* fn)
-        {
-            return [fn](Args... args) -> R {
-                return InterpCallFunctionImpl<R, Args...>::call(fn, args...);
-            };
-        }
-    };
 
     template<typename T>
     struct FastInterpCallFunction
@@ -669,7 +683,7 @@ private:
     template<typename R, typename... Args>
     struct FastInterpCallFunction<R(*)(Args...)>
     {
-        using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
+        using FnInfo = AstTypeHelper::function_type_helper<R(*)(Args...)>;
 
         static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
         {
@@ -694,7 +708,7 @@ private:
     template<typename R, typename... Args>
     struct FastInterpCallFunction<R(*)(Args...) noexcept>
     {
-        using FnInfo = AstTypeHelper::function_type_helper<std::function<R(Args...)>>;
+        using FnInfo = AstTypeHelper::function_type_helper<R(*)(Args...) noexcept>;
 
         static bool WARN_UNUSED check_prototype_ok(AstFunction* fn)
         {

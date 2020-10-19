@@ -14,7 +14,7 @@ TEST(Sanity, BreakAndContinue)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     {
         auto [fn, n] = NewFunction<FnPrototype>("MyFn");
         auto i = fn.NewVariable<int>("i");
@@ -75,8 +75,8 @@ TEST(Sanity, BreakAndContinue)
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
         ReleaseAssert(gold(10) == interpFn(10));
         ReleaseAssert(gold(30) == interpFn(30));

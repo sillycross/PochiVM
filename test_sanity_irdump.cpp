@@ -35,7 +35,7 @@ TEST(SanityIrCodeDump, APlusB)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, value1, value2] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -75,7 +75,7 @@ TEST(SanityIrCodeDump, APlusB_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -119,7 +119,7 @@ TEST(SanityIrCodeDump, APlusB_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -165,7 +165,7 @@ TEST(SanityIrCodeDump, APlusB_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -211,7 +211,7 @@ TEST(SanityIrCodeDump, APlusB_5)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -255,7 +255,7 @@ TEST(SanityIrCodeDump, APlusB_6)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -298,7 +298,7 @@ TEST(SanityIrCodeDump, APlusB_7)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -340,7 +340,7 @@ TEST(SanityIrCodeDump, APlusB_8)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -420,7 +420,7 @@ TEST(SanityIrCodeDump, APlusB_9)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(
@@ -469,7 +469,7 @@ TEST(SanityIrCodeDump, APlusB_10)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int, int)>;
+    using FnPrototype = int(*)(int, int);
     {
         auto [fn, a, b] = NewFunction<FnPrototype>("a_plus_b", "a", "b");
         fn.SetBody(

@@ -17,7 +17,7 @@ TEST(Sanity, LLVMOptimizationPassEffective)
     // Sanity check that LLVM function-level and module-level optimization are working.
     // Specifically, we want to see expression gets simplified, and function gets inlined
     //
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     {
         auto [fn, a] = NewFunction<FnPrototype>("a_plus_10", "a");
         fn.SetBody(

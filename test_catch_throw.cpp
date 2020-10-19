@@ -14,7 +14,7 @@ TEST(SanityCatchThrow, ThrowSanity_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void()>;
+    using FnPrototype = void(*)();
     {
         auto [fn] = NewFunction<FnPrototype>("testfn");
 
@@ -27,8 +27,8 @@ TEST(SanityCatchThrow, ThrowSanity_1)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
         try {
             interpFn();
             ReleaseAssert(false);
@@ -104,7 +104,7 @@ TEST(SanityCatchThrow, ThrowSanity_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     {
         auto [fn, v] = NewFunction<FnPrototype>("testfn");
 
@@ -117,8 +117,8 @@ TEST(SanityCatchThrow, ThrowSanity_2)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
         try {
             interpFn(123);
             ReleaseAssert(false);
@@ -180,7 +180,7 @@ TEST(SanityCatchThrow, ThrowSanity_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     {
         auto [fn, v] = NewFunction<FnPrototype>("testfn");
         auto x = fn.NewVariable<TestNonTrivialCopyConstructor>();
@@ -194,8 +194,8 @@ TEST(SanityCatchThrow, ThrowSanity_3)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
 
         TestNonTrivialCopyConstructor::counter = 0;
         try {
@@ -262,7 +262,7 @@ TEST(SanityCatchThrow, ThrowSanity_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     {
         auto [fn, v] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
@@ -274,8 +274,8 @@ TEST(SanityCatchThrow, ThrowSanity_4)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
 
         try {
             interpFn(123);
@@ -338,7 +338,7 @@ TEST(SanityCatchThrow, ThrowSanity_5)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     {
         auto [fn, v] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
@@ -350,8 +350,8 @@ TEST(SanityCatchThrow, ThrowSanity_5)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
 
         try {
             interpFn(123);
@@ -432,7 +432,7 @@ TEST(SanityCatchThrow, ThrowSanity_6)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int, CtorDtorOrderRecorder*)>;
+    using FnPrototype = void(*)(int, CtorDtorOrderRecorder*);
     {
         auto [fn, v, r] = NewFunction<FnPrototype>("testfn");
         auto x = fn.NewVariable<TestDestructor2>();
@@ -448,8 +448,8 @@ TEST(SanityCatchThrow, ThrowSanity_6)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
         CtorDtorOrderRecorder r;
         try {
             interpFn(123, &r);
@@ -515,7 +515,7 @@ TEST(SanityCatchThrow, ThrowSanity_7)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int, CtorDtorOrderRecorder*)>;
+    using FnPrototype = void(*)(int, CtorDtorOrderRecorder*);
     {
         auto [fn, v, r] = NewFunction<FnPrototype>("testfn");
         auto x = fn.NewVariable<TestDestructor2>();
@@ -531,8 +531,8 @@ TEST(SanityCatchThrow, ThrowSanity_7)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -627,7 +627,7 @@ TEST(SanityCatchThrow, ThrowSanity_8)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int, CtorDtorOrderRecorder*)>;
+    using FnPrototype = void(*)(int, CtorDtorOrderRecorder*);
     {
         auto [fn, v, r] = NewFunction<FnPrototype>("testfn");
         fn.SetBody(
@@ -639,8 +639,8 @@ TEST(SanityCatchThrow, ThrowSanity_8)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("testfn");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         std::vector<int> tmp;

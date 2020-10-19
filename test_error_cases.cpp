@@ -13,7 +13,7 @@ TEST(SanityError, ReturnTypeMismatch)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
 
     fn.SetBody(Return(Literal<double>(1.2)));
@@ -31,13 +31,13 @@ TEST(SanityError, CallPrototypeMismatch_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("CalleeFn");
     fn.SetBody();
 
-    using BadFnPrototype = std::function<void(double)>;
+    using BadFnPrototype = void(*)(double);
 
-    using FnPrototype2 = std::function<void(void)>;
+    using FnPrototype2 = void(*)();
     auto [fn2] = NewFunction<FnPrototype2>("BadFn");
 
     // caller use mismatched prototype to call callee
@@ -57,13 +57,13 @@ TEST(SanityError, CallPrototypeMismatch_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(int)>;
+    using FnPrototype = void(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("CalleeFn");
     fn.SetBody();
 
-    using BadFnPrototype = std::function<void(int, int)>;
+    using BadFnPrototype = void(*)(int, int);
 
-    using FnPrototype2 = std::function<void(void)>;
+    using FnPrototype2 = void(*)();
     auto [fn2] = NewFunction<FnPrototype2>("BadFn");
 
     // caller use mismatched prototype to call callee
@@ -83,13 +83,13 @@ TEST(SanityError, CallPrototypeMismatch_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("CalleeFn");
     fn.SetBody(Return(Literal<int>(1)));
 
-    using BadFnPrototype = std::function<void(void)>;
+    using BadFnPrototype = void(*)();
 
-    using FnPrototype2 = std::function<void(void)>;
+    using FnPrototype2 = void(*)();
     auto [fn2] = NewFunction<FnPrototype2>("BadFn");
 
     // caller use mismatched prototype to call callee
@@ -109,7 +109,7 @@ TEST(SanityError, CallPrototypeMismatch_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(void)>;
+    using FnPrototype = void(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
 
     fn.SetBody(Call<FnPrototype>("NonexistentFn"));
@@ -127,7 +127,7 @@ TEST(SanityError, ReuseAstNode)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
 
     auto x = Call<FnPrototype>("BadFn", param - Literal<int>(1));
@@ -146,7 +146,7 @@ TEST(SanityError, UseVarInOtherFn_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("Fn1");
     auto v = fn.NewVariable<int>();
     fn.SetBody(
@@ -173,7 +173,7 @@ TEST(SanityError, UseVarInOtherFn_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("Fn1");
     auto v = fn.NewVariable<int>();
     fn.SetBody();
@@ -196,7 +196,7 @@ TEST(SanityError, UseVarInOtherFn_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("Fn1");
     auto v = fn.NewVariable<int>();
     fn.SetBody(
@@ -222,7 +222,7 @@ TEST(SanityError, UseVarInOtherFn_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     // We validate functions in alphabetic order of their function names.
     // This time we are validating AFn1 before BadFn. The error should still be detected.
     //
@@ -251,7 +251,7 @@ TEST(SanityError, UseUndeclaredVar)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -272,7 +272,7 @@ TEST(SanityError, RedeclareVar_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(void)>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -294,7 +294,7 @@ TEST(SanityError, RedeclareVar_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         Declare(param, Literal<int>(1)),
@@ -314,7 +314,7 @@ TEST(SanityError, RedeclareVar_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -341,7 +341,7 @@ TEST(SanityNoError, DeclareVarCornerCaseDoesNotCrash)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("TronFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -355,8 +355,8 @@ TEST(SanityNoError, DeclareVarCornerCaseDoesNotCrash)
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("TronFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("TronFn");
     std::ignore = interpFn();
 
     thread_pochiVMContext->m_curModule->EmitIR();
@@ -386,7 +386,7 @@ TEST(SanityError, UseOutOfScopeVar_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -411,7 +411,7 @@ TEST(SanityError, UseOutOfScopeVar_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -436,7 +436,7 @@ TEST(SanityError, UseOutOfScopeVar_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -460,7 +460,7 @@ TEST(SanityError, UseOutOfScopeVar_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -486,7 +486,7 @@ TEST(Sanity, BlockHasNoScopeEffect)
 
     // 'Block' construct, unlike scope, should not destroy variables
     //
-    using FnPrototype = std::function<int()>;
+    using FnPrototype = int(*)();
     auto [fn] = NewFunction<FnPrototype>("GoodFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -502,8 +502,8 @@ TEST(Sanity, BlockHasNoScopeEffect)
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("GoodFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("GoodFn");
     int ret = interpFn();
     ReleaseAssert(ret == 3);
 
@@ -532,7 +532,7 @@ TEST(SanityError, BreakNotInLoop)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void()>;
+    using FnPrototype = void(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         Break()
@@ -551,7 +551,7 @@ TEST(SanityError, ContinueNotInLoop)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void()>;
+    using FnPrototype = void(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         Continue()
@@ -570,7 +570,7 @@ TEST(SanityError, NoReturnValue)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto v = fn.NewVariable<int>("myVarName");
     fn.SetBody(
@@ -585,8 +585,8 @@ TEST(SanityError, NoReturnValue)
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("BadFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("BadFn");
 
 #ifdef TESTBUILD
     // having no return value fires a TestAssert
@@ -611,7 +611,7 @@ TEST(SanityError, Unreachable_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void()>;
+    using FnPrototype = void(*)();
     auto [fn] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         Return(),
@@ -631,7 +631,7 @@ TEST(SanityError, Unreachable_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         If(param == Literal<int>(1)).Then(
@@ -655,7 +655,7 @@ TEST(SanityError, Unreachable_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -679,7 +679,7 @@ TEST(SanityError, Unreachable_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -707,7 +707,7 @@ TEST(SanityError, Unreachable_5)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -731,7 +731,7 @@ TEST(SanityError, Unreachable_6)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -763,7 +763,7 @@ TEST(SanityError, Unreachable_7)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         If(param == Literal<int>(1)).Then(
@@ -786,7 +786,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         For(If(param > Literal<int>(0)).Then(Break()), param > Literal<int>(0), Block()).Do(),
@@ -806,7 +806,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         For(Block(), param > Literal<int>(0), If(param > Literal<int>(0)).Then(Continue())).Do(),
@@ -826,7 +826,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         For(Block(), param > Literal<int>(0), If(param > Literal<int>(0)).Then(Return(param))).Do(),
@@ -846,7 +846,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         For(For(Block(), Literal<bool>(true), Block()).Do(), param > Literal<int>(0), Block()).Do(),
@@ -866,7 +866,7 @@ TEST(SanityError, ForLoopInitStepBlockLimitation_5)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     fn.SetBody(
         For(Block(), param > Literal<int>(0), While(Literal<bool>(false)).Do()).Do(),
@@ -886,7 +886,7 @@ TEST(SanityError, ForLoopStepBlockLimitation)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("BadFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -908,7 +908,7 @@ TEST(SanityNoError, NoUnreachable_1)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     fn.SetBody(
         If(param == Literal<int>(1)).Then(
@@ -937,7 +937,7 @@ TEST(SanityNoError, NoUnreachable_2)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     fn.SetBody(
         If(param == Literal<int>(1)).Then(
@@ -968,7 +968,7 @@ TEST(SanityNoError, NoUnreachable_3)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -1002,7 +1002,7 @@ TEST(SanityNoError, NoUnreachable_4)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     auto i = fn.NewVariable<int>();
     fn.SetBody(
@@ -1042,7 +1042,7 @@ TEST(SanityNoError, NoUnreachable_5)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     fn.SetBody(
         While(param > Literal<int>(0)).Do(
@@ -1076,7 +1076,7 @@ TEST(SanityNoError, NoUnreachable_6)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     fn.SetBody(
         While(param > Literal<int>(0)).Do(
@@ -1108,7 +1108,7 @@ TEST(SanityNoError, NoUnreachable_7)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, param] = NewFunction<FnPrototype>("GoodFn");
     fn.SetBody(
         While(param > Literal<int>(0)).Do(

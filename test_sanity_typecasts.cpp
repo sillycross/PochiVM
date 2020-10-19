@@ -32,7 +32,7 @@ void TestEachInterestingIntParam(const std::function<void(uint64_t)>& testFn)
 template<typename T, typename U>
 std::function<U(T)> GetStaticCastFn()
 {
-    using FnPrototype = std::function<U(T)>;
+    using FnPrototype = U(*)(T);
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
     fn.SetBody(Return(StaticCast<U>(val)));
@@ -50,9 +50,9 @@ std::function<U(T)> GetStaticCastFn()
 
     FnPrototype jitFn = jit->GetFunction<FnPrototype>("MyFn");
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
-    ReleaseAssert(interpFn != nullptr);
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+    ReleaseAssert(interpFn);
 
     return [jitFn, interpFn](T value) -> U {
         U out1 = interpFn(value);
@@ -257,7 +257,7 @@ TEST(Sanity, ReinterpretCast_1)
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     double x = 123.4;
-    using FnPrototype = std::function<uint64_t*(double*)>;
+    using FnPrototype = uint64_t*(*)(double*);
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
     fn.SetBody(Return(ReinterpretCast<uint64_t*>(val)));
@@ -265,8 +265,8 @@ TEST(Sanity, ReinterpretCast_1)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
     union {
         double vd;
@@ -285,7 +285,7 @@ TEST(Sanity, ReinterpretCast_2)
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     double x = 123.4;
-    using FnPrototype = std::function<uint64_t(double*)>;
+    using FnPrototype = uint64_t(*)(double*);
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
     fn.SetBody(Return(ReinterpretCast<uint64_t>(val)));
@@ -293,8 +293,8 @@ TEST(Sanity, ReinterpretCast_2)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
     ReleaseAssert(interpFn(&x) == reinterpret_cast<uintptr_t>(&x));
 }
@@ -308,7 +308,7 @@ TEST(Sanity, ReinterpretCast_3)
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
     double x = 123.4;
-    using FnPrototype = std::function<double*(uint64_t)>;
+    using FnPrototype = double*(*)(uint64_t);
     auto [fn, val] = NewFunction<FnPrototype>("MyFn");
 
     fn.SetBody(Return(ReinterpretCast<double*>(val)));
@@ -316,8 +316,8 @@ TEST(Sanity, ReinterpretCast_3)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
     ReleaseAssert(interpFn(reinterpret_cast<uintptr_t>(&x)) == &x);
 }

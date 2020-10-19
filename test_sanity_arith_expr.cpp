@@ -39,14 +39,14 @@ void CompareResults(double v1, double v2, double r1, double r2)
 template<typename T>                                                             \
 std::function<void(T, T)> fnName()                                               \
 {                                                                                \
-    using FnPrototype = std::function<retType(T, T)>;                            \
+    using FnPrototype = retType(*)(T, T);                                        \
     auto [fn, val1, val2] = NewFunction<FnPrototype>("MyFn");                    \
     fn.SetBody(Return(val1 opName val2));                                        \
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());               \
-    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();                      \
-    FnPrototype interpFn = thread_pochiVMContext->m_curModule->                  \
-                           GetGeneratedFunctionInterpMode<FnPrototype>("MyFn");  \
-    ReleaseAssert(interpFn != nullptr);                                          \
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();                 \
+    auto interpFn = thread_pochiVMContext->m_curModule->                         \
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn"); \
+    ReleaseAssert(interpFn);                                                     \
                                                                                  \
     thread_pochiVMContext->m_curModule->EmitIR();                                \
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();              \
@@ -55,7 +55,7 @@ std::function<void(T, T)> fnName()                                              
     jit->SetModule(thread_pochiVMContext->m_curModule);                          \
                                                                                  \
     FnPrototype jitFn = jit->GetFunction<FnPrototype>("MyFn");                   \
-    FnPrototype gold = [](T v1, T v2) -> retType {                               \
+    auto gold = [](T v1, T v2) -> retType {                                      \
         return v1 opName v2;                                                     \
     };                                                                           \
     std::function<void(T,T)> compare = [gold, interpFn, jitFn](T v1, T v2) {     \

@@ -912,7 +912,7 @@ GEN_FUNCTION_SELECTOR(void_safe_store_value_selector,
                       not_cpp_class_type)
 
 // function_type_helper<T>:
-//    T must be a C style function pointer or a std::function
+//    T must be a C style function pointer
 //    gives information about arg and return types of the function
 //
 template<typename R, typename... Args>
@@ -951,27 +951,7 @@ template<typename T>
 struct function_type_helper
 {
     static_assert(sizeof(T) == 0,
-                  "T must be a C-style function or std::function");
-};
-
-template<typename R, typename... Args>
-struct function_type_helper<std::function<R(Args...)> >
-    : function_type_helper_internal<R, Args...>
-{
-    using ReturnType = typename function_type_helper_internal<R, Args...>::ReturnType;
-
-    template<size_t i>
-    using ArgType = typename function_type_helper_internal<R, Args...>::template ArgType<i>;
-};
-
-template<typename R, typename... Args>
-struct function_type_helper<std::function<R(Args...) noexcept> >
-    : function_type_helper_internal<R, Args...>
-{
-    using ReturnType = typename function_type_helper_internal<R, Args...>::ReturnType;
-
-    template<size_t i>
-    using ArgType = typename function_type_helper_internal<R, Args...>::template ArgType<i>;
+                  "T must be a C-style function");
 };
 
 template<typename R, typename... Args>
@@ -1001,7 +981,7 @@ template<typename T, size_t i>
 using function_arg_type = typename function_type_helper<T>::template ArgType<i>;
 
 // is_function_prototype<T>
-// true_type if T is a C-style function pointer or a std::function object
+// true_type if T is a C-style function pointer
 //
 template<typename T>
 struct is_function_prototype : std::false_type
@@ -1012,19 +992,11 @@ struct is_function_prototype<R(*)(Args...)> : std::true_type
 { };
 
 template<typename R, typename... Args>
-struct is_function_prototype< std::function<R(Args...)> > : std::true_type
-{ };
-
-template<typename R, typename... Args>
 struct is_function_prototype<R(*)(Args...) noexcept> : std::true_type
 { };
 
-template<typename R, typename... Args>
-struct is_function_prototype< std::function<R(Args...) noexcept> > : std::true_type
-{ };
-
 // is_function_prototype<T>
-// true_type if T is a noexcept C-style function pointer or a std::function object
+// true_type if T is a noexcept C-style function pointer
 //
 template<typename T>
 struct is_noexcept_function_prototype : std::false_type
@@ -1034,17 +1006,13 @@ template<typename R, typename... Args>
 struct is_noexcept_function_prototype<R(*)(Args...) noexcept> : std::true_type
 { };
 
-template<typename R, typename... Args>
-struct is_noexcept_function_prototype< std::function<R(Args...) noexcept> > : std::true_type
-{ };
-
 // function_addr_to_callable<T>::get(void* addr):
-//    Converts addr to a callable of type T, which may be a C-style function pointer or a std::function object.
+//    Converts addr to a callable of type T, which must be a C-style function pointer
 //
 template<typename T>
 struct function_addr_to_callable
 {
-    static_assert(sizeof(T) == 0, "T must be either a C-style function pointer or a std::function object");
+    static_assert(sizeof(T) == 0, "T must be a C-style function pointer ");
 };
 
 template<typename R, typename... Args>
@@ -1065,44 +1033,6 @@ struct function_addr_to_callable<R(*)(Args...) noexcept>
     {
         return reinterpret_cast<FnPrototype>(fnAddr);
     }
-};
-
-template<typename R, typename... Args>
-struct function_addr_to_callable<std::function<R(Args...)>>
-{
-    using FnPrototype = std::function<R(Args...)>;
-    static FnPrototype get(void* fnAddr)
-    {
-        return FnPrototype(reinterpret_cast<R(*)(Args...)>(fnAddr));
-    }
-};
-
-// callable_to_c_style_fnptr_type<T>::type
-//    If T is a std::function object, the result is its holding C-style function pointer type
-//    If T is a C-style function pointer type, the result is still T.
-//
-template<typename T>
-struct callable_to_c_style_fnptr_type
-{
-    static_assert(sizeof(T) == 0, "T must be either a C-style function pointer or a std::function object");
-};
-
-template<typename R, typename... Args>
-struct callable_to_c_style_fnptr_type<R(*)(Args...)>
-{
-    using type = R(*)(Args...);
-};
-
-template<typename R, typename... Args>
-struct callable_to_c_style_fnptr_type<R(*)(Args...) noexcept>
-{
-    using type = R(*)(Args...) noexcept;
-};
-
-template<typename R, typename... Args>
-struct callable_to_c_style_fnptr_type<std::function<R(Args...)>>
-{
-    using type = R(*)(Args...);
 };
 
 // Concatenate tuple types. Example:

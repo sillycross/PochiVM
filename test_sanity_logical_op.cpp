@@ -19,7 +19,7 @@ using SimulationFn = std::function<bool(int32_t*, bool*)>;
 std::tuple<Value<bool>, SimulationFn>
 Build(Value<int32_t*> dst, Value<bool>* vars, int numVars, uint64_t& cnt)
 {
-    using SideEffectFn = std::function<bool(bool, int32_t*, uint64_t)>;
+    using SideEffectFn = bool(*)(bool, int32_t*, uint64_t);
 
     cnt++;
     uint64_t ord = cnt;
@@ -63,7 +63,6 @@ Build(Value<int32_t*> dst, Value<bool>* vars, int numVars, uint64_t& cnt)
 
 const static int x_numVars = 10;
 using GeneratedFn = bool(*)(int32_t*, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool) noexcept;
-using InterpGeneratedFn = std::function<bool(int32_t*, bool, bool, bool, bool, bool, bool, bool, bool, bool, bool)>;
 
 void CheckOnce()
 {
@@ -100,8 +99,8 @@ void CheckOnce()
     thread_pochiVMContext->m_curModule->EmitIR();
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
 
-    InterpGeneratedFn interpFn = thread_pochiVMContext->m_curModule->
-                           GetGeneratedFunctionInterpMode<InterpGeneratedFn>("testFn");
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<GeneratedFn>("testFn");
 
     FastInterpFunction<GeneratedFn> fastinterpFn = thread_pochiVMContext->m_curModule->
                 GetFastInterpGeneratedFunction<GeneratedFn>("testFn");
@@ -163,8 +162,8 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<bool(int32_t*, bool, bool)>;
-    using SideEffectFn = std::function<bool(bool, int32_t*, uint64_t)>;
+    using FnPrototype = bool(*)(int32_t*, bool, bool);
+    using SideEffectFn = bool(*)(bool, int32_t*, uint64_t);
 
     {
         auto [fn, r, dst, offset] = NewFunction<SideEffectFn>("f", "r", "dst", "offset");
@@ -244,7 +243,7 @@ TEST(SanityIrCodeDump, LogicalOp)
         return r;
     };
 
-    auto checkOne = [](const FnPrototype& fn, const FnPrototype& gold, bool a, bool b)
+    auto checkOne = [](const FnPrototype& fn, const std::function<std::remove_pointer_t<FnPrototype>>& gold, bool a, bool b)
     {
         const int sz = 7;
         int32_t d1[sz]; memset(d1, 0, sizeof(int32_t) * sz);
@@ -258,7 +257,7 @@ TEST(SanityIrCodeDump, LogicalOp)
         }
     };
 
-    auto check = [checkOne](const FnPrototype& fn, const FnPrototype& gold) {
+    auto check = [checkOne](const FnPrototype& fn, const std::function<std::remove_pointer_t<FnPrototype>>& gold) {
         checkOne(fn, gold, false, false);
         checkOne(fn, gold, false, true);
         checkOne(fn, gold, true, false);
@@ -270,7 +269,7 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_and");
-        FnPrototype gold = [f](int32_t* dst, bool a, bool b) ->bool {
+        auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(a, dst, 1) && f(b, dst, 2);
         };
         check(jitFn, gold);
@@ -278,7 +277,7 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_or");
-        FnPrototype gold = [f](int32_t* dst, bool a, bool b) ->bool {
+        auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(a, dst, 1) || f(b, dst, 2);
         };
         check(jitFn, gold);
@@ -286,7 +285,7 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_3");
-        FnPrototype gold = [f](int32_t* dst, bool a, bool b) ->bool {
+        auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return !f(a, dst, 1) || f(b, dst, 2);
         };
         check(jitFn, gold);
@@ -294,7 +293,7 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_4");
-        FnPrototype gold = [f](int32_t* dst, bool a, bool b) ->bool {
+        auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return (!f(a, dst, 1) && f(b, dst, 2)) || (f(a || !b, dst, 3));
         };
         check(jitFn, gold);
@@ -302,7 +301,7 @@ TEST(SanityIrCodeDump, LogicalOp)
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_5");
-        FnPrototype gold = [f](int32_t* dst, bool a, bool b) ->bool {
+        auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(f(a, dst, 1) || f(b, dst, 2), dst, 3) && !f(f(a, dst, 4) && f(b, dst, 5), dst, 6);
         };
         check(jitFn, gold);

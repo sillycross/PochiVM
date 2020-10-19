@@ -167,7 +167,7 @@ void NewFunctionSetParamNamesHelper(Function& fn, size_t i, const char* name, Ta
 
 // Usage:
 //   auto [ fn, param1, param2 ... ] = NewFunction<Prototype>(fnName, [nameParam1, nameParam2...])
-//   Prototype may be a C-style function pointer or a std::function
+//   Prototype must be a C-style function pointer
 //   Parameter names are optional, but if specified, must specify for all parameters.
 //
 // Example:
@@ -178,7 +178,7 @@ template<typename T, typename... Targs>
 FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramNames)
 {
     static_assert(AstTypeHelper::is_function_prototype<T>::value,
-                  "T must be either a C-style function pointer type or a std::function object");
+                  "T must be a C-style function pointer type");
 
     using FnInfo = AstTypeHelper::function_type_helper<T>;
     static_assert(sizeof...(Targs) == 0 || sizeof...(Targs) == FnInfo::numArgs,

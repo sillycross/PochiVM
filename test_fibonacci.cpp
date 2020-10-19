@@ -30,8 +30,8 @@ TEST(Sanity, FibonacciSeq)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        std::function<uint64_t(int)> interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<std::function<uint64_t(int)>>("fib_nth");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("fib_nth");
         uint64_t ret = interpFn(20);
         ReleaseAssert(ret == 6765);
     }

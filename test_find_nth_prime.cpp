@@ -14,7 +14,7 @@ TEST(Sanity, FindNthPrime)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<int(int)>;
+    using FnPrototype = int(*)(int);
     auto [fn, n] = NewFunction<FnPrototype>("find_nth_prime", "n");
 
     auto i = fn.NewVariable<int>("i");
@@ -49,8 +49,8 @@ TEST(Sanity, FindNthPrime)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("find_nth_prime");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("find_nth_prime");
         int ret = interpFn(1000);
         ReleaseAssert(ret == 7919);
     }

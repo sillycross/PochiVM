@@ -37,7 +37,7 @@ TEST(Sanity, LinkedListChasing)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<uint64_t(void*)>;
+    using FnPrototype = uint64_t(*)(void*);
 
     {
         auto [fn, head] = NewFunction<FnPrototype>("compute_linked_list_sum", "p");
@@ -69,8 +69,8 @@ TEST(Sanity, LinkedListChasing)
     }
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("compute_linked_list_sum");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("compute_linked_list_sum");
 
         uint64_t ret = interpFn(head);
         ReleaseAssert(ret == expectedSum);
@@ -103,7 +103,7 @@ TEST(Sanity, StoreIntoLocalVar)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype1 = std::function<void(int*, int)>;
+    using FnPrototype1 = void(*)(int*, int);
     {
         auto [fn, addr, value] = NewFunction<FnPrototype1>("store_value");
         fn.SetBody(
@@ -118,7 +118,7 @@ TEST(Sanity, StoreIntoLocalVar)
         );
     }
 
-    using FnPrototype2 = std::function<int(int, int)>;
+    using FnPrototype2 = int(*)(int, int);
     {
         auto [fn, value1, value2] = NewFunction<FnPrototype2>("a_plus_b_plus_233");
         auto ret = fn.NewVariable<int>();
@@ -136,15 +136,15 @@ TEST(Sanity, StoreIntoLocalVar)
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
-        FnPrototype2 interpFn = thread_pochiVMContext->m_curModule->
-                                GetGeneratedFunctionInterpMode<FnPrototype2>("a_plus_b_plus_233");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                                GetDebugInterpGeneratedFunction<FnPrototype2>("a_plus_b_plus_233");
 
         ReleaseAssert(interpFn(123, 456) == 123 + 456 + 233);
     }
 
     {
-        FnPrototype1 interpFn = thread_pochiVMContext->m_curModule->
-                                GetGeneratedFunctionInterpMode<FnPrototype1>("store_value");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                                GetDebugInterpGeneratedFunction<FnPrototype1>("store_value");
 
         int x = 29310923;
         interpFn(&x, 101);
@@ -152,8 +152,8 @@ TEST(Sanity, StoreIntoLocalVar)
     }
 
     {
-        FnPrototype1 interpFn = thread_pochiVMContext->m_curModule->
-                                GetGeneratedFunctionInterpMode<FnPrototype1>("inc_value");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                                GetDebugInterpGeneratedFunction<FnPrototype1>("inc_value");
 
         int x = 12345;
         interpFn(&x, 543);
@@ -203,7 +203,7 @@ TEST(Sanity, BoolDeref)
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
-    using FnPrototype = std::function<void(bool*, bool)>;
+    using FnPrototype = void(*)(bool*, bool);
     {
         auto [fn, addr, value] = NewFunction<FnPrototype>("store_bool");
         fn.SetBody(
@@ -217,8 +217,8 @@ TEST(Sanity, BoolDeref)
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
-        FnPrototype interpFn = thread_pochiVMContext->m_curModule->
-                               GetGeneratedFunctionInterpMode<FnPrototype>("store_bool");
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("store_bool");
 
         bool x;
         interpFn(&x, true);
