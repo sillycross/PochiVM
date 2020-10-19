@@ -4,27 +4,82 @@
 namespace PochiVM
 {
 
-FastInterpSnippet WARN_UNUSED AstArithmeticExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+void AstArithmeticExpr::FastInterpSetupSpillLocation()
 {
+    TestAssert(m_fiInlineShape == FIShape::INVALID);
+    Auto(TestAssert(m_fiInlineShape != FIShape::INVALID));
+
     // Case 1: fully inline shape
     // FIFullyInlinedArithmeticExprImpl
     //
     {
         AstFISimpleOperandShape lhs = AstFISimpleOperandShape::TryMatch(m_lhs);
-        if (!lhs.MatchOK())
+        if (lhs.MatchOK())
         {
-            goto match_case2;
+            AstFISimpleOperandShape rhs = AstFISimpleOperandShape::TryMatch(m_rhs);
+            if (rhs.MatchOK())
+            {
+                if (!(rhs.m_kind == FISimpleOperandShapeCategory::ZERO &&
+                      (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)))
+                {
+                    m_fiInlineShape = FIShape::INLINE_BOTH;
+                    return;
+                }
+            }
         }
+    }
+
+    // Case 2: partially inline shape (LHS/RHS)
+    // FIPartialInlineArithmeticExprImpl
+    //
+    {
+        AstFIOperandShape matchSide = AstFIOperandShape::TryMatch(m_lhs);
+        if (matchSide.MatchOK())
+        {
+            m_fiInlineShape = FIShape::INLINE_LHS;
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            m_rhs->FastInterpSetupSpillLocation();
+            return;
+        }
+
+        matchSide = AstFIOperandShape::TryMatch(m_rhs);
+        if (matchSide.MatchOK() && !(matchSide.m_kind == FIOperandShapeCategory::ZERO &&
+                                     (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)))
+        {
+            m_fiInlineShape = FIShape::INLINE_RHS;
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            m_lhs->FastInterpSetupSpillLocation();
+            return;
+        }
+    }
+
+    // Case default: fully outlined shape
+    // FIOutlinedArithmeticExprImpl
+    //
+    {
+        m_fiInlineShape = FIShape::OUTLINE;
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        m_rhs->FastInterpSetupSpillLocation();
+        FISpillLocation spillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        m_fiIsLhsSpill = !spillLoc.IsNoSpill();
+        m_lhs->FastInterpSetupSpillLocation();
+    }
+}
+
+FastInterpSnippet WARN_UNUSED AstArithmeticExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    if (m_fiInlineShape == FIShape::INLINE_BOTH)
+    {
+        // Case 1: fully inline shape
+        // FIFullyInlinedArithmeticExprImpl
+        //
+        AstFISimpleOperandShape lhs = AstFISimpleOperandShape::TryMatch(m_lhs);
+        TestAssert(lhs.MatchOK());
         AstFISimpleOperandShape rhs = AstFISimpleOperandShape::TryMatch(m_rhs);
-        if (!rhs.MatchOK())
-        {
-            goto match_case2;
-        }
-        if (rhs.m_kind == FISimpleOperandShapeCategory::ZERO &&
-            (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV))
-        {
-            goto match_case2;
-        }
+        TestAssert(rhs.MatchOK());
+        TestAssert(!(rhs.m_kind == FISimpleOperandShapeCategory::ZERO &&
+            (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)));
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
         FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
@@ -44,33 +99,23 @@ FastInterpSnippet WARN_UNUSED AstArithmeticExpr::PrepareForFastInterp(FISpillLoc
             inst, inst
         };
     }
-
-match_case2:;
-    // Case 2: partially inline shape (LHS/RHS)
-    // FIPartialInlineArithmeticExprImpl
-    //
+    else if (m_fiInlineShape == FIShape::INLINE_LHS || m_fiInlineShape == FIShape::INLINE_RHS)
     {
-        bool isInlineSideLhs;
-        AstFIOperandShape matchSide = AstFIOperandShape::TryMatch(m_lhs);
-        if (matchSide.MatchOK())
+        bool isInlineSideLhs = (m_fiInlineShape == FIShape::INLINE_LHS);
+        AstFIOperandShape matchSide;
+        if (m_fiInlineShape == FIShape::INLINE_LHS)
         {
-            isInlineSideLhs = true;
+            matchSide = AstFIOperandShape::TryMatch(m_lhs);
+            TestAssert(matchSide.MatchOK());
         }
         else
         {
             matchSide = AstFIOperandShape::TryMatch(m_rhs);
-            if (matchSide.MatchOK() && !(matchSide.m_kind == FIOperandShapeCategory::ZERO &&
-                                         (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)))
-            {
-                isInlineSideLhs = false;
-            }
-            else
-            {
-                goto match_case3;
-            }
+            TestAssert(matchSide.MatchOK() && !(matchSide.m_kind == FIOperandShapeCategory::ZERO &&
+                                                (m_op == AstArithmeticExprType::MOD || m_op == AstArithmeticExprType::DIV)));
         }
 
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
         FastInterpSnippet outlineSide;
         if (isInlineSideLhs)
         {
@@ -107,16 +152,17 @@ match_case2:;
         spillLoc.PopulatePlaceholderIfSpill(inst, 0);
         return outlineSide.AddContinuation(inst);
     }
-
-match_case3:;
-    // Case default: fully outlined shape
-    // FIOutlinedArithmeticExprImpl
-    //
+    else
     {
-        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        // Case default: fully outlined shape
+        // FIOutlinedArithmeticExprImpl
+        //
+        TestAssert(m_fiInlineShape == FIShape::OUTLINE);
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId(), m_fiIsLhsSpill);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
         FastInterpSnippet rhs = m_rhs->PrepareForFastInterp(x_FINoSpill);
         FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        TestAssertIff(m_fiIsLhsSpill, !lhsSpillLoc.IsNoSpill());
         FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
@@ -136,27 +182,84 @@ match_case3:;
     }
 }
 
-FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+void AstComparisonExpr::FastInterpSetupSpillLocation()
 {
+    TestAssert(m_fiInlineShape == FIShape::INVALID);
+    Auto(TestAssert(m_fiInlineShape != FIShape::INVALID));
+
     // Case 1: fully inline shape
     // FIFullyInlinedComparisonExprImpl
     //
     {
         AstFISimpleOperandShape lhs = AstFISimpleOperandShape::TryMatch(m_lhs);
-        if (!lhs.MatchOK())
+        if (lhs.MatchOK())
         {
-            goto match_case2;
+            AstFISimpleOperandShape rhs = AstFISimpleOperandShape::TryMatch(m_rhs);
+            if (rhs.MatchOK())
+            {
+                if (!(lhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO &&
+                      rhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO))
+                {
+                    m_fiInlineShape = FIShape::INLINE_BOTH;
+                    return;
+                }
+            }
         }
+    }
+
+    // Case 2: partially inline shape (LHS/RHS)
+    // FIPartialInlinedComparisonExprImpl
+    //
+    {
+        AstFIOperandShape matchSide = AstFIOperandShape::TryMatch(m_lhs);
+        if (matchSide.MatchOK())
+        {
+            m_fiInlineShape = FIShape::INLINE_LHS;
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            m_rhs->FastInterpSetupSpillLocation();
+            return;
+        }
+
+
+        matchSide = AstFIOperandShape::TryMatch(m_rhs);
+        if (matchSide.MatchOK())
+        {
+            m_fiInlineShape = FIShape::INLINE_RHS;
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+            m_lhs->FastInterpSetupSpillLocation();
+            return;
+        }
+    }
+
+    // Case default: fully outlined shape
+    // FIOutlinedComparisonExprImpl
+    //
+    {
+        m_fiInlineShape = FIShape::OUTLINE;
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        m_rhs->FastInterpSetupSpillLocation();
+        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        m_fiIsLhsSpill = !lhsSpillLoc.IsNoSpill();
+        m_lhs->FastInterpSetupSpillLocation();
+    }
+}
+
+FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    TestAssert(m_fiInlineShape != FIShape::INVALID);
+
+    if (m_fiInlineShape == FIShape::INLINE_BOTH)
+    {
+        // Case 1: fully inline shape
+        // FIFullyInlinedComparisonExprImpl
+        //
+        AstFISimpleOperandShape lhs = AstFISimpleOperandShape::TryMatch(m_lhs);
+        TestAssert(lhs.MatchOK());
         AstFISimpleOperandShape rhs = AstFISimpleOperandShape::TryMatch(m_rhs);
-        if (!rhs.MatchOK())
-        {
-            goto match_case2;
-        }
-        if (lhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO &&
-            rhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO)
-        {
-            goto match_case2;
-        }
+        TestAssert(rhs.MatchOK());
+        TestAssert(!(lhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO &&
+                     rhs.m_kind == FISimpleOperandShapeCategory::LITERAL_NONZERO));
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
 
@@ -176,31 +279,25 @@ FastInterpSnippet WARN_UNUSED AstComparisonExpr::PrepareForFastInterp(FISpillLoc
             inst, inst
         };
     }
-
-match_case2:;
-    // Case 2: partially inline shape (LHS/RHS)
-    // FIPartialInlinedComparisonExprImpl
-    //
+    else if (m_fiInlineShape == FIShape::INLINE_LHS || m_fiInlineShape == FIShape::INLINE_RHS)
     {
-        bool isInlineSideLhs;
-        AstFIOperandShape matchSide = AstFIOperandShape::TryMatch(m_lhs);
-        if (matchSide.MatchOK())
+        // Case 2: partially inline shape (LHS/RHS)
+        // FIPartialInlinedComparisonExprImpl
+        //
+        bool isInlineSideLhs = (m_fiInlineShape == FIShape::INLINE_LHS);
+        AstFIOperandShape matchSide;
+        if (m_fiInlineShape == FIShape::INLINE_LHS)
         {
-            isInlineSideLhs = true;
+            matchSide = AstFIOperandShape::TryMatch(m_lhs);
+            TestAssert(matchSide.MatchOK());
         }
         else
         {
             matchSide = AstFIOperandShape::TryMatch(m_rhs);
-            if (matchSide.MatchOK())
-            {
-                isInlineSideLhs = false;
-            }
-            else
-            {
-                goto match_case3;
-            }
+            TestAssert(matchSide.MatchOK());
         }
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
         FastInterpSnippet outlineSide;
         if (isInlineSideLhs)
         {
@@ -232,16 +329,18 @@ match_case2:;
        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
        return outlineSide.AddContinuation(inst);
     }
-
-match_case3:;
-    // Case default: fully outlined shape
-    // FIOutlinedComparisonExprImpl
-    //
+    else
     {
-        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId());
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId());
+        // Case default: fully outlined shape
+        // FIOutlinedComparisonExprImpl
+        //
+        TestAssert(m_fiInlineShape == FIShape::OUTLINE);
+
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(GetTypeId(), m_fiIsLhsSpill);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId()));
         FastInterpSnippet rhs = m_rhs->PrepareForFastInterp(x_FINoSpill);
         FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        TestAssertIff(m_fiIsLhsSpill, !lhsSpillLoc.IsNoSpill());
         FastInterpSnippet lhs = m_lhs->PrepareForFastInterp(lhsSpillLoc);
 
         FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();

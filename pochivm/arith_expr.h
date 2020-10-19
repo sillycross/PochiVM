@@ -15,7 +15,7 @@ class AstArithmeticExpr : public AstNodeBase
 public:
     AstArithmeticExpr(AstArithmeticExprType op, AstNodeBase* lhs, AstNodeBase* rhs)
         : AstNodeBase(AstNodeType::AstArithmeticExpr, lhs->GetTypeId())
-        , m_op(op), m_lhs(lhs), m_rhs(rhs)
+        , m_op(op), m_fiInlineShape(FIShape::INVALID), m_lhs(lhs), m_rhs(rhs)
     {
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
         TestAssert(m_lhs->GetTypeId().IsPrimitiveType());
@@ -112,8 +112,21 @@ public:
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
+
+    enum FIShape : int16_t
+    {
+        INVALID,
+        INLINE_BOTH,
+        INLINE_LHS,
+        INLINE_RHS,
+        OUTLINE
+    };
 
     AstArithmeticExprType m_op;
+    FIShape m_fiInlineShape;
+    bool m_fiIsLhsSpill;
+
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };
@@ -126,7 +139,7 @@ class AstComparisonExpr : public AstNodeBase
 public:
     AstComparisonExpr(AstComparisonExprType op, AstNodeBase* lhs, AstNodeBase* rhs)
         : AstNodeBase(AstNodeType::AstComparisonExpr, TypeId::Get<bool>())
-        , m_op(op), m_lhs(lhs), m_rhs(rhs)
+        , m_op(op), m_fiInlineShape(FIShape::INVALID), m_lhs(lhs), m_rhs(rhs)
     {
         TestAssert(m_lhs->GetTypeId() == m_rhs->GetTypeId());
         TestAssert(m_lhs->GetTypeId().IsPrimitiveType());
@@ -250,8 +263,21 @@ public:
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
+
+    enum FIShape : int16_t
+    {
+        INVALID,
+        INLINE_BOTH,
+        INLINE_LHS,
+        INLINE_RHS,
+        OUTLINE
+    };
 
     AstComparisonExprType m_op;
+    FIShape m_fiInlineShape;
+    bool m_fiIsLhsSpill;
+
     AstNodeBase* m_lhs;
     AstNodeBase* m_rhs;
 };

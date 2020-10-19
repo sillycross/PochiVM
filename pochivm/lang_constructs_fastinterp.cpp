@@ -34,6 +34,14 @@ FastInterpSnippet AstDereferenceVariableExpr::PrepareForFastInterp(FISpillLocati
     };
 }
 
+void AstBlock::FastInterpSetupSpillLocation()
+{
+    for (AstNodeBase* stmt : m_contents)
+    {
+        stmt->FastInterpSetupSpillLocation();
+    }
+}
+
 FastInterpSnippet WARN_UNUSED AstBlock::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
@@ -50,6 +58,14 @@ static FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstN
 {
     // TODO: implement
     return FastInterpSnippet();
+}
+
+void AstScope::FastInterpSetupSpillLocation()
+{
+    for (AstNodeBase* stmt : m_contents)
+    {
+        stmt->FastInterpSetupSpillLocation();
+    }
 }
 
 FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
@@ -89,6 +105,7 @@ template<bool isFavourTrueBranch>
 static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBase* cond)
 {
     TestAssert(cond->GetTypeId().IsBool());
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
     // Evaluate condition
     //
@@ -135,11 +152,13 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                 // FIPartialInlinedComparisonFavourTrueBranchImpl
                 // FIPartialInlinedComparisonUnpredictableBranchImpl
                 //
-                thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
+                TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(cmpType));
                 FastInterpSnippet snippet = expr->m_rhs->PrepareForFastInterp(x_FINoSpill);
 
                 FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
                 FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+                TestAssert(numOIP == static_cast<FINumOpaqueIntegralParams>(0));
+                TestAssert(numOFP == static_cast<FINumOpaqueFloatingParams>(0));
                 if (cmpType.IsFloatingPoint())
                 {
                     numOIP = FIOpaqueParamsHelper::GetMaxOIP();
@@ -171,11 +190,13 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
             // FIPartialInlinedComparisonFavourTrueBranchImpl
             // FIPartialInlinedComparisonUnpredictableBranchImpl
             //
-            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(cmpType);
+            TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(cmpType));
             FastInterpSnippet snippet = expr->m_lhs->PrepareForFastInterp(x_FINoSpill);
 
             FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
             FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+            TestAssert(numOIP == static_cast<FINumOpaqueIntegralParams>(0));
+            TestAssert(numOFP == static_cast<FINumOpaqueFloatingParams>(0));
             if (cmpType.IsFloatingPoint())
             {
                 numOIP = FIOpaqueParamsHelper::GetMaxOIP();
@@ -225,9 +246,10 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
             }
         }
 
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(TypeId::Get<bool>());
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(TypeId::Get<bool>()));
         FastInterpSnippet snippet = cond->PrepareForFastInterp(x_FINoSpill);
 
+        thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
         using BoilerplateName = typename std::conditional<isFavourTrueBranch,
                 FIOutlinedConditionalFavourTrueBranchImpl,
                 FIOutlinedConditionalUnpredictableBranchImpl>::type;
@@ -236,6 +258,16 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         FIOpaqueParamsHelper::GetMaxOFP()));
         return snippet.AddContinuation(condBrInst);
+    }
+}
+
+void AstIfStatement::FastInterpSetupSpillLocation()
+{
+    m_condClause->FastInterpSetupSpillLocation();
+    m_thenClause->FastInterpSetupSpillLocation();
+    if (HasElseClause())
+    {
+        m_elseClause->FastInterpSetupSpillLocation();
     }
 }
 
@@ -293,6 +325,12 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
     };
 }
 
+void AstWhileLoop::FastInterpSetupSpillLocation()
+{
+    m_condClause->FastInterpSetupSpillLocation();
+    m_body->FastInterpSetupSpillLocation();
+}
+
 FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
@@ -324,6 +362,14 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
     return FastInterpSnippet {
         condBrSnippet.m_entry, afterLoop
     };
+}
+
+void AstForLoop::FastInterpSetupSpillLocation()
+{
+    m_startClause->FastInterpSetupSpillLocation();
+    m_condClause->FastInterpSetupSpillLocation();
+    m_body->FastInterpSetupSpillLocation();
+    m_stepClause->FastInterpSetupSpillLocation();
 }
 
 FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))

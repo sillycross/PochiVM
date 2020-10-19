@@ -64,6 +64,7 @@ public:
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override { }
 
     const char* GetVarNameNoSuffix() const { return m_varname; }
     uint32_t GetVarSuffix() const { return m_varnameSuffix; }

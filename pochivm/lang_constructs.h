@@ -55,6 +55,7 @@ public:
     }
 
     virtual FastInterpSnippet PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override { }
 
     AstVariable* GetOperand() const
     {
@@ -115,6 +116,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
@@ -186,6 +188,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    void FastInterpSetupSpillLocation() override;
 
     void Append(AstNodeBase* stmt)
     {
@@ -254,6 +257,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
 private:
     AstNodeBase* m_condClause;
@@ -328,6 +332,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
 private:
     AstNodeBase* m_condClause;
@@ -422,6 +427,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
@@ -469,6 +475,7 @@ public:
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override { }
 
 private:
     // whether it is a break statement or a continue statement

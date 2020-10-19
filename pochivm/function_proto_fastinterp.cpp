@@ -1,9 +1,21 @@
-#include "fastinterp_ast_helper.hpp"
+﻿#include "fastinterp_ast_helper.hpp"
 #include "function_proto.h"
 #include "codegen_context.hpp"
 
 namespace PochiVM
 {
+
+void AstDeclareVariable::FastInterpSetupSpillLocation()
+{
+    if (m_assignExpr != nullptr)
+    {
+        m_assignExpr->FastInterpSetupSpillLocation();
+    }
+    else if (m_callExpr != nullptr)
+    {
+        m_callExpr->FastInterpSetupSpillLocation();
+    }
+}
 
 FastInterpSnippet WARN_UNUSED AstDeclareVariable::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
@@ -47,6 +59,19 @@ FastInterpSnippet WARN_UNUSED AstDeclareVariable::PrepareForFastInterp(FISpillLo
     TestAssert(thread_llvmContext->m_scopeStack.size() > 0);
     thread_llvmContext->m_scopeStack.back().second.push_back(m_variable);
     return result;
+}
+
+void AstReturnStmt::FastInterpSetupSpillLocation()
+{
+    if (m_retVal != nullptr)
+    {
+        AstFIOperandShape osc = AstFIOperandShape::TryMatch(m_retVal);
+        if (!osc.MatchOK())
+        {
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_retVal->GetTypeId());
+            m_retVal->FastInterpSetupSpillLocation();
+        }
+    }
 }
 
 FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
@@ -97,7 +122,7 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
     // FIOutlinedReturnImpl
     //
     {
-        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_retVal->GetTypeId());
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_retVal->GetTypeId()));
         FastInterpSnippet operand = m_retVal->PrepareForFastInterp(x_FINoSpill);
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
@@ -110,12 +135,44 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
     }
 }
 
+void AstCallExpr::FastInterpSetupSpillLocation()
+{
+    ReleaseAssert(!m_isCppFunction); // TODO handle cpp functions later
+    AstFunction* callee = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+    TestAssert(callee != nullptr);
+
+    thread_pochiVMContext->m_fastInterpStackFrameManager->ForceSpillAll();
+    thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(TypeId::Get<uint64_t>());
+
+    bool isNewSfSpilled = false;
+    m_fastInterpSpillNewSfAddrAt = static_cast<uint32_t>(m_params.size());
+    for (size_t index = 0; index < m_params.size(); index++)
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_params[index]->GetTypeId());
+        m_params[index]->FastInterpSetupSpillLocation();
+
+        if (!isNewSfSpilled)
+        {
+            FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
+            if (!newsfSpillLoc.IsNoSpill())
+            {
+                m_fastInterpSpillNewSfAddrAt = static_cast<uint32_t>(index);
+                isNewSfSpilled = true;
+            }
+        }
+    }
+
+    FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(TypeId::Get<uint64_t>());
+    TestAssertIff(isNewSfSpilled, !newsfSpillLoc.IsNoSpill());
+    std::ignore = newsfSpillLoc;
+}
+
 FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation spillLoc)
 {
     ReleaseAssert(!m_isCppFunction); // TODO handle cpp functions later
     AstFunction* callee = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
     TestAssert(callee != nullptr);
-    
+
     // We do not know the stack frame size right now.
     // We will fix it in the end after all functions are compiled,
     // at that time all stack frame sizes are known.
@@ -142,39 +199,43 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
 
     // Evaluate each parameter
     //
-    bool isNewSfSpilled = false;
+    TestAssert(0 <= m_fastInterpSpillNewSfAddrAt && m_fastInterpSpillNewSfAddrAt <= static_cast<uint32_t>(m_params.size()));
     for (size_t index = 0; index < m_params.size(); index++)
     {
+        if (m_fastInterpSpillNewSfAddrAt == static_cast<uint32_t>(index))
+        {
+            TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral() == static_cast<FINumOpaqueIntegralParams>(1));
+            TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat() == static_cast<FINumOpaqueFloatingParams>(0));
+            thread_pochiVMContext->m_fastInterpStackFrameManager->ForceSpillAll();
+        }
+
         // Evaluate parameter
         //
-        {
-            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_params[index]->GetTypeId());
-            FastInterpSnippet snippet = m_params[index]->PrepareForFastInterp(x_FINoSpill);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_params[index]->GetTypeId()));
+        FastInterpSnippet snippet = m_params[index]->PrepareForFastInterp(x_FINoSpill);
 
-            // If evaluating the parameter causes newStackFrame to be spilled to memory,
-            // we need to spill it before transfering control to match the expectation.
-            //
-            if (!isNewSfSpilled)
-            {
-                FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
-                if (!newsfSpillLoc.IsNoSpill())
-                {
-                    isNewSfSpilled = true;
-                    FastInterpBoilerplateInstance* spillOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                                FastInterpBoilerplateLibrary<FICallExprSpillStackAddrImpl>::SelectBoilerplateBluePrint(
-                                    false /*isFakeSpillForNoParamsCase*/));
-                    newsfSpillLoc.PopulatePlaceholderIfSpill(spillOp, 0);
-                    callOp = callOp.AddContinuation(spillOp);
-                }
-            }
-            callOp = callOp.AddContinuation(snippet);
+        FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
+        TestAssertIff(newsfSpillLoc.IsNoSpill(), static_cast<uint32_t>(index) < m_fastInterpSpillNewSfAddrAt);
+
+        // If evaluating the parameter causes newStackFrame to be spilled to memory,
+        // we need to spill it before transfering control to match the expectation.
+        //
+        if (m_fastInterpSpillNewSfAddrAt == static_cast<uint32_t>(index))
+        {
+            FastInterpBoilerplateInstance* spillOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FICallExprSpillStackAddrImpl>::SelectBoilerplateBluePrint(
+                            false /*isFakeSpillForNoParamsCase*/));
+            newsfSpillLoc.PopulatePlaceholderIfSpill(spillOp, 0);
+            callOp = callOp.AddContinuation(spillOp);
         }
+
+        callOp = callOp.AddContinuation(snippet);
 
         // Populate the evaluated parameter into new stack frame
         //
         {
             FastInterpBoilerplateInstance* fillParamOp;
-            if (!isNewSfSpilled)
+            if (newsfSpillLoc.IsNoSpill())
             {
                 fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                             FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
@@ -183,7 +244,6 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
             }
             else
             {
-                FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
                 fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                             FastInterpBoilerplateLibrary<FICallExprStoreParamNewSfSpilledImpl>::SelectBoilerplateBluePrint(
                                 m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
@@ -197,7 +257,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
 
     {
         FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(TypeId::Get<uint64_t>());
-        TestAssertIff(isNewSfSpilled, !newsfSpillLoc.IsNoSpill());
+        TestAssertIff(m_fastInterpSpillNewSfAddrAt == static_cast<uint32_t>(m_params.size()), newsfSpillLoc.IsNoSpill());
         std::ignore = newsfSpillLoc;
     }
 
@@ -265,6 +325,9 @@ void AstFunction::PrepareForFastInterp()
     {
         m_params[index]->SetFastInterpOffset((index + 1) * 8);
     }
+
+    m_body->FastInterpSetupSpillLocation();
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertEmpty();
 
     FastInterpSnippet body = m_body->PrepareForFastInterp(x_FINoSpill);
     if (body.m_tail != nullptr)

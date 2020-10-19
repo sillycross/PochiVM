@@ -141,6 +141,11 @@ public:
         ReleaseAssert(false && "unimplemented");
     }
 
+    virtual void FastInterpSetupSpillLocation()
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
+
     // For each of the children c of this node, invoke fn(c)
     //
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) = 0;

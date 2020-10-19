@@ -759,6 +759,7 @@ public:
         , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
         , m_fastInterpSretVar(nullptr)
+        , m_fastInterpSpillNewSfAddrAt(static_cast<uint32_t>(-1))
     { }
 
     AstCallExpr(const CppFunctionMetadata* cppFunctionMd,
@@ -772,6 +773,7 @@ public:
         , m_debugInterpStoreParamFns()
         , m_sretAddress(nullptr)
         , m_fastInterpSretVar(nullptr)
+        , m_fastInterpSpillNewSfAddrAt(static_cast<uint32_t>(-1))
     {
         assert(m_cppFunctionMd != nullptr);
         TestAssert(params.size() == static_cast<size_t>(m_cppFunctionMd->m_numParams));
@@ -914,6 +916,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     void FastInterpFixStackFrameSize(AstFunction* target);
 
@@ -936,6 +939,7 @@ private:
     llvm::Value* m_sretAddress;
     AstVariable* m_fastInterpSretVar;
     FISpillLocation m_fastInterpSpillLoc;
+    uint32_t m_fastInterpSpillNewSfAddrAt;
     FastInterpBoilerplateInstance* m_fastInterpInst;
 };
 
@@ -1030,6 +1034,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     // An assign statement for primitive type variable initialization.
     //
@@ -1091,6 +1096,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
     AstNodeBase* m_retVal;
 };

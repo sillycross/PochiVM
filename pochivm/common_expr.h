@@ -45,6 +45,8 @@ public:
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
 
+    virtual void FastInterpSetupSpillLocation() override;
+
     AstNodeBase* GetOperand() const
     {
         return m_operand;
@@ -119,6 +121,7 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override { }
 
     uint64_t GetAsU64()
     {
@@ -183,7 +186,7 @@ class AstAssignExpr : public AstNodeBase
 public:
     AstAssignExpr(AstNodeBase* dst, AstNodeBase* src)
         : AstNodeBase(AstNodeType::AstAssignExpr, TypeId::Get<void>())
-        , m_dst(dst), m_src(src)
+        , m_fiInlineShape(FIShape::INVALID), m_dst(dst), m_src(src)
     {
         TestAssert(m_src->GetTypeId().IsPrimitiveType() || m_src->GetTypeId().IsPointerType());
         TestAssert(m_dst->GetTypeId() == m_src->GetTypeId().AddPointer());
@@ -222,8 +225,23 @@ public:
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
 
 private:
+
+    enum FIShape : int16_t
+    {
+        INVALID,
+        INLINE_ARITH,
+        INLINE_BOTH,
+        INLINE_LHS,
+        INLINE_RHS,
+        OUTLINE
+    };
+
+    FIShape m_fiInlineShape;
+    bool m_fiIsLhsSpill;
+
     AstNodeBase* m_dst;
     AstNodeBase* m_src;
 };

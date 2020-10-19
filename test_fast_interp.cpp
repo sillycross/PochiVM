@@ -132,14 +132,14 @@ TEST(TestFastInterp, Sanity_5)
         auto [fn, a, b] = NewFunction<FnPrototype>("testfn");
 
         fn.SetBody(
-                Return(((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                Return((((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                       (((a + b) + (a + b)) + ((a + b) + (a + b))))) +
+                       (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
-                       ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b)))))
+                       (((a + b) + (a + b)) + ((a + b) + (a + b))))))
         );
     }
 
@@ -562,14 +562,14 @@ TEST(TestFastInterp, Sanity_17)
         fn.SetBody(
                 Return(Call<FnPrototype1>("callee",
                        a + b,
-                       ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                       (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                       (((a + b) + (a + b)) + ((a + b) + (a + b))))) +
+                       (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
-                       ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b)))),
+                       (((a + b) + (a + b)) + ((a + b) + (a + b))))),
                        a + b + a + b))
         );
     }
@@ -611,14 +611,14 @@ TEST(TestFastInterp, Sanity_18)
                 Return(Call<FnPrototype1>("callee",
                        a + b,
                        a + b + a + b,
-                       ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                       (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                       (((a + b) + (a + b)) + ((a + b) + (a + b))))) +
+                       (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
                        (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
                        ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
-                       ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
-                       (((a + b) + (a + b)) + ((a + b) + (a + b))))))
+                       (((a + b) + (a + b)) + ((a + b) + (a + b)))))))
         );
     }
 
@@ -881,5 +881,80 @@ TEST(TestFastInterp, Sanity_25)
         ReleaseAssert(ret == 100 * 99);
         ret = interpFn(100, 50);
         ReleaseAssert(ret == 100 * 99 / 2 + 50 * 49 / 2);
+    }
+}
+
+TEST(TestFastInterp, Sanity_26)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype1 = int(*)() noexcept;
+    {
+        auto [fn] = NewFunction<FnPrototype1>("callee");
+
+        fn.SetBody(
+                Return(Literal<int>(123))
+        );
+    }
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, a, b] = NewFunction<FnPrototype>("testfn");
+
+        fn.SetBody(
+                Return((a + b) + (Call<FnPrototype1>("callee") + (a * b)))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int x = 12;
+        int y = -34;
+        int ret = interpFn(x, y);
+        ReleaseAssert(ret == 12 - 34 + 123 + 12 * -34);
+    }
+}
+
+TEST(TestFastInterp, Sanity_27)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int) noexcept;
+    {
+        auto [fn, a, b] = NewFunction<FnPrototype>("testfn");
+
+        fn.SetBody(
+                Return((a + b) + ((((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
+                ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                (((a + b) + (a + b)) + ((a + b) + (a + b))))) +
+                (((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                (((a + b) + (a + b)) + ((a + b) + (a + b)))) +
+                ((((a + b) + (a + b)) + ((a + b) + (a + b))) +
+                (((a + b) + (a + b)) + ((a + b) + (a + b))))) + (a * b)))
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        int x = 12;
+        int y = -34;
+        int ret = interpFn(x, y);
+        ReleaseAssert(ret == 33 * (12 - 34) + 12 * -34);
     }
 }

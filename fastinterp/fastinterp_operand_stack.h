@@ -152,10 +152,15 @@ public:
 
     bool IsEmpty() const { return m_stack.empty(); }
 
-    void Push(uint32_t operandSize)
+    void Push(uint32_t operandSize, bool spill)
     {
+        TestAssertImp(spill && m_stack.size() > 0, !m_stack.back().m_spillLoc.IsNoSpill());
         m_stack.push_back(FITempOperand(operandSize));
-        if (m_stack.size() > m_nospillLimit)
+        if (spill)
+        {
+            SpillUpTo(m_stack.size());
+        }
+        else if (m_stack.size() > m_nospillLimit)
         {
             SpillUpTo(m_stack.size() - m_nospillLimit);
         }
@@ -230,7 +235,7 @@ public:
 #endif
     }
 
-    void PushTemp(TypeId typeId)
+    void PushTemp(TypeId typeId, bool spill = false)
     {
         TestAssert(!typeId.IsCppClassType() && !typeId.IsVoid());
 #ifdef TESTBUILD
@@ -238,11 +243,11 @@ public:
 #endif
         if (typeId.IsFloatingPoint())
         {
-            m_floatOperandStack.Push(static_cast<uint32_t>(typeId.Size()));
+            m_floatOperandStack.Push(static_cast<uint32_t>(typeId.Size()), spill);
         }
         else
         {
-            m_integralOperandStack.Push(static_cast<uint32_t>(typeId.Size()));
+            m_integralOperandStack.Push(static_cast<uint32_t>(typeId.Size()), spill);
         }
     }
 
@@ -272,6 +277,18 @@ public:
         else
         {
             return m_integralOperandStack.Peek();
+        }
+    }
+
+    bool WARN_UNUSED CanReserveWithoutSpill(TypeId typeId) const
+    {
+        if (typeId.IsFloatingPoint())
+        {
+            return m_floatOperandStack.GetNumNoSpill() < x_fastinterp_max_floating_point_params;
+        }
+        else
+        {
+            return m_integralOperandStack.GetNumNoSpill() < x_fastinterp_max_integral_params;
         }
     }
 
@@ -320,6 +337,16 @@ public:
     FINumOpaqueFloatingParams GetNumNoSpillFloat() const
     {
         return static_cast<FINumOpaqueFloatingParams>(m_floatOperandStack.GetNumNoSpill());
+    }
+
+    void AssertEmpty() const
+    {
+        TestAssert(m_localVarStack.size() == 0 && m_tempStack.size() == 0);
+    }
+
+    void AssertNoTemp() const
+    {
+        TestAssert(m_tempStack.size() == 0);
     }
 
     uint32_t GetFinalStackFrameSize() const
