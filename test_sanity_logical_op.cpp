@@ -243,7 +243,9 @@ TEST(SanityIrCodeDump, LogicalOp)
         return r;
     };
 
-    auto checkOne = [](const FnPrototype& fn, const std::function<std::remove_pointer_t<FnPrototype>>& gold, bool a, bool b)
+    auto checkOne = [](const std::function<std::remove_pointer_t<FnPrototype>>& fn,
+                       const std::function<std::remove_pointer_t<FnPrototype>>& gold,
+                       bool a, bool b)
     {
         const int sz = 7;
         int32_t d1[sz]; memset(d1, 0, sizeof(int32_t) * sz);
@@ -257,7 +259,8 @@ TEST(SanityIrCodeDump, LogicalOp)
         }
     };
 
-    auto check = [checkOne](const FnPrototype& fn, const std::function<std::remove_pointer_t<FnPrototype>>& gold) {
+    auto check = [checkOne](const std::function<std::remove_pointer_t<FnPrototype>>& fn,
+                            const std::function<std::remove_pointer_t<FnPrototype>>& gold) {
         checkOne(fn, gold, false, false);
         checkOne(fn, gold, false, true);
         checkOne(fn, gold, true, false);
@@ -267,44 +270,61 @@ TEST(SanityIrCodeDump, LogicalOp)
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
 
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_and");
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("logical_and");
         auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(a, dst, 1) && f(b, dst, 2);
         };
         check(jitFn, gold);
+        check(interpFn, gold);
     }
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_or");
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("logical_or");
         auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(a, dst, 1) || f(b, dst, 2);
         };
         check(jitFn, gold);
+        check(interpFn, gold);
     }
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_3");
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("logical_fn_3");
         auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return !f(a, dst, 1) || f(b, dst, 2);
         };
         check(jitFn, gold);
+        check(interpFn, gold);
     }
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_4");
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("logical_fn_4");
         auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return (!f(a, dst, 1) && f(b, dst, 2)) || (f(a || !b, dst, 3));
         };
         check(jitFn, gold);
+        check(interpFn, gold);
     }
 
     {
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("logical_fn_5");
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("logical_fn_5");
         auto gold = [f](int32_t* dst, bool a, bool b) ->bool {
             return f(f(a, dst, 1) || f(b, dst, 2), dst, 3) && !f(f(a, dst, 4) && f(b, dst, 5), dst, 6);
         };
         check(jitFn, gold);
+        check(interpFn, gold);
     }
 }
 

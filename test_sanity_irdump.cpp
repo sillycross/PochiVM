@@ -16,10 +16,10 @@ void TestSomeRandomParams(const std::function<int(int,int)>& fn,
     {
         int a = rand() % 2000 - 1000;
         int b = rand() % 2000 - 1000;
-        int r1 = fn(a, b);
-        int r2 = gold(a, b);
         if (cond == nullptr || (cond != nullptr && cond(a, b)))
         {
+            int r1 = fn(a, b);
+            int r2 = gold(a, b);
             ReleaseAssert(r1 == r2);
         }
     }
@@ -65,6 +65,11 @@ TEST(SanityIrCodeDump, APlusB)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_2)
@@ -109,6 +114,11 @@ TEST(SanityIrCodeDump, APlusB_2)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_3)
@@ -155,6 +165,11 @@ TEST(SanityIrCodeDump, APlusB_3)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_4)
@@ -201,6 +216,11 @@ TEST(SanityIrCodeDump, APlusB_4)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_5)
@@ -245,6 +265,11 @@ TEST(SanityIrCodeDump, APlusB_5)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_6)
@@ -288,6 +313,11 @@ TEST(SanityIrCodeDump, APlusB_6)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold, [](int a, int /*b*/){ return a >= 0; });
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold, [](int a, int /*b*/){ return a >= 0; });
 }
 
 TEST(SanityIrCodeDump, APlusB_7)
@@ -330,6 +360,11 @@ TEST(SanityIrCodeDump, APlusB_7)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold, [](int a, int /*b*/){ return a < 0; });
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold, [](int a, int /*b*/){ return a < 0; });
 }
 
 TEST(SanityIrCodeDump, APlusB_8)
@@ -410,6 +445,11 @@ TEST(SanityIrCodeDump, APlusB_8)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_9)
@@ -459,6 +499,11 @@ TEST(SanityIrCodeDump, APlusB_9)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }
 
 TEST(SanityIrCodeDump, APlusB_10)
@@ -591,4 +636,9 @@ TEST(SanityIrCodeDump, APlusB_10)
 
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_b");
     TestSomeRandomParams(jitFn, gold);
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetFastInterpGeneratedFunction<FnPrototype>("a_plus_b");
+    TestSomeRandomParams(interpFn, gold);
 }

@@ -71,4 +71,17 @@ TEST(Sanity, LLVMOptimizationPassEffective)
         FnPrototype jitFn = jit.GetFunction<FnPrototype>("a_plus_50");
         ReleaseAssert(jitFn(233) == 233 + 50);
     }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("a_plus_10");
+        ReleaseAssert(interpFn(233) == 233 + 10);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("a_plus_50");
+        ReleaseAssert(interpFn(233) == 233 + 50);
+    }
 }

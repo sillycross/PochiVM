@@ -72,11 +72,22 @@ TEST(Sanity, BreakAndContinue)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(gold(10) == interpFn(10));
+        ReleaseAssert(gold(30) == interpFn(30));
+        ReleaseAssert(gold(50) == interpFn(50));
+        ReleaseAssert(gold(100) == interpFn(100));
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
 
         ReleaseAssert(gold(10) == interpFn(10));
         ReleaseAssert(gold(30) == interpFn(30));

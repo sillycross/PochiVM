@@ -354,10 +354,18 @@ TEST(SanityNoError, DeclareVarCornerCaseDoesNotCrash)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
-    auto interpFn = thread_pochiVMContext->m_curModule->
-                           GetDebugInterpGeneratedFunction<FnPrototype>("TronFn");
-    std::ignore = interpFn();
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("TronFn");
+        std::ignore = interpFn();
+    }
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("TronFn");
+        std::ignore = interpFn();
+    }
 
     thread_pochiVMContext->m_curModule->EmitIR();
 
@@ -501,11 +509,20 @@ TEST(Sanity, BlockHasNoScopeEffect)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
-    auto interpFn = thread_pochiVMContext->m_curModule->
-                           GetDebugInterpGeneratedFunction<FnPrototype>("GoodFn");
-    int ret = interpFn();
-    ReleaseAssert(ret == 3);
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("GoodFn");
+        int ret = interpFn();
+        ReleaseAssert(ret == 3);
+    }
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("GoodFn");
+        int ret = interpFn();
+        ReleaseAssert(ret == 3);
+    }
 
     thread_pochiVMContext->m_curModule->EmitIR();
 
@@ -567,6 +584,7 @@ TEST(SanityError, NoReturnValue)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
     thread_pochiVMContext->m_curModule = new AstModule("test");
 
@@ -584,9 +602,12 @@ TEST(SanityError, NoReturnValue)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     auto interpFn = thread_pochiVMContext->m_curModule->
                            GetDebugInterpGeneratedFunction<FnPrototype>("BadFn");
+    auto fastInterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("BadFn");
 
 #ifdef TESTBUILD
     // having no return value fires a TestAssert
@@ -599,9 +620,13 @@ TEST(SanityError, NoReturnValue)
 
     ASSERT_DEATH(interpFn(233), "");
 
+    printf("Expecting a Illegal Instruction trap being triggered...\n");
+    ASSERT_DEATH(fastInterpFn(233), "");
+
 #pragma clang diagnostic pop
 #endif
     std::ignore = interpFn;
+    std::ignore = fastInterpFn;
 }
 
 TEST(SanityError, Unreachable_1)

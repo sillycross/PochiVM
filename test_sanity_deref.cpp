@@ -55,6 +55,7 @@ TEST(Sanity, LinkedListChasing)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
 
     Data* head = BuildLinkedList();
@@ -71,6 +72,14 @@ TEST(Sanity, LinkedListChasing)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("compute_linked_list_sum");
+
+        uint64_t ret = interpFn(head);
+        ReleaseAssert(ret == expectedSum);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("compute_linked_list_sum");
 
         uint64_t ret = interpFn(head);
         ReleaseAssert(ret == expectedSum);
@@ -160,6 +169,33 @@ TEST(Sanity, StoreIntoLocalVar)
         ReleaseAssert(x == 12345 + 543);
     }
 
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype2> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype2>("a_plus_b_plus_233");
+
+        ReleaseAssert(interpFn(123, 456) == 123 + 456 + 233);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype1>("store_value");
+
+        int x = 29310923;
+        interpFn(&x, 101);
+        ReleaseAssert(x == 101 + 233);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn = thread_pochiVMContext->m_curModule->
+                                GetFastInterpGeneratedFunction<FnPrototype1>("inc_value");
+
+        int x = 12345;
+        interpFn(&x, 543);
+        ReleaseAssert(x == 12345 + 543);
+    }
+
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);
     thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
@@ -219,6 +255,26 @@ TEST(Sanity, BoolDeref)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("store_bool");
+
+        bool x;
+        interpFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+
+        interpFn(&x, false);
+        ReleaseAssert(x == false);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 0);
+
+        interpFn(&x, true);
+        ReleaseAssert(x == true);
+        ReleaseAssert(*reinterpret_cast<uint8_t*>(&x) == 1);
+    }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("store_bool");
 
         bool x;
         interpFn(&x, true);

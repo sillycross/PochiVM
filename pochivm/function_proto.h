@@ -346,6 +346,14 @@ public:
 
     explicit operator bool() const { return m_fnPtr != nullptr; }
 
+    operator std::function<R(Args...)>() const
+    {
+        return [*this](Args... args) -> R
+        {
+            return (*this)(args...);
+        };
+    }
+
     R operator()(Args... args) const noexcept
     {
         TestAssert(m_fnPtr != nullptr);
@@ -379,6 +387,14 @@ public:
 
     explicit operator bool() const { return m_fnPtr != nullptr; }
 
+    operator std::function<R(Args...)>() const
+    {
+        return [*this](Args... args) -> R
+        {
+            return (*this)(args...);
+        };
+    }
+
     R operator()(Args... args) const
     {
         TestAssert(m_fnPtr != nullptr);
@@ -398,7 +414,10 @@ public:
             }
             else
             {
-                return FIReturnValueHelper::GetReturnValue<R, false /*isNoExcept*/>(r);
+                if constexpr(!std::is_same<R, void>::value)
+                {
+                    return FIReturnValueHelper::GetReturnValue<R, false /*isNoExcept*/>(r);
+                }
             }
         }
     }
