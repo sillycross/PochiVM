@@ -39,6 +39,7 @@ std::function<U(T)> GetStaticCastFn()
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
 
@@ -54,14 +55,19 @@ std::function<U(T)> GetStaticCastFn()
                            GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
     ReleaseAssert(interpFn);
 
-    return [jitFn, interpFn](T value) -> U {
+    FastInterpFunction<FnPrototype> fastInterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
+    return [jitFn, interpFn, fastInterpFn](T value) -> U {
         U out1 = interpFn(value);
         U out2 = jitFn(value);
+        U out3 = fastInterpFn(value);
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wfloat-equal"
-        // we only test small floats, so should not change value
+        // float equal is safe here: static cast is deterministic
         //
         ReleaseAssert(out1 == out2);
+        ReleaseAssert(out1 == out3);
 #pragma clang diagnostic pop
         return out1;
     };
@@ -102,8 +108,6 @@ void TestStaticCastBetweenFloatTypes()
     //
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wfloat-equal"
-    // we only test small floats, so should not change value
-    //
     auto testFn = [&](T value)
     {
         ReleaseAssert(fn(value) == static_cast<U>(value));
@@ -264,9 +268,13 @@ TEST(Sanity, ReinterpretCast_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     auto interpFn = thread_pochiVMContext->m_curModule->
                            GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+
+    FastInterpFunction<FnPrototype> fastinterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
 
     union {
         double vd;
@@ -274,6 +282,7 @@ TEST(Sanity, ReinterpretCast_1)
     } u;
     u.vd = x;
     ReleaseAssert(*interpFn(&x) == u.vi);
+    ReleaseAssert(*fastinterpFn(&x) == u.vi);
 }
 
 TEST(Sanity, ReinterpretCast_2)
@@ -292,11 +301,16 @@ TEST(Sanity, ReinterpretCast_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     auto interpFn = thread_pochiVMContext->m_curModule->
                            GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
+    FastInterpFunction<FnPrototype> fastinterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
     ReleaseAssert(interpFn(&x) == reinterpret_cast<uintptr_t>(&x));
+    ReleaseAssert(fastinterpFn(&x) == reinterpret_cast<uintptr_t>(&x));
 }
 
 TEST(Sanity, ReinterpretCast_3)
@@ -315,9 +329,14 @@ TEST(Sanity, ReinterpretCast_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     auto interpFn = thread_pochiVMContext->m_curModule->
                            GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
 
+    FastInterpFunction<FnPrototype> fastinterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
     ReleaseAssert(interpFn(reinterpret_cast<uintptr_t>(&x)) == &x);
+    ReleaseAssert(fastinterpFn(reinterpret_cast<uintptr_t>(&x)) == &x);
 }

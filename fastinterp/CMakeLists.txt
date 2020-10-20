@@ -54,6 +54,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_logical_and_or.cpp
   fastinterp_tpl_logical_not.cpp
   fastinterp_tpl_pointer_cast.cpp
+  fastinterp_tpl_static_cast.cpp
 )
 
 SET(FASTINTERP_SOURCES

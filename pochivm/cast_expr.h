@@ -78,6 +78,9 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
 
+    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
 private:
     AstNodeBase* m_operand;
 };
