@@ -32,6 +32,7 @@ public:
         , m_storageSize(static_cast<uint32_t>(typeId.RemovePointer().Size()))
         , m_debugInterpOffset(static_cast<uint32_t>(-1))
         , m_fastInterpOffset(static_cast<uint32_t>(-1))
+        , m_fastInterpDtorCallOp(nullptr, nullptr)
     {
         TestAssert(GetTypeId().IsPointerType());
     }
@@ -121,6 +122,9 @@ private:
     // The offset in stackframe in fastinterp mode
     //
     uint32_t m_fastInterpOffset;
+    // Reusable callOp to destruct this variable
+    //
+    FastInterpSnippet m_fastInterpDtorCallOp;
 };
 
 }   // namespace PochiVM

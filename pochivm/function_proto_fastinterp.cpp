@@ -390,6 +390,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     // Entry from current function to callOp
     //
     TestAssert(callOp.m_entry != nullptr);
+    callOp.m_entry->SetAlignmentLog2(4);
     inst->PopulateBoilerplateFnPtrPlaceholder(1, callOp.m_entry);
 
     // After call is complete, if the callee is not noexcept, we need to check for exception
