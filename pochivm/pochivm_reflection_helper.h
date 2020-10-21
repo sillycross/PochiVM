@@ -669,6 +669,8 @@ public:
     // for all non-primitive return types (normally C++ ABI only do this if the returned struct is large)
     //
     static constexpr bool isSretTransformed = FnTypeInfo::isRetValNontriviallyConverted();
+
+    static constexpr bool isWrapperNoExcept = is_wrapper_nothrow;
 };
 
 // constructor_wrapper_helper<C, Args...>::wrapperFn

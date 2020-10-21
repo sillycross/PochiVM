@@ -9,6 +9,8 @@
 #include "constexpr_array_concat_helper.h"
 #include "get_mem_fn_address_helper.h"
 #include "cxx2a_bit_cast_helper.h"
+#include "pochivm_context.h"
+#include "fastinterp/fastinterp_tpl_return_type.h"
 
 namespace PochiVM
 {
@@ -333,6 +335,16 @@ namespace PochiVM {
 
 using InterpCallCppFunctionImpl = void(*)(void* /*ret*/, void** /*params*/);
 
+struct FastInterpCppFunctionInfo
+{
+    TypeId m_returnType;
+    bool m_isNoExcept;
+    // a function pointer of shape 'FIReturnType<R, isNoExcept>(*)(void**) noexcept'
+    //
+    void* m_interpImpl;
+};
+using FastInterpCallCppFunctionGetter = FastInterpCppFunctionInfo(*)() noexcept;
+
 struct CppFunctionMetadata
 {
     // The symbol name, and the bitcode stub
@@ -346,9 +358,13 @@ struct CppFunctionMetadata
     // Whether this function is using StructRet attribute
     //
     bool m_isUsingSret;
+    // Whether this function is noexcept
+    //
+    bool m_isNoExcept;
     // The interp function interface
     //
     InterpCallCppFunctionImpl m_debugInterpFn;
+    FastInterpCallCppFunctionGetter m_fastInterpFn;
     // The unique ordinal, starting from 0
     //
     size_t m_functionOrdinal;
@@ -1079,10 +1095,9 @@ struct interp_call_cpp_fn_helper
         {
             static_assert(AstTypeHelper::primitive_or_pointer_type<typename std::remove_cv<ArgType<numArgs-n>>::type>::value,
                           "parameter type must be pointer or primitive type");
-            void* param = *params;
             build_param_helper<n-1>::call(retVoid, params + 1,
                                           unpackedParams...,
-                                          reinterpret_cast<ArgTypePtr<numArgs-n>>(reinterpret_cast<uintptr_t>(param)));
+                                          reinterpret_cast<ArgTypePtr<numArgs-n>>(reinterpret_cast<uintptr_t>(params)));
         }
     };
 
@@ -1136,6 +1151,74 @@ struct interp_call_cpp_fn_helper
     }
 
     static constexpr InterpCallCppFunctionImpl interpFn = call;
+};
+
+// One extra layer of wrapping over interp_call_cpp_fn_helper,
+// which handles the exception and return value in a manner expected by fastinterp
+//
+template<bool isNoExcept, typename R, InterpCallCppFunctionImpl fnPtr>
+struct fastinterp_call_cpp_fn_helper
+{
+    static FIReturnType<R, isNoExcept> impl(void** params) noexcept
+    {
+        // This is a bit weird.. FastInterp has a 8-byte padding in the params,
+        // since its constant placeholder cannot be 0.
+        //
+        params++;
+        if constexpr(isNoExcept)
+        {
+            if constexpr(std::is_same<R, void>::value)
+            {
+                fnPtr(nullptr, params);
+            }
+            else
+            {
+                R ret;
+                fnPtr(&ret, params);
+                return ret;
+            }
+        }
+        else
+        {
+            FIReturnValueOrExn<R> ret;
+            ret.m_hasExn = false;
+            try
+            {
+                if constexpr(std::is_same<R, void>::value)
+                {
+                    fnPtr(nullptr, params);
+                }
+                else
+                {
+                    fnPtr(&ret.m_ret, params);
+                }
+                return ret;
+            }
+            catch (...)
+            {
+                TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+
+                // From cppreference on std::current_exception():
+                //     If the implementation of this function requires a call to new and the call fails,
+                //     the returned pointer will hold a reference to an instance of std::bad_alloc.
+                //
+                // No, we don't care about such corner case. Everyone knows C++ exception is broken.
+                //
+                thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = std::current_exception();
+                TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+                return FIReturnValueHelper::GetForExn<R>();
+            }
+        }
+    }
+
+    static FastInterpCppFunctionInfo get() noexcept
+    {
+        return FastInterpCppFunctionInfo {
+            TypeId::Get<R>(),
+            isNoExcept,
+            reinterpret_cast<void*>(impl)
+        };
+    }
 };
 
 }   // namespace AstTypeHelper

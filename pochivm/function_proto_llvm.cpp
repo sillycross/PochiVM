@@ -496,6 +496,7 @@ Value* WARN_UNUSED AstCallExpr::EmitIRImpl()
         TestAssertIff(m_cppFunctionMd->m_isUsingSret, m_sretAddress != nullptr);
         callee = thread_llvmContext->m_module->getFunction(m_cppFunctionMd->m_bitcodeData->m_symbolName);
         TestAssert(callee != nullptr);
+        TestAssertImp(m_cppFunctionMd->m_isNoExcept, callee->hasFnAttribute(Attribute::AttrKind::NoUnwind));
     }
     TestAssert(callee->arg_size() == m_params.size() + ((m_isCppFunction && m_cppFunctionMd->m_isUsingSret) ? 1 : 0));
     TestAssertImp(m_isCppFunction, m_params.size() == m_cppFunctionMd->m_numParams);

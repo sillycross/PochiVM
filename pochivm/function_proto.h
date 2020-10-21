@@ -406,11 +406,27 @@ public:
         }
         else
         {
+            TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+            Auto(TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr));
+
             using RetOrExn = FIReturnType<R, false /*isNoExcept*/>;
             RetOrExn r = reinterpret_cast<RetOrExn(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
             if (unlikely(FIReturnValueHelper::HasException<R>(r)))
             {
-                throw 233;  // TODO: throw real exception
+                // Stupid: std::exception_ptr is a shared-ownership smart pointer.
+                // We have to manually null it so the exception won't leak.
+                // However, std::rethrow_exception will NOT null the pointer.
+                // So we have to copy the pointer to a local variable, then null the global-variable pointer,
+                // then call std::rethrow_exception. Now when the local variable goes out of scope,
+                // the refcount is properly decremented..
+                //
+                TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+                std::exception_ptr eptr = thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr;
+                thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = nullptr;
+                // The 'eptr' is a local var, and after rethrow_exception,
+                // it goes out of scope so the exception refcount is decremented.
+                //
+                std::rethrow_exception(eptr);
             }
             else
             {
@@ -741,15 +757,6 @@ private:
             return true;
         }
 
-        static void PopulateParams(uintptr_t /*sf*/) noexcept { }
-
-        template<typename T, typename... TArgs>
-        static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
-        {
-            *reinterpret_cast<T*>(sf) = arg;
-            PopulateParams(sf + 8, more...);
-        }
-
         static FastInterpFunction<R(*)(Args...) noexcept> get(AstFunction* fn)
         {
             return FastInterpFunction<R(*)(Args...) noexcept>(
@@ -836,16 +843,13 @@ public:
         void** curParam = params;
         if (m_cppFunctionMd->m_isUsingSret)
         {
-            void* outPos = alloca(sizeof(void*));
-            *reinterpret_cast<void**>(outPos) = out;
-            *curParam = outPos;
+            *curParam = out;
             curParam++;
         }
         for (size_t i = 0; i < m_cppFunctionMd->m_numParams; i++)
         {
-            void* storePos = alloca(m_cppFunctionMd->m_paramTypes[i].Size());
-            m_debugInterpStoreParamFns[i](storePos, m_params[i]);
-            *curParam = storePos;
+            TestAssert(m_cppFunctionMd->m_paramTypes[i].Size() <= sizeof(void*));
+            m_debugInterpStoreParamFns[i](curParam, m_params[i]);
             curParam++;
         }
         // If the function is using sret or returns void,

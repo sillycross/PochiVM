@@ -28,11 +28,11 @@ inline const CppFunctionMetadata* GetDestructorMetadata(TypeId typeId)
 
 inline void InterpCallDestructorHelper(const CppFunctionMetadata* md, void* addr) noexcept
 {
-    // interp functions take a parameter array of pointers to the actual parameters.
-    // In our case, the actual parameter is 'addr'. So we should populate the array with '&addr'.
+    // interp functions take a parameter array of the actual parameters.
+    // In our case, the actual parameter is 'addr'.
     //
     void* paramsArray[1];
-    paramsArray[0] = &addr;
+    paramsArray[0] = addr;
     assert(md->m_returnType.IsVoid() && md->m_numParams == 1 && !md->m_isUsingSret);
     md->m_debugInterpFn(nullptr /*ret*/, paramsArray);
 }

@@ -140,10 +140,6 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
 
 void AstCallExpr::FastInterpSetupSpillLocation()
 {
-    ReleaseAssert(!m_isCppFunction); // TODO handle cpp functions later
-    AstFunction* callee = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
-    TestAssert(callee != nullptr);
-
     thread_pochiVMContext->m_fastInterpStackFrameManager->ForceSpillAll();
     thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(TypeId::Get<uint64_t>());
 
@@ -172,24 +168,56 @@ void AstCallExpr::FastInterpSetupSpillLocation()
 
 FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation spillLoc)
 {
-    ReleaseAssert(!m_isCppFunction); // TODO handle cpp functions later
-    AstFunction* callee = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
-    TestAssert(callee != nullptr);
-
-    // We do not know the stack frame size right now.
-    // We will fix it in the end after all functions are compiled,
-    // at that time all stack frame sizes are known.
-    //
-    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+    AstFunction* astCallee = nullptr;
+    void* cppInterpCallee = nullptr;
+    bool isCalleeNoExcept;
+    TypeId calleeReturnType;
+    size_t trueNumParams;
+    FastInterpBoilerplateInstance* inst;
+    if (!m_isCppFunction)
+    {
+        astCallee = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+        TestAssert(astCallee != nullptr);
+        isCalleeNoExcept = astCallee->GetIsNoExcept();
+        calleeReturnType = astCallee->GetReturnType();
+        trueNumParams = astCallee->GetNumParams();
+        // For generated function, we do not know the stack frame size right now.
+        // We will fix it in the end after all functions are compiled,
+        // at that time all stack frame sizes are known.
+        //
+        inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
-                    callee->GetReturnType().GetOneLevelPtrFastInterpTypeId(),
+                    calleeReturnType.GetOneLevelPtrFastInterpTypeId(),
                     !spillLoc.IsNoSpill(),
-                    callee->GetIsNoExcept(),
+                    isCalleeNoExcept,
                     static_cast<FIStackframeSizeCategory>(0)));
-    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
-    m_fastInterpSpillLoc = spillLoc;
-    m_fastInterpInst = inst;
-    thread_pochiVMContext->m_fastInterpFnCallFixList.push_back(std::make_pair(callee, this));
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        m_fastInterpSpillLoc = spillLoc;
+        m_fastInterpInst = inst;
+        thread_pochiVMContext->m_fastInterpFnCallFixList.push_back(std::make_pair(astCallee, this));
+    }
+    else
+    {
+        // For C++ function, the stack frame size is fixed: it is always 8 * (2 * #params + 1) bytes
+        //
+        trueNumParams = m_cppFunctionMd->m_numParams + (m_cppFunctionMd->m_isUsingSret ? 1 : 0);
+        FastInterpCppFunctionInfo info = m_cppFunctionMd->m_fastInterpFn();
+        isCalleeNoExcept = info.m_isNoExcept;
+        calleeReturnType = info.m_returnType;
+        cppInterpCallee = info.m_interpImpl;
+
+        TestAssert(isCalleeNoExcept == m_cppFunctionMd->m_isNoExcept);
+        TestAssertImp(m_cppFunctionMd->m_isUsingSret, calleeReturnType.IsVoid());
+        TestAssertImp(!m_cppFunctionMd->m_isUsingSret, calleeReturnType == m_cppFunctionMd->m_returnType);
+        size_t stackFrameSize = 8 * (2 * trueNumParams + 1);
+        inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
+                    calleeReturnType.GetOneLevelPtrFastInterpTypeId(),
+                    !spillLoc.IsNoSpill(),
+                    isCalleeNoExcept,
+                    FIStackframeSizeCategoryHelper::SelectCategory(stackFrameSize)));
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+    }
 
     FastInterpSnippet callOp { nullptr, nullptr };
 
@@ -199,6 +227,24 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     //
     thread_pochiVMContext->m_fastInterpStackFrameManager->ForceSpillAll();
     thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(TypeId::Get<uint64_t>());
+
+    // Populate sret parameter
+    //
+    if (m_isCppFunction && m_cppFunctionMd->m_isUsingSret)
+    {
+        TestAssert(m_fastInterpSretVar != nullptr);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_fastInterpSretVar->GetTypeId()));
+        FastInterpSnippet snippet = m_fastInterpSretVar->PrepareForFastInterp(x_FINoSpill);
+        FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
+        TestAssert(newsfSpillLoc.IsNoSpill());
+
+        FastInterpBoilerplateInstance* fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
+                        m_fastInterpSretVar->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        trueNumParams > 1 /*hasMore*/));
+        fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, 8 /*offset*/);
+        callOp = callOp.AddContinuation(snippet).AddContinuation(fillParamOp);
+    }
 
     // Evaluate each parameter
     //
@@ -235,6 +281,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         callOp = callOp.AddContinuation(snippet);
 
         // Populate the evaluated parameter into new stack frame
+        // TODO: handle RValueToConstPrimitiveReference
         //
         {
             FastInterpBoilerplateInstance* fillParamOp;
@@ -253,7 +300,12 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
                                 index + 1 < m_params.size() /*hasMore*/));
                 newsfSpillLoc.PopulatePlaceholderIfSpill(fillParamOp, 1);
             }
-            fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, index * 8 + 8);
+            uint64_t offset = index * 8 + 8;
+            if (m_isCppFunction && m_cppFunctionMd->m_isUsingSret)
+            {
+                offset += 8;
+            }
+            fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, offset);
             callOp = callOp.AddContinuation(fillParamOp);
         }
     }
@@ -264,7 +316,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         std::ignore = newsfSpillLoc;
     }
 
-    if (m_params.size() == 0)
+    if (trueNumParams == 0)
     {
         // The 'FICallExprImpl' operator is calling its continuation using arguments 'oldsf, newsf',
         // and expects the last function parameter to remove the 'oldsf'.
@@ -279,8 +331,26 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     // After all parameters are populated, transfer control to new function
     //
     TestAssert(callOp.m_tail != nullptr);
-    thread_pochiVMContext->m_fastInterpEngine->PopulateBoilerplateFnPtrPlaceholderAsFunctionEntryPoint(
-                callOp.m_tail, callee, 0 /*ordinal*/);
+    if (!m_isCppFunction)
+    {
+        // For generated function, we just attach the entry point of the function as our continuation
+        //
+        thread_pochiVMContext->m_fastInterpEngine->PopulateBoilerplateFnPtrPlaceholderAsFunctionEntryPoint(
+                    callOp.m_tail, astCallee, 0 /*ordinal*/);
+        callOp.m_tail = nullptr;
+    }
+    else
+    {
+        // For CPP function, we need another operator which transfers control to the interp entry point
+        //
+        FastInterpBoilerplateInstance* entryInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FICallExprEnterCppFnImpl>::SelectBoilerplateBluePrint(
+                        calleeReturnType.GetDefaultFastInterpTypeId(),
+                        isCalleeNoExcept));
+        entryInst->PopulateCppFnPtrPlaceholder(0, reinterpret_cast<void(*)(void) noexcept>(cppInterpCallee));
+        callOp = callOp.AddContinuation(entryInst);
+        callOp.m_tail = nullptr;
+    }
 
     // Entry from current function to callOp
     //
@@ -292,11 +362,11 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral() == static_cast<FINumOpaqueIntegralParams>(0));
     TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat() == static_cast<FINumOpaqueFloatingParams>(0));
     FastInterpSnippet result { inst, inst };
-    if (!callee->GetIsNoExcept())
+    if (!isCalleeNoExcept)
     {
-        if (!callee->GetReturnType().IsVoid() && spillLoc.IsNoSpill())
+        if (!calleeReturnType.IsVoid() && spillLoc.IsNoSpill())
         {
-            thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(callee->GetReturnType());
+            thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(calleeReturnType);
         }
         FastInterpBoilerplateInstance* checkExnOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICallExprCheckExceptionImpl>::SelectBoilerplateBluePrint(
@@ -317,9 +387,9 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
             checkExnOp->PopulateBoilerplateFnPtrPlaceholder(1, trap);
         }
 
-        if (!callee->GetReturnType().IsVoid() && spillLoc.IsNoSpill())
+        if (!calleeReturnType.IsVoid() && spillLoc.IsNoSpill())
         {
-            FISpillLocation tmp = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(callee->GetReturnType());
+            FISpillLocation tmp = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(calleeReturnType);
             TestAssert(tmp.IsNoSpill());
             std::ignore = tmp;
         }

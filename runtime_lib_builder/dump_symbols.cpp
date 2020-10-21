@@ -659,6 +659,8 @@ static void PrintFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& inf
     }
     fprintf(fp, "    static_assert(__pochivm_wrapper_fn_typeinfo::numArgs == %d, \"unexpected number of arguments\");\n", static_cast<int>(offset));
 
+    fprintf(fp, "    static constexpr InterpCallCppFunctionImpl __pochivm_interpfn = AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_generator_t::wrapperFn>::interpFn;\n");
+
     fprintf(fp, "    static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
     std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
     fprintf(fp, "        &%s,\n", varname.c_str());
@@ -666,7 +668,10 @@ static void PrintFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& inf
     fprintf(fp, "        %d /*numParams*/,\n", numParams);
     fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
     fprintf(fp, "        %s /*isUsingSret*/,\n", (isUsingSret ? "true" : "false"));
-    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_generator_t::wrapperFn>::interpFn /*interpFn*/,\n");
+    fprintf(fp, "        __pochivm_wrapper_generator_t::isWrapperNoExcept /*isNoExcept*/,\n");
+    fprintf(fp, "        __pochivm_interpfn /*interpFn*/,\n");
+    fprintf(fp, "        AstTypeHelper::fastinterp_call_cpp_fn_helper<__pochivm_wrapper_generator_t::isWrapperNoExcept, %s /*ReturnType*/, __pochivm_interpfn>::get /*fastInterpFn*/,\n",
+            cppRet.c_str());
     fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
     g_curUniqueFunctionOrdinal++;
     fprintf(fp, "    };\n");
@@ -773,6 +778,7 @@ static void PrintConstructorFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNam
     fprintf(fp, "    static_assert(__pochivm_cpp_fn_ret == TypeId::Get<void>(), \"unexpected return type\");\n");
     fprintf(fp, "    static_assert(__pochivm_wrapper_fn_typeinfo::numArgs == %d + 1, \"unexpected number of arguments\");\n", numCtorParams);
 
+    fprintf(fp, "    static constexpr InterpCallCppFunctionImpl __pochivm_interpfn = AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn;\n");
     fprintf(fp, "    static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
     std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
     fprintf(fp, "        &%s,\n", varname.c_str());
@@ -780,7 +786,10 @@ static void PrintConstructorFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNam
     fprintf(fp, "        %d /*numParams*/,\n", static_cast<int>(info.m_params.size()));
     fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
     fprintf(fp, "        false /*isUsingSret*/,\n");
-    fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+    fprintf(fp, "        __pochivm_wrapper_t::isWrapperFnNoExcept /*isNoExcept*/,\n");
+    fprintf(fp, "        __pochivm_interpfn /*interpFn*/,\n");
+    fprintf(fp, "        AstTypeHelper::fastinterp_call_cpp_fn_helper<__pochivm_wrapper_t::isWrapperFnNoExcept, %s /*ReturnType*/, __pochivm_interpfn>::get /*fastInterpFn*/,\n",
+            cppRet.c_str());
     fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
     g_curUniqueFunctionOrdinal++;
     fprintf(fp, "    };\n");
@@ -1147,6 +1156,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         fprintf(fp, "        using __pochivm_wrapper_t = ReflectionHelper::member_object_accessor_wrapper<&__pochivm_classname::%s>;\n",
                                 info.m_functionName.c_str());
                         fprintf(fp, "        using __pochivm_wrapper_wrapper_t = ReflectionHelper::function_wrapper_helper<__pochivm_wrapper_t::wrapperFn>;\n");
+                        fprintf(fp, "        static constexpr InterpCallCppFunctionImpl __pochivm_interpfn = AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_wrapper_t::wrapperFn>::interpFn;\n");
                         fprintf(fp, "        static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
                         std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
                         fprintf(fp, "            &%s,\n", varname.c_str());
@@ -1154,7 +1164,10 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                         fprintf(fp, "            1 /*numParams*/,\n");
                         fprintf(fp, "            __pochivm_cpp_fn_ret /*returnType*/,\n");
                         fprintf(fp, "            false /*isUsingSret*/,\n");
-                        fprintf(fp, "            AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+                        fprintf(fp, "            __pochivm_wrapper_wrapper_t::isWrapperNoExcept /*isNoExcept*/,\n");
+                        fprintf(fp, "            __pochivm_interpfn /*interpFn*/,\n");
+                        fprintf(fp, "            AstTypeHelper::fastinterp_call_cpp_fn_helper<__pochivm_wrapper_wrapper_t::isWrapperNoExcept, %s /*ReturnType*/, __pochivm_interpfn>::get /*fastInterpFn*/,\n",
+                                cppRet.c_str());
                         fprintf(fp, "            %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
                         g_curUniqueFunctionOrdinal++;
                         fprintf(fp, "        };\n");
@@ -1771,6 +1784,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
 
             for (auto it = fns.begin(); it != fns.end(); it++)
             {
+                std::string cppRet = "void";
                 std::string className = it->first;
                 ParsedFnTypeNamesInfo& info = it->second;
                 fprintf(fp, "template<> class DestructorCppFnMetadata<%s> {\nprivate:\n", className.c_str());
@@ -1787,6 +1801,7 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 fprintf(fp, "    static_assert(__pochivm_cpp_fn_ret == TypeId::Get<void>(), \"unexpected return type\");\n");
 
                 fprintf(fp, "    using __pochivm_wrapper_t = ReflectionHelper::destructor_wrapper_helper<__pochivm_classname>;\n");
+                fprintf(fp, "    static constexpr InterpCallCppFunctionImpl __pochivm_interpfn = AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn;\n");
                 fprintf(fp, "    static constexpr CppFunctionMetadata __pochivm_cpp_fn_metadata = {\n");
                 std::string varname = std::string("__pochivm_internal_bc_") + GetUniqueSymbolHash(info.m_mangledSymbolName);
                 fprintf(fp, "        &%s,\n", varname.c_str());
@@ -1794,7 +1809,11 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 fprintf(fp, "        1 /*numParams*/,\n");
                 fprintf(fp, "        __pochivm_cpp_fn_ret /*returnType*/,\n");
                 fprintf(fp, "        false /*isUsingSret*/,\n");
-                fprintf(fp, "        AstTypeHelper::interp_call_cpp_fn_helper<__pochivm_wrapper_t::wrapperFn>::interpFn /*interpFn*/,\n");
+                ReleaseAssert(info.m_isNoExcept);
+                fprintf(fp, "        true /*isNoExcept*/,\n");
+                fprintf(fp, "        __pochivm_interpfn /*interpFn*/,\n");
+                fprintf(fp, "        AstTypeHelper::fastinterp_call_cpp_fn_helper<true /*isNoExcept*/, %s /*ReturnType*/, __pochivm_interpfn>::get /*fastInterpFn*/,\n",
+                        cppRet.c_str());
                 fprintf(fp, "        %d /*uniqueFunctionOrdinal*/,\n", g_curUniqueFunctionOrdinal);
                 g_curUniqueFunctionOrdinal++;
                 fprintf(fp, "    };\n");
@@ -1803,7 +1822,6 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 fprintf(fp, "};\n\n");
                 std::vector<std::string> cppParams;
                 cppParams.push_back(info.m_params[0]);
-                std::string cppRet = "void";
                 PrintValidateFnPrototype(gp, cppParams, cppRet, varname);
             }
 

@@ -26,10 +26,20 @@ TEST(SanityCallCppFn, Sanity_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        TestClassA a;
+        int ret = interpFn(&a, 123);
+        ReleaseAssert(a.m_y == 123 + 1);
+        ReleaseAssert(ret == 123 + 3);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         TestClassA a;
         int ret = interpFn(&a, 123);
         ReleaseAssert(a.m_y == 123 + 1);
@@ -102,10 +112,28 @@ TEST(SanityCallCppFn, Sanity_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        TestClassA a;
+        int expectedSum = 0;
+        std::vector<int> expectedVec;
+        for (int i = 0; i < 100; i++)
+        {
+            int k = rand() % 1000;
+            int64_t ret = interpFn(&a, k);
+            expectedVec.push_back(k);
+            expectedSum += k;
+            ReleaseAssert(ret == expectedSum);
+            ReleaseAssert(a.m_vec == expectedVec);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         TestClassA a;
         int expectedSum = 0;
         std::vector<int> expectedVec;
@@ -206,10 +234,19 @@ TEST(SanityCallCppFn, Sanity_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        std::string val = "10";
+        int result = interpFn(&val);
+        ReleaseAssert(result == 89);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         std::string val = "10";
         int result = interpFn(&val);
         ReleaseAssert(result == 89);
@@ -270,10 +307,19 @@ TEST(SanityCallCppFn, UnusedCppTypeCornerCase)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        std::string val = "10";
+        void* result = interpFn(&val);
+        ReleaseAssert(result == reinterpret_cast<void*>(&val));
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         std::string val = "10";
         void* result = interpFn(&val);
         ReleaseAssert(result == reinterpret_cast<void*>(&val));
@@ -336,10 +382,36 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        bool x[2];
+        bool* px = x;
+        bool** ppx = &px;
+        bool b[3];
+        uint8_t* _b = reinterpret_cast<uint8_t*>(b);
+
+        memset(b, 233, 3);
+        x[0] = true; x[1] = false;
+        ReleaseAssert(interpFn(233, b, ppx) == false);
+        ReleaseAssert(_b[0] == 1);
+        ReleaseAssert(_b[1] == 1);
+        ReleaseAssert(_b[2] == 1);
+
+        memset(b, 233, 3);
+        x[0] = false; x[1] = true;
+        ReleaseAssert(interpFn(100, b, ppx) == true);
+        ReleaseAssert(_b[0] == 1);
+        ReleaseAssert(_b[1] == 0);
+        ReleaseAssert(_b[2] == 0);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         bool x[2];
         bool* px = x;
@@ -442,10 +514,50 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            bool x[2];
+            bool* px = x;
+            bool** ppx = &px;
+            bool b[4];
+            bool* pb = b;
+            bool** ppb = &pb;
+            uint8_t* _b = reinterpret_cast<uint8_t*>(b);
+
+            memset(x, 233, 1); x[1] = false;
+            memset(b, 233, 4);
+            ReleaseAssert(interpFn(233, ppx, ppb) == false);
+            ReleaseAssert(*reinterpret_cast<uint8_t*>(x) == 1);
+            ReleaseAssert(_b[2] == 1);
+            ReleaseAssert(_b[3] == 0);
+            ReleaseAssert(*ppx = pb);
+        }
+        {
+            bool x[2];
+            bool* px = x;
+            bool** ppx = &px;
+            bool b[4];
+            bool* pb = b;
+            bool** ppb = &pb;
+            uint8_t* _b = reinterpret_cast<uint8_t*>(b);
+            memset(x, 233, 1); x[1] = true;
+            memset(b, 233, 4); b[1] = false;
+            ReleaseAssert(interpFn(100, ppx, ppb) == true);
+            ReleaseAssert(*reinterpret_cast<uint8_t*>(x) == 0);
+            ReleaseAssert(_b[2] == 1);
+            ReleaseAssert(_b[3] == 0);
+            ReleaseAssert(*ppx = pb);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             bool x[2];
@@ -571,10 +683,22 @@ TEST(SanityCallCppFn, VoidStarCornerCase_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        void* a = reinterpret_cast<void*>(233);
+        void* c;
+        void** b = &c;
+        ReleaseAssert(interpFn(a, b) == reinterpret_cast<void*>(233 + 8));
+        ReleaseAssert(c == reinterpret_cast<void*>(233));
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         void* a = reinterpret_cast<void*>(233);
         void* c;
@@ -646,10 +770,22 @@ TEST(SanityCallCppFn, VoidStarCornerCase_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        void* a = reinterpret_cast<void*>(233);
+        void* b[2];
+        b[0] = nullptr; b[1] = reinterpret_cast<void*>(345);
+        ReleaseAssert(interpFn(a, b) == reinterpret_cast<void*>(345));
+        ReleaseAssert(b[0] == reinterpret_cast<void*>(233));
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         void* a = reinterpret_cast<void*>(233);
         void* b[2];
@@ -722,10 +858,19 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        ReleaseAssert(interpFn(233) == true);
+        ReleaseAssert(interpFn(234) == false);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         ReleaseAssert(interpFn(233) == true);
         ReleaseAssert(interpFn(234) == false);
@@ -792,10 +937,21 @@ TEST(SanityCallCppFn, NonTrivialCopyConstructor)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        TestNonTrivialCopyConstructor::counter = 0;
+        TestNonTrivialCopyConstructor x(5);
+        ReleaseAssert(interpFn(&x) == 5);
+        ReleaseAssert(TestNonTrivialCopyConstructor::counter == 1);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         TestNonTrivialCopyConstructor::counter = 0;
         TestNonTrivialCopyConstructor x(5);
@@ -866,10 +1022,21 @@ TEST(SanityCallCppFn, Constructor_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::vector<int> a;
+        a.push_back(233);
+        interpFn(&a);
+        ReleaseAssert(a.size() == 0);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::vector<int> a;
         a.push_back(233);
@@ -940,10 +1107,22 @@ TEST(SanityCallCppFn, Constructor_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::vector<int> a;
+        a.push_back(233);
+        interpFn(&a, 100);
+        ReleaseAssert(a.size() == 100);
+        for (size_t i = 0; i < 100; i++) { ReleaseAssert(a[i] == 0); }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::vector<int> a;
         a.push_back(233);
@@ -1016,10 +1195,22 @@ TEST(SanityCallCppFn, Constructor_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::vector<int> a;
+        a.push_back(233);
+        interpFn(&a, 100, 34567);
+        ReleaseAssert(a.size() == 100);
+        for (size_t i = 0; i < 100; i++) { ReleaseAssert(a[i] == 34567); }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::vector<int> a;
         a.push_back(233);
@@ -1092,10 +1283,25 @@ TEST(SanityCallCppFn, Constructor_4)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::vector<int> a, b;
+        a.push_back(233);
+        b.push_back(456); b.push_back(567);
+        interpFn(&a, &b);
+        ReleaseAssert(a.size() == 2);
+        ReleaseAssert(a[0] == 456 && a[1] == 567);
+        ReleaseAssert(b.size() == 2);
+        ReleaseAssert(b[0] == 456 && b[1] == 567);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::vector<int> a, b;
         a.push_back(233);
@@ -1174,10 +1380,18 @@ TEST(SanityCallCppFn, Constructor_5)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        ReleaseAssert(interpFn() == 233);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         ReleaseAssert(interpFn() == 233);
     }
@@ -1240,10 +1454,23 @@ TEST(SanityCallCppFn, ManuallyCallDestructor)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = 0;
+        TestDestructor1* obj = reinterpret_cast<TestDestructor1*>(alloca(sizeof(TestDestructor1)));
+        new (obj) TestDestructor1(233, &out);
+        ReleaseAssert(out == 0);
+        interpFn(obj);
+        ReleaseAssert(out == 233);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         int out = 0;
         TestDestructor1* obj = reinterpret_cast<TestDestructor1*>(alloca(sizeof(TestDestructor1)));
