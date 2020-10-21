@@ -66,6 +66,8 @@ public:
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
     virtual void FastInterpSetupSpillLocation() override { }
 
+    FastInterpSnippet WARN_UNUSED GetFastInterpDestructorSnippet();
+
     const char* GetVarNameNoSuffix() const { return m_varname; }
     uint32_t GetVarSuffix() const { return m_varnameSuffix; }
     AstFunction* GetFunctionOwner() const { return m_functionOwner; }

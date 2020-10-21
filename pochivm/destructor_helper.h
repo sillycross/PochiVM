@@ -84,4 +84,8 @@ struct AutoInterpExecutionScope
 //
 void EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope);
 
+// Same as EmitIRDestructAllVariablesUntilScope, except that it emits FastInterp code
+//
+FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope);
+
 }   // namespace PochiVM

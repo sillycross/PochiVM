@@ -2,6 +2,7 @@
 #include "codegen_context.hpp"
 #include "arith_expr.h"
 #include "logical_operator.h"
+#include "destructor_helper.h"
 
 namespace PochiVM
 {
@@ -48,16 +49,12 @@ FastInterpSnippet WARN_UNUSED AstBlock::PrepareForFastInterp(FISpillLocation TES
     FastInterpSnippet result { nullptr, nullptr };
     for (AstNodeBase* stmt : m_contents)
     {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
         FastInterpSnippet snippet = stmt->PrepareForFastInterp(x_FINoSpill);
         result = result.AddContinuation(snippet);
     }
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
     return result;
-}
-
-static FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstNodeBase* /*target*/)
-{
-    // TODO: implement
-    return FastInterpSnippet();
 }
 
 void AstScope::FastInterpSetupSpillLocation()
@@ -76,12 +73,17 @@ FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TES
     FastInterpSnippet result { nullptr, nullptr };
     for (AstNodeBase* stmt : m_contents)
     {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
         FastInterpSnippet snippet = stmt->PrepareForFastInterp(x_FINoSpill);
         result = result.AddContinuation(snippet);
     }
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
-    FastInterpSnippet dtorSequence = FIGenerateDestructorSequenceUntilScope(this);
-    result = result.AddContinuation(dtorSequence);
+    if (!result.IsUncontinuable())
+    {
+        FastInterpSnippet dtorSequence = FIGenerateDestructorSequenceUntilScope(this);
+        result = result.AddContinuation(dtorSequence);
+    }
 
     std::vector<DestructorIREmitter*>& list = thread_llvmContext->m_scopeStack.back().second;
     for (auto rit = list.rbegin(); rit != list.rend(); rit++)

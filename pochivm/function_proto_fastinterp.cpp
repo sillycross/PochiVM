@@ -1,6 +1,7 @@
 ﻿#include "fastinterp_ast_helper.hpp"
 #include "function_proto.h"
 #include "codegen_context.hpp"
+#include "destructor_helper.h"
 
 namespace PochiVM
 {
@@ -65,76 +66,110 @@ void AstReturnStmt::FastInterpSetupSpillLocation()
 {
     if (m_retVal != nullptr)
     {
-        AstFIOperandShape osc = AstFIOperandShape::TryMatch(m_retVal);
-        if (!osc.MatchOK())
-        {
-            thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_retVal->GetTypeId());
-            m_retVal->FastInterpSetupSpillLocation();
-        }
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_retVal->GetTypeId());
+        m_retVal->FastInterpSetupSpillLocation();
     }
 }
 
 FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
     bool isNoExcept = thread_llvmContext->m_curFunction->GetIsNoExcept();
 
+    FastInterpSnippet dtors = FIGenerateDestructorSequenceUntilScope(nullptr /*everything*/);
+
     // Case 1: return void
     //
+    if (m_retVal == nullptr)
     {
-        if (m_retVal == nullptr)
-        {
-            TestAssert(thread_llvmContext->m_curFunction->GetReturnType().IsVoid());
-            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                        FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
-                            TypeId::Get<void>().GetDefaultFastInterpTypeId(),
-                            isNoExcept,
-                            false /*exceptionThrown*/,
-                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
-                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
-            return FastInterpSnippet {
-                inst, nullptr
-            };
-        }
-    }
-
-    TestAssert(thread_llvmContext->m_curFunction->GetReturnType() == m_retVal->GetTypeId() && !m_retVal->GetTypeId().IsVoid());
-
-    // Case 2: matches operand shape
-    // FIInlinedReturnImpl
-    //
-    {
-        AstFIOperandShape osc = AstFIOperandShape::TryMatch(m_retVal);
-        if (osc.MatchOK())
-        {
-            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                        FastInterpBoilerplateLibrary<FIInlinedReturnImpl>::SelectBoilerplateBluePrint(
-                            m_retVal->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
-                            osc.m_indexType,
-                            isNoExcept,
-                            osc.m_kind));
-            osc.PopulatePlaceholder(inst, 0, 1);
-            return FastInterpSnippet {
-                inst, nullptr
-            };
-        }
-    }
-
-    // Case 3: default case, outlined operand
-    // FIOutlinedReturnImpl
-    //
-    {
-        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_retVal->GetTypeId()));
-        FastInterpSnippet operand = m_retVal->PrepareForFastInterp(x_FINoSpill);
+        TestAssert(thread_llvmContext->m_curFunction->GetReturnType().IsVoid());
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
-                        m_retVal->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        TypeId::Get<void>().GetDefaultFastInterpTypeId(),
                         isNoExcept,
                         false /*exceptionThrown*/,
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
-        return operand.AddContinuation(FastInterpSnippet { inst, nullptr });
+        FastInterpSnippet snippet = dtors.AddContinuation(inst);
+        return FastInterpSnippet {
+            snippet.m_entry, nullptr
+        };
+    }
+
+    TestAssert(thread_llvmContext->m_curFunction->GetReturnType() == m_retVal->GetTypeId() && !m_retVal->GetTypeId().IsVoid());
+
+    if (dtors.IsEmpty())
+    {
+        // In the case that we have no dtors to run, we can directly return, without spilling to memory
+        //
+
+        // Case 2: matches operand shape
+        // FIInlinedReturnImpl
+        //
+        {
+            AstFIOperandShape osc = AstFIOperandShape::TryMatch(m_retVal);
+            if (osc.MatchOK())
+            {
+                FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                            FastInterpBoilerplateLibrary<FIInlinedReturnImpl>::SelectBoilerplateBluePrint(
+                                m_retVal->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                osc.m_indexType,
+                                isNoExcept,
+                                osc.m_kind));
+                osc.PopulatePlaceholder(inst, 0, 1);
+                return FastInterpSnippet {
+                    inst, nullptr
+                };
+            }
+        }
+
+        // Case 3: default case, outlined operand
+        // FIOutlinedReturnImpl
+        //
+        {
+            TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_retVal->GetTypeId()));
+            FastInterpSnippet operand = m_retVal->PrepareForFastInterp(x_FINoSpill);
+            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIOutlinedReturnImpl>::SelectBoilerplateBluePrint(
+                            m_retVal->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                            isNoExcept,
+                            false /*exceptionThrown*/,
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
+            FastInterpSnippet snippet = operand.AddContinuation(inst);
+            return FastInterpSnippet {
+                snippet.m_entry, nullptr
+            };
+        }
+    }
+    else
+    {
+        // Otherwise, the return statement must be evaluated BEFORE the dtors
+        // So we must force spill the return statement to a memory location
+        //
+        uint64_t offset = thread_pochiVMContext->m_fastInterpStackFrameManager->PushLocalVar(m_retVal->GetTypeId());
+        FISpillLocation sloc;
+        sloc.SetSpillLocation(static_cast<uint32_t>(offset));
+
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_retVal->GetTypeId()));
+        FastInterpSnippet operand = m_retVal->PrepareForFastInterp(sloc);
+
+        FastInterpSnippet snippet = operand.AddContinuation(dtors);
+
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIReturnSpilledLocationImpl>::SelectBoilerplateBluePrint(
+                        m_retVal->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        isNoExcept));
+        inst->PopulateConstantPlaceholder<uint64_t>(0, offset);
+        snippet = snippet.AddContinuation(inst);
+
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(m_retVal->GetTypeId());
+
+        return FastInterpSnippet {
+            snippet.m_entry, nullptr
+        };
     }
 }
 
@@ -201,7 +236,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         // For C++ function, the stack frame size is fixed: it is always 8 * (2 * #params + 1) bytes
         //
         trueNumParams = m_cppFunctionMd->m_numParams + (m_cppFunctionMd->m_isUsingSret ? 1 : 0);
-        FastInterpCppFunctionInfo info = m_cppFunctionMd->m_fastInterpFn();
+        FastInterpCppFunctionInfo info = m_cppFunctionMd->m_getFastInterpFn();
         isCalleeNoExcept = info.m_isNoExcept;
         calleeReturnType = info.m_returnType;
         cppInterpCallee = info.m_interpImpl;
@@ -454,6 +489,7 @@ void AstFunction::PrepareForFastInterp()
     TestAssert(m_fastInterpStackFrameSize == static_cast<uint32_t>(-1));
     m_fastInterpStackFrameSize = thread_pochiVMContext->m_fastInterpStackFrameManager->GetFinalStackFrameSize();
 
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertEmpty();
     TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
     TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
     TestAssert(thread_llvmContext->m_scopeStack.size() == 0);

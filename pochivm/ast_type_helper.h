@@ -364,7 +364,7 @@ struct CppFunctionMetadata
     // The interp function interface
     //
     InterpCallCppFunctionImpl m_debugInterpFn;
-    FastInterpCallCppFunctionGetter m_fastInterpFn;
+    FastInterpCallCppFunctionGetter m_getFastInterpFn;
     // The unique ordinal, starting from 0
     //
     size_t m_functionOrdinal;

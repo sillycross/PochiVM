@@ -1544,10 +1544,20 @@ TEST(SanityCallCppFn, DestructorSanity_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = 0;
+        interpFn(233, &out);
+        ReleaseAssert(out == 233);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         int out = 0;
         interpFn(233, &out);
@@ -1615,10 +1625,20 @@ TEST(SanityCallCppFn, DestructorSanity_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert((r.order == std::vector<int>{123, -123}));
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         interpFn(&r);
@@ -1701,10 +1721,20 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         interpFn(&r);
@@ -1773,6 +1803,7 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004, -3, -2, 1005, 4, 1006,
@@ -1782,6 +1813,15 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_2)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         interpFn(&r);
@@ -1850,6 +1890,7 @@ TEST(SanityCallCppFn, BlockDoesNotConstituteVariableScope)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004, 1005, 4, 1006, 1007, 5, 1008, 6, 1009,
@@ -1859,6 +1900,15 @@ TEST(SanityCallCppFn, BlockDoesNotConstituteVariableScope)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         interpFn(&r);
@@ -1936,6 +1986,7 @@ TEST(SanityCallCppFn, DestructorCalledUponReturnStmt)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns {
             1000, 1, 1001, 2, 1002, 1003, 3, 1004, 4, 1005, 1006, 5, 1007, 6, 1008,
@@ -1945,6 +1996,15 @@ TEST(SanityCallCppFn, DestructorCalledUponReturnStmt)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        interpFn(&r);
+        ReleaseAssert(r.order == expectedAns);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         interpFn(&r);
@@ -2044,6 +2104,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns1 {
             1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3,
@@ -2065,6 +2126,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_1)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -2201,6 +2288,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns1 {
             1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3, -2, -1
@@ -2242,6 +2330,33 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_2)
             ReleaseAssert(r.order == expectedAns4);
         }
     }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
 
     thread_pochiVMContext->m_curModule->EmitIR();
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
@@ -2349,6 +2464,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns1 {
             1000, 1, 1001, 1002, 2, 1003, 1004, 3, 1005, 4, 1006, -4, -3, -2, -1
@@ -2367,6 +2483,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_3)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, true);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false, false);
+            ReleaseAssert(r.order == expectedAns4);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -2491,6 +2633,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004,
@@ -2521,6 +2664,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_1)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -2645,6 +2814,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004,
@@ -2678,6 +2848,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_2)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -2802,6 +2998,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004,
@@ -2832,6 +3029,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_3)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -2930,6 +3153,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_4)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns1 {
             1000, 1, 1001, 1002, 2, 1003, 3, 1004,
@@ -2943,6 +3167,22 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_4)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -3043,6 +3283,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 2, 1002,
@@ -3073,6 +3314,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_1)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -3193,6 +3460,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 2, 1002,
@@ -3223,6 +3491,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_2)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -3343,6 +3637,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns0 {
             1000, 1, 1001, 2, 1002,
@@ -3376,6 +3671,32 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_3)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 0);
+            ReleaseAssert(r.order == expectedAns0);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 1);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 2);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, 3);
+            ReleaseAssert(r.order == expectedAns3);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -3469,6 +3790,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_4)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     std::vector<int> expectedAns1 {
             1000, 1, 1001, 2, 1002,
@@ -3481,6 +3803,22 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_4)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, true);
+            ReleaseAssert(r.order == expectedAns1);
+        }
+        {
+            CtorDtorOrderRecorder r;
+            interpFn(&r, false);
+            ReleaseAssert(r.order == expectedAns2);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -3534,10 +3872,26 @@ TEST(SanityCallCppFn, StaticVarInFunction)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        TestStaticVarInFunction(true /*reset*/);
+        int expected = 123;
+        for (int i = 0; i < 10; i++)
+        {
+            expected += 12;
+            ReleaseAssert(TestStaticVarInFunction(false /*reset*/) == expected);
+            expected += 12;
+            ReleaseAssert(interpFn() == expected);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         TestStaticVarInFunction(true /*reset*/);
         int expected = 123;
@@ -3616,10 +3970,20 @@ TEST(SanityCallCppFn, ConstantWithSignificantAddress)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        const TestConstantClass* expectedAddr = TestConstantWithSignificantAddress();
+        const TestConstantClass* actualAddr = interpFn();
+        ReleaseAssert(expectedAddr == actualAddr);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         const TestConstantClass* expectedAddr = TestConstantWithSignificantAddress();
         const TestConstantClass* actualAddr = interpFn();
@@ -3686,10 +4050,19 @@ TEST(SanityCallCppFn, ConstantWithInsignificantAddress)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("123"))) == false);
+        ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("12345678"))) == true);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("123"))) == false);
         ReleaseAssert(interpFn(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>("12345678"))) == true);
@@ -3754,10 +4127,20 @@ TEST(SanityCallCppFn, StringInternQuirkyBehavior)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        const uint8_t* v1 = StringInterningQuirkyBehavior();
+        const uint8_t* v2 = interpFn();
+        ReleaseAssert(v1 == v2);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         const uint8_t* v1 = StringInterningQuirkyBehavior();
         const uint8_t* v2 = interpFn();
@@ -4250,10 +4633,19 @@ TEST(SanityCallCppFn, MemberObjectAccessor_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::pair<int, double> v = std::make_pair(123, 456.789);
+        ReleaseAssert(interpFn(&v) == 123);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::pair<int, double> v = std::make_pair(123, 456.789);
         ReleaseAssert(interpFn(&v) == 123);
@@ -4318,10 +4710,20 @@ TEST(SanityCallCppFn, MemberObjectAccessor_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::pair<int, double> v = std::make_pair(123, 456.789);
+        interpFn(&v, 543.21);
+        ReleaseAssert(fabs(v.second - 543.21) < 1e-12);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::pair<int, double> v = std::make_pair(123, 456.789);
         interpFn(&v, 543.21);
@@ -4395,10 +4797,21 @@ TEST(SanityCallCppFn, LLVMTypeMismatchRenaming)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::pair<double, float> a = std::make_pair(123.45, 456.789);
+        std::pair<double, uint64_t> b = std::make_pair(876.54, 321);
+        double r = interpFn(&a, &b);
+        ReleaseAssert(fabs(r - (123.45 + 456.789 + 876.54 + 321)) < 1e-5);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         std::pair<double, float> a = std::make_pair(123.45, 456.789);
         std::pair<double, uint64_t> b = std::make_pair(876.54, 321);
@@ -4475,12 +4888,25 @@ TEST(SanityCallCppFn, LLVMTypeMismatchRenaming_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn1 = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype1>("testfn");
         auto interpFn2 = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype2>("testfn2");
+
+        std::pair<uint16_t, uint32_t> v1 = std::make_pair(123, 456);
+        ReleaseAssert(interpFn1(&v1) == 123 + 456);
+        std::pair<uint32_t, uint16_t> v2 = std::make_pair(789, 654);
+        ReleaseAssert(interpFn2(&v2) == 789 + 654);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn1 = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype1>("testfn");
+        FastInterpFunction<FnPrototype2> interpFn2 = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype2>("testfn2");
 
         std::pair<uint16_t, uint32_t> v1 = std::make_pair(123, 456);
         ReleaseAssert(interpFn1(&v1) == 123 + 456);
@@ -4722,5 +5148,86 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_3)
 
         int v = 123;
         ReleaseAssert(jitFn1(&v) == &v);
+    }
+}
+
+TEST(SanityCallCppFn, ReturnExprEvaluatedBeforeDestructor)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)();
+    {
+        auto [fn] = NewFunction<FnPrototype>("testfn");
+        auto v = fn.NewVariable<int>();
+        auto x = fn.NewVariable<TestDestructor1>();
+        fn.SetBody(
+                Declare(v, 123),
+                Declare(x, Constructor<TestDestructor1>(Literal<int>(456), v.Addr())),
+                Return(v)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = interpFn();
+        ReleaseAssert(out == 123);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = interpFn();
+        ReleaseAssert(out == 123);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(x_isDebugBuild);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        int out = jitFn();
+        ReleaseAssert(out == 123);
     }
 }
