@@ -4983,10 +4983,19 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_1)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn1 = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype1>("testfn");
+
+        int v = 123;
+        ReleaseAssert(interpFn1(&v) == 123 * 3 + 3 * 2 + 1);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn1 = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype1>("testfn");
 
         int v = 123;
         ReleaseAssert(interpFn1(&v) == 123 * 3 + 3 * 2 + 1);
@@ -5058,10 +5067,19 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn1 = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype1>("testfn");
+
+        int v = 123;
+        ReleaseAssert(interpFn1(&v) == 123 * 3 + 3 * 2 + 1);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn1 = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype1>("testfn");
 
         int v = 123;
         ReleaseAssert(interpFn1(&v) == 123 * 3 + 3 * 2 + 1);
@@ -5127,10 +5145,19 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn1 = thread_pochiVMContext->m_curModule->
                 GetDebugInterpGeneratedFunction<FnPrototype1>("testfn");
+
+        int v = 123;
+        ReleaseAssert(interpFn1(&v) == &v);
+    }
+
+    {
+        FastInterpFunction<FnPrototype1> interpFn1 = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype1>("testfn");
 
         int v = 123;
         ReleaseAssert(interpFn1(&v) == &v);

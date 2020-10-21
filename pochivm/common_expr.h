@@ -336,6 +336,16 @@ public:
         fn(m_operand);
     }
 
+    virtual void FastInterpSetupSpillLocation() override;
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    {
+        // This AstNode is only used to handle C++ const primitive reference parameter.
+        // The call expression will directly check m_operand, so execution should never reach here
+        //
+        ReleaseAssert(false && "unexpected use of AstRvalueToConstPrimitiveRefExpr");
+    }
+
     AstNodeBase* m_operand;
     uint32_t m_debugInterpOffset;
 };

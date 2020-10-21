@@ -58,6 +58,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_call_expr_enter_cpp_fn.cpp
   fastinterp_tpl_return_spilled_location.cpp
   fastinterp_tpl_call_expr_call_dtor.cpp
+  fastinterp_tpl_call_expr_cpp_const_primitive_ref.cpp
 )
 
 SET(FASTINTERP_SOURCES

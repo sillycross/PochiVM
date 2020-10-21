@@ -278,4 +278,10 @@ FastInterpSnippet WARN_UNUSED AstAssignExpr::PrepareForFastInterp(FISpillLocatio
     }
 }
 
+void AstRvalueToConstPrimitiveRefExpr::FastInterpSetupSpillLocation()
+{
+    thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_operand->GetTypeId());
+    m_operand->FastInterpSetupSpillLocation();
+}
+
 }   // namespace PochiVM

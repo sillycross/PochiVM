@@ -296,7 +296,18 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         // Evaluate parameter
         //
         TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_params[index]->GetTypeId()));
-        FastInterpSnippet snippet = m_params[index]->PrepareForFastInterp(x_FINoSpill);
+        FastInterpSnippet snippet;
+        if (m_params[index]->GetAstNodeType() == AstNodeType::AstRvalueToConstPrimitiveRefExpr)
+        {
+            TestAssert(m_isCppFunction);
+            AstRvalueToConstPrimitiveRefExpr* expr = assert_cast<AstRvalueToConstPrimitiveRefExpr*>(m_params[index]);
+            TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(expr->m_operand->GetTypeId()));
+            snippet = expr->m_operand->PrepareForFastInterp(x_FINoSpill);
+        }
+        else
+        {
+            snippet = m_params[index]->PrepareForFastInterp(x_FINoSpill);
+        }
 
         FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
         TestAssertIff(newsfSpillLoc.IsNoSpill(), static_cast<uint32_t>(index) < m_fastInterpSpillNewSfAddrAt);
@@ -316,7 +327,6 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         callOp = callOp.AddContinuation(snippet);
 
         // Populate the evaluated parameter into new stack frame
-        // TODO: handle RValueToConstPrimitiveReference
         //
         {
             FastInterpBoilerplateInstance* fillParamOp;
@@ -330,24 +340,51 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
             {
                 paramOrd = static_cast<FICallExprParamOrd>(trueParamIndex);
             }
-            if (newsfSpillLoc.IsNoSpill())
+            if (m_params[index]->GetAstNodeType() == AstNodeType::AstRvalueToConstPrimitiveRefExpr)
             {
-
-                fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                            FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
-                                m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
-                                paramOrd,
-                                index + 1 < m_params.size() /*hasMore*/));
+                TestAssert(m_isCppFunction);
+                if (newsfSpillLoc.IsNoSpill())
+                {
+                    fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FICallExprStoreCppConstPrimitiveRefParamImpl>::SelectBoilerplateBluePrint(
+                                    m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paramOrd,
+                                    index + 1 < m_params.size() /*hasMore*/));
+                }
+                else
+                {
+                    fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FICallExprStoreCppConstPrimitiveRefParamNewSfSpilledImpl>::SelectBoilerplateBluePrint(
+                                    m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paramOrd,
+                                    index + 1 < m_params.size() /*hasMore*/));
+                    newsfSpillLoc.PopulatePlaceholderIfSpill(fillParamOp, 2);
+                }
+                fillParamOp->PopulateConstantPlaceholder<uint64_t>(1, trueNumParams * 8);
             }
             else
             {
-                fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                            FastInterpBoilerplateLibrary<FICallExprStoreParamNewSfSpilledImpl>::SelectBoilerplateBluePrint(
-                                m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
-                                paramOrd,
-                                index + 1 < m_params.size() /*hasMore*/));
-                newsfSpillLoc.PopulatePlaceholderIfSpill(fillParamOp, 1);
+                if (newsfSpillLoc.IsNoSpill())
+                {
+                    fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
+                                    m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paramOrd,
+                                    index + 1 < m_params.size() /*hasMore*/));
+                }
+                else
+                {
+                    fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FICallExprStoreParamNewSfSpilledImpl>::SelectBoilerplateBluePrint(
+                                    m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paramOrd,
+                                    index + 1 < m_params.size() /*hasMore*/));
+                    newsfSpillLoc.PopulatePlaceholderIfSpill(fillParamOp, 1);
+                }
             }
+            // This if-branch is very untested since it only happens when we have >100 parameters
+            // TODO: maybe try test it randomly in debug mode
+            //
             if (paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
             {
                 uint64_t offset = trueParamIndex * 8 + 8;
