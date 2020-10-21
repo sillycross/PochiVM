@@ -12,6 +12,7 @@ namespace PochiVM
 struct FICallExprStoreParamImpl
 {
     template<typename ParamType,
+             FICallExprParamOrd paramOrd,
              bool hasMore>
     static constexpr bool cond()
     {
@@ -21,16 +22,25 @@ struct FICallExprStoreParamImpl
     }
 
     // Placeholder rules:
-    // constant placeholder 0: offset in newStackFrame to store param
+    // constant placeholder 0: offset in newStackFrame to store param, if paramOrd == FIRST_NON_INLINE_PARAM_ORD
     //
     template<typename ParamType,
+             FICallExprParamOrd paramOrd,
              bool hasMore>
     static void f([[maybe_unused]] uintptr_t oldStackframe, uintptr_t newStackFrame, ParamType qa) noexcept
     {
+        uint64_t offset;
+        if constexpr(paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = qa;
+            offset = CONSTANT_PLACEHOLDER_0;
         }
+        else
+        {
+            offset = 8 * static_cast<uint64_t>(paramOrd) + 8;
+        }
+
+        *GetLocalVarAddress<ParamType>(newStackFrame, offset) = qa;
 
         if constexpr(hasMore)
         {
@@ -48,6 +58,7 @@ struct FICallExprStoreParamImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("paramType"),
+                    CreateEnumMetaVar<FICallExprParamOrd::X_END_OF_ENUM>("paramOrd"),
                     CreateBoolMetaVar("hasMore")
         );
     }
@@ -56,6 +67,7 @@ struct FICallExprStoreParamImpl
 struct FICallExprStoreParamNewSfSpilledImpl
 {
     template<typename ParamType,
+             FICallExprParamOrd paramOrd,
              bool hasMore>
     static constexpr bool cond()
     {
@@ -66,9 +78,10 @@ struct FICallExprStoreParamNewSfSpilledImpl
 
     // Placeholder rules:
     // constant placeholder 1: spilled newstackframe offset
-    // constant placeholder 0: offset in newStackFrame to store param
+    // constant placeholder 0: offset in newStackFrame to store param, if paramOrd == FIRST_NON_INLINE_PARAM_ORD
     //
     template<typename ParamType,
+             FICallExprParamOrd paramOrd,
              bool hasMore>
     static void f([[maybe_unused]] uintptr_t oldStackframe, ParamType qa) noexcept
     {
@@ -78,10 +91,18 @@ struct FICallExprStoreParamNewSfSpilledImpl
             newStackFrame = *GetLocalVarAddress<uintptr_t>(oldStackframe, CONSTANT_PLACEHOLDER_1);
         }
 
+        uint64_t offset;
+        if constexpr(paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
         {
             DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
-            *GetLocalVarAddress<ParamType>(newStackFrame, CONSTANT_PLACEHOLDER_0) = qa;
+            offset = CONSTANT_PLACEHOLDER_0;
         }
+        else
+        {
+            offset = 8 * static_cast<uint64_t>(paramOrd) + 8;
+        }
+
+        *GetLocalVarAddress<ParamType>(newStackFrame, offset) = qa;
 
         if constexpr(hasMore)
         {
@@ -99,6 +120,7 @@ struct FICallExprStoreParamNewSfSpilledImpl
     {
         return CreateMetaVarList(
                     CreateTypeMetaVar("paramType"),
+                    CreateEnumMetaVar<FICallExprParamOrd::X_END_OF_ENUM>("paramOrd"),
                     CreateBoolMetaVar("hasMore")
         );
     }

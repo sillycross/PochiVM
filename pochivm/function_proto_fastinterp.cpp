@@ -276,8 +276,8 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         FastInterpBoilerplateInstance* fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
                         m_fastInterpSretVar->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        static_cast<FICallExprParamOrd>(0),
                         trueNumParams > 1 /*hasMore*/));
-        fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, 8 /*offset*/);
         callOp = callOp.AddContinuation(snippet).AddContinuation(fillParamOp);
     }
 
@@ -320,11 +320,23 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         //
         {
             FastInterpBoilerplateInstance* fillParamOp;
+            size_t trueParamIndex = index + ((m_isCppFunction && m_cppFunctionMd->m_isUsingSret) ? 1 : 0);
+            FICallExprParamOrd paramOrd;
+            if (trueParamIndex >= static_cast<size_t>(FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD))
+            {
+                paramOrd = FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD;
+            }
+            else
+            {
+                paramOrd = static_cast<FICallExprParamOrd>(trueParamIndex);
+            }
             if (newsfSpillLoc.IsNoSpill())
             {
+
                 fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                             FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
                                 m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                paramOrd,
                                 index + 1 < m_params.size() /*hasMore*/));
             }
             else
@@ -332,15 +344,15 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
                 fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                             FastInterpBoilerplateLibrary<FICallExprStoreParamNewSfSpilledImpl>::SelectBoilerplateBluePrint(
                                 m_params[index]->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                paramOrd,
                                 index + 1 < m_params.size() /*hasMore*/));
                 newsfSpillLoc.PopulatePlaceholderIfSpill(fillParamOp, 1);
             }
-            uint64_t offset = index * 8 + 8;
-            if (m_isCppFunction && m_cppFunctionMd->m_isUsingSret)
+            if (paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
             {
-                offset += 8;
+                uint64_t offset = trueParamIndex * 8 + 8;
+                fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, offset);
             }
-            fillParamOp->PopulateConstantPlaceholder<uint64_t>(0, offset);
             callOp = callOp.AddContinuation(fillParamOp);
         }
     }

@@ -65,6 +65,12 @@ enum class FIStackframeSizeCategory
     X_END_OF_ENUM = FIStackframeSizeCategoryHelper::x_num_categories
 };
 
+enum class FICallExprParamOrd
+{
+    FIRST_NON_INLINE_PARAM_ORD = 100,
+    X_END_OF_ENUM
+};
+
 namespace FIStackframeSizeCategoryHelper
 {
     constexpr FIStackframeSizeCategory SelectCategory(size_t neededSize)

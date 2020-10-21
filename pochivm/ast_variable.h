@@ -32,7 +32,7 @@ public:
         , m_storageSize(static_cast<uint32_t>(typeId.RemovePointer().Size()))
         , m_debugInterpOffset(static_cast<uint32_t>(-1))
         , m_fastInterpOffset(static_cast<uint32_t>(-1))
-        , m_fastInterpDtorCallOp(nullptr, nullptr)
+        , m_fastInterpDtorCallOp(nullptr)
     {
         TestAssert(GetTypeId().IsPointerType());
     }
@@ -67,6 +67,8 @@ public:
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
     virtual void FastInterpSetupSpillLocation() override { }
 
+    // The snippet may only be executed when operand stack is empty
+    //
     FastInterpSnippet WARN_UNUSED GetFastInterpDestructorSnippet();
 
     const char* GetVarNameNoSuffix() const { return m_varname; }
@@ -124,7 +126,7 @@ private:
     uint32_t m_fastInterpOffset;
     // Reusable callOp to destruct this variable
     //
-    FastInterpSnippet m_fastInterpDtorCallOp;
+    FastInterpBoilerplateInstance* m_fastInterpDtorCallOp;
 };
 
 }   // namespace PochiVM
