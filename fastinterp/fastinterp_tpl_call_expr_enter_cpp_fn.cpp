@@ -16,12 +16,6 @@ struct FICallExprEnterCppFnImpl
         return true;
     }
 
-    // Placeholder rules:
-    // boilerplate placeholder 1: exception catch clause
-    // CPP placeholder 0: exception soft-emulator
-    // constant placeholder 0: program position indicator
-    // boilerplate placeholder 0: no-exception case continuation
-    //
     template<typename ReturnType,
              bool isNoExcept>
     static FIReturnType<ReturnType, isNoExcept> f(uintptr_t stackframe) noexcept
