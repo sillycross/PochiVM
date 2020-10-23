@@ -7,7 +7,7 @@ add_library(pochivm
   function_proto_llvm.cpp  
   lang_constructs_llvm.cpp
   ast_variable_llvm.cpp
-  destructor_helper_llvm.cpp
+  scoped_variable_manager_llvm.cpp
   exception_helper_llvm.cpp
   ast_catch_throw_llvm.cpp
   codegen_context.cpp
@@ -18,7 +18,7 @@ add_library(pochivm
   common_expr_fastinterp.cpp
   logical_operator_fastinterp.cpp
   cast_expr_fastinterp.cpp
-  destructor_helper_fastinterp.cpp
+  scoped_variable_manager_fastinterp.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

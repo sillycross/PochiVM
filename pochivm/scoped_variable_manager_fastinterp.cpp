@@ -1,24 +1,24 @@
+#include "fastinterp_ast_helper.hpp"
+#include "codegen_context.hpp"
 #include "destructor_helper.h"
-#include "pochivm.hpp"
 #include "scoped_variable_manager.h"
 
 namespace PochiVM
 {
 
-using namespace llvm;
-
-void ScopedVariableManager::EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope)
+FastInterpSnippet WARN_UNUSED ScopedVariableManager::FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope)
 {
-    TestAssert(m_operationMode == OperationMode::LLVM);
-    TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
+    TestAssert(m_operationMode == OperationMode::FASTINTERP);
+    FastInterpSnippet result { nullptr, nullptr };
     auto rit = m_scopeStack.rbegin();
     while (rit != m_scopeStack.rend())
     {
         const std::vector<DestructorIREmitter*>& vec = rit->second;
         for (auto rit2 = vec.rbegin(); rit2 != vec.rend(); rit2++)
         {
-            DestructorIREmitter* e = *rit2;
-            e->EmitDestructorIR();
+            AstVariable* e = assert_cast<AstVariable*>(*rit2);
+            FastInterpSnippet snippet = e->GetFastInterpDestructorSnippet();
+            result = result.AddContinuation(snippet);
         }
         if (rit->first == boundaryScope)
         {
@@ -28,6 +28,7 @@ void ScopedVariableManager::EmitIRDestructAllVariablesUntilScope(AstNodeBase* bo
     }
     TestAssertImp(boundaryScope != nullptr, rit != m_scopeStack.rend() && rit->first == boundaryScope);
     TestAssertImp(boundaryScope == nullptr, rit == m_scopeStack.rend());
+    return result;
 }
 
 }   // namespace PochiVM
