@@ -68,7 +68,7 @@ void AstScope::FastInterpSetupSpillLocation()
 FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
+    AutoScopedVariableManagerScope asvms(this);
 
     FastInterpSnippet result { nullptr, nullptr };
     for (AstNodeBase* stmt : m_contents)
@@ -81,17 +81,16 @@ FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TES
 
     if (!result.IsUncontinuable())
     {
-        FastInterpSnippet dtorSequence = FIGenerateDestructorSequenceUntilScope(this);
+        FastInterpSnippet dtorSequence = thread_pochiVMContext->m_scopedVariableManager.FIGenerateDestructorSequenceUntilScope(this);
         result = result.AddContinuation(dtorSequence);
     }
 
-    std::vector<DestructorIREmitter*>& list = thread_llvmContext->m_scopeStack.back().second;
+    const std::vector<DestructorIREmitter*>& list = thread_pochiVMContext->m_scopedVariableManager.GetObjectsInCurrentScope();
     for (auto rit = list.rbegin(); rit != list.rend(); rit++)
     {
         AstVariable* var = assert_cast<AstVariable*>(*rit);
         thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
     }
-    thread_llvmContext->PopVariableScope(this);
     return result;
 }
 
@@ -342,11 +341,10 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
 
     FastInterpBoilerplateInstance* afterLoop = FIGetNoopBoilerplate();
 
-    thread_llvmContext->m_fiContinueStmtTarget.push_back(std::make_pair(condBrSnippet.m_entry, m_body));
-    Auto(thread_llvmContext->m_fiContinueStmtTarget.pop_back());
-
-    thread_llvmContext->m_fiBreakStmtTarget.push_back(std::make_pair(afterLoop, m_body));
-    Auto(thread_llvmContext->m_fiBreakStmtTarget.pop_back());
+    AutoScopedVarManagerFIBreakContinueTarget asvmfbct(afterLoop /*breakTarget*/,
+                                                       m_body /*breakTargetScope*/,
+                                                       condBrSnippet.m_entry /*continueTarget*/,
+                                                       m_body /*continueTargetScope*/);
 
     FastInterpSnippet loopBody = m_body->PrepareForFastInterp(x_FINoSpill);
     if (loopBody.IsEmpty())
@@ -378,16 +376,15 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
 {
     TestAssert(spillLoc.IsNoSpill());
 
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
+    AutoScopedVariableManagerScope asvms(this);
 
     FastInterpBoilerplateInstance* loopStepHead = FIGetNoopBoilerplate();
     FastInterpBoilerplateInstance* afterLoopHead = FIGetNoopBoilerplate();
 
-    thread_llvmContext->m_fiContinueStmtTarget.push_back(std::make_pair(loopStepHead, m_body));
-    Auto(thread_llvmContext->m_fiContinueStmtTarget.pop_back());
-
-    thread_llvmContext->m_fiBreakStmtTarget.push_back(std::make_pair(afterLoopHead, m_body));
-    Auto(thread_llvmContext->m_fiBreakStmtTarget.pop_back());
+    AutoScopedVarManagerFIBreakContinueTarget asvmfbct(afterLoopHead /*breakTarget*/,
+                                                       m_body /*breakTargetScope*/,
+                                                       loopStepHead /*continueTarget*/,
+                                                       m_body /*continueTargetScope*/);
 
     FastInterpSnippet startClause = m_startClause->PrepareForFastInterp(x_FINoSpill);
     // We disallow break/continue/return in for-loop init-block
@@ -399,18 +396,17 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     // (the for-body is a separate scope). Although we have checked this condition in Validate(),
     // for sanity, here we assert again that no additional variables are declared since then.
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    size_t numVarsInInitBlock = thread_llvmContext->m_scopeStack.back().second.size();
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    size_t numVarsInInitBlock = thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope();
 #endif
 
     FastInterpSnippet condClause = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(m_condClause);
-
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
 
     FastInterpSnippet loopBody = m_body->PrepareForFastInterp(x_FINoSpill);
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
     if (loopBody.IsEmpty())
     {
         loopBody = loopBody.AddContinuation(FIGetNoopBoilerplate());
@@ -420,25 +416,24 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     // We disallow break/continue/return in for-loop step-block
     //
     TestAssert(!loopStep.IsUncontinuable());
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
     loopStep = FastInterpSnippet(loopStepHead, loopStepHead).AddContinuation(loopStep);
 
     // Call destructors for variables declared in for-loop init-block
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    FastInterpSnippet afterLoop = FIGenerateDestructorSequenceUntilScope(this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    FastInterpSnippet afterLoop = thread_pochiVMContext->m_scopedVariableManager.FIGenerateDestructorSequenceUntilScope(this);
     afterLoop = FastInterpSnippet(afterLoopHead, afterLoopHead).AddContinuation(afterLoop);
 
     // Pop off the variable scope
     //
-    std::vector<DestructorIREmitter*>& list = thread_llvmContext->m_scopeStack.back().second;
+    const std::vector<DestructorIREmitter*>& list = thread_pochiVMContext->m_scopedVariableManager.GetObjectsInCurrentScope();
     for (auto rit = list.rbegin(); rit != list.rend(); rit++)
     {
         AstVariable* var = assert_cast<AstVariable*>(*rit);
         thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
     }
-    thread_llvmContext->PopVariableScope(this);
 
     // Now link everything together
     //
@@ -473,20 +468,18 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
 FastInterpSnippet WARN_UNUSED AstBreakOrContinueStmt::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
-    TestAssert(thread_llvmContext->m_fiBreakStmtTarget.size() > 0);
-    TestAssert(thread_llvmContext->m_fiContinueStmtTarget.size() > 0);
 
     std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scopeBoundary*/> target;
     if (IsBreakStatement())
     {
-        target = thread_llvmContext->m_fiBreakStmtTarget.back();
+        target = thread_pochiVMContext->m_scopedVariableManager.GetFIBreakTarget();
     }
     else
     {
-        target = thread_llvmContext->m_fiContinueStmtTarget.back();
+        target = thread_pochiVMContext->m_scopedVariableManager.GetFIContinueTarget();
     }
 
-    FastInterpSnippet snippet = FIGenerateDestructorSequenceUntilScope(target.second);
+    FastInterpSnippet snippet = thread_pochiVMContext->m_scopedVariableManager.FIGenerateDestructorSequenceUntilScope(target.second);
     TestAssert(!snippet.IsUncontinuable());
     if (snippet.IsEmpty())
     {

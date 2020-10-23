@@ -79,13 +79,4 @@ struct AutoInterpExecutionScope
     }
 };
 
-// Emit IR that calls destructors in reverse order of declaration for all variables declared,
-// until scope 'boundaryScope' (inclusive). When boundaryScope == nullptr, destructs everything.
-//
-void EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope);
-
-// Same as EmitIRDestructAllVariablesUntilScope, except that it emits FastInterp code
-//
-FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope);
-
 }   // namespace PochiVM

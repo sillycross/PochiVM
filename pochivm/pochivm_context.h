@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "scoped_variable_manager.h"
 
 namespace PochiVM
 {
@@ -41,6 +42,8 @@ struct PochiVMContext
     //
     uintptr_t m_debugInterpStackFrameBase;
 
+    ScopedVariableManager m_scopedVariableManager;
+
     FIStackFrameManager* m_fastInterpStackFrameManager;
     FastInterpCodegenEngine* m_fastInterpEngine;
     std::vector<std::pair<AstFunction*, AstCallExpr*>> m_fastInterpFnCallFixList;
@@ -77,5 +80,76 @@ private:
 };
 #define AutoThreadPochiVMContext(...) static_assert(false, "Wrong use of 'auto'-pattern!");
 
-}   // namespace PochiVM
+class AutoScopedVariableManagerScope
+{
+public:
+    AutoScopedVariableManagerScope(AstNodeBase* scope)
+        : m_scope(scope)
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PushScope(m_scope);
+    }
 
+    ~AutoScopedVariableManagerScope()
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PopScope(m_scope);
+    }
+
+private:
+    AstNodeBase* m_scope;
+};
+#define AutoScopedVariableManagerScope(...) static_assert(false, "Wrong use of 'auto'-pattern!");
+
+class AutoScopedVarManagerLLVMBreakContinueTarget
+{
+public:
+    AutoScopedVarManagerLLVMBreakContinueTarget(llvm::BasicBlock* breakTarget,
+                                                AstNodeBase* breakTargetScope,
+                                                llvm::BasicBlock* continueTarget,
+                                                AstNodeBase* continueTargetScope)
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PushLLVMBreakAndContinueTarget(
+                    breakTarget, breakTargetScope, continueTarget, continueTargetScope);
+    }
+
+    ~AutoScopedVarManagerLLVMBreakContinueTarget()
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PopBreakAndContinueTarget(ScopedVariableManager::OperationMode::LLVM);
+    }
+};
+#define AutoScopedVarManagerLLVMBreakContinueTarget(...) static_assert(false, "Wrong use of 'auto'-pattern!");
+
+class AutoScopedVarManagerFIBreakContinueTarget
+{
+public:
+    AutoScopedVarManagerFIBreakContinueTarget(FastInterpBoilerplateInstance* breakTarget,
+                                              AstNodeBase* breakTargetScope,
+                                              FastInterpBoilerplateInstance* continueTarget,
+                                              AstNodeBase* continueTargetScope)
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PushFIBreakAndContinueTarget(
+                    breakTarget, breakTargetScope, continueTarget, continueTargetScope);
+    }
+
+    ~AutoScopedVarManagerFIBreakContinueTarget()
+    {
+        thread_pochiVMContext->m_scopedVariableManager.PopBreakAndContinueTarget(ScopedVariableManager::OperationMode::FASTINTERP);
+    }
+};
+#define AutoScopedVarManagerFIBreakContinueTarget(...) static_assert(false, "Wrong use of 'auto'-pattern!");
+
+class AutoSetScopedVarManagerOperationMode
+{
+public:
+    AutoSetScopedVarManagerOperationMode(ScopedVariableManager::OperationMode mode)
+    {
+        thread_pochiVMContext->m_scopedVariableManager.SetOperationMode(mode);
+    }
+
+    ~AutoSetScopedVarManagerOperationMode()
+    {
+        thread_pochiVMContext->m_scopedVariableManager.ClearOperationMode();
+    }
+};
+#define AutoSetScopedVarManagerOperationMode(...) static_assert(false, "Wrong use of 'auto'-pattern!");
+
+}   // namespace PochiVM

@@ -3,6 +3,7 @@
 #include "ast_expr_base.h"
 #include "common_expr.h"
 #include "pochivm_context.h"
+#include "scoped_variable_manager.h"
 
 namespace llvm {
 class AllocaInst;
@@ -12,13 +13,6 @@ namespace PochiVM
 {
 
 class AstFunction;
-
-class DestructorIREmitter
-{
-public:
-    virtual ~DestructorIREmitter() {}
-    virtual void EmitDestructorIR() = 0;
-};
 
 class AstVariable : public AstNodeBase, public DestructorIREmitter
 {
@@ -48,6 +42,13 @@ public:
     // May only be called if the variable is a CPP class type
     //
     virtual void EmitDestructorIR() override;
+
+    // TODO: as an optimization, we can check for C++ types with trivial destructor
+    //
+    virtual bool HasNontrivialDestructor() override final
+    {
+        return GetTypeId().RemovePointer().IsCppClassType();
+    }
 
     template<typename T>
     void InterpImpl(T* out)

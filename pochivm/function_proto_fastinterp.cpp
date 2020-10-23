@@ -57,8 +57,7 @@ FastInterpSnippet WARN_UNUSED AstDeclareVariable::PrepareForFastInterp(FISpillLo
     // Unlike LLVM mode (which only pushes CPP class that actually have destructors)
     // we need to push everything, since we need to reduce stack frame size when it is destructed.
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0);
-    thread_llvmContext->m_scopeStack.back().second.push_back(m_variable);
+    thread_pochiVMContext->m_scopedVariableManager.PushObject(m_variable);
     return result;
 }
 
@@ -78,7 +77,7 @@ FastInterpSnippet WARN_UNUSED AstReturnStmt::PrepareForFastInterp(FISpillLocatio
 
     bool isNoExcept = thread_llvmContext->m_curFunction->GetIsNoExcept();
 
-    FastInterpSnippet dtors = FIGenerateDestructorSequenceUntilScope(nullptr /*everything*/);
+    FastInterpSnippet dtors = thread_pochiVMContext->m_scopedVariableManager.FIGenerateDestructorSequenceUntilScope(nullptr /*everything*/);
 
     // Case 1: return void
     //
@@ -272,6 +271,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         FastInterpSnippet snippet = m_fastInterpSretVar->PrepareForFastInterp(x_FINoSpill);
         FISpillLocation newsfSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PeekTopTemp(TypeId::Get<uint64_t>());
         TestAssert(newsfSpillLoc.IsNoSpill());
+        std::ignore = newsfSpillLoc;
 
         FastInterpBoilerplateInstance* fillParamOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICallExprStoreParamImpl>::SelectBoilerplateBluePrint(
@@ -488,11 +488,9 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
 void AstFunction::PrepareForFastInterp()
 {
     TestAssert(thread_llvmContext->m_curFunction == nullptr);
-    thread_llvmContext->m_scopeStack.clear();
     thread_pochiVMContext->m_fastInterpStackFrameManager->Reset(static_cast<uint32_t>(m_params.size() + 1) * 8);
     thread_llvmContext->m_curFunction = this;
-    thread_llvmContext->m_fiBreakStmtTarget.clear();
-    thread_llvmContext->m_fiContinueStmtTarget.clear();
+    AutoSetScopedVarManagerOperationMode assvm(ScopedVariableManager::OperationMode::FASTINTERP);
 
     for (size_t index = 0; index < m_params.size(); index++)
     {
@@ -540,9 +538,7 @@ void AstFunction::PrepareForFastInterp()
     m_fastInterpStackFrameSize = thread_pochiVMContext->m_fastInterpStackFrameManager->GetFinalStackFrameSize();
 
     thread_pochiVMContext->m_fastInterpStackFrameManager->AssertEmpty();
-    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
-    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
-    TestAssert(thread_llvmContext->m_scopeStack.size() == 0);
+    thread_pochiVMContext->m_scopedVariableManager.AssertInCleanState();
     thread_llvmContext->m_curFunction = nullptr;
 }
 
@@ -579,7 +575,6 @@ void AstModule::PrepareForFastInterp()
 
     thread_pochiVMContext->m_fastInterpEngine->Reset();
     thread_pochiVMContext->m_fastInterpFnCallFixList.clear();
-    thread_llvmContext->m_scopeStack.clear();
 
     AstTraverseColorMark::ClearAll();
     for (auto iter = m_functions.begin(); iter != m_functions.end(); iter++)

@@ -74,15 +74,8 @@ void AstFunction::EmitIR()
     TestAssert(thread_llvmContext->m_curFunction == nullptr && m_generatedPrototype != nullptr);
     thread_llvmContext->m_curFunction = this;
     thread_llvmContext->m_isCursorAtDummyBlock = false;
-    thread_llvmContext->m_breakStmtTarget.clear();
-    thread_llvmContext->m_continueStmtTarget.clear();
-    thread_llvmContext->m_scopeStack.clear();
-    thread_llvmContext->m_exceptionDtorTree.clear();
-    thread_llvmContext->m_ehCurExceptionObject = nullptr;
-    thread_llvmContext->m_ehCurExceptionType = nullptr;
-    thread_llvmContext->m_currentEHCatchBlock = nullptr;
-    thread_llvmContext->m_dtorTreeBlockOrdinal = 0;
-    thread_llvmContext->m_landingPadBlockOrdinal = 0;
+    thread_llvmContext->m_llvmLandingPadBlockOrdinal = 0;
+    AutoSetScopedVarManagerOperationMode assvm(ScopedVariableManager::OperationMode::LLVM);
 
     // Generated code structure:
     //
@@ -169,10 +162,7 @@ void AstFunction::EmitIR()
     //
     TestAssert(llvm::verifyFunction(*m_generatedPrototype, &outs()) == false);
 
-    TestAssert(thread_llvmContext->m_breakStmtTarget.size() == 0);
-    TestAssert(thread_llvmContext->m_continueStmtTarget.size() == 0);
-    TestAssert(thread_llvmContext->m_scopeStack.size() == 0);
-    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() == 0);
+    thread_pochiVMContext->m_scopedVariableManager.AssertInCleanState();
 
     // Reset curFunction back to nullptr
     //
@@ -581,10 +571,9 @@ Value* WARN_UNUSED AstDeclareVariable::EmitIRImpl()
     // The order is important: first call constructor, then push it into scope,
     // since the constructor may throw (and in that case we should not destruct the variable again)
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0);
     if (m_variable->GetTypeId().RemovePointer().IsCppClassType())
     {
-        thread_llvmContext->m_scopeStack.back().second.push_back(m_variable);
+        thread_pochiVMContext->m_scopedVariableManager.PushObject(m_variable);
     }
     return nullptr;
 }
@@ -597,13 +586,13 @@ Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
         TestAssert(!function->GetReturnType().IsVoid());
         Value* retVal = m_retVal->EmitIR();
         TestAssert(AstTypeHelper::llvm_value_has_type(function->GetReturnType(), retVal));
-        EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
+        thread_pochiVMContext->m_scopedVariableManager.EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
         thread_llvmContext->m_builder->CreateRet(retVal);
     }
     else
     {
         TestAssert(function->GetReturnType().IsVoid());
-        EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
+        thread_pochiVMContext->m_scopedVariableManager.EmitIRDestructAllVariablesUntilScope(nullptr /*scopeBoundary*/);
         thread_llvmContext->m_builder->CreateRetVoid();
     }
     thread_llvmContext->SetInsertPointToDummyBlock();

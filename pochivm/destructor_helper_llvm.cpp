@@ -1,16 +1,18 @@
 #include "destructor_helper.h"
 #include "pochivm.hpp"
+#include "scoped_variable_manager.h"
 
 namespace PochiVM
 {
 
 using namespace llvm;
 
-void EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope)
+void ScopedVariableManager::EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope)
 {
+    TestAssert(m_operationMode == OperationMode::LLVM);
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
-    auto rit = thread_llvmContext->m_scopeStack.rbegin();
-    while (rit != thread_llvmContext->m_scopeStack.rend())
+    auto rit = m_scopeStack.rbegin();
+    while (rit != m_scopeStack.rend())
     {
         const std::vector<DestructorIREmitter*>& vec = rit->second;
         for (auto rit2 = vec.rbegin(); rit2 != vec.rend(); rit2++)
@@ -24,8 +26,8 @@ void EmitIRDestructAllVariablesUntilScope(AstNodeBase* boundaryScope)
         }
         rit++;
     }
-    TestAssertImp(boundaryScope != nullptr, rit != thread_llvmContext->m_scopeStack.rend() && rit->first == boundaryScope);
-    TestAssertImp(boundaryScope == nullptr, rit == thread_llvmContext->m_scopeStack.rend());
+    TestAssertImp(boundaryScope != nullptr, rit != m_scopeStack.rend() && rit->first == boundaryScope);
+    TestAssertImp(boundaryScope == nullptr, rit == m_scopeStack.rend());
 }
 
 }   // namespace PochiVM

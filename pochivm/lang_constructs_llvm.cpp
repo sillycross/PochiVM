@@ -28,7 +28,7 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
 {
     // Push a new layer of variable scope, and codegen the body
     //
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
+    AutoScopedVariableManagerScope asvms(this);
     for (AstNodeBase* stmt : m_contents)
     {
         std::ignore = stmt->EmitIR();
@@ -37,13 +37,11 @@ Value* WARN_UNUSED AstScope::EmitIRImpl()
     // If the cursor is at the dummy block, it means the execution will never reach the end-of-scope
     // (due to a break/continue/return statement), so there is no need to emit destructors here.
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
     if (!thread_llvmContext->m_isCursorAtDummyBlock)
     {
-        EmitIRDestructAllVariablesUntilScope(this);
+        thread_pochiVMContext->m_scopedVariableManager.EmitIRDestructAllVariablesUntilScope(this);
     }
-    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
-    thread_llvmContext->PopVariableScope(this);
     return nullptr;
 }
 
@@ -161,11 +159,10 @@ Value* WARN_UNUSED AstWhileLoop::EmitIRImpl()
                                                Twine("after_whileloop").concat(Twine(labelSuffix)));
     thread_llvmContext->m_builder->CreateBr(loopHead);
 
-    thread_llvmContext->m_continueStmtTarget.push_back(std::make_pair(loopHead, m_body));
-    Auto(thread_llvmContext->m_continueStmtTarget.pop_back());
-
-    thread_llvmContext->m_breakStmtTarget.push_back(std::make_pair(afterLoop, m_body));
-    Auto(thread_llvmContext->m_breakStmtTarget.pop_back());
+    AutoScopedVarManagerLLVMBreakContinueTarget asvmlbct(afterLoop /*breakTarget*/,
+                                                         m_body /*breakTargetScope*/,
+                                                         loopHead /*continueTarget*/,
+                                                         m_body /*continueTargetScope*/);
 
     // Codegen loopHead block
     //
@@ -225,13 +222,11 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     BasicBlock* afterLoop = BasicBlock::Create(*thread_llvmContext->m_llvmContext,
                                                Twine("after_forloop").concat(Twine(labelSuffix)));
 
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(this, std::vector<DestructorIREmitter*>()));
-
-    thread_llvmContext->m_continueStmtTarget.push_back(std::make_pair(loopStep, m_body));
-    Auto(thread_llvmContext->m_continueStmtTarget.pop_back());
-
-    thread_llvmContext->m_breakStmtTarget.push_back(std::make_pair(afterLoop, m_body));
-    Auto(thread_llvmContext->m_breakStmtTarget.pop_back());
+    AutoScopedVariableManagerScope asvms(this);
+    AutoScopedVarManagerLLVMBreakContinueTarget asvmlbct(afterLoop /*breakTarget*/,
+                                                         m_body /*breakTargetScope*/,
+                                                         loopStep /*continueTarget*/,
+                                                         m_body /*continueTargetScope*/);
 
     std::ignore = m_startClause->EmitIR();
     // We disallow break/continue/return in for-loop init-block
@@ -244,8 +239,8 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     // (the for-body is a separate scope). Although we have checked this condition in Validate(),
     // for sanity, here we assert again that no additional variables are declared since then.
     //
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    size_t numVarsInInitBlock = thread_llvmContext->m_scopeStack.back().second.size();
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    size_t numVarsInInitBlock = thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope();
 #endif
 
     // Codegen loopHead block
@@ -255,8 +250,8 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     Value* cond = m_condClause->EmitIR();
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     thread_llvmContext->m_builder->CreateCondBr(cond, loopBody /*trueBranch*/, afterLoop /*falseBranch*/);
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
 
     // Codegen loopBody block
     //
@@ -267,8 +262,8 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     {
         thread_llvmContext->m_builder->CreateBr(loopStep);
     }
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
 
     // Codegen loopStep block
     //
@@ -280,41 +275,35 @@ Value* WARN_UNUSED AstForLoop::EmitIRImpl()
     //
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
     thread_llvmContext->m_builder->CreateBr(loopHead);
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == numVarsInInitBlock);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
 
     // Codegen afterLoop block, call destructors in reverse order
     //
     afterLoop->insertInto(thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
     thread_llvmContext->m_builder->SetInsertPoint(afterLoop);
-    TestAssert(thread_llvmContext->m_scopeStack.size() > 0 && thread_llvmContext->m_scopeStack.back().first == this);
-    EmitIRDestructAllVariablesUntilScope(this);
+    TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
+    thread_pochiVMContext->m_scopedVariableManager.EmitIRDestructAllVariablesUntilScope(this);
 
-    // Pop off the variable scope
-    //
-    TestAssert(thread_llvmContext->m_exceptionDtorTree.size() <= thread_llvmContext->m_scopeStack.size());
-    thread_llvmContext->PopVariableScope(this);
     return nullptr;
 }
 
 Value* WARN_UNUSED AstBreakOrContinueStmt::EmitIRImpl()
 {
     TestAssert(!thread_llvmContext->m_isCursorAtDummyBlock);
-    TestAssert(thread_llvmContext->m_breakStmtTarget.size() > 0);
-    TestAssert(thread_llvmContext->m_continueStmtTarget.size() > 0);
 
     // Call destructors, in reverse order of the variables being declared
     //
     std::pair<BasicBlock* /*branchTarget*/, AstNodeBase* /*scopeBoundary*/> target;
     if (IsBreakStatement())
     {
-        target = thread_llvmContext->m_breakStmtTarget.back();
+        target = thread_pochiVMContext->m_scopedVariableManager.GetLLVMBreakTarget();
     }
     else
     {
-        target = thread_llvmContext->m_continueStmtTarget.back();
+        target = thread_pochiVMContext->m_scopedVariableManager.GetLLVMContinueTarget();
     }
-    EmitIRDestructAllVariablesUntilScope(target.second);
+    thread_pochiVMContext->m_scopedVariableManager.EmitIRDestructAllVariablesUntilScope(target.second);
     thread_llvmContext->m_builder->CreateBr(target.first);
     thread_llvmContext->SetInsertPointToDummyBlock();
     return nullptr;

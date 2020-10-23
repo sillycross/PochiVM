@@ -15,6 +15,11 @@ public:
         TestAssert(AstTypeHelper::llvm_value_has_type(TypeId::Get<void*>(), m_exnObject));
     }
 
+    virtual bool HasNontrivialDestructor() override final
+    {
+        return true;
+    }
+
     virtual void EmitDestructorIR() override
     {
         Function* callee = thread_llvmContext->m_module->getFunction("__cxa_free_exception");
@@ -69,60 +74,64 @@ Value* WARN_UNUSED AstThrowStmt::EmitIRImpl()
     // called in case we throw during the construction of the exception object.
     //
     CallCxaFreeExceptionHelper dtor(exnObjectVoidStar);
-    thread_llvmContext->m_scopeStack.push_back(std::make_pair(nullptr /*scope*/, std::vector<DestructorIREmitter*>()));
-    thread_llvmContext->m_scopeStack.back().second.push_back(&dtor);
 
-    // Cast the exnObject to the actual exception type
-    //
-    Value* exnObject = thread_llvmContext->m_builder->CreateBitCast(
-                exnObjectVoidStar, AstTypeHelper::llvm_type_of(m_exceptionTypeId.AddPointer()));
-
-    // Construct exception object
-    //
-    if (m_isCtor || m_isLValueObject)
     {
-        // The m_operand is the callExpr for constructing the exception object,
-        // with its first parameter be a AstLiteral placeholder (since we don't know the address into
-        // which the exception object should be constructed until we have allocated it now)
+        AutoScopedVariableManagerScope asvms(nullptr /*scope*/);
+        thread_pochiVMContext->m_scopedVariableManager.PushObject(&dtor);
+
+        // Cast the exnObject to the actual exception type
         //
-        TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
-        AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
-        TestAssert(callExpr->GetParams().size() > 0 && callExpr->GetParams()[0]->GetAstNodeType() == AstNodeType::AstLiteralExpr);
-        AstLiteralExpr* placeholder = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
-        placeholder->HijackPointerValueLLVM(exnObject);
-        Value* ret = m_operand->EmitIR();
-        TestAssert(ret == nullptr);
-        std::ignore = ret;
-    }
-    else
-    {
-        if (m_exceptionTypeId.IsCppClassType())
+        Value* exnObject = thread_llvmContext->m_builder->CreateBitCast(
+                    exnObjectVoidStar, AstTypeHelper::llvm_type_of(m_exceptionTypeId.AddPointer()));
+
+        // Construct exception object
+        //
+        if (m_isCtor || m_isLValueObject)
         {
-            // The only way to get a RValue CPP type is from the return value of a callExpr
+            // The m_operand is the callExpr for constructing the exception object,
+            // with its first parameter be a AstLiteral placeholder (since we don't know the address into
+            // which the exception object should be constructed until we have allocated it now)
             //
             TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
             AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
-            TestAssert(callExpr->IsCppFunction() && callExpr->GetCppFunctionMetadata()->m_isUsingSret);
-            callExpr->SetSretAddress(exnObject);
+            TestAssert(callExpr->GetParams().size() > 0 && callExpr->GetParams()[0]->GetAstNodeType() == AstNodeType::AstLiteralExpr);
+            AstLiteralExpr* placeholder = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
+            placeholder->HijackPointerValueLLVM(exnObject);
             Value* ret = m_operand->EmitIR();
             TestAssert(ret == nullptr);
             std::ignore = ret;
         }
         else
         {
-            TestAssert(m_exceptionTypeId.IsPrimitiveType() || m_exceptionTypeId.IsPointerType());
-            Value* ret = m_operand->EmitIR();
-            AstTypeHelper::create_store_helper(m_exceptionTypeId /*srcType*/, ret /*src*/, exnObject /*dst*/);
+            if (m_exceptionTypeId.IsCppClassType())
+            {
+                // The only way to get a RValue CPP type is from the return value of a callExpr
+                //
+                TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
+                AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
+                TestAssert(callExpr->IsCppFunction() && callExpr->GetCppFunctionMetadata()->m_isUsingSret);
+                callExpr->SetSretAddress(exnObject);
+                Value* ret = m_operand->EmitIR();
+                TestAssert(ret == nullptr);
+                std::ignore = ret;
+            }
+            else
+            {
+                TestAssert(m_exceptionTypeId.IsPrimitiveType() || m_exceptionTypeId.IsPointerType());
+                Value* ret = m_operand->EmitIR();
+                AstTypeHelper::create_store_helper(m_exceptionTypeId /*srcType*/, ret /*src*/, exnObject /*dst*/);
+            }
         }
-    }
 
-    // No other temporaries should have been created in this variable scope, since it's an expression
-    //
-    TestAssert(thread_llvmContext->m_scopeStack.back().second.size() == 1);
-    // Pop off the variable scope. The exception object has been constructed successfully,
-    // we don't need to call __cxa_free_exception in the destructor sequence.
-    //
-    thread_llvmContext->PopVariableScope(nullptr /*expectedScope*/);
+        // No other temporaries should have been created in this variable scope, since it's an expression
+        //
+        TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == 1);
+
+        // The variable scope we just pushed goes out of scope here.
+        // This is important, since the exception object has been constructed successfully,
+        // we don't need to call __cxa_free_exception in the destructor sequence.
+        //
+    }
 
     // Emit: __cxa_throw(exn_object, reinterpret_cast<i8*>(typeid_symbol), reinterpret_cast<i8*>(dtor))
     //

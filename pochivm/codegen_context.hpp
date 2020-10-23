@@ -45,8 +45,6 @@ struct LLVMCodegenContext
         , m_dummyBlock(nullptr)
         , m_isCursorAtDummyBlock(false)
         , m_curFunction(nullptr)
-        , m_breakStmtTarget()
-        , m_continueStmtTarget()
     {
         m_passBuilder.registerModuleAnalyses(m_MAM);
         m_passBuilder.registerCGSCCAnalyses(m_CGAM);
@@ -92,17 +90,6 @@ struct LLVMCodegenContext
         m_module = nullptr;
     }
 
-    void PopVariableScope(AstNodeBase* TESTBUILD_ONLY(expectedScope))
-    {
-        TestAssert(m_scopeStack.size() > 0 && m_scopeStack.back().first == expectedScope);
-        TestAssert(m_exceptionDtorTree.size() <= m_scopeStack.size());
-        m_scopeStack.pop_back();
-        if (m_exceptionDtorTree.size() > m_scopeStack.size())
-        {
-            m_exceptionDtorTree.pop_back();
-        }
-    }
-
     llvm::LLVMContext* m_llvmContext;
     llvm::IRBuilder<>* m_builder;
     llvm::Module* m_module;
@@ -128,52 +115,14 @@ struct LLVMCodegenContext
     llvm::BasicBlock* m_dummyBlock;
     bool m_isCursorAtDummyBlock;
 
+    // Ordinal used by landingpad blocks
+    //
+    uint32_t m_llvmLandingPadBlockOrdinal;
+
     // The current function being codegen'ed
     //
     AstFunction* m_curFunction;
 
-    // Current break/continue target
-    // The llvm::BasicBlock is the LLVM block target we should branch to.
-    // The AstNodeBase* is the variable scope corresponding to the target (we branch to the end of the scope),
-    // which may be a AstScope or a AstForLoop. All variables in the scope stack until 'scope' (inclusive)
-    // should be destructed before branching to 'branchTarget' when the break/continue statement is executed.
-    //
-    std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_breakStmtTarget;
-    std::vector<std::pair<llvm::BasicBlock* /*branchTarget*/, AstNodeBase* /*scope*/>> m_continueStmtTarget;
-
-    std::vector<std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scope*/>> m_fiBreakStmtTarget;
-    std::vector<std::pair<FastInterpBoilerplateInstance* /*branchTarget*/, AstNodeBase* /*scope*/>> m_fiContinueStmtTarget;
-
-    // Current stack of variable scopes and declared variables in each scope
-    //
-    std::vector<std::pair<AstNodeBase* /*scope*/, std::vector<DestructorIREmitter*>>> m_scopeStack;
-    // Current "stack" of destructor blocks for handling exceptions
-    // It is actually a tree, with each node branching to its parent in the end,
-    // but it's sufficient to only keep track of the current "dtor position" in each scope stack.
-    // Example: { ctor1; E; ctor2; { ctor3; E; ctor4; } { ctor5; E; ctor6; } ctor7; E; ctor8; }
-    // would have a tree structure of                /- dtor3 <- dtor4
-    //                                dtor1 <- dtor2 -- dtor5 <- dtor6
-    //                                               \- dtor7 <- dtor8
-    // and each exception 'E' would just branch to the corresponding dtor node in the tree.
-    //
-    // m_exceptionDtorTree[i] would store a 'boundary' and a 'branchTarget', which means destructors
-    // for the the first 'boundary' objects constructed in scope stack 'i', and any alive objects
-    // in earlier scopes, would be called when branching to 'branchTarget'.
-    //
-    std::vector<std::pair<int /*boundary*/,  llvm::BasicBlock* /*branchTarget*/>> m_exceptionDtorTree;
-    // An alloca of { i8*, i32 } holding the return value of personalityFn
-    //
-    llvm::Value* m_ehCurExceptionObject;
-    llvm::Value* m_ehCurExceptionType;
-    // The generated catch-block for the current inner-most try-block we are inside, or nullptr if there isn't any
-    //
-    llvm::BasicBlock* m_currentEHCatchBlock;
-    // Ordinal used by dtor tree blocks
-    //
-    uint32_t m_dtorTreeBlockOrdinal;
-    // Ordinal used by landingpad blocks
-    //
-    uint32_t m_landingPadBlockOrdinal;
     // The personalityFn in this module ("__gxx_personality_v0")
     //
     llvm::Constant* m_personalityFn;
