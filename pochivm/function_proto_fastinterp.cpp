@@ -2,6 +2,7 @@
 #include "function_proto.h"
 #include "codegen_context.hpp"
 #include "destructor_helper.h"
+#include "scoped_variable_manager.h"
 
 namespace PochiVM
 {
@@ -431,7 +432,7 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
                     FastInterpBoilerplateLibrary<FICallExprEnterCppFnImpl>::SelectBoilerplateBluePrint(
                         calleeReturnType.GetDefaultFastInterpTypeId(),
                         isCalleeNoExcept));
-        entryInst->PopulateCppFnPtrPlaceholder(0, reinterpret_cast<void(*)(void) noexcept>(cppInterpCallee));
+        entryInst->PopulateCppFnPtrPlaceholder(0, cppInterpCallee);
         callOp = callOp.AddContinuation(entryInst);
         callOp.m_tail = nullptr;
     }
@@ -457,20 +458,9 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
                     FastInterpBoilerplateLibrary<FICallExprCheckExceptionImpl>::SelectBoilerplateBluePrint(
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
-        // TODO: FIXME
-        // Program position indicator
-        //
-        checkExnOp->PopulateConstantPlaceholder<uint64_t>(0, 123);
-        // C++ soft exception emulator
-        //
-        checkExnOp->PopulateCppFnPtrPlaceholder(0, reinterpret_cast<void(*)(uintptr_t, uintptr_t) noexcept>(0x123));
-        // Catch clause
-        //
-        {
-            FastInterpBoilerplateInstance* trap = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                        FastInterpBoilerplateLibrary<FIAbortTrapImpl>::SelectBoilerplateBluePrint(true /*dummy*/));
-            checkExnOp->PopulateBoilerplateFnPtrPlaceholder(1, trap);
-        }
+
+        FastInterpBoilerplateInstance* exnPath = thread_pochiVMContext->m_scopedVariableManager.FIGenerateEHEntryPointForCurrentPosition();
+        checkExnOp->PopulateBoilerplateFnPtrPlaceholder(1, exnPath);
 
         if (!calleeReturnType.IsVoid() && spillLoc.IsNoSpill())
         {

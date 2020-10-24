@@ -39,7 +39,7 @@ FastInterpSnippet WARN_UNUSED AstVariable::GetFastInterpDestructorSnippet()
         m_fastInterpDtorCallOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICallExprCallDestructorOpImpl>::SelectBoilerplateBluePrint(true /*dummy*/));
         m_fastInterpDtorCallOp->PopulateConstantPlaceholder<uint64_t>(0, GetFastInterpOffset());
-        m_fastInterpDtorCallOp->PopulateCppFnPtrPlaceholder(0, reinterpret_cast<void(*)(void) noexcept>(info.m_interpImpl));
+        m_fastInterpDtorCallOp->PopulateCppFnPtrPlaceholder(0, info.m_interpImpl);
         m_fastInterpDtorCallOp->SetAlignmentLog2(4);
     }
 

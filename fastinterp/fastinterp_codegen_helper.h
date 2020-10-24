@@ -31,8 +31,7 @@ public:
         }
     }
 
-    template<typename R, typename... Args>
-    void PopulateCppFnPtrPlaceholder(uint32_t ordinal, R(*value)(Args...) noexcept)
+    void PopulateCppFnPtrPlaceholder(uint32_t ordinal, void* value)
     {
         // Not allowed to hold null pointer
         //
@@ -47,6 +46,12 @@ public:
         m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal + ordinal] = static_cast<uint64_t>(
                     static_cast<uint64_t>(static_cast<int64_t>(m_relativeDataAddr)) +
                     m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal] * sizeof(uint64_t));
+    }
+
+    template<typename R, typename... Args>
+    void PopulateCppFnPtrPlaceholder(uint32_t ordinal, R(*value)(Args...) noexcept)
+    {
+        PopulateCppFnPtrPlaceholder(ordinal, reinterpret_cast<void*>(value));
     }
 
     // The constant type must match what is defined in the boilerplate

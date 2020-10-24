@@ -36,6 +36,11 @@ struct FIOutlinedReturnImpl
                 if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
             }
         }
+        if (exceptionThrown)
+        {
+            if (numOIP != static_cast<FINumOpaqueIntegralParams>(0)) { return false; }
+            if (numOFP != static_cast<FINumOpaqueFloatingParams>(0)) { return false; }
+        }
         return true;
     }
 

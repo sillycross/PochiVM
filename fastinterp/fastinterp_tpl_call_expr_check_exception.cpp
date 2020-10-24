@@ -3,6 +3,7 @@
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
 #include "fastinterp_tpl_stackframe_category.h"
+#include "fastinterp_tpl_conditional_jump_helper.hpp"
 
 namespace PochiVM
 {
@@ -18,9 +19,7 @@ struct FICallExprCheckExceptionImpl
     }
 
     // Placeholder rules:
-    // boilerplate placeholder 1: exception catch clause
-    // CPP placeholder 0: exception soft-emulator
-    // constant placeholder 0: program position indicator
+    // boilerplate placeholder 1: exception case continuation
     // boilerplate placeholder 0: no-exception case continuation
     //
     template<FINumOpaqueIntegralParams numOIP,
@@ -28,29 +27,9 @@ struct FICallExprCheckExceptionImpl
              typename... OpaqueParams>
     static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool hasException) noexcept
     {
-        // This 'likely' is weird. We want to put the false branch (which is the no-exception case) at end.
-        // TODO: revisit this if we have time to fix LLVM's conditional tail call folding.
+        // Put the false branch (which is the no-exception case) at end.
         //
-        if (likely(hasException))
-        {
-            // Call our C++ EH soft-emulator stub, which would call all destructors before the catch block
-            //
-            DEFINE_CPP_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uintptr_t) noexcept);
-            DEFINE_CONSTANT_PLACEHOLDER_0(uintptr_t);
-            CPP_FNPTR_PLACEHOLDER_0(stackframe, CONSTANT_PLACEHOLDER_0);
-
-            // Transfer control to catch block
-            //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
-        }
-        else
-        {
-            // Transfer control to normal block
-            //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
-        }
+        FIConditionalJumpHelper::execute_1_0<FIConditionalJumpHelper::Mode::LikelyMode, OpaqueParams...>(hasException, stackframe, opaqueParams...);
     }
 
     static auto metavars()

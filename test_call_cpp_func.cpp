@@ -4545,6 +4545,44 @@ TEST(SanityCallCppFn, Exception_PropagateThrough_1)
         testFn(interpFn, 14, expectedAns14, true);
     }
 
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        testFn(interpFn, 1000, expectedAns1000, true);
+        testFn(interpFn, 1001, expectedAns1001, true);
+        testFn(interpFn, 1002, expectedAns1002, true);
+        testFn(interpFn, 1003, expectedAns1003, true);
+        testFn(interpFn, 1004, expectedAns1004, true);
+        testFn(interpFn, 1005, expectedAns1005, true);
+        testFn(interpFn, 1006, expectedAns1006, true);
+        testFn(interpFn, 1007, expectedAns1007, true);
+        testFn(interpFn, 1008, expectedAns1008, true);
+        testFn(interpFn, 1009, expectedAns1009, true);
+        testFn(interpFn, 1010, expectedAns1010, true);
+        testFn(interpFn, 1011, expectedAns1011, true);
+        testFn(interpFn, 1012, expectedAns1012, true);
+        testFn(interpFn, 1013, expectedAns1013, true);
+        testFn(interpFn, 1014, expectedAns1014, true);
+        testFn(interpFn, 1015, expectedAns1015, true);
+        testFn(interpFn, 1016, expectedAns1016, false);
+        testFn(interpFn, 1, expectedAns1, true);
+        testFn(interpFn, 2, expectedAns2, true);
+        testFn(interpFn, 3, expectedAns3, true);
+        testFn(interpFn, 4, expectedAns4, true);
+        testFn(interpFn, 5, expectedAns5, true);
+        testFn(interpFn, 6, expectedAns6, true);
+        testFn(interpFn, 7, expectedAns7, true);
+        testFn(interpFn, 8, expectedAns8, true);
+        testFn(interpFn, 9, expectedAns9, true);
+        testFn(interpFn, 10, expectedAns10, true);
+        testFn(interpFn, 11, expectedAns11, true);
+        testFn(interpFn, 12, expectedAns12, true);
+        testFn(interpFn, 13, expectedAns13, true);
+        testFn(interpFn, 14, expectedAns14, true);
+    }
+
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {

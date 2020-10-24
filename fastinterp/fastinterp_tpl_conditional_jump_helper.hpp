@@ -99,6 +99,7 @@ struct FIConditionalJumpHelper
     }
 
     GENERATE_METHOD(execute_0_1, 0, 1)
+    GENERATE_METHOD(execute_1_0, 1, 0)
 
 #undef GENERATE_METHOD
 };

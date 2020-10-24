@@ -38,6 +38,7 @@ public:
         , m_llvmEhCurExceptionObject(nullptr)
         , m_llvmEhCurExceptionType(nullptr)
         , m_llvmCurrentEHCatchBlock(nullptr)
+        , m_fiCurrentEHCatchBlock(nullptr)
         , m_llvmDtorTreeBlockOrdinal(0)
     { }
 
@@ -54,9 +55,11 @@ public:
         m_fiContinueStmtTarget.clear();
         m_scopeStack.clear();
         m_llvmExceptionDtorTree.clear();
+        m_fiExceptionDtorTree.clear();
         m_llvmEhCurExceptionObject = nullptr;
         m_llvmEhCurExceptionType = nullptr;
         m_llvmCurrentEHCatchBlock = nullptr;
+        m_fiCurrentEHCatchBlock = nullptr;
         m_llvmDtorTreeBlockOrdinal = 0;
     }
 
@@ -81,6 +84,7 @@ public:
         {
             TestAssert(m_fiBreakStmtTarget.size() == 0);
             TestAssert(m_fiContinueStmtTarget.size() == 0);
+            TestAssert(m_fiExceptionDtorTree.size() == 0);
         }
     }
 
@@ -126,6 +130,7 @@ public:
     {
         TestAssert(m_scopeStack.size() > 0 && m_scopeStack.back().first == expectedScope);
         TestAssertImp(m_operationMode == OperationMode::LLVM, m_llvmExceptionDtorTree.size() <= m_scopeStack.size());
+        TestAssertImp(m_operationMode == OperationMode::FASTINTERP, m_fiExceptionDtorTree.size() <= m_scopeStack.size());
         const std::vector<DestructorIREmitter*>& vars = m_scopeStack.back().second;
         for (auto it = vars.begin(); it != vars.end(); it++)
         {
@@ -141,6 +146,13 @@ public:
             if (m_llvmExceptionDtorTree.size() > m_scopeStack.size())
             {
                 m_llvmExceptionDtorTree.pop_back();
+            }
+        }
+        else
+        {
+            if (m_fiExceptionDtorTree.size() > m_scopeStack.size())
+            {
+                m_fiExceptionDtorTree.pop_back();
             }
         }
     }
@@ -241,6 +253,10 @@ public:
     //
     FastInterpSnippet WARN_UNUSED FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope);
 
+    // Generate the fastinterp entry point that shall be branched to if an exception happened at current program position.
+    //
+    FastInterpBoilerplateInstance* WARN_UNUSED FIGenerateEHEntryPointForCurrentPosition();
+
 private:
     llvm::BasicBlock* CreateEmptyDtorTreeBlock();
 
@@ -279,6 +295,9 @@ private:
     // in earlier scopes, would be called when branching to 'branchTarget'.
     //
     std::vector<std::pair<int /*boundary*/,  llvm::BasicBlock* /*branchTarget*/>> m_llvmExceptionDtorTree;
+
+    std::vector<std::pair<int /*boundary*/,  FastInterpBoilerplateInstance* /*branchTarget*/>> m_fiExceptionDtorTree;
+
     // An alloca of { i8*, i32 } holding the return value of personalityFn
     //
     llvm::Value* m_llvmEhCurExceptionObject;
@@ -286,6 +305,8 @@ private:
     // The generated catch-block for the current inner-most try-block we are inside, or nullptr if there isn't any
     //
     llvm::BasicBlock* m_llvmCurrentEHCatchBlock;
+    FastInterpBoilerplateInstance* m_fiCurrentEHCatchBlock;
+
     // Ordinal used by dtor tree blocks
     //
     uint32_t m_llvmDtorTreeBlockOrdinal;
