@@ -31,8 +31,7 @@ template<typename T>
 Value<void> Throw(const Constructor<T>& constructorParams)
 {
     static_assert(AstTypeHelper::is_cpp_class_type<T>::value, "must be a CPP class type");
-    T* value = nullptr;
-    AstLiteralExpr* placeholder = new AstLiteralExpr(TypeId::Get<T>().AddPointer(), &value);
+    AstExceptionAddressPlaceholder* placeholder = new AstExceptionAddressPlaceholder(TypeId::Get<T>());
     AstCallExpr* callExpr = internal::GetCallExprFromConstructor(placeholder, constructorParams);
     return Value<void>(new AstThrowStmt(callExpr, true /*isCtor*/, false /*isLValueObject*/));
 }
@@ -48,8 +47,7 @@ Value<void> Throw(const Reference<T>& expr)
     static_assert(AstTypeHelper::is_copy_ctor_registered<T>::value,
                   "The copy constructor (a constructor which takes 'const T&' or 'T&' as parameter) is not registered. "
                   "Register it in pochivm_register_runtime.cpp?");
-    T* value = nullptr;
-    AstLiteralExpr* placeholder = new AstLiteralExpr(TypeId::Get<T>().AddPointer(), &value);
+    AstExceptionAddressPlaceholder* placeholder = new AstExceptionAddressPlaceholder(TypeId::Get<T>());
     AstCallExpr* callExpr = internal::GetCallExprFromConstructor(placeholder, Constructor<T>(expr));
     return Value<void>(new AstThrowStmt(callExpr, false /*isCtor*/, true /*isLValueObject*/));
 }

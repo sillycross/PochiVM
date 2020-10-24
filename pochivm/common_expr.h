@@ -63,8 +63,6 @@ class AstLiteralExpr : public AstNodeBase
 public:
     AstLiteralExpr(TypeId typeId, void* valuePtr)
         : AstNodeBase(AstNodeType::AstLiteralExpr, typeId)
-        , m_useHijackedLLVMValue(false)
-        , m_hijackedLLVMValue(nullptr)
     {
         TestAssert(typeId.IsPrimitiveType() || typeId.IsPointerType());
         InitLiteralValue(typeId, valuePtr);
@@ -86,18 +84,6 @@ public:
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
-
-    // A hacky method used only by 'throw' statement's interp execution
-    //
-    void ResetPointerValue(void* value)
-    {
-        TestAssert(GetTypeId().IsPointerType());
-        m_as_voidstar = value;
-    }
-
-    // A hacky method used only by 'throw' statement's LLVM codegen
-    //
-    void HijackPointerValueLLVM(llvm::Value* value);
 
     bool IsAllBitsZero() const
     {
@@ -140,9 +126,6 @@ FOR_EACH_PRIMITIVE_TYPE
 #undef F
     };
 
-    bool m_useHijackedLLVMValue;
-    llvm::Value* m_hijackedLLVMValue;
-
     void InitLiteralValue(TypeId typeId, void* valuePtr)
     {
         m_as_uint64_t = 0;
@@ -177,6 +160,64 @@ FOR_EACH_PRIMITIVE_INT_TYPE
         assert(GetTypeId().IsDouble());
         return m_as_double;
     }
+};
+
+class AstExceptionAddressPlaceholder : public AstNodeBase
+{
+public:
+    AstExceptionAddressPlaceholder(TypeId exnType)
+        : AstNodeBase(AstNodeType::AstExceptionAddressPlaceholder, exnType.AddPointer())
+        , m_llvmValueSet(false)
+        , m_debuginterpValueSet(false)
+        , m_fastInterpStackOffsetSet(false)
+    { }
+
+    void DebugInterpImpl(void** out)
+    {
+        TestAssert(m_debuginterpValueSet);
+        *out = m_debugInterpValue;
+    }
+
+    // SetDebugInterpValue may be called more than once
+    //
+    void SetDebugInterpValue(void* value)
+    {
+        m_debuginterpValueSet = true;
+        m_debugInterpValue = value;
+    }
+
+    void SetLLVMValue(llvm::Value* value);
+
+    void SetFastInterpValue(uint64_t offset)
+    {
+        TestAssert(!m_fastInterpStackOffsetSet);
+        m_fastInterpStackOffsetSet = true;
+        m_fastInterpStackOffset = offset;
+    }
+
+    virtual void SetupDebugInterpImpl() override
+    {
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstExceptionAddressPlaceholder::DebugInterpImpl);
+    }
+
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
+
+    virtual void FastInterpSetupSpillLocation() override { }
+
+private:
+    llvm::Value* m_llvmValue;
+    void* m_debugInterpValue;
+    uint64_t m_fastInterpStackOffset;
+    bool m_llvmValueSet;
+    bool m_debuginterpValueSet;
+    bool m_fastInterpStackOffsetSet;
 };
 
 // Assign expression: *dst = src

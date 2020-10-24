@@ -99,12 +99,12 @@ public:
             {
                 // CallExpr for constructor is special: it returns void, and the address to construct
                 // the object is placed at the first operand. We do not know the address until now.
-                // So the CallExpr was taking a AstLiteral parameter as a placeholder, and we rewrite its value now.
+                // So the CallExpr was taking a AstExceptionAddressPlaceholder parameter as a placeholder, and we set its value now.
                 //
                 AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
-                AstLiteralExpr* literalExpr = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
-                assert(literalExpr->GetTypeId() == m_exceptionTypeId.AddPointer());
-                literalExpr->ResetPointerValue(addr);
+                AstExceptionAddressPlaceholder* expr = assert_cast<AstExceptionAddressPlaceholder*>(callExpr->GetParams()[0]);
+                assert(expr->GetTypeId() == m_exceptionTypeId.AddPointer());
+                expr->SetDebugInterpValue(addr);
                 m_operand->DebugInterp(nullptr /*out*/);
             }
             // At this time the exception object is constructed.

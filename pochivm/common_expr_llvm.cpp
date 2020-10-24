@@ -15,24 +15,11 @@ Value* WARN_UNUSED AstDereferenceExpr::EmitIRImpl()
     return AstTypeHelper::create_load_helper(GetTypeId(), op);
 }
 
-void AstLiteralExpr::HijackPointerValueLLVM(Value* value)
-{
-    TestAssert(GetTypeId().IsPointerType());
-    TestAssert(value != nullptr && AstTypeHelper::llvm_value_has_type(GetTypeId(), value));
-    TestAssert(!m_useHijackedLLVMValue);
-    m_useHijackedLLVMValue = true;
-    m_hijackedLLVMValue = value;
-}
-
 Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
 {
     Value* inst = nullptr;
     TypeId typeId = GetTypeId();
-    if (m_useHijackedLLVMValue)
-    {
-        inst = m_hijackedLLVMValue;
-    }
-    else if (typeId.IsPrimitiveIntType())
+    if (typeId.IsPrimitiveIntType())
     {
         // Integer type cases: bool needs to be handled specially
         //
@@ -78,6 +65,20 @@ Value* WARN_UNUSED AstLiteralExpr::EmitIRImpl()
         inst = thread_llvmContext->m_builder->CreateBitOrPointerCast(val, AstTypeHelper::llvm_type_of(typeId));
     }
     return inst;
+}
+
+void AstExceptionAddressPlaceholder::SetLLVMValue(llvm::Value *value)
+{
+    TestAssert(!m_llvmValueSet);
+    TestAssert(value != nullptr && AstTypeHelper::llvm_value_has_type(GetTypeId(), value));
+    m_llvmValueSet = true;
+    m_llvmValue = value;
+}
+
+llvm::Value* WARN_UNUSED AstExceptionAddressPlaceholder::EmitIRImpl()
+{
+    TestAssert(m_llvmValueSet);
+    return m_llvmValue;
 }
 
 Value* WARN_UNUSED AstAssignExpr::EmitIRImpl()

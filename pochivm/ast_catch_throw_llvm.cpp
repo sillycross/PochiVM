@@ -94,9 +94,9 @@ Value* WARN_UNUSED AstThrowStmt::EmitIRImpl()
             //
             TestAssert(m_operand->GetAstNodeType() == AstNodeType::AstCallExpr);
             AstCallExpr* callExpr = assert_cast<AstCallExpr*>(m_operand);
-            TestAssert(callExpr->GetParams().size() > 0 && callExpr->GetParams()[0]->GetAstNodeType() == AstNodeType::AstLiteralExpr);
-            AstLiteralExpr* placeholder = assert_cast<AstLiteralExpr*>(callExpr->GetParams()[0]);
-            placeholder->HijackPointerValueLLVM(exnObject);
+            TestAssert(callExpr->GetParams().size() > 0 && callExpr->GetParams()[0]->GetAstNodeType() == AstNodeType::AstExceptionAddressPlaceholder);
+            AstExceptionAddressPlaceholder* placeholder = assert_cast<AstExceptionAddressPlaceholder*>(callExpr->GetParams()[0]);
+            placeholder->SetLLVMValue(exnObject);
             Value* ret = m_operand->EmitIR();
             TestAssert(ret == nullptr);
             std::ignore = ret;
