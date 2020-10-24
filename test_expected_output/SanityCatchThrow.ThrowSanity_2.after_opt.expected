@@ -5,7 +5,8 @@ source_filename = "test"
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr #0
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
@@ -17,3 +18,5 @@ entry:
   tail call void @__cxa_throw(i8* %0, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
   unreachable
 }
+
+attributes #0 = { nounwind }

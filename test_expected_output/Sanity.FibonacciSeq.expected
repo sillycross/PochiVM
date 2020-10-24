@@ -3,7 +3,8 @@ source_filename = "test"
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-define i64 @fib_nth(i32 %_n_0) personality i32 (...)* @__gxx_personality_v0 {
+; Function Attrs: nounwind
+define i64 @fib_nth(i32 %_n_0) #0 personality i32 (...)* @__gxx_personality_v0 {
 entry:
   %n_0 = alloca i32
   br label %body
@@ -27,3 +28,5 @@ else0:                                            ; preds = %body
   %7 = add i64 %3, %6
   ret i64 %7
 }
+
+attributes #0 = { nounwind }

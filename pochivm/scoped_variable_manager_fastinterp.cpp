@@ -8,12 +8,18 @@ namespace PochiVM
 
 static void NO_RETURN fastinterp_unexpected_exception_call_terminate(uintptr_t stackframe) noexcept
 {
-    TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+    ReleaseAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
     fprintf(stderr, "[FASTINTERP RUNTIME] A C++ Exception escaped from a generated function that is marked noexcept!\n"
-            "According to C++ standard, we are calling std::terminate(). The offending function's stack frame is at 0x%llx.\n"
-            "The thrown exception is stored at thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr.\n",
+            "According to C++ standard, we are calling std::terminate(). The offending function's stack frame is at 0x%llx.\n",
             static_cast<unsigned long long>(stackframe));
-    std::terminate();
+    fflush(stderr);
+
+    // This function is intentionally marked noexcept, so re-throwing the exception below will cause std::terminate().
+    // This is better than us calling std::terminate() ourselves, since it will print a helpful message on
+    // what exception is being thrown out, something similar to
+    //     'terminate called after throwing an instance of 'std::bad_function_call'
+    //
+    std::rethrow_exception(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
 }
 
 FastInterpSnippet WARN_UNUSED ScopedVariableManager::FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope)
@@ -79,9 +85,10 @@ FastInterpBoilerplateInstance* WARN_UNUSED ScopedVariableManager::FIGenerateEHEn
         }
     }
 
-    if (GetNumNontrivialDestructorObjects() == 0)
+    if (GetNumNontrivialDestructorObjects() == 0 || thread_llvmContext->m_curFunction->GetIsNoExcept())
     {
-        // No destructors to call, we can simply directly branch to m_fiCurrentEHCatchBlock
+        // No destructors to call, or the action is to terminate,
+        // we can simply directly branch to m_fiCurrentEHCatchBlock
         //
         return m_fiCurrentEHCatchBlock;
     }

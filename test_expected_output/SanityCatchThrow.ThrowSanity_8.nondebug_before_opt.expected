@@ -13,14 +13,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local i8* @__cxa_allocate_exception(i64)
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) #0
 
-declare dso_local void @__cxa_free_exception(i8*)
+; Function Attrs: nounwind
+declare dso_local void @__cxa_free_exception(i8*) #0
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*)
 
 ; Function Attrs: nounwind uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #0 align 2 personality i32 (...)* @__gxx_personality_v0 {
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2* %0) #1 align 2 personality i32 (...)* @__gxx_personality_v0 {
   %2 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 0
   %3 = load %class.CtorDtorOrderRecorder*, %class.CtorDtorOrderRecorder** %2, align 8, !tbaa !4
   %4 = getelementptr inbounds %class.TestDestructor2, %class.TestDestructor2* %0, i64 0, i32 1
@@ -82,7 +84,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 46:                                               ; preds = %38
   %47 = bitcast i32* %40 to i8*
   %48 = bitcast i32* %39 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #5
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #0
   br label %49
 
 49:                                               ; preds = %46, %38
@@ -97,7 +99,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 56:                                               ; preds = %49
   %57 = bitcast i32* %51 to i8*
   %58 = bitcast i32* %9 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #5
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #0
   br label %59
 
 59:                                               ; preds = %56, %49
@@ -107,7 +109,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 
 62:                                               ; preds = %59
   %63 = bitcast i32* %39 to i8*
-  tail call void @_ZdlPv(i8* nonnull %63) #5
+  tail call void @_ZdlPv(i8* nonnull %63) #0
   br label %64
 
 64:                                               ; preds = %62, %59
@@ -131,25 +133,25 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 }
 
 ; Function Attrs: nobuiltin nofree
-declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
+declare dso_local noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1 immarg) #2
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1 immarg) #3
 
 ; Function Attrs: nobuiltin nounwind
-declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #3
+declare dso_local void @_ZdlPv(i8*) local_unnamed_addr #4
 
 ; Function Attrs: noinline noreturn nounwind uwtable
-declare dso_local void @__pochivm_clang_call_terminate(i8*) #4
+declare dso_local void @__pochivm_clang_call_terminate(i8*) #5
 
 ; Function Attrs: nounwind uwtable
-define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #0 align 2 {
-  tail call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* sret %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #5
+define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2* %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #1 align 2 {
+  tail call void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* sret %0, %class.CtorDtorOrderRecorder* %1, i32 %2) #0
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* noalias sret, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #0 align 2
+declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE14call_fn_helperIPDoFS2_S4_iEvE4callIS2_JLi0ELi1EEJS4_iEEET_NS0_12tpl_sequenceIJXspT0_EEEEDpT1_(%class.TestDestructor2* noalias sret, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #1 align 2
 
 define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -169,12 +171,12 @@ body:                                             ; preds = %entry
   unreachable
 }
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { argmemonly nounwind willreturn }
-attributes #3 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #5 = { nounwind }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nobuiltin nofree "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { argmemonly nounwind willreturn }
+attributes #4 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #6 = { noreturn nounwind }
 
 !llvm.ident = !{!0, !0}

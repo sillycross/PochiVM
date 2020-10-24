@@ -46,9 +46,11 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 ; Function Attrs: noinline optnone uwtable
 declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI15TestDestructor2JP21CtorDtorOrderRecorderiEE9call_implIJLi0ELi1EEJS4_iEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%class.TestDestructor2*, %class.CtorDtorOrderRecorder*, i32) #1 align 2
 
-declare dso_local i8* @__cxa_allocate_exception(i64)
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) #2
 
-declare dso_local void @__cxa_free_exception(i8*)
+; Function Attrs: nounwind
+declare dso_local void @__cxa_free_exception(i8*) #2
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*)
 

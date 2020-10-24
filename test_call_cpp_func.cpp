@@ -4237,6 +4237,24 @@ TEST(SanityCallCppFn, UnexpectedException_Interp)
 
 #pragma clang diagnostic pop
     }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        interpFn(345);  // nothing should happen
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wused-but-marked-unused"
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+
+        fprintf(stdout, "DeathTest: Expecting program termination...\n");
+        fflush(stdout);
+        ASSERT_DEATH(interpFn(123), "");
+
+#pragma clang diagnostic pop
+    }
 }
 
 TEST(SanityCallCppFn, UnexpectedException_LLVM)
@@ -5294,5 +5312,117 @@ TEST(SanityCallCppFn, ReturnExprEvaluatedBeforeDestructor)
 
         int out = jitFn();
         ReleaseAssert(out == 123);
+    }
+}
+
+TEST(SanityCallCppFn, ExceptionEscapingNoExceptFunction)
+{
+    // If a C++ exception escaped a function marked as noexcept,
+    // std::terminate() shall be called according to C++ standard. This test tests this behavior.
+    //
+
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int) noexcept;
+    {
+        auto [fn, v] = NewFunction<FnPrototype>("testfn");
+        auto x = fn.NewVariable<TestNonTrivialConstructor>();
+        fn.SetBody(
+                Declare(x, Variable<TestNonTrivialConstructor>::Create2(v)),
+                Return(x.GetValue())
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = interpFn(123);
+        ReleaseAssert(out == 123);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wused-but-marked-unused"
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+
+        fprintf(stdout, "DeathTest: Expecting program termination...\n");
+        fflush(stdout);
+        ASSERT_DEATH(interpFn(12345), "");
+
+#pragma clang diagnostic pop
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        int out = interpFn(123);
+        ReleaseAssert(out == 123);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wused-but-marked-unused"
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+
+        fprintf(stdout, "DeathTest: Expecting program termination...\n");
+        fflush(stdout);
+        ASSERT_DEATH(interpFn(12345), "");
+
+#pragma clang diagnostic pop
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        int out = jitFn(123);
+        ReleaseAssert(out == 123);
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wused-but-marked-unused"
+#pragma clang diagnostic ignored "-Wcovered-switch-default"
+
+        fprintf(stdout, "DeathTest: Expecting program termination...\n");
+        fflush(stdout);
+        ASSERT_DEATH(jitFn(12345), "");
+
+#pragma clang diagnostic pop
     }
 }

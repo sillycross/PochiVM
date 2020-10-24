@@ -45,7 +45,8 @@ bool WARN_UNUSED IsNoLandingPadNeeded()
 {
     // TODO: need extra logic when we support catch
     //
-    return (thread_pochiVMContext->m_scopedVariableManager.GetNumNontrivialDestructorObjects() == 0);
+    return (thread_pochiVMContext->m_scopedVariableManager.GetNumNontrivialDestructorObjects() == 0) &&
+            !thread_llvmContext->m_curFunction->GetIsNoExcept();
 }
 
 }   // namespace PochiVM

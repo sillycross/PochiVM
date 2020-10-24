@@ -13,15 +13,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr #0
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
 ; Function Attrs: nounwind uwtable
-declare dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2*) #0 align 2
+declare dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI15TestDestructor2E9wrapperFnEPS2_(%class.TestDestructor2*) #1 align 2
 
 ; Function Attrs: nounwind uwtable
-declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2*, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #0 align 2
+declare dso_local void @_ZN7PochiVM16ReflectionHelper23function_wrapper_helperIXadL_ZN15TestDestructor26CreateEP21CtorDtorOrderRecorderiEEE15call_fn_wrapperIS2_vE4callIJS4_iEEEvPS2_DpT_(%class.TestDestructor2*, %class.CtorDtorOrderRecorder*, i32) local_unnamed_addr #1 align 2
 
 define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) local_unnamed_addr personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -32,7 +33,8 @@ entry:
   unreachable
 }
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0, !0}
 !llvm.module.flags = !{!1, !2, !3}

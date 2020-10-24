@@ -537,7 +537,9 @@ public:
 
     explicit operator bool() const { return m_fn != nullptr; }
 
-    R operator()(Args... args) const
+    // Important that this function is marked noexcept, so if an exception is thrown out, std::terminate is called
+    //
+    R operator()(Args... args) const noexcept
     {
         TestAssert(m_fn != nullptr);
         return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
@@ -559,10 +561,24 @@ public:
     R operator()(Args... args) const
     {
         TestAssert(m_fn != nullptr);
-        return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
+        if (m_fn->GetIsNoExcept())
+        {
+            return NoExceptExecutor(args...);
+        }
+        else
+        {
+            return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
+        }
     }
 
 private:
+    // Important that this function is marked noexcept, so if an exception is thrown out, std::terminate is called
+    //
+    R NoExceptExecutor(Args... args) const noexcept
+    {
+        return internal::DebugInterpCallFunctionImpl<R, Args...>::call(m_fn, args...);
+    }
+
     AstFunction* m_fn;
 };
 

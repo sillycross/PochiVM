@@ -82,7 +82,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 46:                                               ; preds = %38
   %47 = bitcast i32* %40 to i8*
   %48 = bitcast i32* %39 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #7
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %47, i8* align 4 %48, i64 %43, i1 false) #6
   br label %49
 
 49:                                               ; preds = %46, %38
@@ -97,7 +97,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 56:                                               ; preds = %49
   %57 = bitcast i32* %51 to i8*
   %58 = bitcast i32* %9 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #7
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %57, i8* align 4 %58, i64 %53, i1 false) #6
   br label %59
 
 59:                                               ; preds = %56, %49
@@ -107,7 +107,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destr
 
 62:                                               ; preds = %59
   %63 = bitcast i32* %39 to i8*
-  tail call void @_ZdlPv(i8* nonnull %63) #7
+  tail call void @_ZdlPv(i8* nonnull %63) #6
   br label %64
 
 64:                                               ; preds = %62, %59
@@ -201,7 +201,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 44:                                               ; preds = %36
   %45 = bitcast i32* %38 to i8*
   %46 = bitcast i32* %37 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %45, i8* align 4 %46, i64 %41, i1 false) #7
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* align 4 %45, i8* align 4 %46, i64 %41, i1 false) #6
   br label %47
 
 47:                                               ; preds = %44, %36
@@ -216,7 +216,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 54:                                               ; preds = %47
   %55 = bitcast i32* %49 to i8*
   %56 = bitcast i32* %8 to i8*
-  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %55, i8* align 4 %56, i64 %51, i1 false) #7
+  tail call void @llvm.memmove.p0i8.p0i8.i64(i8* nonnull align 4 %55, i8* align 4 %56, i64 %51, i1 false) #6
   br label %57
 
 57:                                               ; preds = %54, %47
@@ -226,7 +226,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 
 60:                                               ; preds = %57
   %61 = bitcast i32* %37 to i8*
-  tail call void @_ZdlPv(i8* nonnull %61) #7
+  tail call void @_ZdlPv(i8* nonnull %61) #6
   br label %62
 
 62:                                               ; preds = %60, %57
@@ -245,7 +245,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
   br i1 %69, label %70, label %73
 
 70:                                               ; preds = %64
-  %71 = tail call i8* @__cxa_allocate_exception(i64 4) #7
+  %71 = tail call i8* @__cxa_allocate_exception(i64 4) #6
   %72 = bitcast i8* %71 to i32*
   store i32 %2, i32* %72, align 16, !tbaa !15
   tail call void @__cxa_throw(i8* %71, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #9
@@ -259,7 +259,8 @@ declare dso_local i8* @__cxa_allocate_exception(i64) local_unnamed_addr
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*) local_unnamed_addr
 
-declare dso_local void @__cxa_free_exception(i8*)
+; Function Attrs: nounwind
+declare dso_local void @__cxa_free_exception(i8*) #6
 
 ; Function Attrs: nounwind uwtable
 define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper25destructor_wrapper_helperI25TestNonTrivialConstructorE9wrapperFnEPS2_(%class.TestNonTrivialConstructor* %0) #0 align 2 {
@@ -272,7 +273,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23funct
   br i1 %3, label %4, label %7
 
 4:                                                ; preds = %2
-  %5 = tail call i8* @__cxa_allocate_exception(i64 8) #7
+  %5 = tail call i8* @__cxa_allocate_exception(i64 8) #6
   %6 = bitcast i8* %5 to i32 (...)***
   store i32 (...)** bitcast (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTVSt17bad_function_call, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %6, align 8, !tbaa !21
   tail call void @__cxa_throw(i8* %5, i8* bitcast (i8** @_ZTISt17bad_function_call to i8*), i8* bitcast (void (%"class.std::bad_function_call"*)* @_ZNSt17bad_function_callD1Ev to i8*)) #9
@@ -285,7 +286,7 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper23funct
 }
 
 ; Function Attrs: nounwind
-declare dso_local void @_ZNSt17bad_function_callD1Ev(%"class.std::bad_function_call"*) unnamed_addr #6
+declare dso_local void @_ZNSt17bad_function_callD1Ev(%"class.std::bad_function_call"*) unnamed_addr #7
 
 define void @testfn(i32 %_param_0, %class.CtorDtorOrderRecorder* %_param_1) personality i32 (...)* @__gxx_personality_v0 {
 entry:
@@ -354,8 +355,8 @@ attributes #2 = { argmemonly nounwind willreturn }
 attributes #3 = { nobuiltin nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #4 = { noinline noreturn nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #5 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #6 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #7 = { nounwind }
+attributes #6 = { nounwind }
+attributes #7 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #8 = { noreturn nounwind }
 attributes #9 = { noreturn }
 

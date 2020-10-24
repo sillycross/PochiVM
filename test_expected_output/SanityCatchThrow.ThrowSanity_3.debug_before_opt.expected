@@ -34,9 +34,11 @@ define available_externally dso_local void @_ZN7PochiVM16ReflectionHelper26const
 ; Function Attrs: noinline optnone uwtable
 declare dso_local void @_ZN7PochiVM16ReflectionHelper26constructor_wrapper_helperI29TestNonTrivialCopyConstructorJiEE9call_implIJLi0EEJiEEEvNS0_12tpl_sequenceIJXspT_EEEEPS2_DpT0_(%struct.TestNonTrivialCopyConstructor*, i32) #1 align 2
 
-declare dso_local i8* @__cxa_allocate_exception(i64)
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) #2
 
-declare dso_local void @__cxa_free_exception(i8*)
+; Function Attrs: nounwind
+declare dso_local void @__cxa_free_exception(i8*) #2
 
 declare dso_local void @__cxa_throw(i8*, i8*, i8*)
 
@@ -116,6 +118,7 @@ landing_pad_1:                                    ; preds = %10
 
 attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noinline optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { nounwind }
 
 !llvm.ident = !{!0, !0, !0}
 !llvm.module.flags = !{!1, !2, !3}

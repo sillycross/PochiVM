@@ -75,20 +75,78 @@ BasicBlock* WARN_UNUSED ScopedVariableManager::EmitIRExceptionHandlerCleanupLogi
     if (m_llvmCurrentEHCatchBlock == nullptr)
     {
         // Generate the catch block for the case that we are not in a try-catch block
-        // We just propagate the exception to the caller
         //
-        m_llvmCurrentEHCatchBlock = BasicBlock::Create(
-                    *thread_llvmContext->m_llvmContext,
-                    Twine("resume_exception"),
-                    thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
-        thread_llvmContext->m_builder->SetInsertPoint(m_llvmCurrentEHCatchBlock);
-        Value* exnObject = AstTypeHelper::create_load_helper(TypeId::Get<void*>(), m_llvmEhCurExceptionObject);
-        Value* exnType = AstTypeHelper::create_load_helper(TypeId::Get<int32_t>(), m_llvmEhCurExceptionType);
+        if (thread_llvmContext->m_curFunction->GetIsNoExcept())
+        {
+            // If the function is marked noexcept, the action is to terminate
+            //
+            m_llvmCurrentEHCatchBlock = BasicBlock::Create(
+                        *thread_llvmContext->m_llvmContext,
+                        Twine("unexpected_exn_terminate"),
+                        thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+            thread_llvmContext->m_builder->SetInsertPoint(m_llvmCurrentEHCatchBlock);
+            Value* exnObject = AstTypeHelper::create_load_helper(TypeId::Get<void*>(), m_llvmEhCurExceptionObject);
 
-        Value* exn = UndefValue::get(GetPersonalityFnReturnType());
-        exn = thread_llvmContext->m_builder->CreateInsertValue(exn, exnObject, 0);
-        exn = thread_llvmContext->m_builder->CreateInsertValue(exn, exnType, 1);
-        thread_llvmContext->m_builder->CreateResume(exn);
+            // %tmp = call i8* @__cxa_begin_catch(i8* %0)
+            //
+            Function* callee = thread_llvmContext->m_module->getFunction("__cxa_begin_catch");
+            if (callee == nullptr)
+            {
+                Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<void*>());
+                Type* paramTypes[1] = { AstTypeHelper::llvm_type_of(TypeId::Get<void*>()) };
+                FunctionType* funcType = FunctionType::get(returnType,
+                                                           ArrayRef<Type*>(paramTypes, paramTypes + 1),
+                                                           false /*isVariadic*/);
+                callee = Function::Create(
+                            funcType, Function::ExternalLinkage, "__cxa_begin_catch", thread_llvmContext->m_module);
+                callee->setDSOLocal(true);
+                callee->addFnAttr(Attribute::AttrKind::NoUnwind);
+            }
+            TestAssert(callee != nullptr && callee->arg_size() == 1);
+            Value* params[1] = { exnObject };
+            thread_llvmContext->m_builder->CreateCall(callee, ArrayRef<Value*>(params, params + 1));
+
+            // call void @_ZSt9terminatev()
+            //
+            callee = thread_llvmContext->m_module->getFunction("_ZSt9terminatev");
+            if (callee == nullptr)
+            {
+                Type* returnType = AstTypeHelper::llvm_type_of(TypeId::Get<void>());
+                FunctionType* funcType = FunctionType::get(returnType,
+                                                           ArrayRef<Type*>(),
+                                                           false /*isVariadic*/);
+                callee = Function::Create(
+                            funcType, Function::ExternalLinkage, "_ZSt9terminatev", thread_llvmContext->m_module);
+                callee->setDSOLocal(true);
+                callee->addFnAttr(Attribute::AttrKind::NoReturn);
+                callee->addFnAttr(Attribute::AttrKind::NoUnwind);
+            }
+            TestAssert(callee != nullptr && callee->arg_size() == 0);
+            thread_llvmContext->m_builder->CreateCall(callee, ArrayRef<Value*>());
+            thread_llvmContext->m_builder->CreateUnreachable();
+        }
+        else
+        {
+            // We just propagate the exception to the caller
+            //
+            m_llvmCurrentEHCatchBlock = BasicBlock::Create(
+                        *thread_llvmContext->m_llvmContext,
+                        Twine("resume_exception"),
+                        thread_llvmContext->GetCurFunction()->GetGeneratedPrototype());
+            thread_llvmContext->m_builder->SetInsertPoint(m_llvmCurrentEHCatchBlock);
+            Value* exnObject = AstTypeHelper::create_load_helper(TypeId::Get<void*>(), m_llvmEhCurExceptionObject);
+            Value* exnType = AstTypeHelper::create_load_helper(TypeId::Get<int32_t>(), m_llvmEhCurExceptionType);
+
+            Value* exn = UndefValue::get(GetPersonalityFnReturnType());
+            exn = thread_llvmContext->m_builder->CreateInsertValue(exn, exnObject, 0);
+            exn = thread_llvmContext->m_builder->CreateInsertValue(exn, exnType, 1);
+            thread_llvmContext->m_builder->CreateResume(exn);
+        }
+    }
+
+    if (thread_llvmContext->m_curFunction->GetIsNoExcept())
+    {
+        return m_llvmCurrentEHCatchBlock;
     }
 
     int n = static_cast<int>(m_llvmExceptionDtorTree.size());

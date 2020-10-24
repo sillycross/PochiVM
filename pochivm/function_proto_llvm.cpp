@@ -65,6 +65,11 @@ void AstFunction::EmitDefinition()
             index++;
         }
     }
+
+    if (GetIsNoExcept())
+    {
+        m_generatedPrototype->addFnAttr(Attribute::AttrKind::NoUnwind);
+    }
 }
 
 void AstFunction::EmitIR()
@@ -208,7 +213,7 @@ void AstModule::EmitIR()
                                                    ArrayRef<Type*>(),
                                                    true /*isVariadic*/);
         Function* personalityFn = Function::Create(
-                    funcType, Function::ExternalLinkage, "__gxx_personality_v0", thread_llvmContext->m_module);
+                    funcType, Function::ExternalLinkage, "__gxx_personality_v0", m_llvmModule);
         personalityFn->setDSOLocal(true);
         thread_llvmContext->m_personalityFn = personalityFn;
     }
@@ -237,9 +242,10 @@ void AstModule::EmitIR()
             if (!isCXXExceptionHandlerABISymbolsImported)
             {
                 // Import the following symbols:
-                //     declare dso_local i8* @__cxa_allocate_exception(i64)
-                //     declare dso_local void @__cxa_free_exception(i8*)
+                //     declare dso_local i8* @__cxa_allocate_exception(i64) nounwind
+                //     declare dso_local void @__cxa_free_exception(i8*) nounwind
                 //     declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+                //     declare dso_local void @_ZSt9terminatev() noreturn nounwind
                 //
                 if (m_llvmModule->getFunction("__cxa_allocate_exception") == nullptr)
                 {
@@ -250,8 +256,9 @@ void AstModule::EmitIR()
                                                                ArrayRef<Type*>(paramTypes, paramTypes + numParams),
                                                                false /*isVariadic*/);
                     Function* func = Function::Create(
-                                funcType, Function::ExternalLinkage, "__cxa_allocate_exception", thread_llvmContext->m_module);
+                                funcType, Function::ExternalLinkage, "__cxa_allocate_exception", m_llvmModule);
                     func->setDSOLocal(true);
+                    func->addFnAttr(Attribute::AttrKind::NoUnwind);
                 }
                 if (m_llvmModule->getFunction("__cxa_free_exception") == nullptr)
                 {
@@ -262,8 +269,9 @@ void AstModule::EmitIR()
                                                                ArrayRef<Type*>(paramTypes, paramTypes + numParams),
                                                                false /*isVariadic*/);
                     Function* func = Function::Create(
-                                funcType, Function::ExternalLinkage, "__cxa_free_exception", thread_llvmContext->m_module);
+                                funcType, Function::ExternalLinkage, "__cxa_free_exception", m_llvmModule);
                     func->setDSOLocal(true);
+                    func->addFnAttr(Attribute::AttrKind::NoUnwind);
                 }
                 if (m_llvmModule->getFunction("__cxa_throw") == nullptr)
                 {
@@ -278,7 +286,7 @@ void AstModule::EmitIR()
                                                                ArrayRef<Type*>(paramTypes, paramTypes + numParams),
                                                                false /*isVariadic*/);
                     Function* func = Function::Create(
-                                funcType, Function::ExternalLinkage, "__cxa_throw", thread_llvmContext->m_module);
+                                funcType, Function::ExternalLinkage, "__cxa_throw", m_llvmModule);
                     func->setDSOLocal(true);
                 }
                 isCXXExceptionHandlerABISymbolsImported = true;
