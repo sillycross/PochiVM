@@ -37,7 +37,7 @@ using FIReturnType = typename std::conditional<isNoExcept, T, FIReturnValueOrExn
 struct FIReturnValueHelper
 {
     template<typename T>
-    static bool __attribute__((__always_inline__)) HasException(FIReturnType<T, false /*isNoExcept*/> r)
+    static uint64_t __attribute__((__always_inline__)) HasException(FIReturnType<T, false /*isNoExcept*/> r)
     {
         return r.m_hasExn;
     }

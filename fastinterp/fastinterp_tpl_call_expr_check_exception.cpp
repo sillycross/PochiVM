@@ -25,11 +25,11 @@ struct FICallExprCheckExceptionImpl
     template<FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool hasException) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, uint64_t hasException) noexcept
     {
         // Put the false branch (which is the no-exception case) at end.
         //
-        FIConditionalJumpHelper::execute_1_0<FIConditionalJumpHelper::Mode::LikelyMode, OpaqueParams...>(hasException, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_1_0<FIConditionalJumpHelper::Mode::LikelyMode, OpaqueParams...>(hasException != 0, stackframe, opaqueParams...);
     }
 
     static auto metavars()

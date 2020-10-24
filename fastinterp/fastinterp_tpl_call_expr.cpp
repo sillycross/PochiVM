@@ -89,7 +89,7 @@ struct FICallExprImpl
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, bool) noexcept);
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uint64_t) noexcept);
                 BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
@@ -106,7 +106,7 @@ struct FICallExprImpl
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, bool) noexcept);
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uint64_t) noexcept);
                 BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
@@ -120,7 +120,7 @@ struct FICallExprImpl
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType, bool) noexcept);
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType, uint64_t) noexcept);
                 BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, ret, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
