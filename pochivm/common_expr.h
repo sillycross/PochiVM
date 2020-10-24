@@ -302,6 +302,16 @@ public:
         TestAssert(false && "unimplemented");
     }
 
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
+
+    virtual void FastInterpSetupSpillLocation() override
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
+
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
 };
 
@@ -334,6 +344,16 @@ public:
     virtual void SetupDebugInterpImpl() override
     {
         TestAssert(false && "unimplemented");
+    }
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    {
+        ReleaseAssert(false && "unimplemented");
+    }
+
+    virtual void FastInterpSetupSpillLocation() override
+    {
+        ReleaseAssert(false && "unimplemented");
     }
 
     virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }

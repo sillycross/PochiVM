@@ -138,15 +138,9 @@ public:
     //
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() = 0;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/)
-    {
-        ReleaseAssert(false && "unimplemented");
-    }
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) = 0;
 
-    virtual void FastInterpSetupSpillLocation()
-    {
-        ReleaseAssert(false && "unimplemented");
-    }
+    virtual void FastInterpSetupSpillLocation() = 0;
 
     // For each of the children c of this node, invoke fn(c)
     //
