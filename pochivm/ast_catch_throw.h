@@ -144,6 +144,9 @@ public:
         TestAssert(m_debugInterpFn != nullptr);
     }
 
+    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+
     AstNodeBase* m_operand;
     TypeId m_exceptionTypeId;
     bool m_isCtor;

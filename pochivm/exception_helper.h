@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
+#include "pochivm_context.h"
 
 namespace llvm {
 class BasicBlock;
@@ -101,6 +102,29 @@ struct get_typeinfo_object_symbol_name_helper
     }
 };
 
+template<typename T>
+struct fastinterp_throw_helper
+{
+    static void impl(T* exnAddr) noexcept
+    {
+        TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+        try
+        {
+            throw *exnAddr;
+        }
+        catch(...)
+        {
+            thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = std::current_exception();
+            TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+        }
+    }
+
+    static void* get()
+    {
+        return reinterpret_cast<void*>(impl);
+    }
+};
+
 }   // namespace internal
 
 inline bool WARN_UNUSED IsTypeRegisteredForThrownFromGeneratedCode(TypeId typeId)
@@ -115,6 +139,16 @@ inline const char* WARN_UNUSED GetStdTypeInfoObjectSymbolName(TypeId typeId)
     void* r = select_impl_based_on_exception_type<internal::get_typeinfo_object_symbol_name_helper>::get(typeId);
     TestAssert(r != nullptr);
     return reinterpret_cast<const char*>(r);
+}
+
+// The return value is a void(*)(T*) noexcept function pointer
+//
+inline void* WARN_UNUSED GetFastInterpThrowHelper(TypeId typeId)
+{
+    TestAssert(IsTypeRegisteredForThrownFromGeneratedCode(typeId));
+    void* r = select_impl_based_on_exception_type<internal::fastinterp_throw_helper>::get(typeId);
+    TestAssert(r != nullptr);
+    return r;
 }
 
 inline bool WARN_UNUSED IsCppClassCopyConstructible(TypeId typeId)

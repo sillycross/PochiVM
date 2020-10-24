@@ -44,6 +44,26 @@ TEST(SanityCatchThrow, ThrowSanity_1)
         }
     }
 
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+        try {
+            interpFn();
+            ReleaseAssert(false);
+        } catch(std::bad_alloc& w) {
+            ReleaseAssert(std::string(w.what()) == "std::bad_alloc");
+        }
+
+        try {
+            interpFn();
+            ReleaseAssert(false);
+        } catch(std::exception& w) {
+            ReleaseAssert(std::string(w.what()) == "std::bad_alloc");
+        }
+    }
+
     thread_pochiVMContext->m_curModule->EmitIR();
 
     {
@@ -115,10 +135,22 @@ TEST(SanityCatchThrow, ThrowSanity_2)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        try {
+            interpFn(123);
+            ReleaseAssert(false);
+        } catch(int& v) {
+            ReleaseAssert(v == 123);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         try {
             interpFn(123);
             ReleaseAssert(false);
@@ -192,10 +224,25 @@ TEST(SanityCatchThrow, ThrowSanity_3)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        TestNonTrivialCopyConstructor::counter = 0;
+        try {
+            interpFn(123);
+            ReleaseAssert(false);
+        } catch(TestNonTrivialCopyConstructor& v) {
+            ReleaseAssert(v.value == 123);
+            ReleaseAssert(TestNonTrivialCopyConstructor::counter == 1);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         TestNonTrivialCopyConstructor::counter = 0;
         try {
@@ -272,10 +319,23 @@ TEST(SanityCatchThrow, ThrowSanity_4)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        try {
+            interpFn(123);
+            ReleaseAssert(false);
+        } catch(TestNonTrivialConstructor& v) {
+            ReleaseAssert(v.m_value == 123);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         try {
             interpFn(123);
@@ -348,10 +408,32 @@ TEST(SanityCatchThrow, ThrowSanity_5)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        try {
+            interpFn(123);
+            ReleaseAssert(false);
+        } catch(TestNonTrivialConstructor& v) {
+            ReleaseAssert(v.m_value == 123);
+        }
+
+        try {
+            interpFn(12345);
+            ReleaseAssert(false);
+        } catch(std::bad_function_call& w) {
+            ReleaseAssert(std::string(w.what()) == std::string("bad_function_call"));
+        } catch(...) {
+            ReleaseAssert(false);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         try {
             interpFn(123);
@@ -446,10 +528,24 @@ TEST(SanityCatchThrow, ThrowSanity_6)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+        CtorDtorOrderRecorder r;
+        try {
+            interpFn(123, &r);
+            ReleaseAssert(false);
+        } catch(int& v) {
+            ReleaseAssert(v == 123);
+            ReleaseAssert(r.order == expectedAns);
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
         CtorDtorOrderRecorder r;
         try {
             interpFn(123, &r);
@@ -529,10 +625,39 @@ TEST(SanityCatchThrow, ThrowSanity_7)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        {
+            CtorDtorOrderRecorder r;
+            try {
+                interpFn(123, &r);
+                ReleaseAssert(false);
+            } catch(TestNonTrivialConstructor& v) {
+                ReleaseAssert(v.m_value == 123);
+                ReleaseAssert(r.order == expectedAns);
+            }
+        }
+        {
+            CtorDtorOrderRecorder r;
+            try {
+                interpFn(12345, &r);
+                ReleaseAssert(false);
+            } catch(std::bad_function_call& w) {
+                ReleaseAssert(std::string(w.what()) == std::string("bad_function_call"));
+                ReleaseAssert(r.order == expectedAns);
+            } catch(...) {
+                ReleaseAssert(false);
+            }
+        }
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         {
             CtorDtorOrderRecorder r;
@@ -637,10 +762,29 @@ TEST(SanityCatchThrow, ThrowSanity_8)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        CtorDtorOrderRecorder r;
+        std::vector<int> tmp;
+        try {
+            interpFn(123, &r);
+            ReleaseAssert(false);
+        } catch(TestDestructor2& v) {
+            ReleaseAssert(v.m_value == 123);
+            ReleaseAssert(r.order == (std::vector<int>{123, 123, -123}));
+            tmp = r.order;
+        }
+        tmp.push_back(-123);
+        ReleaseAssert(r.order == tmp);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
 
         CtorDtorOrderRecorder r;
         std::vector<int> tmp;

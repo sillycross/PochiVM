@@ -284,4 +284,22 @@ void AstRvalueToConstPrimitiveRefExpr::FastInterpSetupSpillLocation()
     m_operand->FastInterpSetupSpillLocation();
 }
 
+FastInterpSnippet WARN_UNUSED AstExceptionAddressPlaceholder::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    TestAssert(m_fastInterpStackOffsetSet);
+    FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FIVariableImpl>::SelectBoilerplateBluePrint(
+                    GetTypeId().GetDefaultFastInterpTypeId(),
+                    !spillLoc.IsNoSpill(),
+                    numOIP,
+                    numOFP));
+    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+    inst->PopulateConstantPlaceholder<uint64_t>(1, m_fastInterpStackOffset);
+    return FastInterpSnippet {
+        inst, inst
+    };
+}
+
 }   // namespace PochiVM
