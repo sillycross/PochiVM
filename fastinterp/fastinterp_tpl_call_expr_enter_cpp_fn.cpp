@@ -42,5 +42,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FICallExprEnterCppFnImpl>(FIAttribute::NoContinuation);
+    RegisterBoilerplate<FICallExprEnterCppFnImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2);
 }

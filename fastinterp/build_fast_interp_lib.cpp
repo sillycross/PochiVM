@@ -1150,20 +1150,28 @@ public:
                 }
                 StringRef& sr = content.get();
                 ReleaseAssert(sr.size() == preAlignedSize);
-                size_t alignedSize = (preAlignedSize + PochiVM::x_fastinterp_function_alignment - 1) /
-                        PochiVM::x_fastinterp_function_alignment * PochiVM::x_fastinterp_function_alignment;
-                ReleaseAssert(alignedSize > 0 && alignedSize >= preAlignedSize && alignedSize % PochiVM::x_fastinterp_function_alignment == 0);
 
-                uint8_t* data = new uint8_t[alignedSize];
+                ReleaseAssert(PochiVM::x_fastinterp_function_alignment == 1);
+
+                constexpr size_t x_x86_64_ud2_instruction_len = 2;
+                constexpr uint8_t x_x86_64_ud2_instruction_encoding[x_x86_64_ud2_instruction_len] = { 0x0F, 0x0B };
+                size_t extraSize = 0;
+                if (bp.m_attr.HasAttribute(PochiVM::FIAttribute::AppendUd2))
+                {
+                    ReleaseAssert(bp.m_attr.HasAttribute(PochiVM::FIAttribute::NoContinuation));
+                    extraSize = x_x86_64_ud2_instruction_len;
+                }
+
+                size_t totalDataSize = preAlignedSize + extraSize;
+                uint8_t* data = new uint8_t[totalDataSize];
                 Auto(delete [] data);
                 memcpy(data, sr.data(), preAlignedSize);
 
-                // It seems like clang++ populates multi-byte nop in function padding.
-                // Of course this is not a correctness issue, since those paddings are never executed.
-                // However, probably clang++ didn't do this without a reason. Maybe it helps with CPU pipelining..?
-                // Anyway, it doesn't hurt for us to do that as well. At least it helps with gdb assembly dump.
-                //
-                PochiVM::x86_64_populate_NOP_instructions(data + preAlignedSize, alignedSize - preAlignedSize);
+                if (extraSize > 0)
+                {
+                    ReleaseAssert(extraSize == x_x86_64_ud2_instruction_len);
+                    memcpy(data + preAlignedSize, x_x86_64_ud2_instruction_encoding, x_x86_64_ud2_instruction_len);
+                }
 
                 for (const RelocationInfo& rinfo : inst.m_relocationInfo)
                 {
@@ -1355,8 +1363,7 @@ public:
                     }
                 }
 
-                if (!bp.m_attr.HasAttribute(PochiVM::FIAttribute::NoContinuation) &&
-                    PochiVM::x_fastinterp_function_alignment == 1)
+                if (!bp.m_attr.HasAttribute(PochiVM::FIAttribute::NoContinuation))
                 {
                     if (lastInstructionTailCallOrd == -1)
                     {
@@ -1365,10 +1372,9 @@ public:
                         abort();
                     }
                 }
-
-                if (PochiVM::x_fastinterp_function_alignment != 1)
+                else
                 {
-                    lastInstructionTailCallOrd = -1;
+                    ReleaseAssert(lastInstructionTailCallOrd == -1);
                 }
 
                 for (std::pair<uint32_t, uint32_t>& p : cfpList64)
@@ -1424,11 +1430,11 @@ public:
                 }
 
                 fprintf(fp3, "static uint8_t %s%s_%d_contents[%d] = {\n",
-                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(alignedSize));
-                for (size_t i = 0; i < alignedSize; i++)
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(totalDataSize));
+                for (size_t i = 0; i < totalDataSize; i++)
                 {
                     fprintf(fp3, "%d", static_cast<int>(data[i]));
-                    if (i + 1 < alignedSize) {
+                    if (i + 1 < totalDataSize) {
                         fprintf(fp3, ", ");
                     }
                     if (i % 16 == 15) {
@@ -1437,9 +1443,9 @@ public:
                 }
                 fprintf(fp3, "\n};\n");
 
-                ReleaseAssert(alignedSize < (1ULL << 31));
+                ReleaseAssert(totalDataSize < (1ULL << 31));
                 fprintf(fp3, "constexpr uint32_t %s%s_%d_contentLength = %d;\n",
-                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(alignedSize));
+                        blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(totalDataSize));
 
                 // Do startup-time fixup of external symbols
                 // In the same translational unit, global initializers are executed in the same order they are declared.

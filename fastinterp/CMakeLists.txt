@@ -60,6 +60,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_call_expr_call_dtor.cpp
   fastinterp_tpl_call_expr_cpp_const_primitive_ref.cpp
   fastinterp_tpl_throw_exception.cpp
+  fastinterp_tpl_call_expr_call_dtor_caller.cpp
 )
 
 SET(FASTINTERP_SOURCES
