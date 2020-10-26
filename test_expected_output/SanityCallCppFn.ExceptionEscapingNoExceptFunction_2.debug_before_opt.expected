@@ -1,0 +1,68 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+@_ZTIi = external dso_local constant i8*
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_allocate_exception(i64) #0
+
+; Function Attrs: nounwind
+declare dso_local void @__cxa_free_exception(i8*) #0
+
+declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+
+; Function Attrs: nounwind
+define i32 @testfn(i32 %_param_0) #0 personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %param_0 = alloca i32
+  %_cur_exception_object = alloca i8*
+  %_cur_exception_type = alloca i32
+  br label %body
+
+body:                                             ; preds = %entry
+  store i32 %_param_0, i32* %param_0
+  %0 = load i32, i32* %param_0
+  %if0 = icmp eq i32 %0, 12345
+  br i1 %if0, label %then0, label %after_if0
+
+then0:                                            ; preds = %body
+  %1 = call i8* @__cxa_allocate_exception(i64 4)
+  %2 = bitcast i8* %1 to i32*
+  %3 = load i32, i32* %param_0
+  store i32 %3, i32* %2
+  invoke void @__cxa_throw(i8* %1, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+          to label %9 unwind label %landing_pad_0
+
+unexpected_exn_terminate:                         ; preds = %landing_pad_0
+  %4 = load i8*, i8** %_cur_exception_object
+  %5 = call i8* @__cxa_begin_catch(i8* %4)
+  call void @_ZSt9terminatev()
+  unreachable
+
+landing_pad_0:                                    ; preds = %then0
+  %6 = landingpad { i8*, i32 }
+          cleanup
+  %7 = extractvalue { i8*, i32 } %6, 0
+  store i8* %7, i8** %_cur_exception_object
+  %8 = extractvalue { i8*, i32 } %6, 1
+  store i32 %8, i32* %_cur_exception_type
+  br label %unexpected_exn_terminate
+
+9:                                                ; preds = %then0
+  unreachable
+
+after_if0:                                        ; preds = %body
+  %10 = load i32, i32* %param_0
+  ret i32 %10
+}
+
+; Function Attrs: nounwind
+declare dso_local i8* @__cxa_begin_catch(i8*) #0
+
+; Function Attrs: noreturn nounwind
+declare dso_local void @_ZSt9terminatev() #1
+
+attributes #0 = { nounwind }
+attributes #1 = { noreturn nounwind }
