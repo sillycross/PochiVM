@@ -120,9 +120,7 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
 
     // Phase 3: allocate the actual memory, and materialize everything.
     //
-    size_t dataSectionSize = (m_dataSectionLength + 4095) / 4096 * 4096;
-    size_t codeSectionSize = static_cast<size_t>((codeSectionLength + 4095) / 4096 * 4096);
-    size_t mmapLength = dataSectionSize + codeSectionSize;
+    size_t mmapLength = static_cast<size_t>((codeSectionLength + 4095) / 4096 * 4096);
     void* mmapResult = mmap(nullptr, mmapLength, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
     if (mmapResult == MAP_FAILED) {
         return std::unique_ptr<FastInterpGeneratedProgram>(nullptr);
@@ -135,7 +133,7 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
         }
     );
 
-    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(mmapResult) + dataSectionSize;
+    uintptr_t baseAddress = reinterpret_cast<uintptr_t>(mmapResult);
     for (FastInterpBoilerplateInstance* instance : m_allBoilerplateInstances)
     {
         instance->Materialize(baseAddress);
@@ -152,22 +150,14 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
     // TODO: consider only do this in test build
     // TLB shootdown is a bit costly
     //
-    if (dataSectionSize > 0)
     {
-        int r = mprotect(mmapResult, dataSectionSize, PROT_READ);
+        int r = mprotect(reinterpret_cast<void*>(baseAddress), mmapLength, PROT_READ | PROT_EXEC);
         if (r != 0) {
             return std::unique_ptr<FastInterpGeneratedProgram>(nullptr);
         }
     }
 
-    {
-        int r = mprotect(reinterpret_cast<void*>(baseAddress), codeSectionSize, PROT_READ | PROT_EXEC);
-        if (r != 0) {
-            return std::unique_ptr<FastInterpGeneratedProgram>(nullptr);
-        }
-    }
-
-    InvalidateInstructionCache(reinterpret_cast<void*>(baseAddress), codeSectionSize);
+    InvalidateInstructionCache(reinterpret_cast<void*>(baseAddress), mmapLength);
 
     std::unique_ptr<FastInterpGeneratedProgram> ret(new FastInterpGeneratedProgram(mmapResult, mmapLength, std::move(entryPointMap)));
     success = true;

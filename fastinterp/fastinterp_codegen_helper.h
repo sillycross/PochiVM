@@ -42,10 +42,7 @@ public:
 #ifdef TESTBUILD
         m_populatedCppFnptrPlaceholderMask |= (1ULL << ordinal);
 #endif
-        m_dataValues[m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal]] = reinterpret_cast<uint64_t>(value);
-        m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal + ordinal] = static_cast<uint64_t>(
-                    static_cast<uint64_t>(static_cast<int64_t>(m_relativeDataAddr)) +
-                    m_owner->m_cppFnPtrPlaceholderOrdinalToId[ordinal] * sizeof(uint64_t));
+        m_fixupValues[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal + ordinal] = reinterpret_cast<uint64_t>(value);
     }
 
     template<typename R, typename... Args>
@@ -100,7 +97,6 @@ public:
         TestAssert(m_owner->m_usedBoilerplateFnPtrPlaceholderMask == newBluePrint->m_usedBoilerplateFnPtrPlaceholderMask);
         TestAssert(m_owner->m_usedCppFnptrPlaceholderMask == newBluePrint->m_usedCppFnptrPlaceholderMask);
         TestAssert(m_owner->m_usedUInt64PlaceholderMask == newBluePrint->m_usedUInt64PlaceholderMask);
-        TestAssert(m_owner->GetDataSectionLength() == newBluePrint->GetDataSectionLength());
         m_owner = newBluePrint;
     }
 
@@ -112,11 +108,9 @@ public:
 
 private:
     FastInterpBoilerplateInstance(const FastInterpBoilerplateBluePrint* owner,
-                                  int32_t relativeDataAddr,
                                   uint32_t ordinalInArray,
                                   uint16_t log2CodeSectionAlignment)
         : m_owner(owner)
-        , m_relativeDataAddr(relativeDataAddr)
         , m_log2CodeSectionAlignment(log2CodeSectionAlignment)
         , m_codeSectionPaddingRequired(0)
         , m_ordinalInArray(ordinalInArray)
@@ -138,7 +132,6 @@ private:
         {
             m_fixupValues[i] = 0;
         }
-        m_dataValues = new uint64_t[m_owner->GetDataSectionLength() / sizeof(uint64_t)];
     }
 
     // Called after PlaceBoilerplate() phase which populates the m_relativeCodeAddr of every boilerplate function
@@ -168,24 +161,12 @@ private:
                 m_fixupValues[i] = baseAddress + static_cast<uint64_t>(static_cast<int64_t>(instance->m_relativeCodeAddr));
             }
         }
-        // The 'cpp_fn' fixups are all relative pointers to the final baseAddress
-        // Now the base address is known, add it so we get the true pointer
-        //
-        for (uint32_t i = m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal;
-             i < m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal + m_owner->m_highestCppFnptrPlaceholderOrdinal; i++)
-        {
-            m_fixupValues[i] += baseAddress;
-        }
         uint8_t* trueCodeBaseAddress = reinterpret_cast<uint8_t*>(baseAddress + static_cast<uint64_t>(static_cast<int64_t>(m_relativeCodeAddr)));
-        uint8_t* trueDataBaseAddress = reinterpret_cast<uint8_t*>(baseAddress + static_cast<uint64_t>(static_cast<int64_t>(m_relativeDataAddr)));
-        memcpy(trueDataBaseAddress, m_dataValues, m_owner->GetDataSectionLength());
         x86_64_populate_NOP_instructions(trueCodeBaseAddress - m_codeSectionPaddingRequired, m_codeSectionPaddingRequired);
         m_owner->MaterializeCodeSection(trueCodeBaseAddress, m_fixupValues, m_shouldStripLITC);
     }
 
     const FastInterpBoilerplateBluePrint* m_owner;
-
-    int32_t m_relativeDataAddr;
 
     uint16_t m_log2CodeSectionAlignment;
     uint16_t m_codeSectionPaddingRequired;
@@ -218,10 +199,6 @@ private:
     // m_owner->m_highestUInt64PlaceholderOrdinal + m_owner->m_highestCppFnptrPlaceholderOrdinal
     //
     uint64_t* m_fixupValues;
-
-    // An array of length m_owner->GetDataSectionLength / sizeof(uint64_t)
-    //
-    uint64_t* m_dataValues;
 
 #ifdef TESTBUILD
     uint64_t m_populatedBoilerplateFnPtrPlaceholderMask;
@@ -280,7 +257,6 @@ public:
 
     void Reset()
     {
-        m_dataSectionLength = 0;
         m_functionEntryPoint.clear();
         m_allBoilerplateInstances.clear();
         m_boilerplateFnEntryPointPlaceholders.clear();
@@ -293,14 +269,9 @@ public:
             const FastInterpBoilerplateBluePrint* boilerplate,
             size_t log2CodeSectionAlignment = x_fastinterp_log2_function_alignment)
     {
-        // Data section grows down from base address,
-        // its data section range is [-(oldDSLength + thisDsLength), -oldDsLength)
-        //
         TestAssert(log2CodeSectionAlignment <= 6);
-        m_dataSectionLength += boilerplate->GetDataSectionLength();
-        int32_t relativeDataSectionBase = static_cast<int32_t>(-static_cast<ssize_t>(m_dataSectionLength));
         FastInterpBoilerplateInstance* inst = new FastInterpBoilerplateInstance(
-                    boilerplate, relativeDataSectionBase,
+                    boilerplate,
                     static_cast<uint32_t>(m_allBoilerplateInstances.size()),
                     static_cast<uint16_t>(log2CodeSectionAlignment));
         m_allBoilerplateInstances.push_back(inst);
@@ -339,7 +310,6 @@ private:
     std::unordered_map<AstFunction*, std::pair<FastInterpBoilerplateInstance*, FastInterpBoilerplateInstance*> > m_functionEntryPoint;
     std::vector<FastInterpBoilerplateInstance*> m_allBoilerplateInstances;
     std::vector<std::pair<FastInterpBoilerplateInstance*, std::pair<AstFunction*, uint32_t>>> m_boilerplateFnEntryPointPlaceholders;
-    size_t m_dataSectionLength;
 #ifdef TESTBUILD
     bool m_materialized;
 #endif

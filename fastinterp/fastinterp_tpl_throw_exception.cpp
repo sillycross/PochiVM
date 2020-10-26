@@ -1,5 +1,4 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
-#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
@@ -36,8 +35,8 @@ struct FIThrowExceptionImpl
         }
 
         using CppFnPrototype = void(*)(uintptr_t) noexcept;
-        DEFINE_CPP_FNPTR_PLACEHOLDER_0(CppFnPrototype);
-        CPP_FNPTR_PLACEHOLDER_0(exnAddr);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(CppFnPrototype);
+        BOILERPLATE_FNPTR_PLACEHOLDER_1(exnAddr);
 
         DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
         BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
@@ -59,5 +58,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIThrowExceptionImpl>(FIAttribute::CodeModelMedium);
+    RegisterBoilerplate<FIThrowExceptionImpl>();
 }

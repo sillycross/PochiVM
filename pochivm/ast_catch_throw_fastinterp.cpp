@@ -52,10 +52,16 @@ FastInterpSnippet WARN_UNUSED AstThrowStmt::PrepareForFastInterp(FISpillLocation
         FastInterpSnippet snippet = expr->PrepareForFastInterp(x_FINoSpill);
         TestAssert(!snippet.IsEmpty() && !snippet.IsUncontinuable());
 
+        FastInterpBoilerplateInstance* enterCppInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FICallExprEnterCppFnImpl>::SelectBoilerplateBluePrint(
+                        TypeId::Get<void>().GetDefaultFastInterpTypeId(),
+                        true /*isNoExcept*/));
+        enterCppInst->PopulateCppFnPtrPlaceholder(0, cppHelper);
+
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIThrowExceptionImpl>::SelectBoilerplateBluePrint(
                         true /*isQuickAccess*/));
-        inst->PopulateCppFnPtrPlaceholder(0, cppHelper);
+        inst->PopulateBoilerplateFnPtrPlaceholder(1, enterCppInst);
         snippet = snippet.AddContinuation(inst);
 
         FastInterpBoilerplateInstance* cleanup = thread_pochiVMContext->m_scopedVariableManager.FIGenerateEHEntryPointForCurrentPosition();
@@ -112,11 +118,17 @@ FastInterpSnippet WARN_UNUSED AstThrowStmt::PrepareForFastInterp(FISpillLocation
         //
         thread_pochiVMContext->m_scopedVariableManager.PushObject(&variable);
 
+        FastInterpBoilerplateInstance* enterCppInst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FICallExprEnterCppFnImpl>::SelectBoilerplateBluePrint(
+                        TypeId::Get<void>().GetDefaultFastInterpTypeId(),
+                        true /*isNoExcept*/));
+        enterCppInst->PopulateCppFnPtrPlaceholder(0, cppHelper);
+
         FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FIThrowExceptionImpl>::SelectBoilerplateBluePrint(
                         false /*isQuickAccess*/));
         inst->PopulateConstantPlaceholder<uint64_t>(0, offset);
-        inst->PopulateCppFnPtrPlaceholder(0, cppHelper);
+        inst->PopulateBoilerplateFnPtrPlaceholder(1, enterCppInst);
         snippet = snippet.AddContinuation(inst);
 
         // Important to call FIGenerateEHEntryPointForCurrentPosition after pushing variable to scopeVariableManager,

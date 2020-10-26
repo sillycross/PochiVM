@@ -24,7 +24,6 @@ constexpr void constexpr_copy_helper(T* dst, const std::array<T, N>& src)
 template<uint32_t addr32FixupArrayLength,
          uint32_t symbol32FixupArrayLength,
          uint32_t symbol64FixupArrayLength,
-         uint16_t highestCppFnptrPlaceholderOrdinal,
          uint32_t numJmp32,
          uint32_t numJcc32>
 class FastInterpBoilerplateBluePrintWrapper : public FastInterpBoilerplateBluePrint
@@ -37,9 +36,8 @@ public:
           , const std::array<FastInterpSymbolFixupRecord, symbol32FixupArrayLength>& symbol32FixupArray
           , const std::array<FastInterpSymbolFixupRecord, symbol64FixupArrayLength>& symbol64FixupArray
           , uint16_t highestBoilerplateFnptrPlaceholderOrdinal
+          , uint16_t highestCppFnptrPlaceholderOrdinal
           , uint16_t highestUInt64PlaceholderOrdinal
-          , uint16_t numCppFnPtrPlaceholders
-          , const std::array<uint16_t, highestCppFnptrPlaceholderOrdinal>& cppFnPtrPlaceholderOrdinalToId
           , int lastInstructionTailCallOrd
           , const std::array<uint32_t, numJmp32>& jmp32Offsets
           , const std::array<uint32_t, numJcc32>& jcc32Offsets
@@ -59,11 +57,9 @@ public:
               , symbol32FixupArrayLength
               , m_symbol64FixupArrayData
               , symbol64FixupArrayLength
-              , m_cppFnPtrPlaceholderOrdinalToIdData
               , highestBoilerplateFnptrPlaceholderOrdinal
               , highestCppFnptrPlaceholderOrdinal
               , highestUInt64PlaceholderOrdinal
-              , numCppFnPtrPlaceholders
               , lastInstructionTailCallOrd
               , numJmp32
               , m_jmp32OffsetData
@@ -94,23 +90,9 @@ public:
             ReleaseAssert(symbol64FixupArray[i].m_ordinalIntoPlaceholderArray < highestBoilerplateFnptrPlaceholderOrdinal +
                           highestCppFnptrPlaceholderOrdinal + highestUInt64PlaceholderOrdinal);
         }
-        {
-            uint16_t cur = 0;
-            for (uint16_t i = 0; i < highestCppFnptrPlaceholderOrdinal; i++)
-            {
-                ReleaseAssert(cppFnPtrPlaceholderOrdinalToId[i] == static_cast<uint16_t>(-1) ||
-                              cppFnPtrPlaceholderOrdinalToId[i] == cur);
-                if (cppFnPtrPlaceholderOrdinalToId[i] == cur)
-                {
-                    cur++;
-                }
-            }
-            ReleaseAssert(cur == numCppFnPtrPlaceholders);
-        }
         internal::constexpr_copy_helper(m_addr32FixupArrayData, addr32FixupArray);
         internal::constexpr_copy_helper(m_symbol32FixupArrayData, symbol32FixupArray);
         internal::constexpr_copy_helper(m_symbol64FixupArrayData, symbol64FixupArray);
-        internal::constexpr_copy_helper(m_cppFnPtrPlaceholderOrdinalToIdData, cppFnPtrPlaceholderOrdinalToId);
         internal::constexpr_copy_helper(m_jmp32OffsetData, jmp32Offsets);
         internal::constexpr_copy_helper(m_jcc32OffsetData, jcc32Offsets);
     }
@@ -122,7 +104,6 @@ private:
     uint32_t m_addr32FixupArrayData[addr32FixupArrayLength];
     FastInterpSymbolFixupRecord m_symbol32FixupArrayData[symbol32FixupArrayLength];
     FastInterpSymbolFixupRecord m_symbol64FixupArrayData[symbol64FixupArrayLength];
-    uint16_t m_cppFnPtrPlaceholderOrdinalToIdData[highestCppFnptrPlaceholderOrdinal];
     uint32_t m_jmp32OffsetData[numJmp32];
     uint32_t m_jcc32OffsetData[numJcc32];
 };

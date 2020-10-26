@@ -84,7 +84,7 @@
     extern "C" void __pochivm_fast_interp_dynamic_specialization_musttail_boilerplate_function_placeholder_ ## ordinal();             \
     extern "C" void __pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_ ## ordinal();               \
     extern char __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal [1048576] __attribute__ ((__aligned__(1))); \
-    extern uint64_t __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal;
+    extern "C" void __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal();
 
 // Make more of them if necessary, up to 63
 //
@@ -106,6 +106,8 @@ INTERNAL_GEN_DECLARATION_FOR_PLACEHOLDER(14)
 
 template<typename T> struct __pochivm_is_noexcept_fnptr_helper : std::false_type {};
 template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper<R(*)(Args...) noexcept> : std::true_type {};
+
+#ifndef FASTINTERP_TPL_USE_LARGE_MCMODEL
 
 #define INTERNAL_INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER(symprefix, ordinal, ...)                         \
     using _BOILERPLATE_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                        \
@@ -130,14 +132,10 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #ifdef FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 #define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)
 #else
-#ifdef FASTINTERP_TPL_USE_LARGE_MCMODEL
-#define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)
-#else
 #define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)            \
     static_assert(sizeof(_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal) <= 4 &&            \
         !std::is_same<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal, uint32_t>::value,     \
         "In 'Small' code model, constant placeholder must fit in int32_t");
-#endif
 #endif
 
 #define INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(ordinal, ...)                                                      \
@@ -165,6 +163,8 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
     const uint64_t CONSTANT_PLACEHOLDER_ ## ordinal = reinterpret_cast<uint64_t>(                               \
             __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal)
 
+#else   // FASTINTERP_TPL_USE_LARGE_MCMODEL
+
 #define INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(ordinal, ...)                                                     \
     using _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
     static_assert(std::is_pointer<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>::value &&                            \
@@ -174,6 +174,10 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
     const _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal CPP_FNPTR_PLACEHOLDER_ ## ordinal =                           \
         reinterpret_cast<_CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal>(                                              \
             __pochivm_fast_interp_dynamic_specialization_aotc_cpp_function_placeholder_ ## ordinal)
+
+#endif  // FASTINTERP_TPL_USE_LARGE_MCMODEL
+
+#ifndef FASTINTERP_TPL_USE_LARGE_MCMODEL
 
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(0, __VA_ARGS__)
 #define DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(...) INTERNAL_DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_NO_TAILCALL(1, __VA_ARGS__)
@@ -239,6 +243,8 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #define DEFINE_INDEX_CONSTANT_PLACEHOLDER_13 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(13)
 #define DEFINE_INDEX_CONSTANT_PLACEHOLDER_14 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(14)
 
+#else   // FASTINTERP_TPL_USE_LARGE_MCMODEL
+
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_1(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(1, __VA_ARGS__)
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_2(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(2, __VA_ARGS__)
@@ -254,3 +260,5 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_12(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(12, __VA_ARGS__)
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_13(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(13, __VA_ARGS__)
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_14(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(14, __VA_ARGS__)
+
+#endif  // FASTINTERP_TPL_USE_LARGE_MCMODEL

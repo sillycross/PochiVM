@@ -1,5 +1,4 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
-#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
@@ -34,8 +33,8 @@ struct FICallExprCallDestructorOpImpl
 
         static_assert(std::is_same<FIReturnType<void, true /*isNoExcept*/>, void>::value);
 
-        DEFINE_CPP_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-        CPP_FNPTR_PLACEHOLDER_0(stackframe - 8);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
+        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe - 8);
     }
 
     static auto metavars()
@@ -54,5 +53,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FICallExprCallDestructorOpImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2 | FIAttribute::CodeModelMedium);
+    RegisterBoilerplate<FICallExprCallDestructorOpImpl>();
 }

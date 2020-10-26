@@ -1499,22 +1499,6 @@ public:
                 std::sort(jmp32.begin(), jmp32.end());
                 std::sort(jcc32.begin(), jcc32.end());
 
-                int usedCfpOrdinalCnt = 0;
-                std::vector<int> cfpOrdinalMap;
-                cfpOrdinalMap.resize(highestCFPOrdinal);
-                for (uint32_t i = 0; i < highestCFPOrdinal; i++)
-                {
-                    if ((usedCfpMask & (1ULL <<i)) > 0)
-                    {
-                        cfpOrdinalMap[i] = usedCfpOrdinalCnt;
-                        usedCfpOrdinalCnt++;
-                    }
-                    else
-                    {
-                        cfpOrdinalMap[i] = -1;
-                    }
-                }
-
                 fprintf(fp3, "static uint8_t %s%s_%d_contents[%d] = {\n",
                         blueprint_varname_prefix.c_str(), midfix.c_str(), blueprint_varname_suffix, static_cast<int>(totalDataSize));
                 for (size_t i = 0; i < totalDataSize; i++)
@@ -1560,11 +1544,10 @@ public:
                     fprintf(fp3, "\n    } /*fixupSites*/);\n");
                 }
 
-                fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d, %d, %d> %s%s_%d(\n",
+                fprintf(fp3, "constexpr FastInterpBoilerplateBluePrintWrapper<%d, %d, %d, %d, %d> %s%s_%d(\n",
                         static_cast<int>(minusAddrOffsets32.size()),
                         static_cast<int>(allList32.size()),
                         static_cast<int>(allList64.size()),
-                        static_cast<int>(highestCFPOrdinal),
                         static_cast<int>(jmp32.size()),
                         static_cast<int>(jcc32.size()),
                         blueprint_varname_prefix.c_str(),
@@ -1606,18 +1589,9 @@ public:
                 fprintf(fp3, "} /*symbol64FixupArray*/,\n");
 
                 fprintf(fp3, "%d /*highestBoilerplateFnptrPlaceholderOrdinal*/,\n", static_cast<int>(highestBPFPOrdinal));
+                fprintf(fp3, "%d /*highestCppFnptrPlaceholderOrdinal*/,\n", static_cast<int>(highestCFPOrdinal));
                 fprintf(fp3, "%d /*highestUInt64PlaceholderOrdinal*/,\n", static_cast<int>(highestU64Ordinal));
-                fprintf(fp3, "%d /*numCppFnPtrPlaceholders*/,\n", static_cast<int>(usedCfpOrdinalCnt));
 
-                fprintf(fp3, "std::array<uint16_t, %d>{", static_cast<int>(cfpOrdinalMap.size()));
-                for (size_t i = 0; i < cfpOrdinalMap.size(); i++)
-                {
-                    fprintf(fp3, "static_cast<uint16_t>(%d)", static_cast<int>(cfpOrdinalMap[i]));
-                    if (i + 1 < cfpOrdinalMap.size()) {
-                        fprintf(fp3, ", ");
-                    }
-                }
-                fprintf(fp3, "} /*cppFnPtrPlaceholderOrdinalToId*/,\n");
                 fprintf(fp3, "%d /*lastInstructionTailCallOrd*/,\n", lastInstructionTailCallOrd);
 
                 fprintf(fp3, "std::array<uint32_t, %d>{", static_cast<int>(jmp32.size()));

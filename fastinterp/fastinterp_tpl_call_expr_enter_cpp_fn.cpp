@@ -1,5 +1,5 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
-#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
+#define FASTINTERP_TPL_USE_LARGE_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
@@ -43,5 +43,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FICallExprEnterCppFnImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2 | FIAttribute::CodeModelMedium);
+    RegisterBoilerplate<FICallExprEnterCppFnImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2 | FIAttribute::CodeModelLarge);
 }

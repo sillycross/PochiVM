@@ -36,10 +36,16 @@ FastInterpSnippet WARN_UNUSED AstVariable::GetFastInterpDestructorSnippet()
         TestAssert(info.m_isNoExcept);
         TestAssert(info.m_returnType.IsVoid());
 
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FICallExprEnterCppFnImpl>::SelectBoilerplateBluePrint(
+                        TypeId::Get<void>().GetDefaultFastInterpTypeId(),
+                        true /*isNoExcept*/));
+        inst->PopulateCppFnPtrPlaceholder(0, info.m_interpImpl);
+
         m_fastInterpDtorCallOp = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                     FastInterpBoilerplateLibrary<FICallExprCallDestructorOpImpl>::SelectBoilerplateBluePrint(true /*dummy*/));
         m_fastInterpDtorCallOp->PopulateConstantPlaceholder<uint64_t>(0, GetFastInterpOffset());
-        m_fastInterpDtorCallOp->PopulateCppFnPtrPlaceholder(0, info.m_interpImpl);
+        m_fastInterpDtorCallOp->PopulateBoilerplateFnPtrPlaceholder(0, inst);
         m_fastInterpDtorCallOp->SetAlignmentLog2(4);
     }
 

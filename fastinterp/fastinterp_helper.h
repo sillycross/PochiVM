@@ -68,11 +68,6 @@ public:
         return m_contentLength;
     }
 
-    size_t GetDataSectionLength() const
-    {
-        return m_numCppFnPtrPlaceholders * sizeof(uint64_t);
-    }
-
 #ifdef TESTBUILD
     const char* TestOnly_GetSymbolName() const
     {
@@ -90,11 +85,9 @@ protected:
           , uint32_t symbol32FixupArrayLength
           , const FastInterpSymbolFixupRecord* symbol64FixupArray
           , uint32_t symbol64FixupArrayLength
-          , const uint16_t* cppFnPtrPlaceholderOrdinalToId
           , uint16_t highestBoilerplateFnptrPlaceholderOrdinal
           , uint16_t highestCppFnptrPlaceholderOrdinal
           , uint16_t highestUInt64PlaceholderOrdinal
-          , uint16_t numCppFnPtrPlaceholders
           , int lastInstructionTailCallOrd
           , uint32_t jmp32ArrayLength
           , const uint32_t* jmp32Offsets
@@ -113,7 +106,6 @@ protected:
         , m_symbol64FixupArray(symbol64FixupArray)
         , m_jmp32OffsetArray(jmp32Offsets)
         , m_jcc32OffsetArray(jcc32Offsets)
-        , m_cppFnPtrPlaceholderOrdinalToId(cppFnPtrPlaceholderOrdinalToId)
         , m_contentLength(contentLength)
         , m_addr32FixupArrayLength(addr32FixupArrayLength)
         , m_symbol32FixupArrayLength(symbol32FixupArrayLength)
@@ -121,7 +113,6 @@ protected:
         , m_highestBoilerplateFnptrPlaceholderOrdinal(highestBoilerplateFnptrPlaceholderOrdinal)
         , m_highestCppFnptrPlaceholderOrdinal(highestCppFnptrPlaceholderOrdinal)
         , m_highestUInt64PlaceholderOrdinal(highestUInt64PlaceholderOrdinal)
-        , m_numCppFnPtrPlaceholders(numCppFnPtrPlaceholders)
         , m_lastInstructionTailCallOrd(lastInstructionTailCallOrd)
         , m_jmp32ArrayLength(jmp32ArrayLength)
         , m_jcc32ArrayLength(jcc32ArrayLength)
@@ -225,8 +216,6 @@ private:
     const uint32_t* m_jmp32OffsetArray;
     const uint32_t* m_jcc32OffsetArray;
 
-    const uint16_t* m_cppFnPtrPlaceholderOrdinalToId;
-
     uint32_t m_contentLength;
     uint32_t m_addr32FixupArrayLength;
     uint32_t m_symbol32FixupArrayLength;
@@ -235,7 +224,6 @@ private:
     uint16_t m_highestBoilerplateFnptrPlaceholderOrdinal;
     uint16_t m_highestCppFnptrPlaceholderOrdinal;
     uint16_t m_highestUInt64PlaceholderOrdinal;
-    uint16_t m_numCppFnPtrPlaceholders;
     int m_lastInstructionTailCallOrd;
     uint32_t m_jmp32ArrayLength;
     uint32_t m_jcc32ArrayLength;
