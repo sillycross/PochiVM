@@ -23,7 +23,10 @@ struct FIInlinedReturnImpl
              FIOperandShapeCategory osc>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<IndexType, osc>()) { return false; }
+        if constexpr(!std::is_same<ReturnType, void>::value)
+        {
+            if (!FIOperandShapeCategoryHelper::cond<ReturnType, IndexType, osc>()) { return false; }
+        }
         return true;
     }
 

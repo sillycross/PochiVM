@@ -42,7 +42,7 @@ struct FIPointerCastImpl
         {
             static_assert(spillOutput);
 
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<uint64_t>(stackframe, CONSTANT_PLACEHOLDER_0) = qa;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -52,7 +52,7 @@ struct FIPointerCastImpl
         {
             uint64_t result;
             {
-                DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+                DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
                 result = qa + CONSTANT_PLACEHOLDER_1;
             }
 
@@ -63,7 +63,7 @@ struct FIPointerCastImpl
             }
             else
             {
-                DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+                DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                 *GetLocalVarAddress<uint64_t>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
                 DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

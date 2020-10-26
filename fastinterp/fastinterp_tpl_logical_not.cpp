@@ -41,7 +41,7 @@ struct FILogicalNotImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = !cond;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

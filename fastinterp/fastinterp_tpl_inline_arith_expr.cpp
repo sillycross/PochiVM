@@ -27,6 +27,8 @@ struct FIFullyInlinedArithmeticExprImpl
              AstArithmeticExprType arithType>
     static constexpr bool cond()
     {
+        if (!FISimpleOperandShapeCategoryHelper::cond<OperandType, lhsShapeCategory>()) { return false; }
+        if (!FISimpleOperandShapeCategoryHelper::cond<OperandType, rhsShapeCategory>()) { return false; }
         if (std::is_floating_point<OperandType>::value && arithType == AstArithmeticExprType::MOD) { return false; }
         // floating point division by 0 is undefined behavior, and clang generates a special relocation
         // to directly return the binary representation of NaN/Inf. We cannot support this relocation easily.
@@ -99,7 +101,7 @@ struct FIFullyInlinedArithmeticExprImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

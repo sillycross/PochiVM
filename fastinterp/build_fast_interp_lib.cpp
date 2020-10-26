@@ -622,6 +622,13 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     }
 }
 
+enum class CodeModelOption
+{
+    Small,
+    Medium,
+    Large
+};
+
 class SourceFileInfo : NonCopyable, NonMovable
 {
 public:
@@ -956,6 +963,41 @@ public:
                 }
             }
 
+            auto GetCodeModelFromAttribute = [](PochiVM::FIAttribute attr) -> CodeModelOption
+            {
+                if (attr.HasAttribute(PochiVM::FIAttribute::CodeModelMedium))
+                {
+                    ReleaseAssert(!attr.HasAttribute(PochiVM::FIAttribute::CodeModelLarge));
+                    return CodeModelOption::Medium;
+                }
+                if (attr.HasAttribute(PochiVM::FIAttribute::CodeModelLarge))
+                {
+                    return CodeModelOption::Large;
+                }
+                return CodeModelOption::Small;
+            };
+
+            // Check the code model we should use
+            //
+            CodeModelOption mcmodel = CodeModelOption::Small;
+            for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
+            {
+                BoilerplatePack& bp = it->second;
+                mcmodel = GetCodeModelFromAttribute(bp.m_attr);
+            }
+
+            for (auto it = allBoilerplates.begin(); it != allBoilerplates.end(); it++)
+            {
+                BoilerplatePack& bp = it->second;
+                CodeModelOption cm = GetCodeModelFromAttribute(bp.m_attr);
+                if (cm != mcmodel)
+                {
+                    fprintf(stderr, "Boilerplate packs in '%s' have multiple specified code models!\n",
+                            bc_file.c_str());
+                    abort();
+                }
+            }
+
             // Store IR file
             //
             std::string outputIR = bc_file + ".stripped.bc";
@@ -981,11 +1023,27 @@ public:
 
             // Invoke llc to compile to object file
             //
-            // Option '--code-model=medium --relocation-model=static' is required,
+            // Option '--relocation-model=static' is required,
             // see comments in dynamic_specialization_utils.h.
             // 'exception-model=default' seems to mean that exception is disabled.
             //
-            std::string llc_options = " -O=3 -filetype=obj --code-model=medium --relocation-model=static --exception-model=default ";
+            std::string llc_options = " -O=3 -filetype=obj --relocation-model=static --exception-model=default ";
+            if (mcmodel == CodeModelOption::Small)
+            {
+                llc_options += std::string(" --code-model=small ");
+            }
+            else if (mcmodel == CodeModelOption::Medium)
+            {
+                llc_options += std::string(" --code-model=medium ");
+            }
+            else if (mcmodel == CodeModelOption::Large)
+            {
+                llc_options += std::string(" --code-model=large ");
+            }
+            else
+            {
+                ReleaseAssert(false);
+            }
             llc_options += std::string(" --align-all-functions=") + std::to_string(PochiVM::x_fastinterp_log2_function_alignment) + " ";
             llc_options += std::string(" --stack-alignment=") + std::to_string(PochiVM::x_fastinterp_function_stack_alignment) + " ";
             std::string llc_command_line = std::string("llc ") + llc_options + outputIR + " -o " + obj_file;
@@ -1179,7 +1237,8 @@ public:
                     // Reference: https://refspecs.linuxbase.org/elf/x86_64-abi-0.98.pdf Page 69
                     //
                     if (!(rinfo.type == ELF::R_X86_64_64 || rinfo.type == ELF::R_X86_64_PLT32 ||
-                          rinfo.type == ELF::R_X86_64_PC32 || rinfo.type == ELF::R_X86_64_TPOFF32))
+                          rinfo.type == ELF::R_X86_64_PC32 || rinfo.type == ELF::R_X86_64_TPOFF32 ||
+                          rinfo.type == ELF::R_X86_64_32S || rinfo.type == ELF::R_X86_64_32))
                     {
                         fprintf(stderr, "[INTERNAL] Unhandled relocation type %s(%d) in symbol %s. "
                                         "We haven't taken care of this case. Please report a bug.\n",
@@ -1187,7 +1246,8 @@ public:
                         abort();
                     }
 
-                    if (rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_PC32)
+                    if (rinfo.type == ELF::R_X86_64_PLT32 || rinfo.type == ELF::R_X86_64_PC32 ||
+                        rinfo.type == ELF::R_X86_64_32S || rinfo.type == ELF::R_X86_64_32)
                     {
                         ReleaseAssert(UnalignedRead<uint32_t>(data + rinfo.offset) == 0);
                     }
@@ -1212,7 +1272,7 @@ public:
                 }
 
                 std::vector<uint32_t> minusAddrOffsets32;
-                std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List64, allList32, allList64, tpoff32List;
+                std::vector<std::pair<uint32_t /*offset*/, uint32_t /*ordinal*/>> bpfpList32, bpfpList64, cfpList64, u64List32, u64List64, allList32, allList64, tpoff32List;
                 std::vector<uint32_t> jmp32, jcc32;
                 uint32_t highestBPFPOrdinal = 0;
                 uint32_t highestCFPOrdinal = 0;
@@ -1238,6 +1298,12 @@ public:
                         ReleaseAssert(rinfo.offset + 8 <= preAlignedSize);
                         uint64_t addend = static_cast<uint64_t>(rinfo.addend);
                         UnalignedAddAndWriteback<uint64_t>(data + rinfo.offset, addend);
+                    }
+                    else if (rinfo.type == ELF::R_X86_64_32S || rinfo.type == ELF::R_X86_64_32)
+                    {
+                        ReleaseAssert(rinfo.offset + 4 <= preAlignedSize);
+                        uint32_t addend = static_cast<uint32_t>(rinfo.addend);
+                        UnalignedAddAndWriteback<uint32_t>(data + rinfo.offset, addend);
                     }
                     else if (rinfo.type == ELF::R_X86_64_TPOFF32)
                     {
@@ -1351,9 +1417,19 @@ public:
                     {
                         ReleaseAssert(ord < 64);
                         highestU64Ordinal = std::max(highestU64Ordinal, ord + 1);
-                        ReleaseAssert(rinfo.type == ELF::R_X86_64_64);
-                        u64List64.push_back(std::make_pair(rinfo.offset, ord));
                         usedU64Mask |= (1ULL << ord);
+                        if (rinfo.type == ELF::R_X86_64_64)
+                        {
+                            u64List64.push_back(std::make_pair(rinfo.offset, ord));
+                        }
+                        else if (rinfo.type == ELF::R_X86_64_32S || rinfo.type == ELF::R_X86_64_32)
+                        {
+                            u64List32.push_back(std::make_pair(rinfo.offset, ord));
+                        }
+                        else
+                        {
+                            ReleaseAssert(false);
+                        }
                     }
                     else
                     {
@@ -1382,9 +1458,19 @@ public:
                     p.second += highestBPFPOrdinal;
                 }
 
+                for (std::pair<uint32_t, uint32_t>& p : u64List32)
+                {
+                    p.second += highestBPFPOrdinal + highestCFPOrdinal;
+                }
+
                 for (std::pair<uint32_t, uint32_t>& p : u64List64)
                 {
                     p.second += highestBPFPOrdinal + highestCFPOrdinal;
+                }
+
+                for (std::pair<uint32_t, uint32_t>& p : u64List32)
+                {
+                    allList32.push_back(p);
                 }
 
                 for (std::pair<uint32_t, uint32_t>& p : bpfpList32)

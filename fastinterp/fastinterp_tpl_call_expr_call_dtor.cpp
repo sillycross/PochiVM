@@ -1,4 +1,5 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 #include "fastinterp_function_alignment.h"
@@ -27,7 +28,7 @@ struct FICallExprCallDestructorOpImpl
     static void f(uintptr_t stackframe) noexcept
     {
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *reinterpret_cast<uint64_t*>(stackframe) = stackframe + CONSTANT_PLACEHOLDER_0;
         }
 
@@ -53,5 +54,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FICallExprCallDestructorOpImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2);
+    RegisterBoilerplate<FICallExprCallDestructorOpImpl>(FIAttribute::NoContinuation | FIAttribute::AppendUd2 | FIAttribute::CodeModelMedium);
 }

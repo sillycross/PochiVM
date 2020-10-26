@@ -34,7 +34,7 @@ struct FIPartialInlinedComparisonFavourTrueBranchImpl
              FIOperandShapeCategory shapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<IndexType, shapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, IndexType, shapeCategory>()) { return false; }
         return true;
     }
 

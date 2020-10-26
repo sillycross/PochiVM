@@ -87,7 +87,7 @@ struct FIOutlinedDereferenceImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
             base = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_1);
             offset = qa1;
         }
@@ -101,7 +101,7 @@ struct FIOutlinedDereferenceImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

@@ -1,4 +1,5 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
+#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 
@@ -65,7 +66,7 @@ struct FILiteralImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<LiteralType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -93,5 +94,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FILiteralImpl>();
+    RegisterBoilerplate<FILiteralImpl>(FIAttribute::CodeModelMedium);
 }

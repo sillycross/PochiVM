@@ -39,7 +39,7 @@ struct FIInlinedDereferenceImpl
              FIOperandShapeCategory shapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<IndexType, shapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<IndexOperandType, IndexType, shapeCategory>()) { return false; }
         return true;
     }
 
@@ -99,7 +99,7 @@ struct FIInlinedDereferenceImpl
     {
         IndexOperandType index = FIOperandShapeCategoryHelper::get_2_3<IndexOperandType, IndexType, shapeCategory>(stackframe);
 
-        DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+        DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
         OperandType* var = *GetLocalVarAddress<OperandType*>(stackframe, CONSTANT_PLACEHOLDER_1);
 
         OperandType result = var[index];
@@ -111,7 +111,7 @@ struct FIInlinedDereferenceImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

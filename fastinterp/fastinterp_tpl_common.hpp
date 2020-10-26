@@ -82,6 +82,12 @@ template<typename T>
 void RegisterBoilerplate(FIAttribute attr = FIAttribute())
 {
     MetaVarMaterializedList list = T::metavars().template Materialize<T>();
+#ifdef FASTINTERP_TPL_USE_MEDIUM_MCMODEL
+    ReleaseAssert(attr.HasAttribute(FIAttribute::CodeModelMedium));
+#endif
+#ifdef FASTINTERP_TPL_USE_LARGE_MCMODEL
+    ReleaseAssert(attr.HasAttribute(FIAttribute::CodeModelLarge));
+#endif
     __pochivm_register_fast_interp_boilerplate__(__pochivm_stringify_type__<T>(), &list, &attr);
 }
 

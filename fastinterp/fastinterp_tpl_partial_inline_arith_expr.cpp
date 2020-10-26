@@ -35,7 +35,7 @@ struct FIPartialInlineArithmeticExprImpl
              FIOperandShapeCategory shapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<IndexType, shapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, IndexType, shapeCategory>()) { return false; }
         return true;
     }
 
@@ -134,7 +134,7 @@ struct FIPartialInlineArithmeticExprImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

@@ -42,7 +42,7 @@ struct FIFullyInlineAssignImpl
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, LhsIndexType, lhsShapeCategory>()) { return false; }
         if (lhsShapeCategory == FIOperandShapeCategory::LITERAL_NONZERO ||
             lhsShapeCategory == FIOperandShapeCategory::ZERO)
         {
@@ -58,7 +58,7 @@ struct FIFullyInlineAssignImpl
              FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, RhsIndexType, rhsShapeCategory>()) { return false; }
         return true;
     }
 

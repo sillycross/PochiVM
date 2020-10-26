@@ -95,7 +95,7 @@ struct FICallExprImpl
         }
         else if constexpr(spillReturnValue)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<ReturnType>(stackframe, CONSTANT_PLACEHOLDER_0) =
                     FIReturnValueHelper::GetReturnValue<ReturnType, isCalleeNoExcept>(returnValue);
 

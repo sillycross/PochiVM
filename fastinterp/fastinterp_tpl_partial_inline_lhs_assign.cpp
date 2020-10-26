@@ -32,7 +32,7 @@ struct FIPartialInlineLhsAssignImpl
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, LhsIndexType, lhsShapeCategory>()) { return false; }
         if (lhsShapeCategory == FIOperandShapeCategory::LITERAL_NONZERO ||
             lhsShapeCategory == FIOperandShapeCategory::ZERO)
         {

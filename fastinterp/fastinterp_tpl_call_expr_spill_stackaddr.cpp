@@ -23,7 +23,7 @@ struct FICallExprSpillStackAddrImpl
     {
         if constexpr(!isFakeSpillForNoParamCase)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<uintptr_t>(oldStackframe, CONSTANT_PLACEHOLDER_0) = newStackFrame;
 
             // Its continuation keeps computing parameters for this function call

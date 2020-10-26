@@ -44,7 +44,7 @@ struct FIFullyInlineAssignArithExprImpl
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, LhsIndexType, lhsShapeCategory>()) { return false; }
         return true;
     }
 
@@ -55,7 +55,7 @@ struct FIFullyInlineAssignArithExprImpl
              FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, RhsIndexType, rhsShapeCategory>()) { return false; }
         return true;
     }
 
@@ -120,7 +120,7 @@ struct FIFullyInlineAssignArithExprImpl
         OperandType rhs = FIOperandShapeCategoryHelper::get_3_4<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
         OperandType result = EvaluateArithmeticExpression<OperandType, operatorType>(lhs, rhs);
 
-        DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+        DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
         *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
         DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

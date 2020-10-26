@@ -44,7 +44,7 @@ struct FIFullyInlinedComparisonUnpredictableBranchImpl
              FIOperandShapeCategory lhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<LhsIndexType, lhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, LhsIndexType, lhsShapeCategory>()) { return false; }
         return true;
     }
 
@@ -55,7 +55,7 @@ struct FIFullyInlinedComparisonUnpredictableBranchImpl
              FIOperandShapeCategory rhsShapeCategory>
     static constexpr bool cond()
     {
-        if (!FIOperandShapeCategoryHelper::cond<RhsIndexType, rhsShapeCategory>()) { return false; }
+        if (!FIOperandShapeCategoryHelper::cond<OperandType, RhsIndexType, rhsShapeCategory>()) { return false; }
         // LHS and RHS cannot be both literal:
         // We cannot compare equality between two placeholders if they are 64 bits.
         // It is weird for users to write such expressions anyway, so it's OK to lose some performance in this case.

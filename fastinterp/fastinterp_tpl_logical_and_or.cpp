@@ -61,7 +61,7 @@ struct FIUnpredictableLogicalAndOrImpl
                 }
                 else
                 {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+                    DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = false;
 
                     DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -93,7 +93,7 @@ struct FIUnpredictableLogicalAndOrImpl
                 }
                 else
                 {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+                    DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = true;
 
                     DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -175,7 +175,7 @@ struct FIPredictableLogicalAndOrImpl
                 }
                 else
                 {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+                    DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = false;
 
                     DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
@@ -207,7 +207,7 @@ struct FIPredictableLogicalAndOrImpl
                 }
                 else
                 {
-                    DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+                    DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = true;
 
                     DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

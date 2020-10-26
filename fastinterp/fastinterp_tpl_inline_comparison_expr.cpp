@@ -26,6 +26,8 @@ struct FIFullyInlinedComparisonExprImpl
              AstComparisonExprType operatorType>
     static constexpr bool cond()
     {
+        if (!FISimpleOperandShapeCategoryHelper::cond<OperandType, lhsShapeCategory>()) { return false; }
+        if (!FISimpleOperandShapeCategoryHelper::cond<OperandType, rhsShapeCategory>()) { return false; }
         // LHS and RHS cannot be both literal:
         // We cannot compare equality between two placeholders if they are 64 bits.
         // It is weird for users to write such expressions anyway, so it's OK to lose some performance in this case.
@@ -92,7 +94,7 @@ struct FIFullyInlinedComparisonExprImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

@@ -27,7 +27,7 @@ struct FIReturnSpilledLocationImpl
              bool isNoExcept>
     static FIReturnType<ReturnType, isNoExcept> f(uintptr_t stackframe) noexcept
     {
-        DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+        DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
         ReturnType ret = *GetLocalVarAddress<ReturnType>(stackframe, CONSTANT_PLACEHOLDER_0);
         return FIReturnValueHelper::GetForRet<ReturnType, isNoExcept>(ret);
     }

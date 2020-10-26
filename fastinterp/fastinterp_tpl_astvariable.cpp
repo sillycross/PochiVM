@@ -48,7 +48,7 @@ struct FIVariableImpl
     {
         static_assert(std::is_pointer<VarTypePtr>::value, "unexpected VarTypePtr");
 
-        DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+        DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
         VarTypePtr result = GetLocalVarAddress<typename std::remove_pointer<VarTypePtr>::type>(stackframe, CONSTANT_PLACEHOLDER_1);
 
         if constexpr(!spillOutput)
@@ -58,7 +58,7 @@ struct FIVariableImpl
         }
         else
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<VarTypePtr>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);

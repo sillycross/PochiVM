@@ -33,7 +33,7 @@ struct FICallExprStoreCppConstPrimitiveRefParamImpl
         uint64_t offset;
         if constexpr(paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             offset = CONSTANT_PLACEHOLDER_0;
         }
         else
@@ -43,7 +43,7 @@ struct FICallExprStoreCppConstPrimitiveRefParamImpl
 
         uint64_t storeLoc;
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
             storeLoc = offset + CONSTANT_PLACEHOLDER_1;
         }
 
@@ -97,14 +97,14 @@ struct FICallExprStoreCppConstPrimitiveRefParamNewSfSpilledImpl
     {
         uintptr_t newStackFrame;
         {
-            DEFINE_CONSTANT_PLACEHOLDER_2(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_2;
             newStackFrame = *GetLocalVarAddress<uintptr_t>(oldStackframe, CONSTANT_PLACEHOLDER_2);
         }
 
         uint64_t offset;
         if constexpr(paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
         {
-            DEFINE_CONSTANT_PLACEHOLDER_0(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             offset = CONSTANT_PLACEHOLDER_0;
         }
         else
@@ -114,7 +114,7 @@ struct FICallExprStoreCppConstPrimitiveRefParamNewSfSpilledImpl
 
         uint64_t storeLoc;
         {
-            DEFINE_CONSTANT_PLACEHOLDER_1(uint64_t);
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
             storeLoc = offset + CONSTANT_PLACEHOLDER_1;
         }
 

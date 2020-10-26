@@ -69,24 +69,38 @@ FastInterpSnippet WARN_UNUSED AstStaticCastExpr::PrepareForFastInterp(FISpillLoc
     if (!srcType.IsPointerType())
     {
         // Case 1: static_cast between non-pointer types
-        // FIStaticCastImpl
+        // FIStaticCastImpl / FIStaticCastU64DoubleImpl
         //
         TestAssertImp(srcType.IsFloatingPoint(), dstType.IsFloatingPoint());
-        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                    FastInterpBoilerplateLibrary<FIStaticCastImpl>::SelectBoilerplateBluePrint(
-                        srcType.GetDefaultFastInterpTypeId(),
-                        dstType.GetDefaultFastInterpTypeId(),
-                        !spillLoc.IsNoSpill(),
-                        thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
-                        thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
-        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        FastInterpBoilerplateInstance* inst;
+
+        // Special case: uint64_t -> double
         // We currently need magic constant table support for uint64_t -> double cast,
         // see comment in fastinterp_tpl_static_cast.cpp
         //
-        if (srcType == TypeId::Get<uint64_t>() && dstType.IsDouble())
+        //
+        if (srcType == TypeId::Get<uint64_t>() && dstType == TypeId::Get<double>())
         {
+            inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIStaticCastU64DoubleImpl>::SelectBoilerplateBluePrint(
+                            !spillLoc.IsNoSpill(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
+            spillLoc.PopulatePlaceholderIfSpill(inst, 0);
             inst->PopulateConstantPlaceholder<uintptr_t>(1, reinterpret_cast<uintptr_t>(x_x86_64_uint64_to_double_magic_csts));
         }
+        else
+        {
+            inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIStaticCastImpl>::SelectBoilerplateBluePrint(
+                            srcType.GetDefaultFastInterpTypeId(),
+                            dstType.GetDefaultFastInterpTypeId(),
+                            !spillLoc.IsNoSpill(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat()));
+            spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        }
+
         return snippet.AddContinuation(inst);
     }
     else

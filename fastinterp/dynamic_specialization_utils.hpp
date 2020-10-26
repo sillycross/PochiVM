@@ -2,6 +2,7 @@
 
 #include "pochivm/common.h"
 #include "fastinterp_boilerplate_allowed_shapes.h"
+#include "fastinterp_tpl_constant_valid_in_mcmodel.h"
 
 // Define 'placeholders' that will be replaced by constant values at runtime.
 //
@@ -67,10 +68,13 @@
 //        most important perf gains come from. Fortunately 'mcmodel=medium' assumes that code falls in first 2GB,
 //        so in that case we can just let our placeholder point to a code symbol, then the compiler will have the correct assumption.
 //
-// To summarize, we must compile this file using "-mcmodel=medium -fno-pic -fno-pie" and we need 3 kinds of dummy symbols:
+// To summarize, we must compile this file using "-fno-pic -fno-pie".
+// Additionally, if any of the constant placeholder is 64-bit or uint32_t, we need to compile with "-mcmodel=medium".
+// And we need 3 kinds of dummy symbols:
 // (1) A dummy function declaration. It is used to represent a placeholder which is a function pointer to another boilerplate function.
 // (2) A large dummy data array declaration. It is used to represent a placeholder which is a 64-bit raw value.
 // (3) A dummy uint64_t variable. It is used to represent a function pointer pointing to a C++ function in host process.
+
 //
 // Related link:  https://stackoverflow.com/questions/54947302/handling-calls-to-potentially-far-away-ahead-of-time-compiled-functions-from-j
 //
@@ -123,6 +127,19 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         __pochivm_fast_interp_dynamic_specialization_notail_boilerplate_function_placeholder_,                  \
         ordinal, __VA_ARGS__)
 
+#ifdef FASTINTERP_TPL_USE_MEDIUM_MCMODEL
+#define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)
+#else
+#ifdef FASTINTERP_TPL_USE_LARGE_MCMODEL
+#define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)
+#else
+#define INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)            \
+    static_assert(sizeof(_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal) <= 4 &&            \
+        !std::is_same<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal, uint32_t>::value,     \
+        "In 'Small' code model, constant placeholder must fit in int32_t");
+#endif
+#endif
+
 #define INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(ordinal, ...)                                                      \
     using _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                 \
     static_assert(sizeof(_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal) <= 8 &&                                        \
@@ -130,6 +147,7 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
         std::is_pointer<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal>::value) &&                                      \
         !std::is_function<typename std::remove_pointer<_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal>::type>::value,   \
         "must be a primitive data type");                                                                       \
+    INTERNAL_ASSERT_CONSTANT_PLACEHOLDER_FITS_SMALL_MCMODEL(ordinal)                                            \
     union _UNION_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal {                                                        \
         uint64_t __pochivm_dummy; _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal __pochivm_actual_value; };             \
     const uint64_t _DONOTUSE_INTERNAL_CONSTANT_PLACEHOLDER_ ## ordinal = reinterpret_cast<uint64_t>(            \
@@ -137,6 +155,15 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
     const _CONSTANT_PLACEHOLDER_TYPE_ ## ordinal CONSTANT_PLACEHOLDER_ ## ordinal =                             \
         reinterpret_cast<const _UNION_CONSTANT_PLACEHOLDER_TYPE_ ## ordinal *>(                                 \
             &_DONOTUSE_INTERNAL_CONSTANT_PLACEHOLDER_ ## ordinal)->__pochivm_actual_value
+
+// A constant placeholder suitable to be used as a int32_t array index.
+// This is really ugly.. The general version also works, but generates less optimized assembly,
+// probably because clang didn't spend time optimizing such corner case.
+// However, this is so often used in our use case, so it deserves a special case...
+//
+#define INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(ordinal)                                                     \
+    const uint64_t CONSTANT_PLACEHOLDER_ ## ordinal = reinterpret_cast<uint64_t>(                               \
+            __pochivm_fast_interp_dynamic_specialization_data_placeholder_ ## ordinal)
 
 #define INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(ordinal, ...)                                                     \
     using _CPP_FNPTR_PLACEHOLDER_TYPE_ ## ordinal = __VA_ARGS__;                                                \
@@ -195,6 +222,22 @@ template<typename R, typename... Args> struct __pochivm_is_noexcept_fnptr_helper
 #define DEFINE_CONSTANT_PLACEHOLDER_12(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(12, __VA_ARGS__)
 #define DEFINE_CONSTANT_PLACEHOLDER_13(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(13, __VA_ARGS__)
 #define DEFINE_CONSTANT_PLACEHOLDER_14(...) INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(14, __VA_ARGS__)
+
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_0 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(0)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_1 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(1)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_2 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(2)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_3 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(3)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_4 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(4)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_5 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(5)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_6 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(6)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_7 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(7)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_8 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(8)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_9 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(9)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_10 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(10)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_11 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(11)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_12 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(12)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_13 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(13)
+#define DEFINE_INDEX_CONSTANT_PLACEHOLDER_14 INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(14)
 
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_0(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(0, __VA_ARGS__)
 #define DEFINE_CPP_FNPTR_PLACEHOLDER_1(...) INTERNAL_DEFINE_CPP_FNPTR_PLACEHOLDER(1, __VA_ARGS__)

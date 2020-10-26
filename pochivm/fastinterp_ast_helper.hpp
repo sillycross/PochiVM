@@ -9,6 +9,20 @@
 namespace PochiVM
 {
 
+inline bool IsTypeIdConstantValidForSmallCodeModel(TypeId typeId)
+{
+    TestAssert(!typeId.IsCppClassType() && !typeId.IsVoid());
+    if (typeId.Size() > 4)
+    {
+        return false;
+    }
+    if (typeId == TypeId::Get<uint32_t>())
+    {
+        return false;
+    }
+    return true;
+}
+
 struct AstFISimpleOperandShape
 {
     bool MatchOK() const
@@ -33,8 +47,15 @@ struct AstFISimpleOperandShape
             }
             else
             {
-                ret.m_kind = FISimpleOperandShapeCategory::LITERAL_NONZERO;
-                ret.m_literal = lit;
+                if (IsTypeIdConstantValidForSmallCodeModel(lit->GetTypeId()))
+                {
+                    ret.m_kind = FISimpleOperandShapeCategory::LITERAL_NONZERO;
+                    ret.m_literal = lit;
+                }
+                else
+                {
+                    ret.m_kind = FISimpleOperandShapeCategory::X_END_OF_ENUM;
+                }
             }
         }
         else
@@ -111,8 +132,15 @@ struct AstFIOperandShape
             }
             else
             {
-                ret.m_kind = FIOperandShapeCategory::LITERAL_NONZERO;
-                ret.m_mainLiteral = lit;
+                if (IsTypeIdConstantValidForSmallCodeModel(lit->GetTypeId()))
+                {
+                    ret.m_kind = FIOperandShapeCategory::LITERAL_NONZERO;
+                    ret.m_mainLiteral = lit;
+                }
+                else
+                {
+                    ret.m_kind = FIOperandShapeCategory::X_END_OF_ENUM;
+                }
             }
         }
         else if (expr->GetAstNodeType() == AstNodeType::AstDereferenceExpr &&
