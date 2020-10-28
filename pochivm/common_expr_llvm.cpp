@@ -89,6 +89,56 @@ Value* WARN_UNUSED AstAssignExpr::EmitIRImpl()
     return nullptr;
 }
 
+Value* WARN_UNUSED AstPointerArithmeticExpr::EmitIRImpl()
+{
+    Value* base = m_base->EmitIR();
+    Value* index = m_index->EmitIR();
+    // Cast index to 64 bits
+    //
+    index = thread_llvmContext->m_builder->CreateIntCast(
+                                index /*valueToCast*/,
+                                AstTypeHelper::llvm_type_of(TypeId::Get<uint64_t>()) /*destType*/,
+                                m_index->GetTypeId().IsSigned() /*isSourceTypeSigned*/);
+
+    if (!m_isAddition)
+    {
+        index = thread_llvmContext->m_builder->CreateNeg(index);
+    }
+    // Sometimes we don't have the definition of the C++ class,
+    // since the LLVM type is only linked in when it is actually used.
+    // In that case, we will not use GEP, and use direct arithmetic.
+    //
+    bool isOpaque = false;
+    if (m_base->GetTypeId().RemovePointer().IsCppClassType())
+    {
+        Type* llvmType = AstTypeHelper::llvm_type_of(m_base->GetTypeId().RemovePointer());
+        StructType* structType = dyn_cast<StructType>(llvmType);
+        TestAssert(structType != nullptr);
+        isOpaque = structType->isOpaque();
+    }
+
+    if (!isOpaque)
+    {
+        // TODO: revisit if we can add 'inbounds' option. The document is confusing to me.
+        //
+        Value* result = thread_llvmContext->m_builder->CreateGEP(base, index);
+        return result;
+    }
+    else
+    {
+        // Fallback to direct arithmetic. This is bad for the optimizer, however,
+        // since we never use the contents in the struct, the optimizer does not need to do anything anyway.
+        //
+        base = thread_llvmContext->m_builder->CreateBitOrPointerCast(base, AstTypeHelper::llvm_type_of(TypeId::Get<uint64_t>()));
+        size_t sz = GetTypeId().RemovePointer().Size();
+        Value* literal = ConstantInt::get(*thread_llvmContext->m_llvmContext, APInt(64 /*numBits*/, sz, false /*isSigned*/));
+        index = thread_llvmContext->m_builder->CreateMul(index, literal);
+        base = thread_llvmContext->m_builder->CreateAdd(base, index);
+        base = thread_llvmContext->m_builder->CreateBitOrPointerCast(base, AstTypeHelper::llvm_type_of(GetTypeId()));
+        return base;
+    }
+}
+
 Value* WARN_UNUSED AstNullptrExpr::EmitIRImpl()
 {
     CHECK_REPORT_BUG(false, "unimplemented");

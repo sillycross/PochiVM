@@ -138,6 +138,24 @@ Value<T> operator%(const Value<T>& lhs, const Value<T>& rhs)
     return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MOD, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
+// Pointer arithmetic ops convience operator overloading
+//
+template<typename B, typename I, typename = std::enable_if_t<
+             std::is_pointer<B>::value && AstTypeHelper::is_primitive_int_type<I>::value> >
+Value<B> operator+(const Value<B>& base, const Value<I>& index)
+{
+    static_assert(!std::is_same<B, void*>::value, "Pointer arithmetic on 'void*' is against C++ standard.");
+    return Value<B>(new AstPointerArithmeticExpr(base.__pochivm_value_ptr, index.__pochivm_value_ptr, true /*isAddition*/));
+}
+
+template<typename B, typename I, typename = std::enable_if_t<
+             std::is_pointer<B>::value && AstTypeHelper::is_primitive_int_type<I>::value> >
+Value<B> operator-(const Value<B>& base, const Value<I>& index)
+{
+    static_assert(!std::is_same<B, void*>::value, "Pointer arithmetic on 'void*' is against C++ standard.");
+    return Value<B>(new AstPointerArithmeticExpr(base.__pochivm_value_ptr, index.__pochivm_value_ptr, false /*isAddition*/));
+}
+
 // Comparison ops convenience operator overloading
 //
 template<typename T, typename = std::enable_if_t<

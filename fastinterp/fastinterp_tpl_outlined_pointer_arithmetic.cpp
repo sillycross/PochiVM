@@ -7,10 +7,7 @@
 namespace PochiVM
 {
 
-// Partially inlined pointer arithmetic expression.
-// computes var + %
-//
-struct FIPartialInlineLhsPointerArithmeticImpl
+struct FIOutlinedPointerArithmeticImpl
 {
     template<typename IndexType>
     static constexpr bool cond()
@@ -33,7 +30,7 @@ struct FIPartialInlineLhsPointerArithmeticImpl
              FINumOpaqueIntegralParams numOIP>
     static constexpr bool cond()
     {
-        if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+        if (!FIOpaqueParamsHelper::CanPush(numOIP, 2)) { return false; }
         if (!spillOutput)
         {
             if (!FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
@@ -76,14 +73,8 @@ struct FIPartialInlineLhsPointerArithmeticImpl
              FINumOpaqueFloatingParams numOFP,
              FIPowerOfTwoObjectSize powerOfTwoObjectSize,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, IndexType qaOperand) noexcept
+    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, uintptr_t base, IndexType offset) noexcept
     {
-        uintptr_t base;
-        {
-            DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
-            base = *GetLocalVarAddress<uintptr_t>(stackframe, CONSTANT_PLACEHOLDER_1);
-        }
-
         size_t scale;
         if constexpr(powerOfTwoObjectSize != FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO)
         {
@@ -93,11 +84,9 @@ struct FIPartialInlineLhsPointerArithmeticImpl
         {
             // TODO: this breaks down if object size >= 2^31
             //
-            DEFINE_INDEX_CONSTANT_PLACEHOLDER_2;
-            scale = CONSTANT_PLACEHOLDER_2;
+            DEFINE_INDEX_CONSTANT_PLACEHOLDER_1;
+            scale = CONSTANT_PLACEHOLDER_1;
         }
-
-        IndexType offset = qaOperand;
 
         uintptr_t result;
         if constexpr(operatorType == AstArithmeticExprType::ADD)
@@ -146,5 +135,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FIPartialInlineLhsPointerArithmeticImpl>();
+    RegisterBoilerplate<FIOutlinedPointerArithmeticImpl>();
 }

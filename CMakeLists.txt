@@ -153,6 +153,7 @@ add_executable(main
   test_fast_interp_internals.cpp
   test_fast_interp.cpp
   test_paper_microbenchmarks.cpp
+  test_sanity_pointer_arithmetic.cpp
 )
 
 # Important to link runtime using '--whole-archive'

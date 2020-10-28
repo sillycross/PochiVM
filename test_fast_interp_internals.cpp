@@ -2056,12 +2056,11 @@ TEST(TestFastInterpInternal, SanityHandwrittenEulerSieve)
                 FastInterpBoilerplateLibrary<FIPartialInlineLhsPointerArithmeticImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<int>().GetDefaultFastInterpTypeId(),
                     AstArithmeticExprType::ADD,
-                    true /*isQAP*/,
                     false /*spillOutput*/,
                     static_cast<FINumOpaqueIntegralParams>(0),
                     FIOpaqueParamsHelper::GetMaxOFP(),
                     static_cast<FIPowerOfTwoObjectSize>(2) /*int is 2^2 bytes*/));
-    inner_loop_stmt_1->PopulateConstantPlaceholder<uint64_t>(2, 16);
+    inner_loop_stmt_1->PopulateConstantPlaceholder<uint64_t>(1, 16);
     ixprj_2->PopulateBoilerplateFnPtrPlaceholder(0, inner_loop_stmt_1);
 
     // *... = pr[j]

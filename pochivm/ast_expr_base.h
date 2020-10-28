@@ -45,7 +45,8 @@ public:
         AstLogicalNotExpr,
         AstThrowStmt,
         AstRvalueToConstPrimitiveRefExpr,
-        AstExceptionAddressPlaceholder
+        AstExceptionAddressPlaceholder,
+        AstPointerArithmeticExpr
     };
 
     AstNodeType() {}
@@ -85,6 +86,7 @@ public:
         case AstNodeType::AstThrowStmt: return "AstThrowStmt";
         case AstNodeType::AstRvalueToConstPrimitiveRefExpr: return "AstRvalueToConstPrimitiveRefExpr";
         case AstNodeType::AstExceptionAddressPlaceholder: return "AstExceptionAddressPlaceholder";
+        case AstNodeType::AstPointerArithmeticExpr: return "AstPointerArithmeticExpr";
         }
         __builtin_unreachable();
     }

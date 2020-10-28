@@ -284,6 +284,61 @@ private:
     AstNodeBase* m_src;
 };
 
+class AstPointerArithmeticExpr : public AstNodeBase
+{
+public:
+    AstPointerArithmeticExpr(AstNodeBase* base, AstNodeBase* index, bool isAddition)
+        : AstNodeBase(AstNodeType::AstPointerArithmeticExpr, base->GetTypeId())
+        , m_base(base), m_index(index), m_isAddition(isAddition)
+    {
+        TestAssert(base->GetTypeId().IsPointerType() && !(base->GetTypeId() == TypeId::Get<void*>()));
+        TestAssert(index->GetTypeId().IsPrimitiveIntType());
+    }
+
+    template<typename BaseType, typename IndexType>
+    void InterpImpl([[maybe_unused]] BaseType* out)
+    {
+        constexpr bool cond = std::is_pointer<BaseType>::value && !std::is_same<BaseType, void*>::value &&
+                AstTypeHelper::is_primitive_int_type<IndexType>::value;
+        TestAssert(cond);
+        if constexpr(cond)
+        {
+            BaseType base;
+            m_base->DebugInterp(&base);
+            IndexType index;
+            m_index->DebugInterp(&index);
+            if (m_isAddition) {
+                *out = base + index;
+            } else {
+                *out = base - index;
+            }
+        }
+    }
+
+    GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstPointerArithmeticExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
+
+    virtual void SetupDebugInterpImpl() override
+    {
+        m_debugInterpFn = SelectImpl(m_base->GetTypeId(), m_index->GetTypeId());
+    }
+
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    {
+        fn(m_base);
+        fn(m_index);
+    }
+
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override;
+
+    AstNodeBase* m_base;
+    AstNodeBase* m_index;
+    bool m_isAddition;
+    bool m_fiIsBaseSpill;
+};
+
 // A NULL pointer known at codegen time
 //
 class AstNullptrExpr : public AstNodeBase

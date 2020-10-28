@@ -302,4 +302,119 @@ FastInterpSnippet WARN_UNUSED AstExceptionAddressPlaceholder::PrepareForFastInte
     };
 }
 
+void AstPointerArithmeticExpr::FastInterpSetupSpillLocation()
+{
+    if (m_base->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_index->GetTypeId());
+        m_index->FastInterpSetupSpillLocation();
+    }
+    else
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(m_base->GetTypeId());
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_index->GetTypeId());
+        m_index->FastInterpSetupSpillLocation();
+        FISpillLocation spillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(GetTypeId());
+        m_fiIsBaseSpill = !spillLoc.IsNoSpill();
+        m_base->FastInterpSetupSpillLocation();
+    }
+}
+
+FastInterpSnippet WARN_UNUSED AstPointerArithmeticExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    size_t objectSize = m_base->GetTypeId().RemovePointer().Size();
+    TestAssert(objectSize < 1ULL << 31);
+    FIPowerOfTwoObjectSize po2Size;
+    if (math::is_power_of_2(static_cast<int>(objectSize)))
+    {
+        int log2 = __builtin_ctz(static_cast<unsigned int>(objectSize));
+        TestAssert((1ULL << log2) == objectSize);
+        if (log2 >= static_cast<int>(FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO))
+        {
+            po2Size = FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO;
+        }
+        else
+        {
+            po2Size = static_cast<FIPowerOfTwoObjectSize>(log2);
+        }
+    }
+    else
+    {
+        po2Size = FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO;
+    }
+
+    if (m_base->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+    {
+        // Case 1: inline LHS
+        //
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_index->GetTypeId()));
+        FastInterpSnippet snippet = m_index->PrepareForFastInterp(x_FINoSpill);
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIPartialInlineLhsPointerArithmeticImpl>::SelectBoilerplateBluePrint(
+                        m_index->GetTypeId().GetDefaultFastInterpTypeId() /*indexType*/,
+                        m_isAddition ? AstArithmeticExprType::ADD : AstArithmeticExprType::SUB,
+                        !spillLoc.IsNoSpill(),
+                        thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                        FIOpaqueParamsHelper::GetMaxOFP(),
+                        po2Size));
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+
+        AstDereferenceVariableExpr* expr = assert_cast<AstDereferenceVariableExpr*>(m_base);
+        inst->PopulateConstantPlaceholder<uint64_t>(1, expr->GetOperand()->GetFastInterpOffset());
+
+        if (po2Size == FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO)
+        {
+            inst->PopulateConstantPlaceholder<uint64_t>(2, objectSize);
+        }
+        return snippet.AddContinuation(inst);
+    }
+    else
+    {
+        // Case 2: outlined
+        //
+        thread_pochiVMContext->m_fastInterpStackFrameManager->PushTemp(m_base->GetTypeId(), m_fiIsBaseSpill);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_index->GetTypeId()));
+        FastInterpSnippet rhsSnippet = m_index->PrepareForFastInterp(x_FINoSpill);
+        FISpillLocation lhsSpillLoc = thread_pochiVMContext->m_fastInterpStackFrameManager->PopTemp(m_base->GetTypeId());
+        TestAssertIff(m_fiIsBaseSpill, !lhsSpillLoc.IsNoSpill());
+        FastInterpSnippet lhsSnippet = m_base->PrepareForFastInterp(lhsSpillLoc);
+
+        if (lhsSpillLoc.IsNoSpill())
+        {
+            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIOutlinedPointerArithmeticImpl>::SelectBoilerplateBluePrint(
+                            m_index->GetTypeId().GetDefaultFastInterpTypeId(),
+                            m_isAddition ? AstArithmeticExprType::ADD : AstArithmeticExprType::SUB,
+                            !spillLoc.IsNoSpill(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                            FIOpaqueParamsHelper::GetMaxOFP(),
+                            po2Size));
+            spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+            if (po2Size == FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO)
+            {
+                inst->PopulateConstantPlaceholder<uint64_t>(1, objectSize);
+            }
+            return lhsSnippet.AddContinuation(rhsSnippet).AddContinuation(inst);
+        }
+        else
+        {
+            FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                        FastInterpBoilerplateLibrary<FIPartialInlineLhsPointerArithmeticImpl>::SelectBoilerplateBluePrint(
+                            m_index->GetTypeId().GetDefaultFastInterpTypeId() /*indexType*/,
+                            m_isAddition ? AstArithmeticExprType::ADD : AstArithmeticExprType::SUB,
+                            !spillLoc.IsNoSpill(),
+                            thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                            FIOpaqueParamsHelper::GetMaxOFP(),
+                            po2Size));
+            spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+            lhsSpillLoc.PopulatePlaceholderIfSpill(inst, 1);
+            if (po2Size == FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO)
+            {
+                inst->PopulateConstantPlaceholder<uint64_t>(2, objectSize);
+            }
+            return lhsSnippet.AddContinuation(rhsSnippet).AddContinuation(inst);
+        }
+    }
+}
+
 }   // namespace PochiVM

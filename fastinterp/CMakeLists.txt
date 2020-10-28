@@ -62,6 +62,7 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_throw_exception.cpp
   fastinterp_tpl_call_expr_call_dtor_caller.cpp
   fastinterp_tpl_static_cast_u64_double.cpp
+  fastinterp_tpl_outlined_pointer_arithmetic.cpp
 )
 
 SET(FASTINTERP_SOURCES
