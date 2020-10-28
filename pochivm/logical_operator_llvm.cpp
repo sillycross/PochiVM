@@ -1,6 +1,6 @@
 #include "logical_operator.h"
 #include "error_context.h"
-#include "pochivm.hpp"
+#include "llvm_ast_helper.hpp"
 #include "function_proto.h"
 
 namespace PochiVM

@@ -2,7 +2,7 @@
 #include "destructor_helper.h"
 #include "exception_helper.h"
 #include "ast_catch_throw.h"
-#include "pochivm.hpp"
+#include "llvm_ast_helper.hpp"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Linker/Linker.h"

@@ -1,7 +1,7 @@
 #include "common_expr.h"
 #include "error_context.h"
 #include "ast_type_helper.hpp"
-#include "pochivm.hpp"
+#include "llvm_ast_helper.hpp"
 #include "function_proto.h"
 
 namespace PochiVM

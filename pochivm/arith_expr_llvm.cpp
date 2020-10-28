@@ -1,6 +1,6 @@
 #include "arith_expr.h"
 #include "error_context.h"
-#include "pochivm.hpp"
+#include "llvm_ast_helper.hpp"
 
 namespace PochiVM
 {

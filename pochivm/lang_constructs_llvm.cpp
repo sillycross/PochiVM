@@ -2,7 +2,7 @@
 #include "lang_constructs.h"
 #include "function_proto.h"
 #include "destructor_helper.h"
-#include "pochivm.hpp"
+#include "llvm_ast_helper.hpp"
 
 namespace PochiVM
 {
