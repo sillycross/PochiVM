@@ -719,7 +719,7 @@ TEST(TestFastInterpInternal, SanityHandwrittenFibonacci)
     fib_fn->PopulateConstantPlaceholder<int>(2, 2);
 
     FastInterpBoilerplateInstance* lit_1 = engine.InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
+                FastInterpBoilerplateLibrary<FILiteralMcMediumImpl>::SelectBoilerplateBluePrint(
                     TypeId::Get<uint64_t>().GetOneLevelPtrFastInterpTypeId(),
                     false /*isAllBitsZero*/,
                     false /*spillOutput*/,

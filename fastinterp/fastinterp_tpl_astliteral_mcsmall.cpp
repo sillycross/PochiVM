@@ -1,12 +1,11 @@
 #define POCHIVM_INSIDE_FASTINTERP_TPL_CPP
-#define FASTINTERP_TPL_USE_MEDIUM_MCMODEL
 
 #include "fastinterp_tpl_common.hpp"
 
 namespace PochiVM
 {
 
-struct FILiteralImpl
+struct FILiteralMcSmallImpl
 {
     // Only allow primitive type and 'void*'
     //
@@ -36,6 +35,10 @@ struct FILiteralImpl
         {
             if (FIOpaqueParamsHelper::CanPush(numOFP)) { return false; }
             if (FIOpaqueParamsHelper::CanPush(numOIP)) { return false; }
+        }
+        if constexpr(!std::is_same<LiteralType, void>::value)
+        {
+            if (!IsConstantValidInSmallCodeModel<LiteralType>()) { return false; }
         }
         return true;
     }
@@ -94,5 +97,5 @@ extern "C"
 void __pochivm_build_fast_interp_library__()
 {
     using namespace PochiVM;
-    RegisterBoilerplate<FILiteralImpl>(FIAttribute::CodeModelMedium);
+    RegisterBoilerplate<FILiteralMcSmallImpl>();
 }

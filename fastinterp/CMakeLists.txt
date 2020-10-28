@@ -45,7 +45,8 @@ SET(FASTINTERP_TPL_SOURCES
   fastinterp_tpl_partial_inline_rhs_deref.cpp
   fastinterp_tpl_partial_inline_lhs_deref.cpp
   fastinterp_tpl_outlined_deref.cpp
-  fastinterp_tpl_astliteral.cpp
+  fastinterp_tpl_astliteral_mcmedium.cpp
+  fastinterp_tpl_astliteral_mcsmall.cpp
   fastinterp_tpl_noop.cpp
   fastinterp_tpl_outlined_conditional_branch.cpp
   fastinterp_tpl_inline_comparison_condbr_unpredictable.cpp

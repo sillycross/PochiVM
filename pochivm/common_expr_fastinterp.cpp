@@ -143,13 +143,27 @@ FastInterpSnippet WARN_UNUSED AstLiteralExpr::PrepareForFastInterp(FISpillLocati
         numOFP = FIOpaqueParamsHelper::GetMaxOFP();
     }
 
-    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FILiteralImpl>::SelectBoilerplateBluePrint(
-                    GetTypeId().GetOneLevelPtrFastInterpTypeId(),
-                    isAllBitsZero,
-                    !spillLoc.IsNoSpill(),
-                    numOIP,
-                    numOFP));
+    FastInterpBoilerplateInstance* inst;
+    if (IsTypeIdConstantValidForSmallCodeModel(GetTypeId()))
+    {
+        inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FILiteralMcSmallImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        isAllBitsZero,
+                        !spillLoc.IsNoSpill(),
+                        numOIP,
+                        numOFP));
+    }
+    else
+    {
+        inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FILiteralMcMediumImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        isAllBitsZero,
+                        !spillLoc.IsNoSpill(),
+                        numOIP,
+                        numOFP));
+    }
     spillLoc.PopulatePlaceholderIfSpill(inst, 0);
     if (!isAllBitsZero)
     {
