@@ -97,7 +97,7 @@ void CheckOnce()
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     auto interpFn = thread_pochiVMContext->m_curModule->
                            GetDebugInterpGeneratedFunction<GeneratedFn>("testFn");
@@ -235,7 +235,7 @@ TEST(SanityIrCodeDump, LogicalOp)
         AssertIsExpectedOutput(dump);
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SideEffectFn f = [](bool r, int32_t* dst, uint64_t offset) -> bool {
         *dst += 1;

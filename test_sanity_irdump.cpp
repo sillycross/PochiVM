@@ -58,7 +58,7 @@ TEST(SanityIrCodeDump, APlusB)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -107,7 +107,7 @@ TEST(SanityIrCodeDump, APlusB_2)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -158,7 +158,7 @@ TEST(SanityIrCodeDump, APlusB_3)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -209,7 +209,7 @@ TEST(SanityIrCodeDump, APlusB_4)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -258,7 +258,7 @@ TEST(SanityIrCodeDump, APlusB_5)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -306,7 +306,7 @@ TEST(SanityIrCodeDump, APlusB_6)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -353,7 +353,7 @@ TEST(SanityIrCodeDump, APlusB_7)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -438,7 +438,7 @@ TEST(SanityIrCodeDump, APlusB_8)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -492,7 +492,7 @@ TEST(SanityIrCodeDump, APlusB_9)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -629,7 +629,7 @@ TEST(SanityIrCodeDump, APlusB_10)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);

@@ -102,7 +102,7 @@ TEST(Sanity, BreakAndContinue)
 
     AssertIsExpectedOutput(dump);
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);

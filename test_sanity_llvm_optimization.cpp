@@ -50,7 +50,7 @@ TEST(Sanity, LLVMOptimizationPassEffective)
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
     ReleaseAssert(!thread_errorContext->HasError());
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIR();
+    thread_pochiVMContext->m_curModule->OptimizeIR(2 /*optLevel*/);
 
     std::string _dst;
     llvm::raw_string_ostream rso(_dst /*target*/);

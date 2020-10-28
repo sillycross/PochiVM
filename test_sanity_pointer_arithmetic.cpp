@@ -49,7 +49,7 @@ std::function<void(uint64_t, uint64_t)> TestPointerArithmeticInternal(bool isAdd
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     // TODO: this leaks. Fix later
     //
@@ -178,7 +178,7 @@ TEST(SanityPointerArithmetic, Sanity_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -221,7 +221,7 @@ TEST(SanityPointerArithmetic, Sanity_3)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
@@ -283,7 +283,7 @@ void TestLiteralPointerArithmetic()
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warray-bounds-pointer-arithmetic"
@@ -430,7 +430,7 @@ TEST(SanityPointerArithmetic, Sanity_5)
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warray-bounds-pointer-arithmetic"

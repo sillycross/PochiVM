@@ -434,7 +434,7 @@ void AstModule::EmitIR()
     thread_llvmContext->ClearModule();
 }
 
-void AstModule::OptimizeIR()
+void AstModule::OptimizeIR(int optLevel)
 {
     // According to LLVM Document, should not run optimize pass repeatedly on one module.
     //
@@ -443,7 +443,7 @@ void AstModule::OptimizeIR()
     m_irOptimized = true;
 #endif
 
-    thread_llvmContext->RunOptimizationPass(m_llvmModule);
+    thread_llvmContext->RunOptimizationPass(m_llvmModule, optLevel);
 
     // Just for sanity, validate that the module still contains no errors.
     // llvm::verifyModule returns false on success
@@ -451,10 +451,10 @@ void AstModule::OptimizeIR()
     TestAssert(verifyModule(*m_llvmModule, &outs()) == false);
 }
 
-void AstModule::OptimizeIRIfNotDebugMode()
+void AstModule::OptimizeIRIfNotDebugMode([[maybe_unused]] int optLevel)
 {
 #ifdef NDEBUG
-    OptimizeIR();
+    OptimizeIR(optLevel);
 #endif
 }
 

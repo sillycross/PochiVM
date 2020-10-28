@@ -41,7 +41,7 @@ std::function<U(T)> GetStaticCastFn()
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
     thread_pochiVMContext->m_curModule->PrepareForFastInterp();
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     // TODO: this leaks. Fix later
     //

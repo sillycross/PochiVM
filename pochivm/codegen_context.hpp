@@ -31,20 +31,10 @@ class AstVariable;
 class AstFunction;
 class FastInterpBoilerplateInstance;
 
-struct LLVMCodegenContext
+class LLVMOptimizationPassPipeline
 {
-    // Optimization level used for compiling LLVM IR.
-    //
-    static const llvm::PassBuilder::OptimizationLevel
-            x_optimizationLevel = llvm::PassBuilder::OptimizationLevel::O2;
-
-    LLVMCodegenContext()
-        : m_llvmContext(nullptr)
-        , m_builder(nullptr)
-        , m_module(nullptr)
-        , m_dummyBlock(nullptr)
-        , m_isCursorAtDummyBlock(false)
-        , m_curFunction(nullptr)
+public:
+    LLVMOptimizationPassPipeline(llvm::PassBuilder::OptimizationLevel optLevel)
     {
         m_passBuilder.registerModuleAnalyses(m_MAM);
         m_passBuilder.registerCGSCCAnalyses(m_CGAM);
@@ -52,8 +42,37 @@ struct LLVMCodegenContext
         m_passBuilder.registerLoopAnalyses(m_LAM);
         m_passBuilder.crossRegisterProxies(m_LAM, m_FAM, m_CGAM, m_MAM);
 
-        m_MPM = m_passBuilder.buildPerModuleDefaultPipeline(x_optimizationLevel);
+        m_MPM = m_passBuilder.buildPerModuleDefaultPipeline(optLevel);
     }
+
+    void Run(llvm::Module* module)
+    {
+        TestAssert(module != nullptr);
+        m_MPM.run(*module, m_MAM);
+    }
+
+private:
+    llvm::PassBuilder m_passBuilder;
+    llvm::LoopAnalysisManager m_LAM;
+    llvm::FunctionAnalysisManager m_FAM;
+    llvm::CGSCCAnalysisManager m_CGAM;
+    llvm::ModuleAnalysisManager m_MAM;
+    llvm::ModulePassManager m_MPM;
+};
+
+struct LLVMCodegenContext
+{
+    LLVMCodegenContext()
+        : m_llvmContext(nullptr)
+        , m_builder(nullptr)
+        , m_module(nullptr)
+        , m_llvmOptPipelineO1(llvm::PassBuilder::OptimizationLevel::O1)
+        , m_llvmOptPipelineO2(llvm::PassBuilder::OptimizationLevel::O2)
+        , m_llvmOptPipelineO3(llvm::PassBuilder::OptimizationLevel::O3)
+        , m_dummyBlock(nullptr)
+        , m_isCursorAtDummyBlock(false)
+        , m_curFunction(nullptr)
+    { }
 
     AstFunction* GetCurFunction() const
     {
@@ -68,10 +87,25 @@ struct LLVMCodegenContext
         m_isCursorAtDummyBlock = true;
     }
 
-    void RunOptimizationPass(llvm::Module* module)
+    void RunOptimizationPass(llvm::Module* module, int optLevel)
     {
-        TestAssert(module != nullptr);
-        m_MPM.run(*module, m_MAM);
+        TestAssert(0 <= optLevel && optLevel <= 3);
+        if (optLevel == 0)
+        {
+            return;
+        }
+        else if (optLevel == 1)
+        {
+            m_llvmOptPipelineO1.Run(module);
+        }
+        else if (optLevel == 2)
+        {
+            m_llvmOptPipelineO2.Run(module);
+        }
+        else if (optLevel == 3)
+        {
+            m_llvmOptPipelineO3.Run(module);
+        }
     }
 
     void SetupModule(llvm::LLVMContext* llvmContext, llvm::IRBuilder<>* builder, llvm::Module* module)
@@ -94,12 +128,9 @@ struct LLVMCodegenContext
     llvm::IRBuilder<>* m_builder;
     llvm::Module* m_module;
 
-    llvm::PassBuilder m_passBuilder;
-    llvm::LoopAnalysisManager m_LAM;
-    llvm::FunctionAnalysisManager m_FAM;
-    llvm::CGSCCAnalysisManager m_CGAM;
-    llvm::ModuleAnalysisManager m_MAM;
-    llvm::ModulePassManager m_MPM;
+    LLVMOptimizationPassPipeline m_llvmOptPipelineO1;
+    LLVMOptimizationPassPipeline m_llvmOptPipelineO2;
+    LLVMOptimizationPassPipeline m_llvmOptPipelineO3;
 
     // After we codegen a control-flow redirection statement (break/continue/return),
     // we redirect m_builder to m_dummyBlock and set m_isCursorAtDummyBlock to true,

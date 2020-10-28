@@ -41,7 +41,7 @@ TEST(PaperMicrobenchmark, FibonacciSeq)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -105,7 +105,7 @@ TEST(PaperMicrobenchmark, EulerSieve)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIR();
+    thread_pochiVMContext->m_curModule->OptimizeIR(2);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -192,7 +192,7 @@ TEST(PaperMicrobenchmark, QuickSort)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2);
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);

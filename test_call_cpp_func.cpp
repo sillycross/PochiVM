@@ -64,7 +64,7 @@ TEST(SanityCallCppFn, Sanity_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -160,7 +160,7 @@ TEST(SanityCallCppFn, Sanity_2)
         AssertIsExpectedOutput(dump, "before_opt");
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -264,7 +264,7 @@ TEST(SanityCallCppFn, Sanity_3)
         AssertIsExpectedOutput(dump, "before_opt");
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -337,7 +337,7 @@ TEST(SanityCallCppFn, UnusedCppTypeCornerCase)
         AssertIsExpectedOutput(dump, "before_opt");
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -452,7 +452,7 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -612,7 +612,7 @@ TEST(SanityCallCppFn, BooleanTypeCornerCase_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -725,7 +725,7 @@ TEST(SanityCallCppFn, VoidStarCornerCase_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -812,7 +812,7 @@ TEST(SanityCallCppFn, VoidStarCornerCase_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -894,7 +894,7 @@ TEST(SanityCallCppFn, ReturnsNonPrimitiveType)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -977,7 +977,7 @@ TEST(SanityCallCppFn, NonTrivialCopyConstructor)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1062,7 +1062,7 @@ TEST(SanityCallCppFn, Constructor_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1149,7 +1149,7 @@ TEST(SanityCallCppFn, Constructor_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1237,7 +1237,7 @@ TEST(SanityCallCppFn, Constructor_3)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1331,7 +1331,7 @@ TEST(SanityCallCppFn, Constructor_4)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1414,7 +1414,7 @@ TEST(SanityCallCppFn, Constructor_5)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1498,7 +1498,7 @@ TEST(SanityCallCppFn, ManuallyCallDestructor)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1582,7 +1582,7 @@ TEST(SanityCallCppFn, DestructorSanity_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1663,7 +1663,7 @@ TEST(SanityCallCppFn, DestructorSanity_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -1742,7 +1742,7 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_1)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -1829,7 +1829,7 @@ TEST(SanityCallCppFn, DestructorCalledInReverseOrder_2)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -1916,7 +1916,7 @@ TEST(SanityCallCppFn, BlockDoesNotConstituteVariableScope)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2012,7 +2012,7 @@ TEST(SanityCallCppFn, DestructorCalledUponReturnStmt)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2176,7 +2176,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_1)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2359,7 +2359,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_2)
 
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2533,7 +2533,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithIfStatement_3)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2714,7 +2714,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_1)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -2898,7 +2898,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_2)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3079,7 +3079,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_3)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3197,7 +3197,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithForLoop_4)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3364,7 +3364,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_1)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3541,7 +3541,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_2)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3721,7 +3721,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_3)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3833,7 +3833,7 @@ TEST(SanityCallCppFn, DestructorInteractionWithWhileLoop_4)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -3922,7 +3922,7 @@ TEST(SanityCallCppFn, StaticVarInFunction)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4008,7 +4008,7 @@ TEST(SanityCallCppFn, ConstantWithSignificantAddress)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4086,7 +4086,7 @@ TEST(SanityCallCppFn, ConstantWithInsignificantAddress)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4165,7 +4165,7 @@ TEST(SanityCallCppFn, StringInternQuirkyBehavior)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4293,7 +4293,7 @@ TEST(SanityCallCppFn, UnexpectedException_LLVM)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4619,7 +4619,7 @@ TEST(SanityCallCppFn, Exception_PropagateThrough_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4725,7 +4725,7 @@ TEST(SanityCallCppFn, MemberObjectAccessor_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4804,7 +4804,7 @@ TEST(SanityCallCppFn, MemberObjectAccessor_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4893,7 +4893,7 @@ TEST(SanityCallCppFn, LLVMTypeMismatchRenaming)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -4988,7 +4988,7 @@ TEST(SanityCallCppFn, LLVMTypeMismatchRenaming_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -5075,7 +5075,7 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -5159,7 +5159,7 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -5220,7 +5220,7 @@ TEST(SanityCallCppFn, ConstRefParameterConversion_3)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     {
         SimpleJIT jit;
@@ -5292,7 +5292,7 @@ TEST(SanityCallCppFn, ReturnExprEvaluatedBeforeDestructor)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -5395,7 +5395,7 @@ TEST(SanityCallCppFn, ExceptionEscapingNoExceptFunction)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -5504,7 +5504,7 @@ TEST(SanityCallCppFn, ExceptionEscapingNoExceptFunction_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {

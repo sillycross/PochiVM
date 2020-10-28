@@ -168,7 +168,9 @@ inline void AssertIsExpectedOutput(std::string out, std::string suffix = "")
     }
 }
 
-// This class has been so rotten.. Don't use to for anything but test purpose
+// This class has been so rotten.. Don't use it for anything but test purpose
+// WARNING: especially do not use this class for perf benchmark.
+// It does not set llvm::CodeGenOpt::Level correctly, so the assembly instructions emitted by LLVM is very poor quality.
 //
 class SimpleJIT
 {

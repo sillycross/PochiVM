@@ -499,7 +499,7 @@ TEST(SanityBitCode, SanityInliningWorks)
         AutoThreadLLVMCodegenContext alc;
 
         thread_llvmContext->m_llvmContext = context.get();
-        thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->RunOptimizationPass(module.get(), 3 /*optLevel*/);
 
         std::string _dst;
         llvm::raw_string_ostream rso(_dst /*target*/);
@@ -569,7 +569,7 @@ TEST(SanityBitCode, SanityInliningWorks_2)
         AutoThreadLLVMCodegenContext alc;
 
         thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
-        thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->RunOptimizationPass(module.get(), 3 /*optLevel*/);
 
         std::string _dst;
         llvm::raw_string_ostream rso(_dst /*target*/);
@@ -635,7 +635,7 @@ TEST(SanityBitCode, SanityNotInlinableFunction)
         AutoThreadLLVMCodegenContext alc;
 
         thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
-        thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->RunOptimizationPass(module.get(), 3 /*optLevel*/);
 
         std::string _dst;
         llvm::raw_string_ostream rso(_dst /*target*/);
@@ -706,7 +706,7 @@ TEST(SanityBitCode, SanityNotInlinableFunction_2)
         AutoThreadLLVMCodegenContext alc;
 
         thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
-        thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->RunOptimizationPass(module.get(), 3 /*optLevel*/);
 
         std::string _dst;
         llvm::raw_string_ostream rso(_dst /*target*/);
@@ -792,7 +792,7 @@ TEST(SanityBitCode, SanityNotInlinableFunction_3)
         AutoThreadLLVMCodegenContext alc;
 
         thread_llvmContext->SetupModule(context.get(), irBuilder, module.get());
-        thread_llvmContext->RunOptimizationPass(module.get());
+        thread_llvmContext->RunOptimizationPass(module.get(), 3 /*optLevel*/);
 
         std::string _dst;
         llvm::raw_string_ostream rso(_dst /*target*/);

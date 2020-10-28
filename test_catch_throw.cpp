@@ -82,7 +82,7 @@ TEST(SanityCatchThrow, ThrowSanity_1)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -177,7 +177,7 @@ TEST(SanityCatchThrow, ThrowSanity_2)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -272,7 +272,7 @@ TEST(SanityCatchThrow, ThrowSanity_3)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -363,7 +363,7 @@ TEST(SanityCatchThrow, ThrowSanity_4)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -470,7 +470,7 @@ TEST(SanityCatchThrow, ThrowSanity_5)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -574,7 +574,7 @@ TEST(SanityCatchThrow, ThrowSanity_6)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -701,7 +701,7 @@ TEST(SanityCatchThrow, ThrowSanity_7)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {
@@ -818,7 +818,7 @@ TEST(SanityCatchThrow, ThrowSanity_8)
         }
     }
 
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     if (!x_isDebugBuild)
     {

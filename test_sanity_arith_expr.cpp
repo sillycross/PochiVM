@@ -53,7 +53,7 @@ std::function<void(T, T)> fnName()                                              
     ReleaseAssert(fastinterpFn);                                                 \
                                                                                  \
     thread_pochiVMContext->m_curModule->EmitIR();                                \
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();              \
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);              \
                                                                                  \
     SimpleJIT* jit = new SimpleJIT();                                            \
     jit->SetModule(thread_pochiVMContext->m_curModule);                          \

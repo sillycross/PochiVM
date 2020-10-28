@@ -641,8 +641,8 @@ public:
     void PrepareForFastInterp();
 
     void EmitIR();
-    void OptimizeIR();
-    void OptimizeIRIfNotDebugMode();
+    void OptimizeIR(int optLevel);
+    void OptimizeIRIfNotDebugMode(int optLevel);
 
     // Called after emitting IR and optionally optimizing IR.
     // Transfer ownership of m_llvmContext and m_llvmModule to the returned llvm::ThreadSafeModule object.
