@@ -359,6 +359,8 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
         loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condBrSnippet.m_entry);
     }
 
+    condBrSnippet.m_entry->SetAlignmentLog2(4);
+
     return FastInterpSnippet {
         condBrSnippet.m_entry, afterLoop
     };
@@ -449,6 +451,8 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
         loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopStep.m_entry);
     }
     loopStep.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClause.m_entry);
+
+    condClause.m_entry->SetAlignmentLog2(4);
 
     if (startClause.IsEmpty())
     {

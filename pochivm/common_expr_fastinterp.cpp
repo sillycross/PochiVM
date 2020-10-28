@@ -6,32 +6,122 @@ namespace PochiVM
 
 void AstDereferenceExpr::FastInterpSetupSpillLocation()
 {
+    if (m_operand->GetAstNodeType() == AstNodeType::AstPointerArithmeticExpr)
+    {
+        AstPointerArithmeticExpr* paExpr = assert_cast<AstPointerArithmeticExpr*>(m_operand);
+        if (paExpr->m_isAddition)
+        {
+            AstFIOperandShape osc = AstFIOperandShape::TryMatch(paExpr->m_index);
+            if (osc.MatchOK())
+            {
+                if (paExpr->m_base->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+                {
+                    return;
+                }
+                else
+                {
+                    thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(paExpr->m_base->GetTypeId());
+                    paExpr->m_base->FastInterpSetupSpillLocation();
+                    return;
+                }
+            }
+        }
+    }
+
     thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(GetTypeId().AddPointer());
     m_operand->FastInterpSetupSpillLocation();
 }
 
 FastInterpSnippet WARN_UNUSED AstDereferenceExpr::PrepareForFastInterp(FISpillLocation spillLoc)
 {
-    // TODO: support dereference with offset
-    //
-    TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId().AddPointer()));
-    FastInterpSnippet snippet = m_operand->PrepareForFastInterp(x_FINoSpill);
-    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
-    if (!spillLoc.IsNoSpill() || !GetTypeId().IsFloatingPoint())
+    if (m_operand->GetAstNodeType() == AstNodeType::AstPointerArithmeticExpr)
     {
-        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+        AstPointerArithmeticExpr* paExpr = assert_cast<AstPointerArithmeticExpr*>(m_operand);
+        if (paExpr->m_isAddition)
+        {
+            AstFIOperandShape osc = AstFIOperandShape::TryMatch(paExpr->m_index);
+            if (osc.MatchOK())
+            {
+                if (paExpr->m_base->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr)
+                {
+                    FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+                    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+                    if (!spillLoc.IsNoSpill())
+                    {
+                        numOIP = FIOpaqueParamsHelper::GetMaxOIP();
+                        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+                    }
+                    else if (GetTypeId().IsFloatingPoint())
+                    {
+                        numOIP = FIOpaqueParamsHelper::GetMaxOIP();
+                    }
+                    else
+                    {
+                        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+                    }
+                    AstDereferenceVariableExpr* derefVarExpr = assert_cast<AstDereferenceVariableExpr*>(paExpr->m_base);
+                    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FIInlinedDereferenceImpl>::SelectBoilerplateBluePrint(
+                                    GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paExpr->m_index->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    osc.m_indexType,
+                                    osc.m_kind,
+                                    !spillLoc.IsNoSpill(),
+                                    numOIP,
+                                    numOFP));
+                    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+                    inst->PopulateConstantPlaceholder<uint64_t>(1, derefVarExpr->GetOperand()->GetFastInterpOffset());
+                    osc.PopulatePlaceholder(inst, 2, 3);
+                    return FastInterpSnippet { inst, inst };
+                }
+                else
+                {
+                    TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(paExpr->m_base->GetTypeId()));
+                    FastInterpSnippet snippet = paExpr->m_base->PrepareForFastInterp(x_FINoSpill);
+
+                    FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+                    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+                    if (!spillLoc.IsNoSpill() || !GetTypeId().IsFloatingPoint())
+                    {
+                        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+                    }
+                    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                                FastInterpBoilerplateLibrary<FIPartialInlineRhsDereferenceImpl>::SelectBoilerplateBluePrint(
+                                    GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    paExpr->m_index->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                                    osc.m_indexType,
+                                    osc.m_kind,
+                                    !spillLoc.IsNoSpill(),
+                                    numOIP,
+                                    numOFP));
+                    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+                    osc.PopulatePlaceholder(inst, 1, 2);
+                    return snippet.AddContinuation(inst);
+                }
+            }
+        }
     }
-    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
-                FastInterpBoilerplateLibrary<FIPartialInlineRhsDereferenceImpl>::SelectBoilerplateBluePrint(
-                    GetTypeId().GetOneLevelPtrFastInterpTypeId(),
-                    TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
-                    TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
-                    FIOperandShapeCategory::ZERO,
-                    !spillLoc.IsNoSpill(),
-                    thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
-                    numOFP));
-    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
-    return snippet.AddContinuation(inst);
+
+    {
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(GetTypeId().AddPointer()));
+        FastInterpSnippet snippet = m_operand->PrepareForFastInterp(x_FINoSpill);
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+        if (!spillLoc.IsNoSpill() || !GetTypeId().IsFloatingPoint())
+        {
+            numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+        }
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIPartialInlineRhsDereferenceImpl>::SelectBoilerplateBluePrint(
+                        GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        TypeId::Get<uint64_t>().GetDefaultFastInterpTypeId(),
+                        TypeId::Get<int32_t>().GetDefaultFastInterpTypeId(),
+                        FIOperandShapeCategory::ZERO,
+                        !spillLoc.IsNoSpill(),
+                        thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
+                        numOFP));
+        spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+        return snippet.AddContinuation(inst);
+    }
 }
 
 FastInterpSnippet WARN_UNUSED AstLiteralExpr::PrepareForFastInterp(FISpillLocation spillLoc)

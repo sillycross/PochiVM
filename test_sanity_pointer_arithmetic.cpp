@@ -410,3 +410,57 @@ TEST(SanityPointerArithmetic, Sanity_4)
     TestLiteralPointerArithmetic<bool, true, false>();
     TestLiteralPointerArithmetic<bool, false, false>();
 }
+
+TEST(SanityPointerArithmetic, Sanity_5)
+{
+    AutoThreadPochiVMContext apv;AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int*);
+    auto [fn, b] = NewFunction<FnPrototype>("MyFn");
+
+    fn.SetBody(Return(b[1]));
+
+    int tmp[3] = {123, 456, 789};
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warray-bounds-pointer-arithmetic"
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(tmp - 1) == 123);
+        ReleaseAssert(interpFn(tmp) == 456);
+        ReleaseAssert(interpFn(tmp + 1) == 789);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(tmp - 1) == 123);
+        ReleaseAssert(interpFn(tmp) == 456);
+        ReleaseAssert(interpFn(tmp + 1) == 789);
+    }
+
+    SimpleJIT jit;
+    jit.SetAllowResolveSymbolInHostProcess(true);
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
+        ReleaseAssert(jitFn(tmp - 1) == 123);
+        ReleaseAssert(jitFn(tmp) == 456);
+        ReleaseAssert(jitFn(tmp + 1) == 789);
+    }
+#pragma clang diagnostic pop
+}

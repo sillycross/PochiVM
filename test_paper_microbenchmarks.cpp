@@ -52,3 +52,75 @@ TEST(DISABLED_PaperMicrobenchmark, FibonacciSeq)
         ReleaseAssert(ret == 102334155);
     }
 }
+
+TEST(DISABLED_PaperMicrobenchmark, EulerSieve)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int, int*, int*) noexcept;
+    {
+        auto [fn, n, lp, pr] = NewFunction<FnPrototype>("euler_sieve");
+        auto cnt = fn.NewVariable<int>();
+        auto i = fn.NewVariable<int>();
+        auto j = fn.NewVariable<int>();
+        fn.SetBody(
+            Declare(cnt, 0),
+            For(Declare(i, 2), i <= n, Increment(i)).Do(
+                If(lp[i] == 0).Then(
+                    Assign(lp[i], i),
+                    Assign(pr[cnt], i),
+                    Increment(cnt)
+                ),
+                For(Declare(j, 0), j < cnt && pr[j] <= lp[i] && i * pr[j] <= n, Increment(j)).Do(
+                    Assign(lp[i * pr[j]], pr[j])
+                )
+            ),
+            Return(cnt)
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        int n = 100000000;
+        int* lp = new int[static_cast<size_t>(n + 10)];
+        memset(lp, 0, sizeof(int) * static_cast<size_t>(n + 10));
+        int* pr = new int[static_cast<size_t>(n + 10)];
+        memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
+
+        FastInterpFunction<FnPrototype> fnPtr = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("euler_sieve");
+        {
+            AutoTimer t;
+            int result = fnPtr(n, lp, pr);
+            ReleaseAssert(result == 5761455);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        int n = 100000000;
+        int* lp = new int[static_cast<size_t>(n + 10)];
+        memset(lp, 0, sizeof(int) * static_cast<size_t>(n + 10));
+        int* pr = new int[static_cast<size_t>(n + 10)];
+        memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
+
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("euler_sieve");
+        {
+            AutoTimer t;
+            int result = jitFn(n, lp, pr);
+            ReleaseAssert(result == 5761455);
+        }
+    }
+}

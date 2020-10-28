@@ -67,6 +67,20 @@ public:
     )>* = nullptr >
     Reference<typename std::remove_pointer<T>::type>* operator->() const;
 
+    // Operator[]: possible for T*
+    //
+    template<typename I, std::enable_if_t<(
+            std::is_pointer<T>::value && !std::is_same<T, void*>::value &&
+            AstTypeHelper::is_primitive_int_type<I>::value
+    )>* = nullptr >
+    Reference<typename std::remove_pointer<T>::type> operator[](const Value<I>& index) const;
+
+    template<typename I, std::enable_if_t<(
+            std::is_pointer<T>::value && !std::is_same<T, void*>::value &&
+            AstTypeHelper::is_primitive_int_type<I>::value
+    )>* = nullptr >
+    Reference<typename std::remove_pointer<T>::type> operator[](I index) const;
+
     // Immutable. There is no reason to modify __pochivm_value_ptr after construction, and
     // it is catches errors like a = b (should instead write Assign(a, b))
     //
@@ -564,6 +578,39 @@ Reference<typename std::remove_pointer<T>::type>* Value<T>::operator->() const
     //
     static_assert(sizeof(Reference<_PointerElementType>) == 8, "unexpected size of Reference");
     return reinterpret_cast<Reference<_PointerElementType>*>(const_cast<AstNodeBase**>(&__pochivm_value_ptr));
+}
+
+template<typename T>
+template<typename I, std::enable_if_t<(
+        std::is_pointer<T>::value && !std::is_same<T, void*>::value &&
+        AstTypeHelper::is_primitive_int_type<I>::value
+)>*>
+Reference<typename std::remove_pointer<T>::type> Value<T>::operator[](const Value<I>& index) const
+{
+    using _PointerElementType = typename std::remove_pointer<T>::type;
+    return Reference<_PointerElementType>(
+                new AstPointerArithmeticExpr(
+                    __pochivm_value_ptr, index.__pochivm_value_ptr, true /*isAddition*/));
+}
+
+template<typename T>
+template<typename I, std::enable_if_t<(
+        std::is_pointer<T>::value && !std::is_same<T, void*>::value &&
+        AstTypeHelper::is_primitive_int_type<I>::value
+)>*>
+Reference<typename std::remove_pointer<T>::type> Value<T>::operator[](I index) const
+{
+    using _PointerElementType = typename std::remove_pointer<T>::type;
+    if (index == 0)
+    {
+        return Reference<_PointerElementType>(__pochivm_value_ptr);
+    }
+    else
+    {
+        return Reference<_PointerElementType>(
+                    new AstPointerArithmeticExpr(
+                        __pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<I>(), &index), true /*isAddition*/));
+    }
 }
 
 // Language utility: Assign a value to a variable
