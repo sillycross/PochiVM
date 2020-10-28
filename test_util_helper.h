@@ -252,3 +252,67 @@ public:
     PochiVM::AstModule* m_astModule;
     bool m_allowResolveSymbolInHostProcess;
 };
+
+class TestJitHelper
+{
+public:
+    TestJitHelper() {}
+
+    void Init(int optLevel)
+    {
+        using namespace PochiVM;
+        TestAssert(0 <= optLevel && optLevel <= 3);
+        if (optLevel > 0)
+        {
+            thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(optLevel);
+        }
+
+        llvm::ExitOnError exitOnErr;
+        llvm::orc::JITTargetMachineBuilder jtmb = exitOnErr(llvm::orc::JITTargetMachineBuilder::detectHost());
+        if (optLevel == 0)
+        {
+            jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::None);
+        }
+        else if (optLevel == 1)
+        {
+            jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::Less);
+        }
+        else if (optLevel == 2)
+        {
+            jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::Default);
+        }
+        else if (optLevel == 3)
+        {
+            jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
+        }
+        jtmb.setCodeModel(llvm::CodeModel::Small);
+
+        m_jit = exitOnErr(llvm::orc::LLJITBuilder().setJITTargetMachineBuilder(jtmb).create());
+
+        {
+            char Prefix = llvm::EngineBuilder().selectTarget()->createDataLayout().getGlobalPrefix();
+            std::unique_ptr<llvm::orc::DynamicLibrarySearchGenerator> R =
+                    exitOnErr(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(Prefix));
+            ReleaseAssert(R != nullptr);
+            m_jit->getMainJITDylib().addGenerator(std::move(R));
+        }
+
+        llvm::orc::ThreadSafeModule M = thread_pochiVMContext->m_curModule->GetThreadSafeModule();
+        exitOnErr(m_jit->addIRModule(std::move(M)));
+        m_astModule = thread_pochiVMContext->m_curModule;
+    }
+
+    template<typename FnPrototype>
+    FnPrototype GetFunction(const std::string& fnName)
+    {
+        ReleaseAssert(m_jit != nullptr && m_astModule != nullptr);
+        ReleaseAssert(m_astModule->CheckFunctionExistsAndPrototypeMatches<FnPrototype>(fnName));
+        llvm::ExitOnError exitOnErr;
+        auto sym = exitOnErr(m_jit->lookup(fnName));
+        return PochiVM::AstTypeHelper::function_addr_to_callable<FnPrototype>::get(
+                reinterpret_cast<void*>(sym.getAddress()));
+    }
+
+    std::unique_ptr<llvm::orc::LLJIT> m_jit;
+    PochiVM::AstModule* m_astModule;
+};

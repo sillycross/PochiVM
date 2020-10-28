@@ -29,7 +29,10 @@ TEST(PaperMicrobenchmark, FibonacciSeq)
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
 
-    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    {
+        AutoTimer t;
+        thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    }
 
     {
         AutoTimer timer;
@@ -40,15 +43,17 @@ TEST(PaperMicrobenchmark, FibonacciSeq)
         ReleaseAssert(ret == 102334155);
     }
 
-    thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2);
-
-    SimpleJIT jit;
-    jit.SetModule(thread_pochiVMContext->m_curModule);
+    TestJitHelper jit;
+    FnPrototype jitFn;
+    {
+        AutoTimer t;
+        thread_pochiVMContext->m_curModule->EmitIR();
+        jit.Init(3 /*optLevel*/);
+        jitFn = jit.GetFunction<FnPrototype>("fib_nth");
+    }
 
     {
         AutoTimer t;
-        FnPrototype jitFn = jit.GetFunction<FnPrototype>("fib_nth");
         uint64_t ret = jitFn(40);
         ReleaseAssert(ret == 102334155);
     }
@@ -105,10 +110,9 @@ TEST(PaperMicrobenchmark, EulerSieve)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIR(2);
 
-    SimpleJIT jit;
-    jit.SetModule(thread_pochiVMContext->m_curModule);
+    TestJitHelper jit;
+    jit.Init(3 /*optLevel*/);
 
     {
         int n = 100000000;
@@ -192,10 +196,9 @@ TEST(PaperMicrobenchmark, QuickSort)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2);
 
-    SimpleJIT jit;
-    jit.SetModule(thread_pochiVMContext->m_curModule);
+    TestJitHelper jit;
+    jit.Init(3 /*optLevel*/);
 
     {
         int n = 5000000;
