@@ -200,3 +200,213 @@ TEST(SanityPointerArithmetic, Sanity_2)
         ReleaseAssert(jitFn(ptr, 1) == 789);
     }
 }
+
+TEST(SanityPointerArithmetic, Sanity_3)
+{
+    AutoThreadPochiVMContext apv;AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int*, int);
+    auto [fn, b, i] = NewFunction<FnPrototype>("MyFn");
+
+    fn.SetBody(Return(*(b + i)));
+
+    int tmp[3] = {123, 456, 789};
+    int* ptr = tmp + 1;
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(ptr, -1) == 123);
+        ReleaseAssert(interpFn(ptr, 0) == 456);
+        ReleaseAssert(interpFn(ptr, 1) == 789);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(ptr, -1) == 123);
+        ReleaseAssert(interpFn(ptr, 0) == 456);
+        ReleaseAssert(interpFn(ptr, 1) == 789);
+    }
+
+    SimpleJIT jit;
+    jit.SetAllowResolveSymbolInHostProcess(true);
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
+        ReleaseAssert(jitFn(ptr, -1) == 123);
+        ReleaseAssert(jitFn(ptr, 0) == 456);
+        ReleaseAssert(jitFn(ptr, 1) == 789);
+    }
+}
+
+namespace {
+
+template<typename LiteralType, LiteralType literalValue, bool isAdd>
+void TestLiteralPointerArithmetic()
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = int(*)(int*);
+    auto [fn, b] = NewFunction<FnPrototype>("MyFn");
+
+    if (isAdd)
+    {
+        fn.SetBody(Return(*(b + Literal<LiteralType>(literalValue))));
+    }
+    else
+    {
+        fn.SetBody(Return(*(b - Literal<LiteralType>(literalValue))));
+    }
+
+    int tmp[3] = {123, 456, 789};
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(!thread_errorContext->HasError());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warray-bounds-pointer-arithmetic"
+
+    ssize_t shift = static_cast<ssize_t>(literalValue);
+    if (!isAdd)
+    {
+        shift = -shift;
+    }
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(tmp - shift) == 123);
+        ReleaseAssert(interpFn(tmp - shift + 1) == 456);
+        ReleaseAssert(interpFn(tmp - shift + 2) == 789);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+
+        ReleaseAssert(interpFn(tmp - shift) == 123);
+        ReleaseAssert(interpFn(tmp - shift + 1) == 456);
+        ReleaseAssert(interpFn(tmp - shift + 2) == 789);
+    }
+
+    SimpleJIT jit;
+    jit.SetAllowResolveSymbolInHostProcess(true);
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
+        ReleaseAssert(jitFn(tmp - shift) == 123);
+        ReleaseAssert(jitFn(tmp - shift + 1) == 456);
+        ReleaseAssert(jitFn(tmp - shift + 2) == 789);
+    }
+#pragma clang diagnostic pop
+}
+
+}   // anonymous namespace
+
+TEST(SanityPointerArithmetic, Sanity_4)
+{
+    TestLiteralPointerArithmetic<int8_t, 2, true>();
+    TestLiteralPointerArithmetic<int8_t, 1, true>();
+    TestLiteralPointerArithmetic<int8_t, 0, true>();
+    TestLiteralPointerArithmetic<int8_t, -1, true>();
+    TestLiteralPointerArithmetic<int8_t, -2, true>();
+    TestLiteralPointerArithmetic<int8_t, 2, false>();
+    TestLiteralPointerArithmetic<int8_t, 1, false>();
+    TestLiteralPointerArithmetic<int8_t, 0, false>();
+    TestLiteralPointerArithmetic<int8_t, -1, false>();
+    TestLiteralPointerArithmetic<int8_t, -2, false>();
+
+    TestLiteralPointerArithmetic<int16_t, 2, true>();
+    TestLiteralPointerArithmetic<int16_t, 1, true>();
+    TestLiteralPointerArithmetic<int16_t, 0, true>();
+    TestLiteralPointerArithmetic<int16_t, -1, true>();
+    TestLiteralPointerArithmetic<int16_t, -2, true>();
+    TestLiteralPointerArithmetic<int16_t, 2, false>();
+    TestLiteralPointerArithmetic<int16_t, 1, false>();
+    TestLiteralPointerArithmetic<int16_t, 0, false>();
+    TestLiteralPointerArithmetic<int16_t, -1, false>();
+    TestLiteralPointerArithmetic<int16_t, -2, false>();
+
+    TestLiteralPointerArithmetic<int32_t, 2, true>();
+    TestLiteralPointerArithmetic<int32_t, 1, true>();
+    TestLiteralPointerArithmetic<int32_t, 0, true>();
+    TestLiteralPointerArithmetic<int32_t, -1, true>();
+    TestLiteralPointerArithmetic<int32_t, -2, true>();
+    TestLiteralPointerArithmetic<int32_t, 2, false>();
+    TestLiteralPointerArithmetic<int32_t, 1, false>();
+    TestLiteralPointerArithmetic<int32_t, 0, false>();
+    TestLiteralPointerArithmetic<int32_t, -1, false>();
+    TestLiteralPointerArithmetic<int32_t, -2, false>();
+
+    TestLiteralPointerArithmetic<int64_t, 2, true>();
+    TestLiteralPointerArithmetic<int64_t, 1, true>();
+    TestLiteralPointerArithmetic<int64_t, 0, true>();
+    TestLiteralPointerArithmetic<int64_t, -1, true>();
+    TestLiteralPointerArithmetic<int64_t, -2, true>();
+    TestLiteralPointerArithmetic<int64_t, 2, false>();
+    TestLiteralPointerArithmetic<int64_t, 1, false>();
+    TestLiteralPointerArithmetic<int64_t, 0, false>();
+    TestLiteralPointerArithmetic<int64_t, -1, false>();
+    TestLiteralPointerArithmetic<int64_t, -2, false>();
+
+    TestLiteralPointerArithmetic<uint8_t, 2, true>();
+    TestLiteralPointerArithmetic<uint8_t, 1, true>();
+    TestLiteralPointerArithmetic<uint8_t, 0, true>();
+    TestLiteralPointerArithmetic<uint8_t, 2, false>();
+    TestLiteralPointerArithmetic<uint8_t, 1, false>();
+    TestLiteralPointerArithmetic<uint8_t, 0, false>();
+
+    TestLiteralPointerArithmetic<uint16_t, 2, true>();
+    TestLiteralPointerArithmetic<uint16_t, 1, true>();
+    TestLiteralPointerArithmetic<uint16_t, 0, true>();
+    TestLiteralPointerArithmetic<uint16_t, 2, false>();
+    TestLiteralPointerArithmetic<uint16_t, 1, false>();
+    TestLiteralPointerArithmetic<uint16_t, 0, false>();
+
+    TestLiteralPointerArithmetic<uint32_t, 2, true>();
+    TestLiteralPointerArithmetic<uint32_t, 1, true>();
+    TestLiteralPointerArithmetic<uint32_t, 0, true>();
+    TestLiteralPointerArithmetic<uint32_t, 2, false>();
+    TestLiteralPointerArithmetic<uint32_t, 1, false>();
+    TestLiteralPointerArithmetic<uint32_t, 0, false>();
+
+    TestLiteralPointerArithmetic<uint64_t, 2, true>();
+    TestLiteralPointerArithmetic<uint64_t, 1, true>();
+    TestLiteralPointerArithmetic<uint64_t, 0, true>();
+    TestLiteralPointerArithmetic<uint64_t, static_cast<uint64_t>(-1), true>();
+    TestLiteralPointerArithmetic<uint64_t, static_cast<uint64_t>(-2), true>();
+    TestLiteralPointerArithmetic<uint64_t, 2, false>();
+    TestLiteralPointerArithmetic<uint64_t, 1, false>();
+    TestLiteralPointerArithmetic<uint64_t, 0, false>();
+    TestLiteralPointerArithmetic<uint64_t, static_cast<uint64_t>(-1), false>();
+    TestLiteralPointerArithmetic<uint64_t, static_cast<uint64_t>(-2), false>();
+
+    TestLiteralPointerArithmetic<bool, true, true>();
+    TestLiteralPointerArithmetic<bool, false, true>();
+    TestLiteralPointerArithmetic<bool, true, false>();
+    TestLiteralPointerArithmetic<bool, false, false>();
+}
