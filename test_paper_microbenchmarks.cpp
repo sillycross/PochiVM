@@ -18,11 +18,11 @@ TEST(DISABLED_PaperMicrobenchmark, FibonacciSeq)
     auto [fn, n] = NewFunction<FnPrototype>("fib_nth", "n");
 
     fn.SetBody(
-        If(n <= Literal<int>(2)).Then(
+        If(n <= 2).Then(
                 Return(Literal<uint64_t>(1))
         ).Else(
-                Return(Call<FnPrototype>("fib_nth", n - Literal<int>(1))
-                       + Call<FnPrototype>("fib_nth", n - Literal<int>(2)))
+                Return(Call<FnPrototype>("fib_nth", n - 1)
+                       + Call<FnPrototype>("fib_nth", n - 2))
         )
     );
 

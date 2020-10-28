@@ -138,7 +138,79 @@ Value<T> operator%(const Value<T>& lhs, const Value<T>& rhs)
     return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MOD, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
-// Pointer arithmetic ops convience operator overloading
+// Convenience overloading: arithmetic operation with literal
+//
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
+Value<T> operator+(const Value<T>& lhs, T rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::ADD, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::SUB>::value> >
+Value<T> operator-(const Value<T>& lhs, T rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::SUB, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MUL>::value> >
+Value<T> operator*(const Value<T>& lhs, T rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MUL, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::DIV>::value> >
+Value<T> operator/(const Value<T>& lhs, T rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::DIV, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MODULO>::value> >
+Value<T> operator%(const Value<T>& lhs, T rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MOD, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
+Value<T> operator+(T lhs, const Value<T>& rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::ADD, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::SUB>::value> >
+Value<T> operator-(T lhs, const Value<T>& rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::SUB, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MUL>::value> >
+Value<T> operator*(T lhs, const Value<T>& rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MUL, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::DIV>::value> >
+Value<T> operator/(T lhs, const Value<T>& rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::DIV, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::MODULO>::value> >
+Value<T> operator%(T lhs, const Value<T>& rhs)
+{
+    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::MOD, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+// Pointer arithmetic ops convenience operator overloading
 //
 template<typename B, typename I, typename = std::enable_if_t<
              std::is_pointer<B>::value && AstTypeHelper::is_primitive_int_type<I>::value> >
@@ -154,6 +226,24 @@ Value<B> operator-(const Value<B>& base, const Value<I>& index)
 {
     static_assert(!std::is_same<B, void*>::value, "Pointer arithmetic on 'void*' is against C++ standard.");
     return Value<B>(new AstPointerArithmeticExpr(base.__pochivm_value_ptr, index.__pochivm_value_ptr, false /*isAddition*/));
+}
+
+// Convenience overloading: pointer arithmetic with literal offset
+//
+template<typename B, typename I, typename = std::enable_if_t<
+             std::is_pointer<B>::value && AstTypeHelper::is_primitive_int_type<I>::value> >
+Value<B> operator+(const Value<B>& base, I index)
+{
+    static_assert(!std::is_same<B, void*>::value, "Pointer arithmetic on 'void*' is against C++ standard.");
+    return Value<B>(new AstPointerArithmeticExpr(base.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<I>(), &index), true /*isAddition*/));
+}
+
+template<typename B, typename I, typename = std::enable_if_t<
+             std::is_pointer<B>::value && AstTypeHelper::is_primitive_int_type<I>::value> >
+Value<B> operator-(const Value<B>& base, I index)
+{
+    static_assert(!std::is_same<B, void*>::value, "Pointer arithmetic on 'void*' is against C++ standard.");
+    return Value<B>(new AstPointerArithmeticExpr(base.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<I>(), &index), false /*isAddition*/));
 }
 
 // Comparison ops convenience operator overloading
@@ -200,6 +290,96 @@ template<typename T, typename = std::enable_if_t<
 Value<bool> operator>=(const Value<T>& lhs, const Value<T>& rhs)
 {
     return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_EQUAL, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+}
+
+// Convenience overloading: comparing with a literal
+//
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
+Value<bool> operator==(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::EQUAL, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
+Value<bool> operator!=(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::NOT_EQUAL, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
+Value<bool> operator<(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_THAN, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
+Value<bool> operator>(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_THAN, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             (AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value
+          && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
+Value<bool> operator<=(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_EQUAL, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             (AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value
+          && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
+Value<bool> operator>=(const Value<T>& lhs, T rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_EQUAL, lhs.__pochivm_value_ptr, new AstLiteralExpr(TypeId::Get<T>(), &rhs)));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
+Value<bool> operator==(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::EQUAL, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value> >
+Value<bool> operator!=(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::NOT_EQUAL, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
+Value<bool> operator<(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_THAN, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value> >
+Value<bool> operator>(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_THAN, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             (AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value
+          && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
+Value<bool> operator<=(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::LESS_EQUAL, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
+}
+
+template<typename T, typename = std::enable_if_t<
+             (AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::GREATER>::value
+          && AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::EQUAL>::value)> >
+Value<bool> operator>=(T lhs, const Value<T>& rhs)
+{
+    return Value<bool>(new AstComparisonExpr(AstComparisonExprType::GREATER_EQUAL, new AstLiteralExpr(TypeId::Get<T>(), &lhs), rhs.__pochivm_value_ptr));
 }
 
 inline Value<bool> operator&&(const Value<bool>& lhs, const Value<bool>& rhs)
