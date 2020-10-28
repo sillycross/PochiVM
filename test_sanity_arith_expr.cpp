@@ -228,6 +228,9 @@ TEST(Sanity, ArithAndCompareExpr)
 #define F(type) TestInterestingIntegerParams<type>(GetModFn<type>, false /*isMulOp*/, true /*isDivOp*/);
     FOR_EACH_PRIMITIVE_INT_TYPE_EXCEPT_BOOL
 #undef F
+#define F(type) TestInterestingIntegerParams<type>(GetDivFn<type>, false /*isMulOp*/, true /*isDivOp*/);
+    FOR_EACH_PRIMITIVE_INT_TYPE_EXCEPT_BOOL
+#undef F
 #define F(type) TestInterestingIntegerParams<type>(GetEqFn<type>, false /*isMulOp*/, false /*isDivOp*/);
     FOR_EACH_PRIMITIVE_INT_TYPE_EXCEPT_BOOL
 #undef F

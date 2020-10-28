@@ -537,13 +537,9 @@ struct supports_addsubmul_internal : std::integral_constant<bool,
         (is_primitive_type<T>::value && !std::is_same<T, bool>::value)
 > {};
 
-// Only float types support DIV
-// It is intentional that int types do not support DIV: one should always check
-// for divisor != 0 before doing int DIV, so having a convenience operator is error prone
-//
 template<typename T>
 struct supports_div_internal : std::integral_constant<bool,
-        (is_primitive_float_type<T>::value)
+        (is_primitive_type<T>::value && !std::is_same<T, bool>::value)
 > {};
 
 // All int-type except bool supports MODULO

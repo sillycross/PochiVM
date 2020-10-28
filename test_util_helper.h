@@ -168,6 +168,8 @@ inline void AssertIsExpectedOutput(std::string out, std::string suffix = "")
     }
 }
 
+// This class has been so rotten.. Don't use to for anything but test purpose
+//
 class SimpleJIT
 {
 public:

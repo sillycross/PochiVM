@@ -3,10 +3,11 @@
 #include "pochivm.h"
 #include "codegen_context.hpp"
 #include "test_util_helper.h"
+#include <random>
 
 using namespace PochiVM;
 
-TEST(DISABLED_PaperMicrobenchmark, FibonacciSeq)
+TEST(PaperMicrobenchmark, FibonacciSeq)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -53,7 +54,7 @@ TEST(DISABLED_PaperMicrobenchmark, FibonacciSeq)
     }
 }
 
-TEST(DISABLED_PaperMicrobenchmark, EulerSieve)
+TEST(PaperMicrobenchmark, EulerSieve)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -104,7 +105,7 @@ TEST(DISABLED_PaperMicrobenchmark, EulerSieve)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+    thread_pochiVMContext->m_curModule->OptimizeIR();
 
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
@@ -121,6 +122,103 @@ TEST(DISABLED_PaperMicrobenchmark, EulerSieve)
             AutoTimer t;
             int result = jitFn(n, lp, pr);
             ReleaseAssert(result == 5761455);
+        }
+    }
+}
+
+TEST(PaperMicrobenchmark, QuickSort)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = void(*)(int*, int, int) noexcept;
+    {
+        auto [fn, a, lo, hi] = NewFunction<FnPrototype>("quicksort");
+        auto tmp = fn.NewVariable<int>();
+        auto pivot = fn.NewVariable<int>();
+        auto i = fn.NewVariable<int>();
+        auto j = fn.NewVariable<int>();
+        fn.SetBody(
+            If(lo < hi).Then(
+                Declare(pivot, a[hi]),
+                Declare(i, lo),
+                For(Declare(j, lo), j <= hi, Increment(j)).Do(
+                    If(a[j] < pivot).Then(
+                        Declare(tmp, a[i]),
+                        Assign(a[i], a[j]),
+                        Assign(a[j], tmp),
+                        Increment(i)
+                    )
+                ),
+                Assign(a[hi], a[i]),
+                Assign(a[i], pivot),
+                Call<FnPrototype>("quicksort", a, lo, i - 1),
+                Call<FnPrototype>("quicksort", a, i + 1, hi)
+            )
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        int n = 5000000;
+        int* a = new int[static_cast<size_t>(n)];
+        for (int i = 0; i < n; i++)
+        {
+            a[i] = i;
+        }
+        std::mt19937 mt_rand(123 /*seed*/);
+        for (int i = 0; i < n; i++)
+        {
+            std::swap(a[i], a[mt_rand() % static_cast<size_t>(i + 1)]);
+        }
+
+        FastInterpFunction<FnPrototype> fnPtr = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("quicksort");
+        {
+            AutoTimer t;
+            fnPtr(a, 0, n - 1);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            ReleaseAssert(a[i] == i);
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode();
+
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        int n = 5000000;
+        int* a = new int[static_cast<size_t>(n)];
+        for (int i = 0; i < n; i++)
+        {
+            a[i] = i;
+        }
+        std::mt19937 mt_rand(123 /*seed*/);
+        for (int i = 0; i < n; i++)
+        {
+            std::swap(a[i], a[mt_rand() % static_cast<size_t>(i + 1)]);
+        }
+
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("quicksort");
+        {
+            AutoTimer t;
+            jitFn(a, 0, n - 1);
+        }
+
+        for (int i = 0; i < n; i++)
+        {
+            ReleaseAssert(a[i] == i);
         }
     }
 }
