@@ -4,6 +4,7 @@
 #include "generated/fastinterp_library.generated.h"
 #include "x86_64_asm_helper.h"
 #include "x86_64_populate_nop_instruction_helper.h"
+#include "pochivm/codegen_arena_allocator.h"
 
 namespace PochiVM
 {
@@ -107,7 +108,8 @@ public:
     }
 
 private:
-    FastInterpBoilerplateInstance(const FastInterpBoilerplateBluePrint* owner,
+    FastInterpBoilerplateInstance(TempArenaAllocator& alloc,
+                                  const FastInterpBoilerplateBluePrint* owner,
                                   uint32_t ordinalInArray,
                                   uint16_t log2CodeSectionAlignment)
         : m_owner(owner)
@@ -126,7 +128,7 @@ private:
 #endif
     {
         TestAssert(m_log2CodeSectionAlignment >= x_fastinterp_log2_function_alignment && m_log2CodeSectionAlignment <= 6);
-        m_fixupValues = new uint64_t[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
+        m_fixupValues = new (alloc) uint64_t[m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal +
                 m_owner->m_highestUInt64PlaceholderOrdinal + m_owner->m_highestCppFnptrPlaceholderOrdinal];
         for (uint32_t i = 0; i < m_owner->m_highestBoilerplateFnptrPlaceholderOrdinal; i++)
         {
@@ -260,6 +262,7 @@ public:
         m_functionEntryPoint.clear();
         m_allBoilerplateInstances.clear();
         m_boilerplateFnEntryPointPlaceholders.clear();
+        m_boilerplateAlloc.Reset();
 #ifdef TESTBUILD
         m_materialized = false;
 #endif
@@ -270,7 +273,8 @@ public:
             size_t log2CodeSectionAlignment = x_fastinterp_log2_function_alignment)
     {
         TestAssert(log2CodeSectionAlignment <= 6);
-        FastInterpBoilerplateInstance* inst = new FastInterpBoilerplateInstance(
+        FastInterpBoilerplateInstance* inst = new (m_boilerplateAlloc) FastInterpBoilerplateInstance(
+                    m_boilerplateAlloc,
                     boilerplate,
                     static_cast<uint32_t>(m_allBoilerplateInstances.size()),
                     static_cast<uint16_t>(log2CodeSectionAlignment));
@@ -310,6 +314,7 @@ private:
     std::unordered_map<AstFunction*, std::pair<FastInterpBoilerplateInstance*, FastInterpBoilerplateInstance*> > m_functionEntryPoint;
     std::vector<FastInterpBoilerplateInstance*> m_allBoilerplateInstances;
     std::vector<std::pair<FastInterpBoilerplateInstance*, std::pair<AstFunction*, uint32_t>>> m_boilerplateFnEntryPointPlaceholders;
+    TempArenaAllocator m_boilerplateAlloc;
 #ifdef TESTBUILD
     bool m_materialized;
 #endif

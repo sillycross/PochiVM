@@ -5,6 +5,16 @@
 #include "test_util_helper.h"
 #include <random>
 
+// Uncomment to enable running paper microbenchmarks
+//
+//#define ENABLE_PAPER_MICROBENCHMARKS
+
+#ifdef ENABLE_PAPER_MICROBENCHMARKS
+#define PAPER_MICROBENCHMARK_TEST_PREFIX PaperMicrobenchmark
+#else
+#define PAPER_MICROBENCHMARK_TEST_PREFIX DISABLED_PaperMicrobenchmark
+#endif
+
 using namespace PochiVM;
 
 namespace {
@@ -133,7 +143,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // namespace PaperMicrobenchmarkFibonacciSequence
 
-TEST(PaperMicrobenchmark, FibonacciSeq)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -330,7 +340,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // namespace PaperMicrobenchmarkEulerSieve
 
-TEST(PaperMicrobenchmark, EulerSieve)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -551,7 +561,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // namespace PaperMicrobenchmarkQuickSort
 
-TEST(PaperMicrobenchmark, QuickSort)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -886,7 +896,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // namespace PaperMicrobenchmarkBrainfxxkPrintPrimes
 
-TEST(PaperMicrobenchmark, BrainfxxkPrintPrimes)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, BrainfxxkPrintPrimes)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1259,7 +1269,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // namespace PaperMicrobenchmarkBrainfxxkMandelbrot
 
-TEST(PaperMicrobenchmark, BrainfxxkMandelbrot)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, BrainfxxkMandelbrot)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1412,7 +1422,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // PaperMicrobenchmarkAMillionIncrement
 
-TEST(PaperMicrobenchmark, AMillionIncrement)
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
