@@ -132,6 +132,10 @@ add_subdirectory(fastinterp)
 #
 add_subdirectory(pochivm)
 
+# Build application: mini_db_backend
+#
+add_subdirectory(mini_db_backend)
+
 # add the executable
 #
 add_executable(main
@@ -154,6 +158,7 @@ add_executable(main
   test_fast_interp.cpp
   test_paper_microbenchmarks.cpp
   test_sanity_pointer_arithmetic.cpp
+  test_mini_db_backend_unit_test.cpp
 )
 
 # Important to link runtime using '--whole-archive'
@@ -167,6 +172,7 @@ target_link_libraries(main PUBLIC
 target_link_libraries(main PUBLIC
   gtest
   pochivm
+  mini_db_backend
   ${LLVM_EXTRA_LINK_LIBRARIES} 
 )
 
