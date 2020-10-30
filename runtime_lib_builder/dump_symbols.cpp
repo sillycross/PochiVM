@@ -105,6 +105,10 @@ struct ParsedFnTypeNamesInfo
             m_prefix = className;
             m_functionName = "";
         }
+        else if (m_fnType == PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
+        {
+            m_functionName = src->m_fnName;
+        }
         else
         {
             ReleaseAssert(m_fnType == PochiVM::ReflectionHelper::FunctionType::StaticMemberFn ||
@@ -456,7 +460,11 @@ static bool CmpParsedFnTypeNamesInfo(const ParsedFnTypeNamesInfo& a, const Parse
     return a.m_wrapperFnMangledSymbolName < b.m_wrapperFnMangledSymbolName;
 }
 
-static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNotPrintVarName = false, size_t firstParam = 0)
+static void PrintFnParams(FILE* fp,
+                          const ParsedFnTypeNamesInfo& info,
+                          bool doNotPrintVarName = false,
+                          size_t firstParam = 0,
+                          bool printRightBracket = true)
 {
     ReleaseAssert(info.m_params.size() >= firstParam);
     fprintf(fp, "(%s", (info.m_params.size() == firstParam ? ")" : "\n"));
@@ -468,7 +476,7 @@ static void PrintFnParams(FILE* fp, const ParsedFnTypeNamesInfo& info, bool doNo
         {
             fprintf(fp, " __pochivm_%d", static_cast<int>(i - firstParam));
         }
-        fprintf(fp, "%s", (i == info.m_params.size() - 1) ? ")" : ",\n");
+        fprintf(fp, "%s", (i == info.m_params.size() - 1) ? (printRightBracket ? ")" : "") : ",\n");
     }
 }
 
@@ -594,7 +602,55 @@ static void PrintFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& inf
     fprintf(fp, "    using __pochivm_wrapper_generator_t = ReflectionHelper::function_wrapper_helper<\n");
     fprintf(fp, "            static_cast<__pochivm_func_t>(\n");
     fprintf(fp, "                    ");
-    if (info.m_prefix == "")
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
+    {
+        if (info.m_functionName == "operator++" || info.m_functionName == "operator--")
+        {
+            ReleaseAssert(info.m_params.size() == 1);
+            fprintf(fp, "&::PochiVM::ReflectionHelper::OutlinedOperatorWrapper::f<\n");
+            fprintf(fp, "                        %s,\n", info.m_origParams[0].c_str());
+            fprintf(fp, "                        %s /*isIncrement*/\n", (info.m_functionName == "operator++" ? "true" : "false"));
+            fprintf(fp, "                    >");
+        }
+        else
+        {
+            fprintf(fp, "&::PochiVM::ReflectionHelper::OutlinedOperatorWrapper::f<\n");
+            ReleaseAssert(info.m_params.size() == 2);
+            fprintf(fp, "                        %s,\n", info.m_origParams[0].c_str());
+            fprintf(fp, "                        %s,\n", info.m_origParams[1].c_str());
+            fprintf(fp, "                        ");
+            if (info.m_functionName == "operator==")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::EQUAL");
+            }
+            else if (info.m_functionName == "operator!=")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::NOT_EQUAL");
+            }
+            else if (info.m_functionName == "operator<")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::LESS_THAN");
+            }
+            else if (info.m_functionName == "operator<=")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::LESS_EQUAL");
+            }
+            else if (info.m_functionName == "operator>")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::GREATER_THAN");
+            }
+            else if (info.m_functionName == "operator>=")
+            {
+                fprintf(fp, "::PochiVM::AstComparisonExprType::GREATER_EQUAL");
+            }
+            else
+            {
+                ReleaseAssert(false);
+            }
+            fprintf(fp, "\n                    >");
+        }
+    }
+    else if (info.m_prefix == "")
     {
         fprintf(fp, "&::%s", info.m_functionName.c_str());
     }
@@ -710,6 +766,20 @@ static void PrintFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& inf
     fprintf(fp, "}\n");
     fprintf(fp, "    ));\n");
     fprintf(fp, "}\n\n");
+
+    if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
+    {
+        if (info.m_functionName == "operator++" || info.m_functionName == "operator--")
+        {
+            // overload the postfix version as well, it takes a "dummy" int parameter
+            //
+            fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Reference" : "Value"),
+                    info.m_ret.c_str(), info.m_functionName.c_str());
+            PrintFnParams(fp, info, false /*doNotPrintVarName*/, 0 /*firstParam*/, false /*printRightBracket*/);
+            fprintf(fp, ", int /*unused*/)\n");
+            fprintf(fp, "{\n    return %s__pochivm_0;\n}\n\n", info.m_functionName.substr(strlen("operator")).c_str());
+        }
+    }
 }
 
 static void PrintConstructorFnCallBody(FILE* fp, FILE* gp, const ParsedFnTypeNamesInfo& info)
@@ -1104,7 +1174,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 ParsedFnTypeNamesInfo& info = it->second;
                 if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
                     info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
-                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor)
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -1415,6 +1486,32 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
         }
         fprintf(fp, "\n} // namespace CallFreeFn\n\n");
 
+        // Generate all outline-defined overloaded operators
+        //
+        {
+            fprintf(fp, "// Outline-defined overloaded operators\n//\n\n");
+
+            for (auto it = g_symbolAddrToTypeData.begin(); it != g_symbolAddrToTypeData.end(); it++)
+            {
+                ParsedFnTypeNamesInfo& info = it->second;
+                if (info.m_fnType == PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
+                {
+                    fprintf(fp, "// Original parameter and return types:\n");
+                    for (const std::string& param : info.m_origParams)
+                    {
+                        fprintf(fp, "//          %s\n", param.c_str());
+                    }
+                    fprintf(fp, "// Returns: %s\n", info.m_origRet.c_str());
+                    fprintf(fp, "//\n");
+                    fprintf(fp, "inline %s<%s> %s", (info.m_isRetApiVar ? "Reference" : "Value"),
+                            info.m_ret.c_str(), info.m_functionName.c_str());
+                    PrintFnParams(fp, info);
+                    fprintf(fp, "\n");
+                    PrintFnCallBody(fp, gp, info);
+                }
+            }
+        }
+
         // generate class member functions (implementation)
         //
         {
@@ -1427,7 +1524,8 @@ static void GenerateCppRuntimeHeaderFile(const std::string& generatedFileFolder,
                 if (info.m_fnType != PochiVM::ReflectionHelper::FunctionType::FreeFn &&
                     info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
                     info.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
-                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject &&
+                    info.m_fnType != PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
                 {
                     fns[info.m_prefix].push_back(info);
                 }
@@ -2435,7 +2533,8 @@ int main(int argc, char** argv)
             std::pair<std::string, std::string>& symbolPair = addrToSymbol[addr];
             if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
                 it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
-                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
             {
                 // For constructors, the symbol is a generated wrapper function, not the original prototype
                 // The original prototype must have no template parameters since our API dit not support
@@ -2447,7 +2546,8 @@ int main(int argc, char** argv)
             it->second.RecordMangledSymbolName(symbolPair.first /*mangled*/);
             if (it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Constructor &&
                 it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::Destructor &&
-                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject)
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::NonStaticMemberObject &&
+                it->second.m_fnType != PochiVM::ReflectionHelper::FunctionType::OutlineDefinedOverloadedOperator)
             {
                 uintptr_t wrapperAddr = reinterpret_cast<uintptr_t>(it->second.m_wrapperFnAddress);
                 ReleaseAssert(addrToSymbol.count(wrapperAddr));

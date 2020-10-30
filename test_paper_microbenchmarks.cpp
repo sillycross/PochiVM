@@ -1528,13 +1528,17 @@ void CreateFunction(const char* regex)
     using Regexs = int(*)(std::vector<std::string>*);
     auto [regexs, inputs] = NewFunction<Regexs>("regexs");
     auto result = regexs.NewVariable<int>();
-    auto i = regexs.NewVariable<size_t>();
+    auto it = regexs.NewVariable<std::vector<std::string>::iterator>();
+    auto end = regexs.NewVariable<std::vector<std::string>::iterator>();
     regexs.SetBody(
             Declare(result, 0),
-            For(Declare(i, 0UL), i < inputs->size(), Increment(i)).Do(
+            Declare(it, inputs->begin()),
+            Declare(end, inputs->end()),
+            While(it != end).Do(
                 Assign(result, result + StaticCast<int>(
-                    Call<RegexFn>(regexfn, (*inputs)[i].c_str()))
-                )
+                    Call<RegexFn>(regexfn, it->c_str())
+                )),
+                it++
             ),
             Return(result)
     );

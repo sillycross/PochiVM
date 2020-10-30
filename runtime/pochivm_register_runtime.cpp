@@ -197,6 +197,21 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&std::vector<std::string>::size>();
     RegisterMemberFn<static_cast<std::vector<std::string>::reference(std::vector<std::string>::*)(std::vector<std::string>::size_type)>(&std::vector<std::string>::operator[])>();
 
+    RegisterMemberFn<static_cast<std::vector<std::string>::iterator(std::vector<std::string>::*)()>(&std::vector<std::string>::begin)>();
+    RegisterMemberFn<static_cast<std::vector<std::string>::iterator(std::vector<std::string>::*)()>(&std::vector<std::string>::end)>();
+    RegisterMemberFn<&std::vector<std::string>::iterator::operator*>();
+    RegisterMemberFn<&std::vector<std::string>::iterator::operator->>();
+
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::NOT_EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::LESS_THAN>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::LESS_EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::GREATER_THAN>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<std::string>::iterator, std::vector<std::string>::iterator, AstComparisonExprType::GREATER_EQUAL>();
+
+    RegisterOutlineIncrementOrDecrementOperator<std::vector<std::string>::iterator, true /*isIncrement*/>();
+    RegisterOutlineIncrementOrDecrementOperator<std::vector<std::string>::iterator, false /*isIncrement*/>();
+
     // RegisterFreeFn<static_cast<bool(*)(const std::vector<std::string>::iterator&, const std::vector<std::string>::iterator&)>(&__gnu_cxx::operator==)>();
 }
 

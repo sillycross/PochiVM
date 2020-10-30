@@ -6,6 +6,8 @@
 #include "for_each_primitive_type.h"
 #include "get_mem_fn_address_helper.h"
 #include "reflective_stringify_helper.h"
+#include "ast_comparison_expr_type.h"
+#include "ast_arithmetic_expr_type.h"
 
 namespace PochiVM
 {
@@ -836,6 +838,54 @@ struct member_object_accessor_wrapper
     }
 };
 
+struct OutlinedOperatorWrapper
+{
+    template<typename LHS, typename RHS, AstComparisonExprType op>
+    static bool f(LHS lhs, RHS rhs)
+    {
+        static_assert(std::is_reference<LHS>::value && std::is_reference<RHS>::value);
+        if constexpr(op == AstComparisonExprType::EQUAL)
+        {
+            return lhs == rhs;
+        }
+        else if constexpr(op == AstComparisonExprType::NOT_EQUAL)
+        {
+            return lhs != rhs;
+        }
+        else if constexpr(op == AstComparisonExprType::LESS_THAN)
+        {
+            return lhs < rhs;
+        }
+        else if constexpr(op == AstComparisonExprType::LESS_EQUAL)
+        {
+            return lhs <= rhs;
+        }
+        else if constexpr(op == AstComparisonExprType::GREATER_THAN)
+        {
+            return lhs > rhs;
+        }
+        else
+        {
+            static_assert(op == AstComparisonExprType::GREATER_EQUAL);
+            return lhs >= rhs;
+        }
+    }
+
+    template<typename C, bool isIncrement>
+    static void f(C lhs)
+    {
+        static_assert(std::is_reference<C>::value);
+        if constexpr(isIncrement)
+        {
+            lhs++;
+        }
+        else
+        {
+            lhs--;
+        }
+    }
+};
+
 // get_function_pointer_address(t)
 // Returns the void* address of t, where t must be a pointer to a free function or a static or non-static class method
 //
@@ -881,7 +931,8 @@ enum class FunctionType
     Constructor,
     Destructor,
     TypeInfoObject,
-    NonStaticMemberObject
+    NonStaticMemberObject,
+    OutlineDefinedOverloadedOperator
 };
 
 struct RawFnTypeNamesInfo
@@ -1062,6 +1113,71 @@ struct get_raw_fn_typenames_info
                                   false /*isCopyCtorOrAssignmentOp*/);
     }
 
+    static RawFnTypeNamesInfo get_outlined_comparison_operator(AstComparisonExprType opType)
+    {
+        static_assert(fnInfo::numArgs == 2);
+        std::string fnName = "operator";
+        if (opType == AstComparisonExprType::EQUAL) {
+            fnName += "==";
+        }
+        else if (opType == AstComparisonExprType::NOT_EQUAL) {
+            fnName += "!=";
+        }
+        else if (opType == AstComparisonExprType::LESS_THAN) {
+            fnName += "<";
+        }
+        else if (opType == AstComparisonExprType::LESS_EQUAL) {
+            fnName += "<=";
+        }
+        else if (opType == AstComparisonExprType::GREATER_THAN) {
+            fnName += ">";
+        }
+        else if (opType == AstComparisonExprType::GREATER_EQUAL) {
+            fnName += ">=";
+        }
+        else
+        {
+            ReleaseAssert(false);
+        }
+        return RawFnTypeNamesInfo(FunctionType::OutlineDefinedOverloadedOperator,
+                                  fnInfo::numArgs,
+                                  fnInfo::get_api_ret_and_param_typenames(),
+                                  fnInfo::get_original_ret_and_param_typenames(),
+                                  nullptr /*classTypeName*/,
+                                  fnName.c_str(),
+                                  get_function_pointer_address(t),
+                                  fnInfo::is_const(),
+                                  fnInfo::is_noexcept(),
+                                  false /*is_wrapper_fn_required*/,
+                                  false /*is_sret_transform_required*/,
+                                  nullptr /*wrapperFn*/,
+                                  false /*isCopyCtorOrAssignmentOp*/);
+    }
+
+    static RawFnTypeNamesInfo get_outlined_increment_decrement_operator(bool isIncrement)
+    {
+        static_assert(fnInfo::numArgs == 1);
+        std::string fnName = "operator";
+        if (isIncrement) {
+            fnName += "++";
+        } else {
+            fnName += "--";
+        }
+        return RawFnTypeNamesInfo(FunctionType::OutlineDefinedOverloadedOperator,
+                                  fnInfo::numArgs,
+                                  fnInfo::get_api_ret_and_param_typenames(),
+                                  fnInfo::get_original_ret_and_param_typenames(),
+                                  nullptr /*classTypeName*/,
+                                  fnName.c_str(),
+                                  get_function_pointer_address(t),
+                                  fnInfo::is_const(),
+                                  fnInfo::is_noexcept(),
+                                  false /*is_wrapper_fn_required*/,
+                                  false /*is_sret_transform_required*/,
+                                  nullptr /*wrapperFn*/,
+                                  false /*isCopyCtorOrAssignmentOp*/);
+    }
+
     static RawFnTypeNamesInfo get_member_object(const char* class_typename,
                                                 const char* member_object_name)
     {
@@ -1225,6 +1341,38 @@ void RegisterExceptionObjectType()
     // Make sure we have access to the LLVM type of C as well.
     //
     RegisterFreeFn<&__pochivm_dummy_register_type_helper<C>>();
+}
+
+template<typename LHS, typename RHS, AstComparisonExprType op>
+void RegisterOutlineDefinedOverloadedOperator()
+{
+    constexpr auto f = ReflectionHelper::OutlinedOperatorWrapper::f<const LHS&, const RHS&, op>;
+    ReflectionHelper::RawFnTypeNamesInfo info =
+            ReflectionHelper::get_raw_fn_typenames_info<f>::get_outlined_comparison_operator(op);
+    __pochivm_report_info__(&info);
+
+    if constexpr(!std::is_pointer<LHS>::value && !ReflectionHelper::is_primitive_type<LHS>::value)
+    {
+        RegisterDestructor<LHS>();
+    }
+    if constexpr(!std::is_pointer<RHS>::value && !ReflectionHelper::is_primitive_type<RHS>::value)
+    {
+        RegisterDestructor<RHS>();
+    }
+}
+
+template<typename C, bool isIncrement>
+void RegisterOutlineIncrementOrDecrementOperator()
+{
+    constexpr auto f = ReflectionHelper::OutlinedOperatorWrapper::f<C&, isIncrement>;
+    ReflectionHelper::RawFnTypeNamesInfo info =
+            ReflectionHelper::get_raw_fn_typenames_info<f>::get_outlined_increment_decrement_operator(isIncrement);
+    __pochivm_report_info__(&info);
+
+    if constexpr(!std::is_pointer<C>::value && !ReflectionHelper::is_primitive_type<C>::value)
+    {
+        RegisterDestructor<C>();
+    }
 }
 
 }   // namespace PochiVM
