@@ -387,6 +387,11 @@ protected:
 namespace AstTypeHelper
 {
 
+// 'char' behaves identical to either 'int8_t' or 'uint8_t' (platform dependent),
+// but is a different type. This type figures out what it should behaves like
+//
+using CharAliasType = typename std::conditional<std::is_signed<char>::value, int8_t, uint8_t>::type;
+
 // GetTypeId<T>::value gives the unique TypeId representing type T
 //
 template<typename T>
@@ -404,6 +409,10 @@ template<> struct GetTypeId<type> {	\
 F(void)
 FOR_EACH_PRIMITIVE_TYPE
 #undef F
+
+template<> struct GetTypeId<char> {
+    constexpr static TypeId value = GetTypeId<CharAliasType>::value;
+};
 
 #define F(...) \
 template<> struct GetTypeId<__VA_ARGS__> {	\
@@ -435,7 +444,7 @@ template<typename T>
 struct is_primitive_int_type : std::false_type {};
 #define F(type) \
 template<> struct is_primitive_int_type<type> : std::true_type {};
-FOR_EACH_PRIMITIVE_INT_TYPE
+FOR_EACH_PRIMITIVE_INT_TYPE_AND_CHAR
 #undef F
 
 // is_primitive_float_type<T>::value
@@ -455,7 +464,7 @@ template<typename T>
 struct is_primitive_type : std::false_type {};
 #define F(type) \
 template<> struct is_primitive_type<type> : std::true_type {};
-FOR_EACH_PRIMITIVE_TYPE
+FOR_EACH_PRIMITIVE_TYPE_AND_CHAR
 #undef F
 
 // may_explicit_convert<T, U>::value (T, U must be primitive types)

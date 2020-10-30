@@ -15,7 +15,7 @@ namespace ReflectionHelper
 
 template<typename T> struct is_primitive_type : std::false_type {};
 #define F(t) template<> struct is_primitive_type<t> : std::true_type {};
-FOR_EACH_PRIMITIVE_TYPE
+FOR_EACH_PRIMITIVE_TYPE_AND_CHAR
 #undef F
 
 // remove_type_ref_internal<T>::type
@@ -34,11 +34,11 @@ struct remove_type_ref_internal {
 // Primitive types are unchanged
 //
 #define F(t) template<> struct remove_type_ref_internal<t> { using type = t; };
-FOR_EACH_PRIMITIVE_TYPE
+FOR_EACH_PRIMITIVE_TYPE_AND_CHAR
 #undef F
 
 #define F(t) template<> struct remove_type_ref_internal<const t> { using type = const t; };
-FOR_EACH_PRIMITIVE_TYPE
+FOR_EACH_PRIMITIVE_TYPE_AND_CHAR
 #undef F
 
 // Pointer types are unchanged
@@ -76,7 +76,7 @@ struct convert_const_primitive_type_ref
 };
 
 #define F(t) template<> struct convert_const_primitive_type_ref<const t&> { using type = t; };
-FOR_EACH_PRIMITIVE_TYPE
+FOR_EACH_PRIMITIVE_TYPE_AND_CHAR
 #undef F
 
 template<typename T>

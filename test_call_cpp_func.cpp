@@ -5535,3 +5535,245 @@ TEST(SanityCallCppFn, ExceptionEscapingNoExceptFunction_2)
 #pragma clang diagnostic pop
     }
 }
+
+TEST(SanityCallCppFn, CharTypeSanity_1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = char*(*)(std::string*) noexcept;
+    {
+        auto [fn, v] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(v->c_str())
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char* out = interpFn(&s);
+        ReleaseAssert(out == s.c_str());
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char* out = interpFn(&s);
+        ReleaseAssert(out == s.c_str());
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        if (x_isDebugBuild)
+        {
+            AssertIsExpectedOutput(dump, "debug_before_opt");
+        }
+        else
+        {
+            AssertIsExpectedOutput(dump, "nondebug_before_opt");
+        }
+    }
+
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    if (!x_isDebugBuild)
+    {
+        std::string _dst;
+        llvm::raw_string_ostream rso(_dst /*target*/);
+        thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+        std::string& dump = rso.str();
+
+        AssertIsExpectedOutput(dump, "after_opt");
+    }
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char* out = jitFn(&s);
+        ReleaseAssert(out == s.c_str());
+    }
+}
+
+TEST(SanityCallCppFn, CharTypeSanity_2)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = char(*)(std::string*) noexcept;
+    {
+        auto [fn, v] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return((*v)[Literal<size_t>(2)])
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = interpFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = interpFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = jitFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+}
+
+TEST(SanityCallCppFn, CharTypeSanity_3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = char(*)(std::string*) noexcept;
+    {
+        auto [fn, v] = NewFunction<FnPrototype>("testfn");
+        fn.SetBody(
+                Return(v->c_str()[2])
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = interpFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = interpFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        std::string s("12345");
+        char out = jitFn(&s);
+        ReleaseAssert(out == s[2]);
+    }
+}
+
+TEST(SanityCallCppFn, CharTypeSanity_4)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = size_t(*)(char*) noexcept;
+    {
+        auto [fn, v] = NewFunction<FnPrototype>("testfn");
+        auto s = fn.NewVariable<std::string>();
+        fn.SetBody(
+                Declare(s, Constructor<std::string>(v)),
+                Return(s.size())
+        );
+    }
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("testfn");
+
+        const char* s = "1234567";
+        size_t out = interpFn(const_cast<char*>(s));
+        ReleaseAssert(out == 7);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("testfn");
+
+        const char* s = "1234567";
+        size_t out = interpFn(const_cast<char*>(s));
+        ReleaseAssert(out == 7);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("testfn");
+
+        const char* s = "1234567";
+        size_t out = jitFn(const_cast<char*>(s));
+        ReleaseAssert(out == 7);
+    }
+}
+

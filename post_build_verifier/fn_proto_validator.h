@@ -55,7 +55,8 @@ struct validate_type
     F(bool, Type::getInt1Ty(type->getContext())) \
     F(float, Type::getFloatTy(type->getContext())) \
     F(double, Type::getDoubleTy(type->getContext())) \
-    F(void, Type::getVoidTy(type->getContext()))
+    F(void, Type::getVoidTy(type->getContext())) \
+    F(char, Type::getInt8Ty(type->getContext()))
 
 #define F(t, expr)                              \
 template<> struct validate_type<t>              \

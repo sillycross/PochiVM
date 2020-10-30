@@ -22,6 +22,17 @@ F(double)
     FOR_EACH_PRIMITIVE_INT_TYPE \
     FOR_EACH_PRIMITIVE_FLOAT_TYPE
 
+// 'char' is stupid: it always behaves either like 'int8_t' or like 'uint8_t',
+// but it is always a distinct type...
+//
+#define FOR_EACH_PRIMITIVE_TYPE_AND_CHAR \
+    FOR_EACH_PRIMITIVE_TYPE \
+    F(char)
+
+#define FOR_EACH_PRIMITIVE_INT_TYPE_AND_CHAR \
+    FOR_EACH_PRIMITIVE_INT_TYPE \
+    F(char)
+
 // All allowed widening conversions, which are the only implicit conversions allowed.
 //
 #define FOR_EACH_PRIMITIVE_INT_TYPE_WIDENING_CONVERSION \
@@ -44,7 +55,13 @@ F(int8_t, int32_t)     \
 F(int8_t, int64_t)     \
 F(int16_t, int32_t)    \
 F(int16_t, int64_t)    \
-F(int32_t, int64_t)
+F(int32_t, int64_t)    \
+F(char, int16_t)       \
+F(char, uint16_t)      \
+F(char, int32_t)       \
+F(char, uint32_t)      \
+F(char, int64_t)       \
+F(char, uint64_t)
 
 namespace PochiVM
 {

@@ -188,6 +188,11 @@ static void RegisterRuntimeLibrary()
     RegisterMemberObject<&TestConstPrimitiveTypeCtor::value>();
     RegisterFreeFn<&TestNonPrimitiveTypeConstRef>();
     RegisterFreeFn<&TestAddressOfConstPrimitiveRef>();
+
+    RegisterMemberFn<&std::string::c_str>();
+    RegisterMemberFn<&std::string::size>();
+    RegisterMemberFn<static_cast<std::string::reference(std::string::*)(std::string::size_type)>(&std::string::operator[])>();
+    RegisterConstructor<std::string, const char*>();
 }
 
 // DO NOT MODIFY

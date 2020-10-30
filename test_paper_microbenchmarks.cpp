@@ -7,7 +7,7 @@
 
 // Uncomment to enable running paper microbenchmarks
 //
-#define ENABLE_PAPER_MICROBENCHMARKS
+//#define ENABLE_PAPER_MICROBENCHMARKS
 
 #ifdef ENABLE_PAPER_MICROBENCHMARKS
 #define PAPER_MICROBENCHMARK_TEST_PREFIX PaperMicrobenchmark
