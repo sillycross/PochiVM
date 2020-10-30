@@ -193,6 +193,11 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&std::string::size>();
     RegisterMemberFn<static_cast<std::string::reference(std::string::*)(std::string::size_type)>(&std::string::operator[])>();
     RegisterConstructor<std::string, const char*>();
+
+    RegisterMemberFn<&std::vector<std::string>::size>();
+    RegisterMemberFn<static_cast<std::vector<std::string>::reference(std::vector<std::string>::*)(std::vector<std::string>::size_type)>(&std::vector<std::string>::operator[])>();
+
+    // RegisterFreeFn<static_cast<bool(*)(const std::vector<std::string>::iterator&, const std::vector<std::string>::iterator&)>(&__gnu_cxx::operator==)>();
 }
 
 // DO NOT MODIFY

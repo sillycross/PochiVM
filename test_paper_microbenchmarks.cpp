@@ -1479,3 +1479,148 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
+
+namespace PaperRegexMiniExample
+{
+
+static int g_ordinal = 0;
+using RegexFn = bool(*)(char* /*input*/);
+
+Function codegen(const char* regex)
+{
+    auto [regexfn, input] = NewFunction<RegexFn>(std::string("match") + std::to_string(g_ordinal++));
+    if (regex[0] == '\0')
+    {
+        regexfn.SetBody(
+            Return(*input == '\0')
+        );
+    }
+    else if (regex[1] == '+')
+    {
+        regexfn.SetBody(
+            While(*input == regex[0]).Do(
+                Assign(input, input + 1),
+                If (Call<RegexFn>(codegen(regex+2), input)).Then(
+                    Return(true)
+                )
+            ),
+            Return(false)
+        );
+    }
+    else if (regex[0] == '.')
+    {
+        regexfn.SetBody(
+            Return(*input != '\0' && Call<RegexFn>(codegen(regex+1), input+1))
+        );
+    }
+    else
+    {
+        regexfn.SetBody(
+            Return(*input == *regex && Call<RegexFn>(codegen(regex+1), input+1))
+        );
+    }
+    return regexfn;
+}
+
+void CreateFunction(const char* regex)
+{
+    Function regexfn = codegen(regex);
+    using Regexs = int(*)(std::vector<std::string>*);
+    auto [regexs, inputs] = NewFunction<Regexs>("regexs");
+    auto result = regexs.NewVariable<int>();
+    auto i = regexs.NewVariable<size_t>();
+    regexs.SetBody(
+            Declare(result, 0),
+            For(Declare(i, 0UL), i < inputs->size(), Increment(i)).Do(
+                Assign(result, result + StaticCast<int>(
+                    Call<RegexFn>(regexfn, (*inputs)[i].c_str()))
+                )
+            ),
+            Return(result)
+    );
+}
+
+void SetupModule(const char* regex)
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+    CreateFunction(regex);
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+double TimeFastInterpCodegenTime()
+{
+    double ts;
+    {
+        AutoTimer t(&ts);
+        thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    }
+    return ts;
+}
+
+std::pair<TestJitHelper, double> TimeLLVMCodegenTime(int optLevel)
+{
+    double ts;
+    using FnPrototype = int(*)(int, int) noexcept;
+    TestJitHelper jit;
+    FnPrototype jitFn;
+    {
+        AutoTimer t(&ts);
+        thread_pochiVMContext->m_curModule->EmitIR();
+        jit.Init(optLevel);
+        // Important to call getFunction here:
+        // The actual LLVM codegen work is done in GetFunction, so must be timed
+        //
+        jitFn = jit.GetFunction<FnPrototype>("largefn");
+        std::ignore = jitFn;
+    }
+    return std::make_pair(std::move(jit), ts);
+}
+
+}   // namespace PaperRegexMiniExample
+
+TEST(PaperRegexMiniExample, Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    using namespace PaperRegexMiniExample;
+    SetupModule("ab.d+e");
+
+    using FnPrototype = int(*)(std::vector<std::string>*);
+
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("regexs");
+
+        std::vector<std::string> input { "abcde", "abcdde", "abde", "abcdef" };
+        int out = interpFn(&input);
+        ReleaseAssert(out == 2);
+    }
+
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("regexs");
+
+        std::vector<std::string> input { "abcde", "abcdde", "abde", "abcdef" };
+        int out = interpFn(&input);
+        ReleaseAssert(out == 2);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    {
+        SimpleJIT jit;
+        jit.SetAllowResolveSymbolInHostProcess(true);
+        jit.SetModule(thread_pochiVMContext->m_curModule);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("regexs");
+
+        std::vector<std::string> input { "abcde", "abcdde", "abde", "abcdef" };
+        int out = jitFn(&input);
+        ReleaseAssert(out == 2);
+    }
+}

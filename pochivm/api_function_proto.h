@@ -400,6 +400,12 @@ Value<typename internal::call_expr_construct_helper<T>::ReturnType> Call(const s
     return internal::call_expr_construct_helper<T>::call(fnName, args...);
 }
 
+template<typename T, typename... Targs>
+Value<typename internal::call_expr_construct_helper<T>::ReturnType> Call(Function fn, Targs... args)
+{
+    return internal::call_expr_construct_helper<T>::call(fn.GetPtr()->GetName(), args...);
+}
+
 // Return(): a return statement, with no return value
 //
 inline Value<void> Return()
@@ -414,6 +420,11 @@ Value<void> Return(const Value<T>& val)
 {
     static_assert(!std::is_same<T, void>::value, "Cannot return a void expression. Use Return() instead.");
     return Value<void>(new AstReturnStmt(val.__pochivm_value_ptr));
+}
+
+inline Value<void> Return(bool val)
+{
+    return Value<void>(new AstReturnStmt(new AstLiteralExpr(TypeId::Get<bool>(), &val)));
 }
 
 // CallDestructor<T>(T* ptr): manually call the destructor to destruct the object at 'ptr'
