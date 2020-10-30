@@ -61,6 +61,7 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
     // Repeat: pick a node with no inbound-degree, chase its outlink until we reach an end or a visited node.
     //
     int32_t codeSectionLength = 0;
+    size_t numInstantiated = 0;
     for (int pass = 0; pass < 2; pass++)
     {
         for (size_t i = 0; i < m_allBoilerplateInstances.size(); i++)
@@ -81,6 +82,7 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
             instance->SetAlignmentLog2(4);
             while (true)
             {
+                numInstantiated++;
                 int padding = codeSectionLength & ((1 << instance->m_log2CodeSectionAlignment) - 1);
                 if (padding != 0) { padding = (1 << instance->m_log2CodeSectionAlignment) - padding; }
                 codeSectionLength += padding;
@@ -107,7 +109,14 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
                 }
             }
         }
+        // If in the first pass, we have instantiated everything, just break out.
+        //
+        if (numInstantiated == m_allBoilerplateInstances.size())
+        {
+            break;
+        }
     }
+    TestAssert(numInstantiated == m_allBoilerplateInstances.size());
 
 #ifdef TESTBUILD
     // Just to make sure we have placed every boilerplate instance

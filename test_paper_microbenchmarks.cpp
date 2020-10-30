@@ -7,7 +7,7 @@
 
 // Uncomment to enable running paper microbenchmarks
 //
-//#define ENABLE_PAPER_MICROBENCHMARKS
+#define ENABLE_PAPER_MICROBENCHMARKS
 
 #ifdef ENABLE_PAPER_MICROBENCHMARKS
 #define PAPER_MICROBENCHMARK_TEST_PREFIX PaperMicrobenchmark
@@ -183,21 +183,21 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3] / 100);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
 
@@ -380,21 +380,21 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3] / 100);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
 
@@ -601,21 +601,21 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3] / 100);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
 
@@ -937,21 +937,21 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, BrainfxxkPrintPrimes)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3]);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
 
@@ -1310,21 +1310,21 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, BrainfxxkMandelbrot)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3]);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
 
@@ -1439,7 +1439,7 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
     TimeFastInterpCodegenTime();
     double fastInterpPerformance = GetBestResultOfRuns([]() {
         return TimeFastInterpPerformance();
-    }, 5 /*numRuns*/);
+    });
 
     double llvmCodegenTime[4], llvmPerformance[4];
     for (int optLevel = 0; optLevel <= 3; optLevel ++)
@@ -1462,20 +1462,20 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastinterpCodegenTime);
-    printf("LLVM -O0:   %.6lf\n", llvmCodegenTime[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmCodegenTime[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmCodegenTime[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmCodegenTime[3]);
+    printf("FastInterp: %.7lf\n", fastinterpCodegenTime);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
-    printf("FastInterp: %.6lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.6lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.6lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.6lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.6lf\n", llvmPerformance[3]);
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
 }
