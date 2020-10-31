@@ -158,9 +158,11 @@ const static bool x_isTestBuild = false;
 
 #ifndef NDEBUG
 const static bool x_isDebugBuild = true;
+#define ALWAYS_INLINE_IN_NONDEBUG
 #define DEBUG_ONLY(...) __VA_ARGS__
 #else
 const static bool x_isDebugBuild = false;
+#define ALWAYS_INLINE_IN_NONDEBUG ALWAYS_INLINE
 #define DEBUG_ONLY(...)
 #endif
 

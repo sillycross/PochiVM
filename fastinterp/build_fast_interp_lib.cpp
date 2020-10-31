@@ -1635,33 +1635,35 @@ public:
             else
             {
                 CuckooHashTable ht = GetCuckooHashTable(n, bp.m_instances);
-                fprintf(fp1, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s;\n",
-                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
+                auto printVariableName = [&](FILE* fp, bool printExtern)
+                {
+                    fprintf(fp, "%s FastInterpBoilerplateSelectionHashTable<%d, %d",
+                            (printExtern ? "extern const" : "constexpr"), static_cast<int>(n), static_cast<int>(ht.ht.size()));
 
-                fprintf(fp3, "extern const FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s;\n",
-                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
-                fprintf(fp3, "constexpr FastInterpBoilerplateSelectionHashTableHelperWrapper<%d, %d> %s%s(\n",
-                        static_cast<int>(n), static_cast<int>(ht.ht.size()), lib_varname_prefix.c_str(), midfix.c_str());
-                fprintf(fp3, "std::array<uint32_t, %d> {", static_cast<int>(n * 3));
-                ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n && ht.h3.size() == n);
-                for (size_t i = 0; i < ht.h1.size(); i++)
-                {
-                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h1[i]));
-                    fprintf(fp3, ", ");
-                }
-                for (size_t i = 0; i < ht.h2.size(); i++)
-                {
-                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h2[i]));
-                    fprintf(fp3, ", ");
-                }
-                for (size_t i = 0; i < ht.h3.size(); i++)
-                {
-                    fprintf(fp3, "%lluU", static_cast<unsigned long long>(ht.h3[i]));
-                    if (i + 1 < ht.h3.size()) {
-                        fprintf(fp3, ", ");
+                    ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n && ht.h3.size() == n);
+                    for (size_t i = 0; i < ht.h1.size(); i++)
+                    {
+                        fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h1[i]));
                     }
-                }
-                fprintf(fp3, "} /*hashfns*/,\n");
+                    for (size_t i = 0; i < ht.h2.size(); i++)
+                    {
+                        fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h2[i]));
+                    }
+                    for (size_t i = 0; i < ht.h3.size(); i++)
+                    {
+                        fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h3[i]));
+                    }
+                    fprintf(fp, "> %s%s", lib_varname_prefix.c_str(), midfix.c_str());
+                    if (printExtern)
+                    {
+                        fprintf(fp, ";\n");
+                    }
+                };
+
+                printVariableName(fp1, true /*printExtern*/);
+                printVariableName(fp3, true /*printExtern*/);
+                printVariableName(fp3, false /*printExtern*/);
+                fprintf(fp3, "(\n");
                 fprintf(fp3, "std::array<FastInterpBoilerplateSelectionHashTableEntry, %d> {\n", static_cast<int>(ht.ht.size()));
                 for (size_t i = 0; i < ht.ht.size(); i++)
                 {

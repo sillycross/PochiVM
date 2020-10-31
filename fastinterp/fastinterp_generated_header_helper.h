@@ -108,39 +108,79 @@ private:
     uint32_t m_jcc32OffsetData[numJcc32];
 };
 
-template<uint32_t N, uint32_t M>
-class FastInterpBoilerplateSelectionHashTableHelperWrapper: public FastInterpBoilerplateSelectionHashTableHelper
+template<uint32_t N, uint32_t M, uint32_t... HashFns>
+class FastInterpBoilerplateSelectionHashTable
 {
 public:
-    constexpr FastInterpBoilerplateSelectionHashTableHelperWrapper(
-            const std::array<uint32_t, N * 3>& hashFns
-          , const std::array<FastInterpBoilerplateSelectionHashTableEntry, M>& hashtable
+    template<typename T>
+    friend struct FastInterpBoilerplateLibrary;
+
+    constexpr FastInterpBoilerplateSelectionHashTable(
+            const std::array<FastInterpBoilerplateSelectionHashTableEntry, M>& hashtable
 #ifdef TESTBUILD
           , const std::array<uint64_t, M * N>& trueEntries
 #endif
     )
-        : FastInterpBoilerplateSelectionHashTableHelper(
-              N, M, m_hashFnsData, m_hashtableData
-#ifdef TESTBUILD
-            , m_trueEntriesData
-#endif
-        )
     {
         for (uint32_t i = 0; i < M; i++)
         {
             ReleaseAssert((hashtable[i].m_value == nullptr) == (hashtable[i].m_fingerprint == static_cast<uint64_t>(-1)));
         }
-        internal::constexpr_copy_helper(m_hashFnsData, hashFns);
         internal::constexpr_copy_helper(m_hashtableData, hashtable);
 #ifdef TESTBUILD
         internal::constexpr_copy_helper(m_trueEntriesData, trueEntries);
 #endif
     }
 
-private:
-    // We must use C array, same as FastInterpBoilerplateWrapper
+    // It is a programming error to select a non-existent boilerplate!
     //
-    uint32_t m_hashFnsData[N * 3];
+    const FastInterpBoilerplateBluePrint* ALWAYS_INLINE_IN_NONDEBUG SelectBoilerplateBluePrint(const std::array<uint64_t, N>& key) const
+    {
+        static_assert(N > 0, "Bad N");
+        const FastInterpBoilerplateSelectionHashTableEntry* h1 = m_hashtableData + ComputeHash<0>(key) % M;
+        const FastInterpBoilerplateSelectionHashTableEntry* h2 = m_hashtableData + ComputeHash<1>(key) % M;
+        uint64_t h3 = ComputeHash<2>(key);
+        // h3 is always selected so that it's not -1 for all keys in hash table
+        //
+        TestAssert(h3 != static_cast<uint64_t>(-1));
+        const FastInterpBoilerplateSelectionHashTableEntry* result = nullptr;
+        if (h1->m_fingerprint == h3)
+        {
+            // h3 is always selected so that pre-computed hash table has no collisions
+            // Also all non-existent entries have fingerprint -1
+            //
+            TestAssert(h1 == h2 || h2->m_fingerprint != h3);
+            result = h1;
+        }
+        else
+        {
+            // It is a programming error to select non-existent boilerplate
+            //
+            TestAssert(h2->m_fingerprint == h3);
+            result = h2;
+        }
+        // It is a programming error to select non-existent boilerplate
+        //
+        TestAssert(memcmp(m_trueEntriesData + static_cast<size_t>(result - m_hashtableData) * N, key.data(), N * sizeof(uint64_t)) == 0);
+        TestAssert(result->m_value != nullptr);
+        return result->m_value;
+    }
+
+    template<size_t ord>
+    uint64_t ALWAYS_INLINE_IN_NONDEBUG ComputeHash(const std::array<uint64_t, N>& key) const
+    {
+        static_assert(ord < 3, "bad ordinal");
+        static_assert(sizeof...(HashFns) == N * 3);
+        constexpr std::array<uint32_t, N * 3> hashFnsData { HashFns... };
+        uint64_t ret = 0;
+        for (uint32_t i = 0; i < N; i++)
+        {
+            ret += key[i] * hashFnsData[ord * N + i];
+        }
+        return ret;
+    }
+
+private:
     FastInterpBoilerplateSelectionHashTableEntry m_hashtableData[M];
 #ifdef TESTBUILD
     uint64_t m_trueEntriesData[M * N];

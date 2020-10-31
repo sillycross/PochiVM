@@ -7,7 +7,7 @@
 
 // Uncomment to enable running paper microbenchmarks
 //
-//#define ENABLE_PAPER_MICROBENCHMARKS
+#define ENABLE_PAPER_MICROBENCHMARKS
 
 #ifdef ENABLE_PAPER_MICROBENCHMARKS
 #define PAPER_MICROBENCHMARK_TEST_PREFIX PaperMicrobenchmark
@@ -1532,13 +1532,11 @@ void CreateFunction(const char* regex)
     auto end = regexs.NewVariable<std::vector<std::string>::iterator>();
     regexs.SetBody(
             Declare(result, 0),
-            Declare(it, inputs->begin()),
             Declare(end, inputs->end()),
-            While(it != end).Do(
+            For(Declare(it, inputs->begin()), it != end, it++).Do(
                 Assign(result, result + StaticCast<int>(
                     Call<RegexFn>(regexfn, it->c_str())
-                )),
-                it++
+                ))
             ),
             Return(result)
     );
