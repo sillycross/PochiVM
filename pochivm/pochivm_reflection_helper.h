@@ -1116,24 +1116,24 @@ struct get_raw_fn_typenames_info
     static RawFnTypeNamesInfo get_outlined_comparison_operator(AstComparisonExprType opType)
     {
         static_assert(fnInfo::numArgs == 2);
-        std::string fnName = "operator";
+        std::string* fnName = new std::string("operator");
         if (opType == AstComparisonExprType::EQUAL) {
-            fnName += "==";
+            *fnName += "==";
         }
         else if (opType == AstComparisonExprType::NOT_EQUAL) {
-            fnName += "!=";
+            *fnName += "!=";
         }
         else if (opType == AstComparisonExprType::LESS_THAN) {
-            fnName += "<";
+            *fnName += "<";
         }
         else if (opType == AstComparisonExprType::LESS_EQUAL) {
-            fnName += "<=";
+            *fnName += "<=";
         }
         else if (opType == AstComparisonExprType::GREATER_THAN) {
-            fnName += ">";
+            *fnName += ">";
         }
         else if (opType == AstComparisonExprType::GREATER_EQUAL) {
-            fnName += ">=";
+            *fnName += ">=";
         }
         else
         {
@@ -1144,7 +1144,7 @@ struct get_raw_fn_typenames_info
                                   fnInfo::get_api_ret_and_param_typenames(),
                                   fnInfo::get_original_ret_and_param_typenames(),
                                   nullptr /*classTypeName*/,
-                                  fnName.c_str(),
+                                  fnName->c_str(),
                                   get_function_pointer_address(t),
                                   fnInfo::is_const(),
                                   fnInfo::is_noexcept(),
@@ -1157,18 +1157,18 @@ struct get_raw_fn_typenames_info
     static RawFnTypeNamesInfo get_outlined_increment_decrement_operator(bool isIncrement)
     {
         static_assert(fnInfo::numArgs == 1);
-        std::string fnName = "operator";
+        std::string* fnName = new std::string("operator");
         if (isIncrement) {
-            fnName += "++";
+            *fnName += "++";
         } else {
-            fnName += "--";
+            *fnName += "--";
         }
         return RawFnTypeNamesInfo(FunctionType::OutlineDefinedOverloadedOperator,
                                   fnInfo::numArgs,
                                   fnInfo::get_api_ret_and_param_typenames(),
                                   fnInfo::get_original_ret_and_param_typenames(),
                                   nullptr /*classTypeName*/,
-                                  fnName.c_str(),
+                                  fnName->c_str(),
                                   get_function_pointer_address(t),
                                   fnInfo::is_const(),
                                   fnInfo::is_noexcept(),
