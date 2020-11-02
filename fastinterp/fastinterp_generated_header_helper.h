@@ -124,7 +124,7 @@ public:
     {
         for (uint32_t i = 0; i < M; i++)
         {
-            ReleaseAssert((hashtable[i].m_value == nullptr) == (hashtable[i].m_fingerprint == static_cast<uint64_t>(-1)));
+            ReleaseAssert((hashtable[i].m_value == nullptr) == (hashtable[i].m_fingerprint == static_cast<uint32_t>(-1)));
         }
         internal::constexpr_copy_helper(m_hashtableData, hashtable);
 #ifdef TESTBUILD
@@ -137,50 +137,53 @@ public:
     const FastInterpBoilerplateBluePrint* ALWAYS_INLINE_IN_NONDEBUG SelectBoilerplateBluePrint(const std::array<uint64_t, N>& key) const
     {
         static_assert(N > 0, "Bad N");
-        const FastInterpBoilerplateSelectionHashTableEntry* h1 = m_hashtableData + ComputeHash<0>(key) % M;
-        const FastInterpBoilerplateSelectionHashTableEntry* h2 = m_hashtableData + ComputeHash<1>(key) % M;
-        uint64_t h3 = ComputeHash<2>(key);
-        // h3 is always selected so that it's not -1 for all keys in hash table
-        //
-        TestAssert(h3 != static_cast<uint64_t>(-1));
-        const FastInterpBoilerplateSelectionHashTableEntry* result = nullptr;
-        if (h1->m_fingerprint == h3)
+        uint32_t h1 = ComputeHash<0>(key);
+        uint32_t h2 = ComputeHash<1>(key);
+        uint32_t p1 = MapToHashTableSlot(h1);
+        uint32_t p2 = MapToHashTableSlot(h2);
+        uint32_t result;
+        if (m_hashtableData[p1].m_fingerprint == h2)
         {
-            // h3 is always selected so that pre-computed hash table has no collisions
+            // h1 and h2 are always selected so that pre-computed hash table has no collisions
             // Also all non-existent entries have fingerprint -1
             //
-            TestAssert(h1 == h2 || h2->m_fingerprint != h3);
-            result = h1;
+            TestAssert(p1 == p2 || m_hashtableData[p2].m_fingerprint != h1);
+            result = p1;
         }
         else
         {
             // It is a programming error to select non-existent boilerplate
             //
-            TestAssert(h2->m_fingerprint == h3);
-            result = h2;
+            TestAssert(m_hashtableData[p2].m_fingerprint == h1);
+            result = p2;
         }
         // It is a programming error to select non-existent boilerplate
         //
-        TestAssert(memcmp(m_trueEntriesData + static_cast<size_t>(result - m_hashtableData) * N, key.data(), N * sizeof(uint64_t)) == 0);
-        TestAssert(result->m_value != nullptr);
-        return result->m_value;
+        TestAssert(memcmp(m_trueEntriesData + result * N, key.data(), N * sizeof(uint64_t)) == 0);
+        TestAssert(m_hashtableData[result].m_value != nullptr);
+        return m_hashtableData[result].m_value;
     }
 
+private:
     template<size_t ord>
-    uint64_t ALWAYS_INLINE_IN_NONDEBUG ComputeHash(const std::array<uint64_t, N>& key) const
+    uint32_t ALWAYS_INLINE_IN_NONDEBUG ComputeHash(const std::array<uint64_t, N>& key) const
     {
-        static_assert(ord < 3, "bad ordinal");
-        static_assert(sizeof...(HashFns) == N * 3);
-        constexpr std::array<uint32_t, N * 3> hashFnsData { HashFns... };
-        uint64_t ret = 0;
+        static_assert(ord < 2, "bad ordinal");
+        static_assert(sizeof...(HashFns) == N * 2);
+        constexpr std::array<uint32_t, N * 2> hashFnsData { HashFns... };
+        uint32_t ret = 0;
         for (uint32_t i = 0; i < N; i++)
         {
-            ret += key[i] * hashFnsData[ord * N + i];
+            ret += static_cast<uint32_t>(key[i]) * hashFnsData[ord * N + i];
         }
         return ret;
     }
 
-private:
+    uint32_t ALWAYS_INLINE_IN_NONDEBUG MapToHashTableSlot(uint32_t hashValue) const
+    {
+        return static_cast<uint32_t>((static_cast<uint64_t>(hashValue) * M) >> 32);
+    }
+
     FastInterpBoilerplateSelectionHashTableEntry m_hashtableData[M];
 #ifdef TESTBUILD
     uint64_t m_trueEntriesData[M * N];

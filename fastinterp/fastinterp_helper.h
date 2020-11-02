@@ -243,15 +243,15 @@ private:
 struct FastInterpBoilerplateSelectionHashTableEntry
 {
     constexpr FastInterpBoilerplateSelectionHashTableEntry()
-        : m_value(nullptr), m_fingerprint(static_cast<uint64_t>(-1))
+        : m_value(nullptr), m_fingerprint(static_cast<uint32_t>(-1))
     { }
 
-    constexpr FastInterpBoilerplateSelectionHashTableEntry(const FastInterpBoilerplateBluePrint* value, uint64_t fingerprint)
+    constexpr FastInterpBoilerplateSelectionHashTableEntry(const FastInterpBoilerplateBluePrint* value, uint32_t fingerprint)
         : m_value(value), m_fingerprint(fingerprint)
     { }
 
     const FastInterpBoilerplateBluePrint* m_value;
-    uint64_t m_fingerprint;
+    uint32_t m_fingerprint;
 };
 
 // const FastInterpBoilerplateBluePrint* FastInterpBoilerplateLibrary<T>::SelectBoilerplateBluePrint(...)

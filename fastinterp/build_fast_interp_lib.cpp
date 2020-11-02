@@ -366,8 +366,7 @@ struct CuckooHashTable
 {
     std::vector<uint32_t> h1;
     std::vector<uint32_t> h2;
-    std::vector<uint32_t> h3;
-    std::vector<std::pair<uint32_t, uint64_t>> ht;
+    std::vector<std::pair<uint32_t, uint32_t>> ht;
     std::vector<std::vector<uint64_t>> trueEntries;
 };
 
@@ -390,7 +389,7 @@ uint32_t find_next_prime(uint32_t x)
     return x;
 }
 
-uint32_t find_random_prime()
+uint32_t get_random_odd_value_u32()
 {
     while (true)
     {
@@ -399,7 +398,8 @@ uint32_t find_random_prime()
         {
             value = (value << 16) + static_cast<uint32_t>(rand() & ((1<<16)-1));
         }
-        if (is_prime(value)) {
+        if (value % 2 == 1)
+        {
             return value;
         }
     }
@@ -409,19 +409,24 @@ void build_random_hash_function(std::vector<uint32_t>& out)
 {
     for (size_t i = 0; i < out.size(); i++)
     {
-        out[i] = find_random_prime();
+        out[i] = get_random_odd_value_u32();
     }
 }
 
-uint64_t compute_hash_value(const std::vector<uint32_t>& hashfn, const std::vector<uint64_t>& input)
+uint32_t compute_hash_value(const std::vector<uint32_t>& hashfn, const std::vector<uint64_t>& input)
 {
     ReleaseAssert(input.size() == hashfn.size());
-    uint64_t ret = 0;
+    uint32_t ret = 0;
     for (size_t i = 0; i < input.size(); i++)
     {
-        ret += input[i] * hashfn[i];
+        ret += static_cast<uint32_t>(input[i]) * hashfn[i];
     }
     return ret;
+}
+
+uint32_t map_to_ht_slot(uint32_t hashValue, uint32_t M)
+{
+    return static_cast<uint32_t>((static_cast<uint64_t>(hashValue) * M) >> 32);
 }
 
 bool try_displace(CuckooHashTable& h, const std::vector<std::pair<uint32_t, uint32_t>>& twoslots, uint32_t displace, uint32_t depth)
@@ -447,53 +452,61 @@ bool try_displace(CuckooHashTable& h, const std::vector<std::pair<uint32_t, uint
     }
     ReleaseAssert(h.ht[otherslot].first == static_cast<uint32_t>(-1));
     h.ht[otherslot] = h.ht[displace];
-    h.ht[displace] = std::make_pair(static_cast<uint32_t>(-1), static_cast<uint64_t>(-1));
-    return true;
-}
-
-bool try_populate_fingerprint(CuckooHashTable& h, const std::vector<BoilerplateInstance>& list)
-{
-    std::set<uint64_t> s;
-    for (size_t i = 0; i < list.size(); i++)
-    {
-        uint64_t x = compute_hash_value(h.h3, list[i].m_paramValues);
-        if (x == static_cast<uint64_t>(-1))
-        {
-            return false;
-        }
-        if (s.count(x))
-        {
-            return false;
-        }
-        s.insert(x);
-    }
+    h.ht[displace] = std::make_pair(static_cast<uint32_t>(-1), static_cast<uint32_t>(-1));
     return true;
 }
 
 bool try_build_ht(CuckooHashTable& h, const std::vector<BoilerplateInstance>& list)
 {
     uint32_t M = static_cast<uint32_t>(h.ht.size());
-    std::vector<std::pair<uint32_t, uint32_t>> twoslots;
+    std::vector<std::pair<uint32_t, uint32_t>> twoslots, twohvs;
     twoslots.resize(list.size());
+    twohvs.resize(list.size());
+    std::set<std::pair<uint32_t, uint32_t>> existPair;
     for (size_t i = 0; i < list.size(); i++)
     {
-        uint32_t h1 = static_cast<uint32_t>(compute_hash_value(h.h1, list[i].m_paramValues) % M);
-        uint32_t h2 = static_cast<uint32_t>(compute_hash_value(h.h2, list[i].m_paramValues) % M);
-        twoslots[i] = std::make_pair(h1, h2);
+        uint32_t h1 = compute_hash_value(h.h1, list[i].m_paramValues);
+        uint32_t h2 = compute_hash_value(h.h2, list[i].m_paramValues);
+        twohvs[i] = std::make_pair(h1, h2);
+
+        uint32_t p1 = map_to_ht_slot(h1, M);
+        uint32_t p2 = map_to_ht_slot(h2, M);
+        if (h1 == static_cast<uint32_t>(-1) || h2 == static_cast<uint32_t>(-1))
+        {
+            return false;
+        }
+
+        twoslots[i] = std::make_pair(p1, p2);
+
+        if (existPair.count(std::make_pair(p1, h2)))
+        {
+            return false;
+        }
+        existPair.insert(std::make_pair(p1, h2));
+
+        if (p1 != p2)
+        {
+            if (existPair.count(std::make_pair(p2, h1)))
+            {
+                return false;
+            }
+            existPair.insert(std::make_pair(p2, h1));
+        }
     }
+
     for (uint32_t i = 0; i < M; i++)
     {
-        h.ht[i] = std::make_pair(static_cast<uint32_t>(-1), static_cast<uint64_t>(-1));
+        h.ht[i] = std::make_pair(static_cast<uint32_t>(-1), static_cast<uint32_t>(-1));
     }
     for (size_t i = 0; i < list.size(); i++)
     {
         if (h.ht[twoslots[i].first].first == static_cast<uint32_t>(-1))
         {
-            h.ht[twoslots[i].first] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint64_t>(-1));
+            h.ht[twoslots[i].first] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint32_t>(-1));
         }
         else if (h.ht[twoslots[i].second].first == static_cast<uint32_t>(-1))
         {
-            h.ht[twoslots[i].second] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint64_t>(-1));
+            h.ht[twoslots[i].second] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint32_t>(-1));
         }
         else
         {
@@ -511,32 +524,25 @@ bool try_build_ht(CuckooHashTable& h, const std::vector<BoilerplateInstance>& li
                 return false;
             }
             ReleaseAssert(h.ht[displace].first == static_cast<uint32_t>(-1));
-            h.ht[displace] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint64_t>(-1));
-        }
-    }
-
-    while (true)
-    {
-        build_random_hash_function(h.h3);
-        if (try_populate_fingerprint(h, list))
-        {
-            break;
+            h.ht[displace] = std::make_pair(static_cast<uint32_t>(i), static_cast<uint32_t>(-1));
         }
     }
 
     for (size_t i = 0; i < list.size(); i++)
     {
+        uint32_t h1 = twohvs[i].first;
+        uint32_t h2 = twohvs[i].second;
         uint32_t p1 = twoslots[i].first;
         uint32_t p2 = twoslots[i].second;
         ReleaseAssert(h.ht[p1].first == static_cast<uint32_t>(i) || h.ht[p2].first == static_cast<uint32_t>(i));
         if (h.ht[p1].first == static_cast<uint32_t>(i))
         {
-            h.ht[p1].second = compute_hash_value(h.h3, list[i].m_paramValues);
+            h.ht[p1].second = h2;
             h.trueEntries[p1] = list[i].m_paramValues;
         }
         else
         {
-            h.ht[p2].second = compute_hash_value(h.h3, list[i].m_paramValues);
+            h.ht[p2].second = h1;
             h.trueEntries[p2] = list[i].m_paramValues;
         }
     }
@@ -545,19 +551,21 @@ bool try_build_ht(CuckooHashTable& h, const std::vector<BoilerplateInstance>& li
     //
     for (size_t i = 0; i < list.size(); i++)
     {
-        uint32_t p1 = static_cast<uint32_t>(compute_hash_value(h.h1, list[i].m_paramValues) % M);
-        uint32_t p2 = static_cast<uint32_t>(compute_hash_value(h.h2, list[i].m_paramValues) % M);
-        uint64_t h3 = compute_hash_value(h.h3, list[i].m_paramValues);
-        ReleaseAssert(h3 != static_cast<uint64_t>(-1));
-        if (h.ht[p1].second == h3)
+        uint32_t h1 = compute_hash_value(h.h1, list[i].m_paramValues);
+        uint32_t h2 = compute_hash_value(h.h2, list[i].m_paramValues);
+
+        uint32_t p1 = map_to_ht_slot(h1, M);
+        uint32_t p2 = map_to_ht_slot(h2, M);
+
+        if (h.ht[p1].second == h2)
         {
             ReleaseAssert(h.ht[p1].first == static_cast<uint32_t>(i));
             ReleaseAssert(h.trueEntries[p1] == list[i].m_paramValues);
-            ReleaseAssert(p1 == p2 || h.ht[p2].second != h3);
+            ReleaseAssert(p1 == p2 || h.ht[p2].second != h1);
         }
         else
         {
-            ReleaseAssert(h.ht[p2].second == h3);
+            ReleaseAssert(h.ht[p2].second == h1);
             ReleaseAssert(h.ht[p2].first == static_cast<uint32_t>(i));
             ReleaseAssert(h.trueEntries[p2] == list[i].m_paramValues);
         }
@@ -568,15 +576,30 @@ bool try_build_ht(CuckooHashTable& h, const std::vector<BoilerplateInstance>& li
     {
         if (h.ht[i].first == static_cast<uint32_t>(-1))
         {
-            ReleaseAssert(h.ht[i].second == static_cast<uint64_t>(-1));
+            ReleaseAssert(h.ht[i].second == static_cast<uint32_t>(-1));
         }
         else
         {
-            ReleaseAssert(h.ht[i].second != static_cast<uint64_t>(-1));
+            ReleaseAssert(h.ht[i].second != static_cast<uint32_t>(-1));
             ReleaseAssert(!s.count(h.ht[i].first));
             ReleaseAssert(h.ht[i].first < list.size());
             s.insert(h.ht[i].first);
-            ReleaseAssert(h.ht[i].second == compute_hash_value(h.h3, list[h.ht[i].first].m_paramValues));
+
+            uint32_t h1 = compute_hash_value(h.h1, list[h.ht[i].first].m_paramValues);
+            uint32_t h2 = compute_hash_value(h.h2, list[h.ht[i].first].m_paramValues);
+
+            uint32_t p1 = map_to_ht_slot(h1, M);
+            uint32_t p2 = map_to_ht_slot(h2, M);
+
+            ReleaseAssert(p1 == i || p2 == i);
+            if (p1 == i)
+            {
+                ReleaseAssert(h.ht[i].second == h2);
+            }
+            else
+            {
+                ReleaseAssert(h.ht[i].second == h1);
+            }
         }
     }
     ReleaseAssert(s.size() == list.size());
@@ -601,7 +624,6 @@ CuckooHashTable GetCuckooHashTable(size_t n, const std::vector<BoilerplateInstan
     CuckooHashTable ret;
     ret.h1.resize(n);
     ret.h2.resize(n);
-    ret.h3.resize(n);
     uint32_t htSize = find_next_prime(static_cast<uint32_t>(static_cast<double>(list.size()) / 0.4));
     if (htSize < 5) { htSize = 5; }
     ret.ht.resize(htSize);
@@ -1640,7 +1662,7 @@ public:
                     fprintf(fp, "%s FastInterpBoilerplateSelectionHashTable<%d, %d",
                             (printExtern ? "extern const" : "constexpr"), static_cast<int>(n), static_cast<int>(ht.ht.size()));
 
-                    ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n && ht.h3.size() == n);
+                    ReleaseAssert(ht.h1.size() == n && ht.h2.size() == n);
                     for (size_t i = 0; i < ht.h1.size(); i++)
                     {
                         fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h1[i]));
@@ -1648,10 +1670,6 @@ public:
                     for (size_t i = 0; i < ht.h2.size(); i++)
                     {
                         fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h2[i]));
-                    }
-                    for (size_t i = 0; i < ht.h3.size(); i++)
-                    {
-                        fprintf(fp, ", %lluU", static_cast<unsigned long long>(ht.h3[i]));
                     }
                     fprintf(fp, "> %s%s", lib_varname_prefix.c_str(), midfix.c_str());
                     if (printExtern)
@@ -1676,7 +1694,7 @@ public:
                     {
                         fprintf(fp3, "&%s%s_%d", blueprint_varname_prefix.c_str(), midfix.c_str(), static_cast<int>(ht.ht[i].first));
                     }
-                    fprintf(fp3, ", %lluULL }", static_cast<unsigned long long>(ht.ht[i].second));
+                    fprintf(fp3, ", %uU }", ht.ht[i].second);
                     if (i + 1 < ht.ht.size()) {
                         fprintf(fp3, ", ");
                     }
