@@ -3,6 +3,7 @@
 #include "api_base.h"
 #include "function_proto.h"
 #include "api_lang_constructs.h"
+#include "api_vt_base.h"
 
 #include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
 #include "generated/pochivm_runtime_headers.generated.h"
@@ -60,6 +61,13 @@ public:
     template<typename T, typename... Targs>
     friend FunctionAndParamsTuple<T> NewFunction(const std::string& fnName, Targs... paramNames);
 
+    Function(const std::string& fnName)
+        : m_ptr(thread_pochiVMContext->m_curModule->NewAstFunction(fnName))
+#ifndef NDEBUG
+        , m_prototypeFrozen(false)
+#endif
+    { }
+
     void SetReturnType(TypeId type)
     {
         assert(!m_prototypeFrozen);
@@ -96,6 +104,18 @@ public:
 
     AstFunction* GetPtr() const { return m_ptr; }
 
+    void AddParamUnnamed(TypeId type)
+    {
+        assert(!m_prototypeFrozen);
+        m_ptr->AddParam(type, "param");
+    }
+
+    VariableVT GetParam(size_t ord)
+    {
+        TestAssert(ord < m_ptr->GetNumParams());
+        return VariableVT(m_ptr->GetParamsVector()[ord]);
+    }
+
 private:
     Function(AstFunction* ptr)
         : m_ptr(ptr)
@@ -103,12 +123,6 @@ private:
         , m_prototypeFrozen(false)
 #endif
     {}
-
-    void AddParamUnnamed(TypeId type)
-    {
-        assert(!m_prototypeFrozen);
-        m_ptr->AddParam(type, "param");
-    }
 
     void FreezePrototype()
     {
@@ -404,6 +418,38 @@ template<typename T, typename... Targs>
 Value<typename internal::call_expr_construct_helper<T>::ReturnType> Call(Function fn, Targs... args)
 {
     return internal::call_expr_construct_helper<T>::call(fn.GetPtr()->GetName(), args...);
+}
+
+template<typename ReturnType>
+Value<ReturnType> CallVT(const std::string& fnName, const std::vector<ValueVT>& params)
+{
+    std::vector<AstNodeBase*> paramNodes;
+    for (const ValueVT& param : params)
+    {
+        paramNodes.push_back(param.__pochivm_value_ptr);
+    }
+    return Value<ReturnType>(new AstCallExpr(fnName, paramNodes, TypeId::Get<ReturnType>()));
+}
+
+template<typename ReturnType>
+Value<ReturnType> CallVT(Function fn, const std::vector<ValueVT>& params)
+{
+    return CallVT<ReturnType>(fn.GetPtr()->GetName(), params);
+}
+
+inline ValueVT CallVT(const std::string& fnName, TypeId returnType, const std::vector<ValueVT>& params)
+{
+    std::vector<AstNodeBase*> paramNodes;
+    for (const ValueVT& param : params)
+    {
+        paramNodes.push_back(param.__pochivm_value_ptr);
+    }
+    return ValueVT(new AstCallExpr(fnName, paramNodes, returnType));
+}
+
+inline ValueVT CallVT(Function fn, TypeId returnType, const std::vector<ValueVT>& params)
+{
+    return CallVT(fn.GetPtr()->GetName(), returnType, params);
 }
 
 // Return(): a return statement, with no return value

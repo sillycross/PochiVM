@@ -45,7 +45,7 @@ private:
         InitScope(args...);
     }
 
-    AstScope* const m_ptr;
+    AstScope* m_ptr;
 };
 
 // Usage: Block(stmt1, stmt2, ...)
@@ -83,7 +83,7 @@ private:
         InitBlock(args...);
     }
 
-    AstBlock* const m_ptr;
+    AstBlock* m_ptr;
 };
 
 namespace internal

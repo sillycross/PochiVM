@@ -203,4 +203,17 @@ struct TpchSupplierTableRow
     }
 };
 
+struct TestTable1Row
+{
+    int a;
+    int b;
+
+    bool WARN_UNUSED LoadRow(FILE* fp)
+    {
+        if (!TpchDbDumpReader::LoadInt32(fp, a)) { return false; }
+        ReleaseAssert(TpchDbDumpReader::LoadInt32(fp, b));
+        return true;
+    }
+};
+
 }   // namespace MiniDbBackend

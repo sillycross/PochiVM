@@ -212,7 +212,43 @@ static void RegisterRuntimeLibrary()
     RegisterOutlineIncrementOrDecrementOperator<std::vector<std::string>::iterator, true /*isIncrement*/>();
     RegisterOutlineIncrementOrDecrementOperator<std::vector<std::string>::iterator, false /*isIncrement*/>();
 
-    // RegisterFreeFn<static_cast<bool(*)(const std::vector<std::string>::iterator&, const std::vector<std::string>::iterator&)>(&__gnu_cxx::operator==)>();
+    RegisterFreeFn<&MiniDbBackend::GetCustomerTable>();
+    RegisterFreeFn<&MiniDbBackend::GetLineitemTable>();
+    RegisterFreeFn<&MiniDbBackend::GetNationTable>();
+    RegisterFreeFn<&MiniDbBackend::GetOrdersTable>();
+    RegisterFreeFn<&MiniDbBackend::GetPartTable>();
+    RegisterFreeFn<&MiniDbBackend::GetPartSuppTable>();
+    RegisterFreeFn<&MiniDbBackend::GetRegionTable>();
+    RegisterFreeFn<&MiniDbBackend::GetSupplierTable>();
+    RegisterFreeFn<&MiniDbBackend::GetTestTable1>();
+    RegisterConstructor<std::vector<uintptr_t>>();
+
+    RegisterMemberFn<static_cast<std::vector<uintptr_t>::iterator(std::vector<uintptr_t>::*)()>(&std::vector<uintptr_t>::begin)>();
+    RegisterMemberFn<static_cast<std::vector<uintptr_t>::iterator(std::vector<uintptr_t>::*)()>(&std::vector<uintptr_t>::end)>();
+    RegisterMemberFn<&std::vector<uintptr_t>::iterator::operator*>();
+    RegisterMemberFn<&std::vector<uintptr_t>::iterator::operator->>();
+
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::NOT_EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::LESS_THAN>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::LESS_EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::GREATER_THAN>();
+    RegisterOutlineDefinedOverloadedOperator<std::vector<uintptr_t>::iterator, std::vector<uintptr_t>::iterator, AstComparisonExprType::GREATER_EQUAL>();
+
+    RegisterOutlineIncrementOrDecrementOperator<std::vector<uintptr_t>::iterator, true /*isIncrement*/>();
+    RegisterOutlineIncrementOrDecrementOperator<std::vector<uintptr_t>::iterator, false /*isIncrement*/>();
+
+    RegisterMemberFn<static_cast<uintptr_t*(std::vector<uintptr_t>::*)()>(&std::vector<uintptr_t>::data)>();
+    RegisterMemberFn<&std::vector<uintptr_t>::size>();
+    RegisterMemberFn<static_cast<void(std::vector<uintptr_t>::*)(const uintptr_t&)>(&std::vector<uintptr_t>::push_back)>();
+
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintInt32>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintInt64>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintUInt32>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintUInt64>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintDouble>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintString>();
+    RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintNewLine>();
 }
 
 // DO NOT MODIFY
