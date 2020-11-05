@@ -264,7 +264,7 @@ public:
         TestAssert(0 <= optLevel && optLevel <= 3);
         if (optLevel > 0)
         {
-            thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(optLevel);
+            thread_pochiVMContext->m_curModule->OptimizeIR(optLevel);
         }
 
         llvm::ExitOnError exitOnErr;

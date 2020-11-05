@@ -38,17 +38,17 @@ inline void TpchLoadUnitTestDatabase()
     x_unittesttable_table1.LoadData("tpch_data/unittest_table1.txt");
 }
 
-inline __attribute__((__used__)) std::vector<uintptr_t>* GetTpchTableHelper(const char* name)
+inline __attribute__((__used__)) std::vector<uintptr_t>* GetTpchTableHelper(int table)
 {
-    if (strcmp(name, "customer") == 0) { return &x_tpchtable_customer.m_data; }
-    if (strcmp(name, "lineitem") == 0) { return &x_tpchtable_lineitem.m_data; }
-    if (strcmp(name, "nation") == 0) { return &x_tpchtable_nation.m_data; }
-    if (strcmp(name, "orders") == 0) { return &x_tpchtable_orders.m_data; }
-    if (strcmp(name, "part") == 0) { return &x_tpchtable_part.m_data; }
-    if (strcmp(name, "partsupp") == 0) { return &x_tpchtable_partsupp.m_data; }
-    if (strcmp(name, "region") == 0) { return &x_tpchtable_region.m_data; }
-    if (strcmp(name, "supplier") == 0) { return &x_tpchtable_supplier.m_data; }
-    if (strcmp(name, "testtable1") == 0) { return &x_unittesttable_table1.m_data; }
+    if (table == TPCH_CUSTOMER) { return &x_tpchtable_customer.m_data; }
+    if (table == TPCH_LINEITEM) { return &x_tpchtable_lineitem.m_data; }
+    if (table == TPCH_NATION) { return &x_tpchtable_nation.m_data; }
+    if (table == TPCH_ORDERS) { return &x_tpchtable_orders.m_data; }
+    if (table == TPCH_PART) { return &x_tpchtable_part.m_data; }
+    if (table == TPCH_PARTSUPP) { return &x_tpchtable_partsupp.m_data; }
+    if (table == TPCH_REGION) { return &x_tpchtable_region.m_data; }
+    if (table == TPCH_SUPPLIER) { return &x_tpchtable_supplier.m_data; }
+    if (table == UNITTEST_TABLE1) { return &x_unittesttable_table1.m_data; }
     ReleaseAssert(false);
 }
 

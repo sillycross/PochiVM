@@ -105,15 +105,163 @@ TEST(MiniDbBackendUnitTest, SimpleSelect)
     }
 }
 
-TEST(MiniDbBackend, TpchQuery6)
+template<auto buildQueryFn>
+void BenchmarkTpchQuery()
 {
-    AutoThreadPochiVMContext apv;
-    AutoThreadErrorContext arc;
-    AutoThreadLLVMCodegenContext alc;
+    const int numRuns = 10;
+    AstModule* modules[numRuns * 4];
+    for (int i = 0; i < numRuns * 4; i++)
+    {
+        buildQueryFn();
+        modules[i] = thread_pochiVMContext->m_curModule;
+    }
 
+    double fastInterpCodegenTime = 1e100;
+    for (int i = 0; i < numRuns * 2; i++)
+    {
+        thread_pochiVMContext->m_curModule = modules[i];
+        double ts;
+        {
+            AutoTimer t(&ts);
+            thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+        }
+        fastInterpCodegenTime = std::min(fastInterpCodegenTime, ts);
+        if (i == 0)
+        {
+            // By default when the next module is generated, we delete the previous module
+            // Null it out to prevent it from being deleted.
+            //
+            thread_pochiVMContext->m_fastInterpGeneratedProgram = nullptr;
+        }
+    }
+
+    using FnPrototype = void(*)(SqlResultPrinter*);
+
+    double llvmCodegenTime[4] = { 1e100, 1e100, 1e100, 1e100 };
+    for (int optLevel = 0; optLevel <= 3; optLevel++)
+    {
+        for (int i = 0; i < numRuns; i++)
+        {
+            thread_pochiVMContext->m_curModule = modules[optLevel * numRuns + i];
+            TestJitHelper* jit;
+            double ts;
+            {
+                AutoTimer t(&ts);
+                jit = new TestJitHelper();
+                thread_pochiVMContext->m_curModule->EmitIR();
+                jit->Init(optLevel);
+                FnPrototype jitFn = jit->GetFunction<FnPrototype>("execute_query");
+                std::ignore = jitFn;
+            }
+            llvmCodegenTime[optLevel] = std::min(llvmCodegenTime[optLevel], ts);
+        }
+    }
+
+    double fastInterpPerformance = 1e100;
+    thread_pochiVMContext->m_curModule = modules[0];
+    for (int i = 0; i < numRuns; i++)
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                GetFastInterpGeneratedFunction<FnPrototype>("execute_query");
+        double ts;
+        SqlResultPrinter printer;
+        {
+            AutoTimer t(&ts);
+            interpFn(&printer);
+        }
+        fastInterpPerformance = std::min(fastInterpPerformance, ts);
+    }
+
+    double llvmPerformance[4] = { 1e100, 1e100, 1e100, 1e100 };
+    for (int optLevel = 0; optLevel <= 3; optLevel++)
+    {
+        buildQueryFn();
+
+        TestJitHelper jit;
+        thread_pochiVMContext->m_curModule->EmitIR();
+        jit.Init(optLevel);
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("execute_query");
+        std::ignore = jitFn;
+
+        for (int i = 0; i < numRuns; i++)
+        {
+            double ts;
+            SqlResultPrinter printer;
+            {
+                AutoTimer t(&ts);
+                jitFn(&printer);
+            }
+            llvmPerformance[optLevel] = std::min(llvmPerformance[optLevel], ts);
+        }
+    }
+
+    printf("==============================\n");
+    printf("   Codegen Time Comparison\n");
+    printf("------------------------------\n");
+    printf("FastInterp: %.7lf\n", fastInterpCodegenTime);
+    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
+    printf("==============================\n\n");
+
+    printf("==============================\n");
+    printf("  Execution Time Comparison\n");
+    printf("------------------------------\n");
+    printf("FastInterp: %.7lf\n", fastInterpPerformance);
+    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
+    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
+    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
+    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
+    printf("==============================\n");
+}
+
+template<auto buildQueryFn>
+void CheckTpchQueryCorrectness(const std::string& expectedResult)
+{
+    buildQueryFn();
+
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+
+    using FnPrototype = void(*)(SqlResultPrinter*);
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        interpFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        interpFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    SimpleJIT jit;
+    jit.SetAllowResolveSymbolInHostProcess(true);
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        jitFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+}
+
+namespace
+{
+
+void BuildTpchQuery6()
+{
     thread_pochiVMContext->m_curModule = new AstModule("test");
-
-    TpchLoadDatabase();
 
     auto tableRow = x_tpchtable_lineitem.GetTableRow();
     auto where_clause1_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_shipdate);
@@ -198,40 +346,32 @@ TEST(MiniDbBackend, TpchQuery6)
     plan->CodeGen();
 
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
-    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+};
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery6_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
 
     std::string expectedResult =
         "| 38212505.914700 |\n";
 
-    using FnPrototype = void(*)(SqlResultPrinter*);
-    {
-        auto interpFn = thread_pochiVMContext->m_curModule->
-                               GetDebugInterpGeneratedFunction<FnPrototype>("execute_query");
-        SqlResultPrinter result;
-        interpFn(&result);
-        ReleaseAssert(expectedResult == result.m_start);
-    }
+    CheckTpchQueryCorrectness<BuildTpchQuery6>(expectedResult);
+}
 
-    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
-    {
-        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
-                               GetFastInterpGeneratedFunction<FnPrototype>("execute_query");
-        SqlResultPrinter result;
-        interpFn(&result);
-        ReleaseAssert(expectedResult == result.m_start);
-    }
+TEST(PaperBenchmark, TpchQuery6)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
 
-    thread_pochiVMContext->m_curModule->EmitIR();
-    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+    TpchLoadDatabase();
 
-    SimpleJIT jit;
-    jit.SetAllowResolveSymbolInHostProcess(true);
-    jit.SetModule(thread_pochiVMContext->m_curModule);
-
-    {
-        FnPrototype jitFn = jit.GetFunction<FnPrototype>("execute_query");
-        SqlResultPrinter result;
-        jitFn(&result);
-        ReleaseAssert(expectedResult == result.m_start);
-    }
+    printf("******* TPCH Query 6 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery6>();
 }

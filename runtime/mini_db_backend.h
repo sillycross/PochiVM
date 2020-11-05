@@ -6,16 +6,29 @@
 namespace MiniDbBackend
 {
 
-std::vector<uintptr_t>* GetTpchTableHelper(const char* name);
-inline std::vector<uintptr_t>* GetCustomerTable() { return GetTpchTableHelper("customer"); }
-inline std::vector<uintptr_t>* GetLineitemTable() { return GetTpchTableHelper("lineitem"); }
-inline std::vector<uintptr_t>* GetNationTable() { return GetTpchTableHelper("nation"); }
-inline std::vector<uintptr_t>* GetOrdersTable() { return GetTpchTableHelper("orders"); }
-inline std::vector<uintptr_t>* GetPartTable() { return GetTpchTableHelper("part"); }
-inline std::vector<uintptr_t>* GetPartSuppTable() { return GetTpchTableHelper("partsupp"); }
-inline std::vector<uintptr_t>* GetRegionTable() { return GetTpchTableHelper("region"); }
-inline std::vector<uintptr_t>* GetSupplierTable() { return GetTpchTableHelper("supplier"); }
-inline std::vector<uintptr_t>* GetTestTable1() { return GetTpchTableHelper("testtable1"); }
+enum TpchTableName
+{
+    TPCH_CUSTOMER,
+    TPCH_LINEITEM,
+    TPCH_NATION,
+    TPCH_ORDERS,
+    TPCH_PART,
+    TPCH_PARTSUPP,
+    TPCH_REGION,
+    TPCH_SUPPLIER,
+    UNITTEST_TABLE1
+};
+
+std::vector<uintptr_t>* GetTpchTableHelper(int);
+inline std::vector<uintptr_t>* GetCustomerTable() { return GetTpchTableHelper(TPCH_CUSTOMER); }
+inline std::vector<uintptr_t>* GetLineitemTable() { return GetTpchTableHelper(TPCH_LINEITEM); }
+inline std::vector<uintptr_t>* GetNationTable() { return GetTpchTableHelper(TPCH_NATION); }
+inline std::vector<uintptr_t>* GetOrdersTable() { return GetTpchTableHelper(TPCH_ORDERS); }
+inline std::vector<uintptr_t>* GetPartTable() { return GetTpchTableHelper(TPCH_PART); }
+inline std::vector<uintptr_t>* GetPartSuppTable() { return GetTpchTableHelper(TPCH_PARTSUPP); }
+inline std::vector<uintptr_t>* GetRegionTable() { return GetTpchTableHelper(TPCH_REGION); }
+inline std::vector<uintptr_t>* GetSupplierTable() { return GetTpchTableHelper(TPCH_SUPPLIER); }
+inline std::vector<uintptr_t>* GetTestTable1() { return GetTpchTableHelper(UNITTEST_TABLE1); }
 
 struct SqlResultPrinter
 {
@@ -37,47 +50,61 @@ struct SqlResultPrinter
         }
     }
 
+    // It seems like LLJIT has some bug handling global constant strings when CodeGenOpt::Less or higher is given.
+    // Weird.. workaround it for now.
+    //
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#pragma clang diagnostic ignored "-Wformat-security"
     void PrintInt32(int32_t value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %d ", value);
+        int8_t fmt[] = { '|', ' ', '%', 'd', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt), value);
         TestAssert(m_current < m_end);
     }
 
     void PrintUInt32(uint32_t value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %u ", value);
+        int8_t fmt[] = { '|', ' ', '%', 'u', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt), value);
         TestAssert(m_current < m_end);
     }
 
     void PrintInt64(int64_t value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %ld ", value);
+        int8_t fmt[] = { '|', ' ', '%', 'l', 'd', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt),  value);
         TestAssert(m_current < m_end);
     }
 
     void PrintUInt64(uint64_t value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %lu ", value);
+        int8_t fmt[] = { '|', ' ', '%', 'l', 'u', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt),  value);
         TestAssert(m_current < m_end);
     }
 
     void PrintDouble(double value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %lf ", value);
+        int8_t fmt[] = { '|', ' ', '%', 'l', 'f', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt), value);
         TestAssert(m_current < m_end);
     }
 
     void PrintString(char* value)
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "| %s ", value);
+        int8_t fmt[] = { '|', ' ', '%', 's', ' ', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt), value);
         TestAssert(m_current < m_end);
     }
 
     void PrintNewLine()
     {
-        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), "|\n");
+        int8_t fmt[] = { '|', '\n', '\0' };
+        m_current += snprintf(m_current, static_cast<size_t>(m_end - m_current), reinterpret_cast<char*>(fmt));
         TestAssert(m_current < m_end);
     }
+#pragma clang diagnostic pop
 
     char* m_start;
     char* m_current;

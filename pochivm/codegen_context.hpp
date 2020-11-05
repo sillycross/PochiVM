@@ -31,6 +31,10 @@ class AstVariable;
 class AstFunction;
 class FastInterpBoilerplateInstance;
 
+// This class cannot be reused!
+// I'm not sure why, LLVM has hardly any documentation on how to correctly use their new pass manager,
+// but I get a segfault in release mode when I reuse it.
+//
 class LLVMOptimizationPassPipeline
 {
 public:
@@ -96,15 +100,18 @@ struct LLVMCodegenContext
         }
         else if (optLevel == 1)
         {
-            m_llvmOptPipelineO1.Run(module);
+            LLVMOptimizationPassPipeline opt(llvm::PassBuilder::OptimizationLevel::O1);
+            opt.Run(module);
         }
         else if (optLevel == 2)
         {
-            m_llvmOptPipelineO2.Run(module);
+            LLVMOptimizationPassPipeline opt(llvm::PassBuilder::OptimizationLevel::O2);
+            opt.Run(module);
         }
         else if (optLevel == 3)
         {
-            m_llvmOptPipelineO3.Run(module);
+            LLVMOptimizationPassPipeline opt(llvm::PassBuilder::OptimizationLevel::O3);
+            opt.Run(module);
         }
     }
 
