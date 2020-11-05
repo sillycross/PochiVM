@@ -70,9 +70,6 @@ struct LLVMCodegenContext
         : m_llvmContext(nullptr)
         , m_builder(nullptr)
         , m_module(nullptr)
-        , m_llvmOptPipelineO1(llvm::PassBuilder::OptimizationLevel::O1)
-        , m_llvmOptPipelineO2(llvm::PassBuilder::OptimizationLevel::O2)
-        , m_llvmOptPipelineO3(llvm::PassBuilder::OptimizationLevel::O3)
         , m_dummyBlock(nullptr)
         , m_isCursorAtDummyBlock(false)
         , m_curFunction(nullptr)
@@ -134,10 +131,6 @@ struct LLVMCodegenContext
     llvm::LLVMContext* m_llvmContext;
     llvm::IRBuilder<>* m_builder;
     llvm::Module* m_module;
-
-    LLVMOptimizationPassPipeline m_llvmOptPipelineO1;
-    LLVMOptimizationPassPipeline m_llvmOptPipelineO2;
-    LLVMOptimizationPassPipeline m_llvmOptPipelineO3;
 
     // After we codegen a control-flow redirection statement (break/continue/return),
     // we redirect m_builder to m_dummyBlock and set m_isCursorAtDummyBlock to true,
