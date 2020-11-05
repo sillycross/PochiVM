@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pochivm/common.h"
+#include "pochivm/pochivm_function_pointer.h"
 
 class TestSmallClass;
 
@@ -549,3 +550,17 @@ inline const int* TestAddressOfConstPrimitiveRef(const int& v)
 {
     return &v;
 }
+
+struct TestGeneratedFnPtr
+{
+    TestGeneratedFnPtr(uintptr_t ptr)
+        : m_ptr(ptr)
+    { }
+
+    int execute(int a, int b)
+    {
+        return PochiVM::GeneratedFunctionPointer<int(*)(int, int)>(m_ptr)(a, b);
+    }
+
+    uintptr_t m_ptr;
+};

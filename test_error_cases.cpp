@@ -1157,3 +1157,22 @@ TEST(SanityNoError, NoUnreachable_7)
 
     AssertIsExpectedOutput(dump);
 }
+
+TEST(SanityError, AddressOfNonExistentGeneratedFunction)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    using FnPrototype = uintptr_t(*)();
+    auto [fn] = NewFunction<FnPrototype>("BadFn");
+    fn.SetBody(
+        Return(GetGeneratedFunctionPointer("tron"))
+    );
+
+    ReleaseAssert(!thread_pochiVMContext->m_curModule->Validate());
+    ReleaseAssert(thread_errorContext->HasError());
+
+    AssertIsExpectedOutput(thread_errorContext->m_errorMsg);
+}

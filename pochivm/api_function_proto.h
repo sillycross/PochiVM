@@ -487,4 +487,14 @@ inline void NewModule(const std::string& name)
     thread_pochiVMContext->m_curModule = new AstModule(name);
 }
 
+inline Value<uintptr_t> GetGeneratedFunctionPointer(const std::string& fnName)
+{
+    return Value<uintptr_t>(new AstGeneratedFunctionPointerExpr(fnName));
+}
+
+inline Value<uintptr_t> GetGeneratedFunctionPointer(const Function& fn)
+{
+    return Value<uintptr_t>(new AstGeneratedFunctionPointerExpr(fn.GetPtr()->GetName()));
+}
+
 }   // namespace PochiVM

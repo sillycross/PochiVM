@@ -94,5 +94,11 @@ namespace FIStackframeSizeCategoryHelper
         return static_cast<FIStackframeSizeCategory>(r);
     }
 
+    inline uint32_t GetSize(FIStackframeSizeCategory category)
+    {
+        TestAssert(static_cast<int>(category) < x_num_categories);
+        return static_cast<uint32_t>(x_size_list[static_cast<size_t>(category)]);
+    }
+
 }   // namespace FIStackframeSizeCategoryHelper
 }   // namespace PochiVM

@@ -1,0 +1,19 @@
+; ModuleID = 'test'
+source_filename = "test"
+
+declare dso_local i32 @__gxx_personality_v0(...)
+
+; Function Attrs: norecurse nounwind readnone
+define i32 @a_plus_b(i32 %_param_0, i32 %_param_1) #0 personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  %0 = add i32 %_param_1, %_param_0
+  ret i32 %0
+}
+
+; Function Attrs: norecurse nounwind readnone
+define i64 @get_ptr() local_unnamed_addr #0 personality i32 (...)* @__gxx_personality_v0 {
+entry:
+  ret i64 ptrtoint (i32 (i32, i32)* @a_plus_b to i64)
+}
+
+attributes #0 = { norecurse nounwind readnone }

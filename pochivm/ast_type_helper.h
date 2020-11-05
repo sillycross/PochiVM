@@ -1201,7 +1201,7 @@ struct fastinterp_call_cpp_fn_helper
             }
             catch (...)
             {
-                TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+                TestAssert(!thread_pochiVMFastInterpOutstandingExceptionPtr);
 
                 // From cppreference on std::current_exception():
                 //     If the implementation of this function requires a call to new and the call fails,
@@ -1209,8 +1209,8 @@ struct fastinterp_call_cpp_fn_helper
                 //
                 // No, we don't care about such corner case. Everyone knows C++ exception is broken.
                 //
-                thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = std::current_exception();
-                TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+                thread_pochiVMFastInterpOutstandingExceptionPtr = std::current_exception();
+                TestAssert(thread_pochiVMFastInterpOutstandingExceptionPtr);
                 return FIReturnValueHelper::GetForExn<R>();
             }
         }

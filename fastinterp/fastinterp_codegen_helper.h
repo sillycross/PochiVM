@@ -262,6 +262,7 @@ public:
         m_functionEntryPoint.clear();
         m_allBoilerplateInstances.clear();
         m_boilerplateFnEntryPointPlaceholders.clear();
+        m_fastInterpFnPtrFixList.clear();
         m_boilerplateAlloc.Reset();
 #ifdef TESTBUILD
         m_materialized = false;
@@ -302,6 +303,11 @@ public:
         }
     }
 
+    void AppendFnPtrFixList(AstFunction* fn, FastInterpBoilerplateInstance* inst)
+    {
+        m_fastInterpFnPtrFixList.push_back(std::make_pair(fn, inst));
+    }
+
     // Materialize the generated program. All placeholders must have been populated.
     // If anything failed, return nullptr.
     // After calling this function, this class no longer needs to exist.
@@ -311,6 +317,7 @@ public:
 private:
     static void InvalidateInstructionCache(const void* addr, size_t len);
 
+    std::vector<std::pair<AstFunction*, FastInterpBoilerplateInstance*>> m_fastInterpFnPtrFixList;
     std::unordered_map<AstFunction*, std::pair<FastInterpBoilerplateInstance*, FastInterpBoilerplateInstance*> > m_functionEntryPoint;
     std::vector<FastInterpBoilerplateInstance*> m_allBoilerplateInstances;
     std::vector<std::pair<FastInterpBoilerplateInstance*, std::pair<AstFunction*, uint32_t>>> m_boilerplateFnEntryPointPlaceholders;

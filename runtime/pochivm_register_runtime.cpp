@@ -253,6 +253,9 @@ static void RegisterRuntimeLibrary()
     RegisterConstructor<MiniDbBackend::QueryExecutionTempAllocator>();
     RegisterMemberFn<&MiniDbBackend::QueryExecutionTempAllocator::Allocate>();
     RegisterMemberFn<&MiniDbBackend::QueryExecutionTempAllocator::Reset>();
+
+    RegisterConstructor<TestGeneratedFnPtr, uintptr_t>();
+    RegisterMemberFn<&TestGeneratedFnPtr::execute>();
 }
 
 // DO NOT MODIFY

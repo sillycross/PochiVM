@@ -5,6 +5,7 @@
 #include "error_context.h"
 #include "bitcode_data.h"
 #include "fastinterp/fastinterp_tpl_return_type.h"
+#include "pochivm_function_pointer.h"
 
 #include "generated/pochivm_runtime_cpp_typeinfo.generated.h"
 
@@ -327,130 +328,6 @@ private:
     bool m_isNoExcept;
     uint32_t m_fastInterpStackFrameSize;
     void* m_fastInterpCppEntryPoint;
-};
-
-template<typename T>
-class FastInterpFunction
-{
-    static_assert(sizeof(T) == 0, "T must be a C function pointer");
-};
-
-template<typename R, typename... Args>
-class FastInterpFunction<R(*)(Args...) noexcept>
-{
-public:
-    FastInterpFunction() : m_fnPtr(nullptr) {}
-    FastInterpFunction(void* fnPtr, uint32_t stackframeSize)
-        : m_fnPtr(fnPtr), m_stackframeSize(stackframeSize)
-    { }
-
-    explicit operator bool() const { return m_fnPtr != nullptr; }
-
-    operator std::function<R(Args...)>() const
-    {
-        return [*this](Args... args) -> R
-        {
-            return (*this)(args...);
-        };
-    }
-
-    R operator()(Args... args) const noexcept
-    {
-        TestAssert(m_fnPtr != nullptr);
-        uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
-        PopulateParams(sf + 8, args...);
-        return reinterpret_cast<R(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
-    }
-
-private:
-    static void PopulateParams(uintptr_t /*sf*/) noexcept { }
-
-    template<typename T, typename... TArgs>
-    static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
-    {
-        *reinterpret_cast<T*>(sf) = arg;
-        PopulateParams(sf + 8, more...);
-    }
-
-    void* m_fnPtr;
-    uint32_t m_stackframeSize;
-};
-
-template<typename R, typename... Args>
-class FastInterpFunction<R(*)(Args...)>
-{
-public:
-    FastInterpFunction() : m_fnPtr(nullptr) {}
-    FastInterpFunction(void* fnPtr, uint32_t stackframeSize, bool isNoExcept)
-        : m_fnPtr(fnPtr), m_stackframeSize(stackframeSize), m_isNoExcept(isNoExcept)
-    { }
-
-    explicit operator bool() const { return m_fnPtr != nullptr; }
-
-    operator std::function<R(Args...)>() const
-    {
-        return [*this](Args... args) -> R
-        {
-            return (*this)(args...);
-        };
-    }
-
-    R operator()(Args... args) const
-    {
-        TestAssert(m_fnPtr != nullptr);
-        uintptr_t sf = reinterpret_cast<uintptr_t>(alloca(m_stackframeSize));
-        PopulateParams(sf + 8, args...);
-        if (m_isNoExcept)
-        {
-            return reinterpret_cast<R(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
-        }
-        else
-        {
-            TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
-            Auto(TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr));
-
-            using RetOrExn = FIReturnType<R, false /*isNoExcept*/>;
-            RetOrExn r = reinterpret_cast<RetOrExn(*)(uintptr_t) noexcept>(m_fnPtr)(sf);
-            if (unlikely(FIReturnValueHelper::HasException<R>(r)))
-            {
-                // Stupid: std::exception_ptr is a shared-ownership smart pointer.
-                // We have to manually null it so the exception won't leak.
-                // However, std::rethrow_exception will NOT null the pointer.
-                // So we have to copy the pointer to a local variable, then null the global-variable pointer,
-                // then call std::rethrow_exception. Now when the local variable goes out of scope,
-                // the refcount is properly decremented..
-                //
-                TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
-                std::exception_ptr eptr = thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr;
-                thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = nullptr;
-                // The 'eptr' is a local var, and after rethrow_exception,
-                // it goes out of scope so the exception refcount is decremented.
-                //
-                std::rethrow_exception(eptr);
-            }
-            else
-            {
-                if constexpr(!std::is_same<R, void>::value)
-                {
-                    return FIReturnValueHelper::GetReturnValue<R, false /*isNoExcept*/>(r);
-                }
-            }
-        }
-    }
-
-private:
-    static void PopulateParams(uintptr_t /*sf*/) noexcept { }
-
-    template<typename T, typename... TArgs>
-    static void PopulateParams(uintptr_t sf, T arg, TArgs... more) noexcept
-    {
-        *reinterpret_cast<T*>(sf) = arg;
-        PopulateParams(sf + 8, more...);
-    }
-
-    void* m_fnPtr;
-    uint32_t m_stackframeSize;
-    bool m_isNoExcept;
 };
 
 namespace internal
@@ -786,7 +663,11 @@ private:
     // This is required to make tests happy (so IR dump output is deterministic).
     // The perf hit should be small. TODO: consider use std::unordered_map in release?
     //
+#ifdef TESTBUILD
     std::map<std::string, AstFunction*> m_functions;
+#else
+    std::unordered_map<std::string, AstFunction*> m_functions;
+#endif
     llvm::LLVMContext* m_llvmContext;
     llvm::Module* m_llvmModule;
 #ifdef TESTBUILD
@@ -796,6 +677,44 @@ private:
     bool m_irEmitted;
     bool m_irOptimized;
 #endif
+};
+
+// A function pointer to a generated function invocable from C++ code
+// This operator gives an opaque uintptr_t value.
+// From the C++ code one can write 'GeneratedFunctionPointer<FnPrototype>(value)(args...)'
+// to invoke the generated function
+//
+class AstGeneratedFunctionPointerExpr : public AstNodeBase
+{
+public:
+    AstGeneratedFunctionPointerExpr(const std::string& fnName)
+        : AstNodeBase(AstNodeType::AstGeneratedFunctionPointerExpr, TypeId::Get<uintptr_t>())
+        , m_fnName(fnName)
+    { }
+
+    void InterpImpl(uintptr_t* result)
+    {
+        *result = m_debugInterpResult;
+    }
+
+    virtual void SetupDebugInterpImpl() override
+    {
+        m_callTarget = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+        m_debugInterpResult = GeneratedFunctionPointerImpl::GetControlValueForDebugInterpFn(m_callTarget);
+        m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstGeneratedFunctionPointerExpr::InterpImpl);
+    }
+
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override {}
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override { }
+
+    const std::string& GetFnName() { return m_fnName; }
+
+private:
+    std::string m_fnName;
+    AstFunction* m_callTarget;
+    uintptr_t m_debugInterpResult;
 };
 
 // Call a generated function
@@ -1490,6 +1409,21 @@ inline bool WARN_UNUSED AstFunction::Validate()
             if (!c->ValidateSignature())
             {
                 assert(thread_errorContext->HasError());
+                success = false;
+                return;
+            }
+        }
+
+        if (nodeType == AstNodeType::AstGeneratedFunctionPointerExpr)
+        {
+            // Check the function exists
+            //
+            AstGeneratedFunctionPointerExpr* c = assert_cast<AstGeneratedFunctionPointerExpr*>(cur);
+            const std::string& fnName = c->GetFnName();
+            if (thread_pochiVMContext->m_curModule->GetAstFunction(fnName) == nullptr)
+            {
+                REPORT_ERR("Function %s: Attempted to take generated function address of non-existent function %s",
+                           m_name.c_str(), fnName.c_str());
                 success = false;
                 return;
             }

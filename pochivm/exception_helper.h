@@ -107,15 +107,15 @@ struct fastinterp_throw_helper
 {
     static void impl(T* exnAddr) noexcept
     {
-        TestAssert(!thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+        TestAssert(!thread_pochiVMFastInterpOutstandingExceptionPtr);
         try
         {
             throw *exnAddr;
         }
         catch(...)
         {
-            thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr = std::current_exception();
-            TestAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+            thread_pochiVMFastInterpOutstandingExceptionPtr = std::current_exception();
+            TestAssert(thread_pochiVMFastInterpOutstandingExceptionPtr);
         }
     }
 

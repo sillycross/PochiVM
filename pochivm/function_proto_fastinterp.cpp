@@ -598,4 +598,38 @@ void AstModule::PrepareForFastInterp()
     }
 }
 
+FastInterpSnippet WARN_UNUSED AstGeneratedFunctionPointerExpr::PrepareForFastInterp(FISpillLocation spillLoc)
+{
+    FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+    FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+    if (!spillLoc.IsNoSpill())
+    {
+        numOIP = FIOpaqueParamsHelper::GetMaxOIP();
+        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+    }
+    else if (GetTypeId().IsFloatingPoint())
+    {
+        numOIP = FIOpaqueParamsHelper::GetMaxOIP();
+    }
+    else
+    {
+        numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+    }
+
+    FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                FastInterpBoilerplateLibrary<FILiteralMcMediumImpl>::SelectBoilerplateBluePrint(
+                    GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                    false /*isAllBitsZero*/,
+                    !spillLoc.IsNoSpill(),
+                    numOIP,
+                    numOFP));
+    spillLoc.PopulatePlaceholderIfSpill(inst, 0);
+
+    AstFunction* target = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+    TestAssert(target != nullptr);
+
+    thread_pochiVMContext->m_fastInterpEngine->AppendFnPtrFixList(target, inst);
+    return FastInterpSnippet { inst, inst };
+}
+
 }   // namespace PochiVM

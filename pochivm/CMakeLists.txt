@@ -20,6 +20,7 @@ add_library(pochivm
   cast_expr_fastinterp.cpp
   scoped_variable_manager_fastinterp.cpp
   ast_catch_throw_fastinterp.cpp
+  pochivm_function_pointer.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

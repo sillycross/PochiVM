@@ -608,4 +608,13 @@ Value* WARN_UNUSED AstReturnStmt::EmitIRImpl()
     return nullptr;
 }
 
+Value* WARN_UNUSED AstGeneratedFunctionPointerExpr::EmitIRImpl()
+{
+    AstFunction* target = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
+    TestAssert(target != nullptr);
+    Function* callee = target->GetGeneratedPrototype();
+    TestAssert(callee != nullptr);
+    return thread_llvmContext->m_builder->CreateBitOrPointerCast(callee, AstTypeHelper::llvm_type_of(TypeId::Get<uintptr_t>()));
+}
+
 }   // namespace PochiVM

@@ -48,13 +48,13 @@ struct PochiVMContext
     FastInterpCodegenEngine* m_fastInterpEngine;
     std::vector<std::pair<AstFunction*, AstCallExpr*>> m_fastInterpFnCallFixList;
     FastInterpGeneratedProgram* m_fastInterpGeneratedProgram;
-    std::exception_ptr m_fastInterpOutstandingExceptionPtr;
 
     // Current module
     //
     AstModule* m_curModule;
 };
 
+extern thread_local std::exception_ptr thread_pochiVMFastInterpOutstandingExceptionPtr;
 inline thread_local PochiVMContext* thread_pochiVMContext = nullptr;
 
 class AutoThreadPochiVMContext

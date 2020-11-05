@@ -159,6 +159,7 @@ add_executable(main
   test_paper_microbenchmarks.cpp
   test_sanity_pointer_arithmetic.cpp
   test_mini_db_backend_unit_test.cpp
+  test_generated_function_pointer.cpp
 )
 
 # Important to link runtime using '--whole-archive'

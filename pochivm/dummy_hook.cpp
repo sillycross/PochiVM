@@ -1,4 +1,5 @@
 #include "common.h"
+#include "pochivm_context.h"
 
 namespace PochiVM
 {
@@ -16,4 +17,8 @@ void NO_RETURN __pochivm_report_info__(ReflectionHelper::RawFnTypeNamesInfo*)
     ReleaseAssert(false);
 }
 
-}
+// Defintion for 'thread_pochiVMFastInterpOutstandingExceptionPtr'
+//
+thread_local std::exception_ptr thread_pochiVMFastInterpOutstandingExceptionPtr;
+
+}   // namespace PochiVM

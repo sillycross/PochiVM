@@ -2,6 +2,7 @@
 
 #include "fastinterp_codegen_helper.h"
 #include "pochivm/function_proto.h"
+#include "pochivm/pochivm_function_pointer.h"
 
 namespace PochiVM
 {
@@ -143,10 +144,6 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
     );
 
     uintptr_t baseAddress = reinterpret_cast<uintptr_t>(mmapResult);
-    for (FastInterpBoilerplateInstance* instance : m_allBoilerplateInstances)
-    {
-        instance->Materialize(baseAddress);
-    }
 
     std::unordered_map<AstFunction*, void*> entryPointMap;
     for (auto it = m_functionEntryPoint.begin(); it != m_functionEntryPoint.end(); it++)
@@ -154,6 +151,31 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
         TestAssert(!entryPointMap.count(it->first));
         entryPointMap[it->first] = reinterpret_cast<void*>(
                     baseAddress + static_cast<uint64_t>(static_cast<int64_t>(it->second.second->m_relativeCodeAddr)));
+    }
+
+    // Only now we know the true baseAddress, we can compute the values for function pointers.
+    // Populate these placeholders.
+    //
+    for (auto iter = m_fastInterpFnPtrFixList.begin();
+         iter != m_fastInterpFnPtrFixList.end(); iter++)
+    {
+        AstFunction* fn = iter->first;
+        // This 'inst' is always a FILiteralMcMediumImpl, so we should write to placeholder 1
+        //
+        FastInterpBoilerplateInstance* inst = iter->second;
+
+        TestAssert(entryPointMap.count(fn));
+        void* addr = entryPointMap.find(fn)->second;
+
+        uint64_t controlValue = GeneratedFunctionPointerImpl::GetControlValueForFastInterpFn(fn, reinterpret_cast<uint64_t>(addr));
+        inst->PopulateConstantPlaceholder<uint64_t>(1, controlValue);
+    }
+
+    // Now all the placeholders are populated, materialize everything.
+    //
+    for (FastInterpBoilerplateInstance* instance : m_allBoilerplateInstances)
+    {
+        instance->Materialize(baseAddress);
     }
 
     // TODO: consider only do this in test build

@@ -8,7 +8,7 @@ namespace PochiVM
 
 static void NO_RETURN fastinterp_unexpected_exception_call_terminate(uintptr_t stackframe) noexcept
 {
-    ReleaseAssert(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+    ReleaseAssert(thread_pochiVMFastInterpOutstandingExceptionPtr);
     fprintf(stderr, "[FASTINTERP RUNTIME] A C++ Exception escaped from a generated function that is marked noexcept!\n"
             "According to C++ standard, we are calling std::terminate(). The offending function's stack frame is at 0x%llx.\n",
             static_cast<unsigned long long>(stackframe));
@@ -19,7 +19,7 @@ static void NO_RETURN fastinterp_unexpected_exception_call_terminate(uintptr_t s
     // what exception is being thrown out, something similar to
     //     'terminate called after throwing an instance of 'std::bad_function_call'
     //
-    std::rethrow_exception(thread_pochiVMContext->m_fastInterpOutstandingExceptionPtr);
+    std::rethrow_exception(thread_pochiVMFastInterpOutstandingExceptionPtr);
 }
 
 FastInterpSnippet WARN_UNUSED ScopedVariableManager::FIGenerateDestructorSequenceUntilScope(AstNodeBase* boundaryScope)
