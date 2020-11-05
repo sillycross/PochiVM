@@ -81,7 +81,7 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectModImpl, AstArithmeticExpr, ModImpl, AstTypeHelper::is_primitive_int_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         if (m_op == AstArithmeticExprType::ADD) {
             m_debugInterpFn = SelectAddImpl(m_lhs->GetTypeId());
@@ -103,16 +103,16 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_lhs);
         fn(m_rhs);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     enum FIShape : int16_t
     {
@@ -222,7 +222,7 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectLEqImpl, AstComparisonExpr, LEqImpl, AstTypeHelper::is_primitive_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         if (m_op == AstComparisonExprType::EQUAL)
         {
@@ -254,16 +254,16 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_lhs);
         fn(m_rhs);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     enum FIShape : int16_t
     {

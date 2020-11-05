@@ -21,7 +21,7 @@ public:
         TestAssert(!GetTypeId().IsCppClassType() && !GetTypeId().IsVoid());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     template<typename T>
     void InterpImpl(T* out)
@@ -33,19 +33,19 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstDereferenceExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
 
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     AstNodeBase* GetOperand() const
     {
@@ -76,14 +76,14 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstLiteralExpr, InterpImpl, AstTypeHelper::primitive_or_pointer_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     bool IsAllBitsZero() const
     {
@@ -106,8 +106,8 @@ public:
         }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final { }
 
     uint64_t GetAsU64()
     {
@@ -195,18 +195,18 @@ public:
         m_fastInterpStackOffset = offset;
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstExceptionAddressPlaceholder::DebugInterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override final;
 
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual void FastInterpSetupSpillLocation() override final { }
 
 private:
     llvm::Value* m_llvmValue;
@@ -249,21 +249,21 @@ public:
 
     AstNodeBase* GetDst() const { return m_dst; }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(m_src->GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_src);
         fn(m_dst);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
 private:
 
@@ -317,21 +317,21 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstPointerArithmeticExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(m_base->GetTypeId(), m_index->GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_base);
         fn(m_index);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     AstNodeBase* m_base;
     AstNodeBase* m_index;
@@ -350,24 +350,24 @@ public:
         TestAssert(typeId.IsPointerType());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         TestAssert(false && "unimplemented");
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override final
     {
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void FastInterpSetupSpillLocation() override
+    virtual void FastInterpSetupSpillLocation() override final
     {
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 };
 
 // A TRASH pointer known at codegen time
@@ -394,24 +394,24 @@ public:
         TestAssert(typeId.IsPointerType());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         TestAssert(false && "unimplemented");
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override final
     {
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void FastInterpSetupSpillLocation() override
+    virtual void FastInterpSetupSpillLocation() override final
     {
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 };
 
 // Converts a rvalue to a temporary reference, so it matches the expectation of a C++ function
@@ -427,7 +427,7 @@ public:
         TestAssert(operand->GetTypeId().IsPrimitiveType() || operand->GetTypeId().IsPointerType());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     template<typename T>
     void InterpImpl(T** out)
@@ -439,19 +439,19 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstRvalueToConstPrimitiveRefExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
 
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual void FastInterpSetupSpillLocation() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation /*spillLoc*/) override final
     {
         // This AstNode is only used to handle C++ const primitive reference parameter.
         // The call expression will directly check m_operand, so execution should never reach here

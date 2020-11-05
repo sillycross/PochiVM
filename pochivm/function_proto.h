@@ -697,17 +697,17 @@ public:
         *result = m_debugInterpResult;
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_callTarget = thread_pochiVMContext->m_curModule->GetAstFunction(m_fnName);
         m_debugInterpResult = GeneratedFunctionPointerImpl::GetControlValueForDebugInterpFn(m_callTarget);
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstGeneratedFunctionPointerExpr::InterpImpl);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override {}
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final {}
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final { }
 
     const std::string& GetFnName() { return m_fnName; }
 
@@ -760,7 +760,7 @@ public:
 #endif
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImplGeneratedFunction(void* out)
     {
@@ -859,7 +859,7 @@ public:
         m_fastInterpSretVar = variable;
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         if (!m_isCppFunction)
         {
@@ -879,7 +879,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         for (auto it = m_params.begin(); it != m_params.end(); it++)
         {
@@ -887,8 +887,8 @@ public:
         }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     void FastInterpFixStackFrameSize(AstFunction* target);
 
@@ -955,7 +955,7 @@ public:
                       m_callExpr->GetParams()[0] == m_variable);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(void* /*out*/)
     {
@@ -993,20 +993,20 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         if (m_assignExpr != nullptr) { fn(m_assignExpr); }
         if (m_callExpr != nullptr) { fn(m_callExpr); }
         fn(m_variable);
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     // An assign statement for primitive type variable initialization.
     //
@@ -1029,7 +1029,7 @@ public:
                       m_retVal->GetTypeId().IsPrimitiveType() || m_retVal->GetTypeId().IsPointerType());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     template<typename T>
     void InterpImpl(InterpControlSignal* out)
@@ -1047,7 +1047,7 @@ public:
         *out = InterpControlSignal::Return;
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         if (m_retVal == nullptr)
         {
@@ -1059,7 +1059,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         if (m_retVal != nullptr)
         {
@@ -1067,8 +1067,8 @@ public:
         }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     AstNodeBase* m_retVal;
 };

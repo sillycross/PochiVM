@@ -29,7 +29,7 @@ public:
         TestAssert(!GetTypeId().IsCppClassType() && !GetTypeId().IsVoid());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     template<typename T>
     void InterpImpl(T* out)
@@ -44,18 +44,18 @@ public:
                               InterpImpl,
                               AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
 
-    virtual FastInterpSnippet PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual FastInterpSnippet PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final { }
 
     AstVariable* GetOperand() const
     {
@@ -102,12 +102,12 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBlock::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -115,10 +115,10 @@ public:
         }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void Append(AstNodeBase* stmt)
     {
@@ -158,7 +158,7 @@ public:
         return m_contents.size() == 0;
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(InterpControlSignal* ics)
     {
@@ -174,12 +174,12 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstScope::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -187,7 +187,7 @@ public:
         }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
     void FastInterpSetupSpillLocation() override;
 
     void Append(AstNodeBase* stmt)
@@ -225,7 +225,7 @@ public:
     AstScope* GetThenClause() const { return m_thenClause; }
     AstScope* GetElseClause() const { return m_elseClause; }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(InterpControlSignal* ics)
     {
@@ -242,12 +242,12 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstIfStatement::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         // The order is important: reachability analysis relies on this order
         //
@@ -256,8 +256,8 @@ public:
         if (m_elseClause != nullptr) { fn(m_elseClause); }
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
 private:
     AstNodeBase* m_condClause;
@@ -278,7 +278,7 @@ public:
         TestAssert(m_condClause->GetTypeId().IsBool());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(InterpControlSignal* ics)
     {
@@ -320,19 +320,19 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstWhileLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_condClause);
         fn(m_body);
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
 private:
     AstNodeBase* m_condClause;
@@ -357,7 +357,7 @@ public:
         TestAssert(m_condClause->GetTypeId().IsBool());
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(InterpControlSignal* ics)
     {
@@ -411,12 +411,12 @@ public:
         }
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstForLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         // The order is important: reachability analysis relies on this order
         //
@@ -426,8 +426,8 @@ public:
         fn(m_stepClause);
     }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
@@ -450,7 +450,7 @@ public:
         , m_isBreak(isBreak)
     { }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     void InterpImpl(InterpControlSignal* ics)
     {
@@ -467,15 +467,15 @@ public:
 
     bool IsBreakStatement() const { return m_isBreak; }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBreakOrContinueStmt::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final { }
 
 private:
     // whether it is a break statement or a continue statement

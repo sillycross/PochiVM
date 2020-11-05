@@ -43,7 +43,7 @@ public:
         m_rhs->DebugInterp(out);
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         if (m_isAnd)
         {
@@ -55,16 +55,16 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_lhs);
         fn(m_rhs);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     // whether this operator is '&&' or '||'
     //
@@ -93,20 +93,20 @@ public:
         *out = !*out;
     }
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstLogicalNotExpr::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_op);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     AstFiLogicalOpPrediction m_fiPrediction;
     AstNodeBase* m_op;

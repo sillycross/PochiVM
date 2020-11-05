@@ -20,7 +20,7 @@ public:
         return true;
     }
 
-    virtual void EmitDestructorIR() override
+    virtual void EmitDestructorIR() override final
     {
         Function* callee = thread_llvmContext->m_module->getFunction("__cxa_free_exception");
         TestAssert(callee != nullptr);

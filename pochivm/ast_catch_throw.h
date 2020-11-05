@@ -67,9 +67,9 @@ public:
                       GetDestructorMetadata(m_exceptionTypeId) != nullptr);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
@@ -138,14 +138,14 @@ public:
         }
     };
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = select_impl_based_on_exception_type<select_impl_helper>::get(m_exceptionTypeId);
         TestAssert(m_debugInterpFn != nullptr);
     }
 
-    virtual void FastInterpSetupSpillLocation() override;
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override final;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
 
     AstNodeBase* m_operand;
     TypeId m_exceptionTypeId;

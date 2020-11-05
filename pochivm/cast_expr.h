@@ -66,20 +66,20 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstStaticCastExpr, InterpImpl, AstTypeHelper::not_cpp_class_or_void_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void FastInterpSetupSpillLocation() override;
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override final;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
 
 private:
     AstNodeBase* m_operand;
@@ -107,20 +107,20 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstReinterpretCastExpr, InterpImpl, AstTypeHelper::pointer_or_uint64_type)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
     {
         fn(m_operand);
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void FastInterpSetupSpillLocation() override;
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
+    virtual void FastInterpSetupSpillLocation() override final;
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
 
 private:
     AstNodeBase* m_operand;

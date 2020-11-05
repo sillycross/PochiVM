@@ -36,12 +36,12 @@ public:
         m_varname = newName;
     }
 
-    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override;
+    virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
     // Emit the LLVM IR code that calls the destructor for this variable
     // May only be called if the variable is a CPP class type
     //
-    virtual void EmitDestructorIR() override;
+    virtual void EmitDestructorIR() override final;
 
     // TODO: as an optimization, we can check for C++ types with trivial destructor
     //
@@ -58,15 +58,15 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstVariable, InterpImpl, std::is_pointer)
 
-    virtual void SetupDebugInterpImpl() override
+    virtual void SetupDebugInterpImpl() override final
     {
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
 
-    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override;
-    virtual void FastInterpSetupSpillLocation() override { }
+    virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
+    virtual void FastInterpSetupSpillLocation() override final { }
 
     // The snippet may only be executed when operand stack is empty
     //
