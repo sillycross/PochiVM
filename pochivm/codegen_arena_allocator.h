@@ -7,6 +7,8 @@
 namespace PochiVM
 {
 
+inline GlobalCodegenMemoryPool g_codegenMemoryPool;
+
 class TempArenaAllocator
 {
 public:

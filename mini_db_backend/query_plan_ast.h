@@ -91,6 +91,7 @@ public:
     { }
 
     virtual PochiVM::ValueVT WARN_UNUSED Codegen() override final;
+    PochiVM::ReferenceVT WARN_UNUSED CodegenForWrite();
 
     SqlRow* m_owner;
     size_t m_offset;
@@ -233,6 +234,9 @@ public:
         TestAssert(ordinal < m_updateExprs.size() && m_updateExprs[ordinal] == nullptr);
         m_updateExprs[ordinal] = value;
     }
+
+    PochiVM::Block WARN_UNUSED EmitInit();
+    PochiVM::Block WARN_UNUSED EmitUpdate();
 
 private:
     std::vector<SqlValueBase*> m_initialValues;
@@ -392,6 +396,18 @@ public:
     PochiVM::Variable<std::vector<uintptr_t>>* m_var;
 };
 
+class AggregatedRowContainer : public SqlRowContainer
+{
+public:
+    AggregatedRowContainer(SqlAggregationRow* row) : m_var(nullptr), m_row(row) { }
+
+    virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
+    virtual PochiVM::VariableVT WARN_UNUSED GetVariable() override final;
+
+    PochiVM::Variable<uintptr_t>* m_var;
+    SqlAggregationRow* m_row;
+};
+
 // A piece of logic which creates a stream of SQL rows from some source
 //
 class QueryPlanRowGenerator
@@ -426,19 +442,22 @@ public:
     virtual void Codegen(PochiVM::Scope insertPoint) = 0;
 };
 
+class QueryPlanPipelineStageBase
+{
+public:
+    virtual ~QueryPlanPipelineStageBase() { }
+    virtual PochiVM::Scope WARN_UNUSED Codegen() = 0;
+};
+
 // A function executing a single stage of query plan
 // It takes two or more parameters, which is the input container and output container,
 // and optionally a list of other context variables used
 //
-class QueryPlanPipelineStage
+class QueryPlanPipelineStage : public QueryPlanPipelineStageBase
 {
 public:
-    // Emits the function, and returns the block that calls the function
-    //
-    PochiVM::Scope WARN_UNUSED Codegen();
+    virtual PochiVM::Scope WARN_UNUSED Codegen() override final;
 
-    std::string m_name;
-    std::vector<SqlRowContainer*> m_neededContainers;
     std::vector<SqlRow*> m_neededRows;
     QueryPlanRowGenerator* m_generator;
     std::vector<QueryPlanRowProcessor*> m_processor;
@@ -454,6 +473,15 @@ public:
     SqlRow* m_dst;
 };
 
+class AggregationRowGenerator : public QueryPlanRowGenerator
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+
+    AggregatedRowContainer* m_src;
+    SqlRow* m_dst;
+};
+
 class TempTableRowOutputter : public QueryPlanRowOutputter
 {
 public:
@@ -461,6 +489,15 @@ public:
 
     SqlRow* m_src;
     SqlTableContainer* m_dst;
+};
+
+class AggregationOutputter : public QueryPlanRowOutputter
+{
+public:
+    virtual void Codegen(PochiVM::Scope insertPoint) override final;
+
+    SqlAggregationRow* m_row;
+    AggregatedRowContainer* m_container;
 };
 
 class SqlResultOutputter : public QueryPlanRowOutputter

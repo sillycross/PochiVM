@@ -28,6 +28,13 @@ inline ValueVT WARN_UNUSED SqlField::Codegen()
     }
 }
 
+inline ReferenceVT WARN_UNUSED SqlField::CodegenForWrite()
+{
+    TestAssertImp(m_owner->GetRowType() == SqlRowType::TABLE_ROW, !GetType().IsPointerType());
+    Variable<uintptr_t>& var = m_owner->GetAddress();
+    return *ReinterpretCast(GetType().AddPointer(), var + Literal<size_t>(m_offset));
+}
+
 inline ValueVT WARN_UNUSED SqlLiteral::Codegen()
 {
     return Literal(GetType(), m_value);
@@ -71,6 +78,30 @@ inline ValueVT WARN_UNUSED SqlCountAggregator::Codegen()
     ValueVT oldValue = m_oldAggregatedValue->Codegen();
     uint64_t v = 1;
     return CreateArithmeticExpr(oldValue, Literal(GetType(), &v), AstArithmeticExprType::ADD);
+}
+
+inline Block WARN_UNUSED SqlAggregationRow::EmitInit()
+{
+    Block result;
+    size_t len = m_fields.size();
+    TestAssert(len == m_initialValues.size());
+    for (size_t i = 0; i < len; i++)
+    {
+        result.Append(Assign(m_fields[i]->CodegenForWrite(), m_initialValues[i]->Codegen()));
+    }
+    return result;
+}
+
+inline Block WARN_UNUSED SqlAggregationRow::EmitUpdate()
+{
+    Block result;
+    size_t len = m_fields.size();
+    TestAssert(len == m_updateExprs.size());
+    for (size_t i = 0; i < len; i++)
+    {
+        result.Append(Assign(m_fields[i]->CodegenForWrite(), m_updateExprs[i]->Codegen()));
+    }
+    return result;
 }
 
 inline Block WARN_UNUSED SqlTableContainer::EmitDeclaration()
@@ -123,6 +154,29 @@ inline Block WARN_UNUSED TempTableContainer::EmitDeclaration()
     return Block(Declare(*m_var));
 }
 
+inline VariableVT WARN_UNUSED AggregatedRowContainer::GetVariable()
+{
+    TestAssert(m_var != nullptr);
+    return VariableVT(m_var->__pochivm_var_ptr);
+}
+
+inline Block WARN_UNUSED AggregatedRowContainer::EmitDeclaration()
+{
+    auto alloc = thread_queryCodegenContext.m_curFunction->NewVariable<QueryExecutionTempAllocator>();
+    m_var = new Variable<uintptr_t>(thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t>());
+    TestAssert(!thread_queryCodegenContext.m_rowMap.count(m_row));
+    thread_queryCodegenContext.m_rowMap[m_row] = m_var;
+
+    Block result = Block(
+        Declare(alloc),
+        Declare(*m_var, alloc.Allocate(Literal<size_t>(m_row->GetRowSize()))),
+        m_row->EmitInit()
+    );
+
+    thread_queryCodegenContext.m_rowMap.erase(thread_queryCodegenContext.m_rowMap.find(m_row));
+    return result;
+}
+
 inline VariableVT WARN_UNUSED TempTableContainer::GetVariable()
 {
     TestAssert(m_var != nullptr);
@@ -171,11 +225,25 @@ inline Scope WARN_UNUSED SqlTableRowGenerator::Codegen(Scope insertPoint)
     return ret;
 }
 
+inline Scope WARN_UNUSED AggregationRowGenerator::Codegen(Scope insertPoint)
+{
+    Variable<uintptr_t>* v = new Variable<uintptr_t>(thread_queryCodegenContext.GetContainer(m_src));
+    thread_queryCodegenContext.m_rowMap[m_dst] = v;
+    return insertPoint;
+}
+
 inline void TempTableRowOutputter::Codegen(Scope insertPoint)
 {
     Variable<std::vector<uintptr_t>> v(thread_queryCodegenContext.GetContainer(m_dst));
     Variable<uintptr_t>& row = thread_queryCodegenContext.GetRow(m_src);
     insertPoint.Append(v.push_back(row));
+}
+
+inline void AggregationOutputter::Codegen(Scope insertPoint)
+{
+    Variable<uintptr_t>* v = new Variable<uintptr_t>(thread_queryCodegenContext.GetContainer(m_container));
+    thread_queryCodegenContext.m_rowMap[m_row] = v;
+    insertPoint.Append(m_row->EmitUpdate());
 }
 
 inline void SqlResultOutputter::Codegen(Scope insertPoint)

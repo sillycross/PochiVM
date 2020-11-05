@@ -52,8 +52,6 @@ TEST(MiniDbBackendUnitTest, SimpleSelect)
     outputter->m_projections.push_back(tableRow->GetSqlField(&TestTable1Row::a));
 
     auto stage = new QueryPlanPipelineStage();
-    stage->m_name = "select1";
-    stage->m_neededContainers.push_back(table_src);
     stage->m_generator = generator;
     stage->m_processor.push_back(row_processor);
     stage->m_outputter = outputter;
@@ -73,6 +71,137 @@ TEST(MiniDbBackendUnitTest, SimpleSelect)
         "| 3 | 4 | 3 |\n"
         "| 4 | 3 | 4 |\n"
         "| 2 | 1 | 2 |\n";
+
+    using FnPrototype = void(*)(SqlResultPrinter*);
+    {
+        auto interpFn = thread_pochiVMContext->m_curModule->
+                               GetDebugInterpGeneratedFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        interpFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    {
+        FastInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+                               GetFastInterpGeneratedFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        interpFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+
+    SimpleJIT jit;
+    jit.SetAllowResolveSymbolInHostProcess(true);
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+
+    {
+        FnPrototype jitFn = jit.GetFunction<FnPrototype>("execute_query");
+        SqlResultPrinter result;
+        jitFn(&result);
+        ReleaseAssert(expectedResult == result.m_start);
+    }
+}
+
+TEST(MiniDbBackend, TpchQuery6)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    TpchLoadDatabase();
+
+    auto tableRow = x_tpchtable_lineitem.GetTableRow();
+    auto where_clause1_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_shipdate);
+    auto where_clause1_rhs = new SqlLiteral(static_cast<uint32_t>(757411200));
+    auto where_clause1_result = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL, where_clause1_lhs, where_clause1_rhs);
+
+    auto where_clause2_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_shipdate);
+    auto where_clause2_rhs = new SqlLiteral(static_cast<uint32_t>(788947200));
+    auto where_clause2_result = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN, where_clause2_lhs, where_clause2_rhs);
+
+    auto where_clause3_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_discount);
+    auto where_clause3_rhs = new SqlLiteral(static_cast<double>(0.05));
+    auto where_clause3_result = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL, where_clause3_lhs, where_clause3_rhs);
+
+    auto where_clause4_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_discount);
+    auto where_clause4_rhs = new SqlLiteral(static_cast<double>(0.07));
+    auto where_clause4_result = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL, where_clause4_lhs, where_clause4_rhs);
+
+    auto where_clause5_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_quantity);
+    auto where_clause5_rhs = new SqlLiteral(static_cast<double>(24));
+    auto where_clause5_result = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN, where_clause5_lhs, where_clause5_rhs);
+
+    auto where_and_1 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_clause1_result, where_clause2_result);
+    auto where_and_2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_and_1, where_clause3_result);
+    auto where_and_3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_and_2, where_clause4_result);
+    auto where_result = new SqlBinaryLogicalOperator(true /*isAnd*/, where_and_3, where_clause5_result);
+
+    auto table_src = new SqlTableContainer("lineitem");
+
+    auto aggregation_field_0_init = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row = new SqlAggregationRow({ aggregation_field_0_init });
+    auto aggregator_container = new AggregatedRowContainer(aggregation_row);
+
+    auto projection_mul_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice);
+    auto projection_mul_rhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_discount);
+    auto projection_sum_term = new SqlArithmeticOperator(TypeId::Get<double>(), AstArithmeticExprType::MUL, projection_mul_lhs, projection_mul_rhs);
+
+    auto aggregator_update_field_0 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(0),
+                projection_sum_term);
+    aggregation_row->SetUpdateExpr(0, aggregator_update_field_0);
+
+    auto generator = new SqlTableRowGenerator();
+    generator->m_src = table_src;
+    generator->m_dst = tableRow;
+
+    auto row_filter_processor = new SqlFilterProcessor(where_result);
+
+    auto aggregation_outputter = new AggregationOutputter();
+    aggregation_outputter->m_row = aggregation_row;
+    aggregation_outputter->m_container = aggregator_container;
+
+    auto stage = new QueryPlanPipelineStage();
+    stage->m_generator = generator;
+    stage->m_processor.push_back(row_filter_processor);
+    stage->m_outputter = aggregation_outputter;
+    stage->m_neededRows.push_back(tableRow);
+    stage->m_neededRows.push_back(aggregation_row);
+
+    auto aggregation_row_reader = new AggregationRowGenerator();
+    aggregation_row_reader->m_src = aggregator_container;
+    aggregation_row_reader->m_dst = aggregation_row;
+
+    auto aggregation_field_0_result = aggregation_row->GetSqlProjectionField(0);
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(aggregation_field_0_result);
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = aggregation_row_reader;
+    stage2->m_outputter = outputter;
+    stage2->m_neededRows.push_back(aggregation_row);
+
+    auto plan = new QueryPlan();
+    plan->m_stages.push_back(stage);
+    plan->m_stages.push_back(stage2);
+    plan->m_neededContainers.push_back(table_src);
+    plan->m_neededContainers.push_back(aggregator_container);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+
+    std::string expectedResult =
+        "| 38212505.914700 |\n";
 
     using FnPrototype = void(*)(SqlResultPrinter*);
     {

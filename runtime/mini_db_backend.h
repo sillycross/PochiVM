@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pochivm/common.h"
+#include "pochivm/global_codegen_memory_pool.h"
 
 namespace MiniDbBackend
 {
@@ -81,6 +82,93 @@ struct SqlResultPrinter
     char* m_start;
     char* m_current;
     char* m_end;
+};
+
+// TODO: inline global variable crashes dump_symbol.cpp at exit,
+// probably some weird issue with global destructors.
+// I think this is just the runConstructor() bug that has been fixed in LLVM 11,
+// but figure out what's going on later.
+//
+extern PochiVM::GlobalCodegenMemoryPool g_queryExecutionMemoryPool;
+
+class QueryExecutionTempAllocator
+{
+public:
+    QueryExecutionTempAllocator()
+        : m_listHead(0)
+        , m_currentAddress(8)
+        , m_currentAddressEnd(0)
+    { }
+
+    ~QueryExecutionTempAllocator()
+    {
+        FreeAllMemoryChunks();
+    }
+
+    void Reset()
+    {
+        FreeAllMemoryChunks();
+    }
+
+    uintptr_t Allocate(size_t size)
+    {
+        // TODO: support large size allocation
+        //
+        size_t alignment = 8;
+        TestAssert(size <= g_queryExecutionMemoryPool.x_memoryChunkSize - 4096);
+        AlignCurrentAddress(alignment);
+        if (m_currentAddress + size > m_currentAddressEnd)
+        {
+            GetNewMemoryChunk();
+            AlignCurrentAddress(alignment);
+            TestAssert(m_currentAddress + size <= m_currentAddressEnd);
+        }
+        TestAssert(m_currentAddress % alignment == 0);
+        uintptr_t result = m_currentAddress;
+        m_currentAddress += size;
+        TestAssert(m_currentAddress <= m_currentAddressEnd);
+        return result;
+    }
+
+private:
+    void GetNewMemoryChunk()
+    {
+        uintptr_t address = g_queryExecutionMemoryPool.GetMemoryChunk();
+        AppendToList(address);
+        // the first 8 bytes of the region is used as linked list
+        //
+        m_currentAddress = address + 8;
+        m_currentAddressEnd = address + g_queryExecutionMemoryPool.x_memoryChunkSize;
+    }
+
+    void AlignCurrentAddress(size_t alignment)
+    {
+        size_t mask = alignment - 1;
+        m_currentAddress += mask;
+        m_currentAddress &= ~mask;
+    }
+
+    void AppendToList(uintptr_t address)
+    {
+        *reinterpret_cast<uintptr_t*>(address) = m_listHead;
+        m_listHead = address;
+    }
+
+    void FreeAllMemoryChunks()
+    {
+        while (m_listHead != 0)
+        {
+            uintptr_t next = *reinterpret_cast<uintptr_t*>(m_listHead);
+            g_queryExecutionMemoryPool.FreeMemoryChunk(m_listHead);
+            m_listHead = next;
+        }
+        m_currentAddress = 8;
+        m_currentAddressEnd = 0;
+    }
+
+    uintptr_t m_listHead;
+    uintptr_t m_currentAddress;
+    uintptr_t m_currentAddressEnd;
 };
 
 }   // namespace MiniDbBackend

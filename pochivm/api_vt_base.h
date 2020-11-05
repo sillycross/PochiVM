@@ -159,4 +159,9 @@ inline Value<bool> CreateComparisonExpr(const ValueVT& lhs, const ValueVT& rhs, 
     return Value<bool>(new AstComparisonExpr(op, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
+inline Value<void> Assign(const ReferenceVT& lhs, const ValueVT& rhs)
+{
+    return Value<void>(new AstAssignExpr(lhs.__pochivm_ref_ptr, rhs.__pochivm_value_ptr));
+}
+
 }   // namespace PochiVM

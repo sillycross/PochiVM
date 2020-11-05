@@ -76,6 +76,4 @@ private:
     ConcurrentQueue<uintptr_t> m_freeList;
 };
 
-inline GlobalCodegenMemoryPool g_codegenMemoryPool;
-
 }   // namespace PochiVM

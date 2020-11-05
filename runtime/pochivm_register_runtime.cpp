@@ -249,6 +249,10 @@ static void RegisterRuntimeLibrary()
     RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintDouble>();
     RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintString>();
     RegisterMemberFn<&MiniDbBackend::SqlResultPrinter::PrintNewLine>();
+
+    RegisterConstructor<MiniDbBackend::QueryExecutionTempAllocator>();
+    RegisterMemberFn<&MiniDbBackend::QueryExecutionTempAllocator::Allocate>();
+    RegisterMemberFn<&MiniDbBackend::QueryExecutionTempAllocator::Reset>();
 }
 
 // DO NOT MODIFY
