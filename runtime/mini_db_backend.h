@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "pochivm/common.h"
 #include "pochivm/global_codegen_memory_pool.h"
+#include "pochivm/pochivm_function_pointer.h"
 
 namespace MiniDbBackend
 {
@@ -197,5 +198,36 @@ private:
     uintptr_t m_currentAddress;
     uintptr_t m_currentAddressEnd;
 };
+
+struct GeneratedKeyEqualFnOperator
+{
+    using KeyType = uintptr_t;
+    bool operator()(const KeyType& lhs, const KeyType& rhs) const
+    {
+        using FnPrototype = bool(*)(KeyType, KeyType);
+        return PochiVM::GeneratedFunctionPointer<FnPrototype>(m_cmpFn)(lhs, rhs);
+    }
+    uintptr_t m_cmpFn;
+};
+
+struct GeneratedKeyHashFnOperator
+{
+    using KeyType = uintptr_t;
+    size_t operator()(const KeyType& k) const
+    {
+        using FnPrototype = size_t(*)(KeyType);
+        return PochiVM::GeneratedFunctionPointer<FnPrototype>(m_hashFn)(k);
+    }
+    uintptr_t m_hashFn;
+};
+
+using QEHashTable = std::unordered_map<uintptr_t, uintptr_t, GeneratedKeyHashFnOperator, GeneratedKeyEqualFnOperator>;
+
+inline QEHashTable CreateQEHashTable(uintptr_t hashFn, uintptr_t equalFn)
+{
+    return QEHashTable(32 /*initBucketCount*/,
+                       GeneratedKeyHashFnOperator { hashFn },
+                       GeneratedKeyEqualFnOperator { equalFn });
+}
 
 }   // namespace MiniDbBackend

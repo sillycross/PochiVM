@@ -67,6 +67,7 @@ private:
         , m_llvmEntryBlock(nullptr)
         , m_isNoExcept(false)
         , m_fastInterpStackFrameSize(static_cast<uint32_t>(-1))
+        , m_fastInterpStackFrameSizeCategory(FIStackframeSizeCategory::X_END_OF_ENUM)
         , m_fastInterpCppEntryPoint(nullptr)
     { }
 
@@ -202,6 +203,20 @@ public:
         return m_fastInterpStackFrameSize;
     }
 
+    FIStackframeSizeCategory GetFastInterpStackSizeCategory()
+    {
+        TestAssert(m_fastInterpStackFrameSize != static_cast<uint32_t>(-1));
+        if (m_fastInterpStackFrameSizeCategory != FIStackframeSizeCategory::X_END_OF_ENUM)
+        {
+            TestAssert(m_fastInterpStackFrameSizeCategory == FIStackframeSizeCategoryHelper::SelectCategory(GetFastInterpStackFrameSize()));
+        }
+        else
+        {
+            m_fastInterpStackFrameSizeCategory = FIStackframeSizeCategoryHelper::SelectCategory(GetFastInterpStackFrameSize());
+        }
+        return m_fastInterpStackFrameSizeCategory;
+    }
+
     // Below are methods for interp mode
     //
     // Interp execute the function
@@ -327,6 +342,7 @@ private:
 
     bool m_isNoExcept;
     uint32_t m_fastInterpStackFrameSize;
+    FIStackframeSizeCategory m_fastInterpStackFrameSizeCategory;
     void* m_fastInterpCppEntryPoint;
 };
 

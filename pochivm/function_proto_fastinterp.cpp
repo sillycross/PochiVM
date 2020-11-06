@@ -7,6 +7,50 @@
 namespace PochiVM
 {
 
+namespace {
+
+template<int n>
+struct precompute_cpp_sfcat_array_helper
+{
+    static constexpr std::array<FIStackframeSizeCategory, n> get()
+    {
+        if constexpr(n == 0)
+        {
+            return std::array<FIStackframeSizeCategory, 0>{};
+        }
+        else
+        {
+            size_t stackFrameSize = 8 * (2 * (n - 1) + 1);
+            FIStackframeSizeCategory result = FIStackframeSizeCategoryHelper::SelectCategory(stackFrameSize);
+            return AstTypeHelper::constexpr_std_array_concat(
+                        precompute_cpp_sfcat_array_helper<n-1>::get(),
+                        std::array<FIStackframeSizeCategory, 1>{ result });
+        }
+    }
+};
+
+constexpr uint32_t x_precomputed_cpp_sfcat_num = 100;
+constexpr std::array<FIStackframeSizeCategory, x_precomputed_cpp_sfcat_num> x_precomputed_cpp_sfcat =
+        precompute_cpp_sfcat_array_helper<x_precomputed_cpp_sfcat_num>::get();
+
+FIStackframeSizeCategory GetStackFrameSizeCategoryForCppFunctionCall(size_t numParams)
+{
+    // For C++ function, the stack frame size is fixed: it is always 8 * (2 * #params + 1) bytes
+    //
+    size_t neededSize = 8 * (2 * numParams + 1);
+    if (likely(numParams < x_precomputed_cpp_sfcat_num))
+    {
+        TestAssert(x_precomputed_cpp_sfcat[numParams] == FIStackframeSizeCategoryHelper::SelectCategory(neededSize));
+        return x_precomputed_cpp_sfcat[numParams];
+    }
+    else
+    {
+        return FIStackframeSizeCategoryHelper::SelectCategory(neededSize);
+    }
+}
+
+}   // anonymous namespace
+
 void AstDeclareVariable::FastInterpSetupSpillLocation()
 {
     if (m_assignExpr != nullptr)
@@ -233,8 +277,6 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
     }
     else
     {
-        // For C++ function, the stack frame size is fixed: it is always 8 * (2 * #params + 1) bytes
-        //
         trueNumParams = m_cppFunctionMd->m_numParams + (m_cppFunctionMd->m_isUsingSret ? 1 : 0);
         FastInterpCppFunctionInfo info = m_cppFunctionMd->m_getFastInterpFn();
         isCalleeNoExcept = info.m_isNoExcept;
@@ -244,13 +286,15 @@ FastInterpSnippet WARN_UNUSED AstCallExpr::PrepareForFastInterp(FISpillLocation 
         TestAssert(isCalleeNoExcept == m_cppFunctionMd->m_isNoExcept);
         TestAssertImp(m_cppFunctionMd->m_isUsingSret, calleeReturnType.IsVoid());
         TestAssertImp(!m_cppFunctionMd->m_isUsingSret, calleeReturnType == m_cppFunctionMd->m_returnType);
-        size_t stackFrameSize = 8 * (2 * trueNumParams + 1);
+        // For C++ function, the stack frame size only depends on how many parameters it has
+        //
+        FIStackframeSizeCategory sfCategory = GetStackFrameSizeCategoryForCppFunctionCall(trueNumParams);
         inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
                 FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
                     calleeReturnType.GetOneLevelPtrFastInterpTypeId(),
                     !spillLoc.IsNoSpill(),
                     isCalleeNoExcept,
-                    FIStackframeSizeCategoryHelper::SelectCategory(stackFrameSize)));
+                    sfCategory));
         spillLoc.PopulatePlaceholderIfSpill(inst, 0);
     }
 
@@ -538,7 +582,7 @@ void AstFunction::PrepareForFastInterp()
 //
 void AstCallExpr::FastInterpFixStackFrameSize(AstFunction* target)
 {
-    FIStackframeSizeCategory sfsCat = FIStackframeSizeCategoryHelper::SelectCategory(target->GetFastInterpStackFrameSize());
+    FIStackframeSizeCategory sfsCat = target->GetFastInterpStackSizeCategory();
     m_fastInterpInst->ReplaceBluePrint(
                 FastInterpBoilerplateLibrary<FICallExprImpl>::SelectBoilerplateBluePrint(
                     target->GetReturnType().GetOneLevelPtrFastInterpTypeId(),

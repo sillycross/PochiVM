@@ -7,8 +7,7 @@ namespace PochiVM
 uintptr_t GeneratedFunctionPointerImpl::GetControlValueForFastInterpFn(AstFunction* fn, uintptr_t generatedFnAddress)
 {
     TestAssert(generatedFnAddress < (1ULL << 48));
-    uint32_t sfSize = fn->GetFastInterpStackFrameSize();
-    FIStackframeSizeCategory sfSizeCat = FIStackframeSizeCategoryHelper::SelectCategory(sfSize);
+    FIStackframeSizeCategory sfSizeCat = fn->GetFastInterpStackSizeCategory();
     uint64_t value = (1ULL << 62);
     if (fn->GetIsNoExcept())
     {
