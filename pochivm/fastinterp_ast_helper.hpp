@@ -117,8 +117,7 @@ struct AstFIOperandShape
             ret.m_mainVariable = assert_cast<AstDereferenceVariableExpr*>(expr)->GetOperand();
             return ret;
         }
-
-        if (expr->GetAstNodeType() == AstNodeType::AstLiteralExpr)
+        else if (expr->GetAstNodeType() == AstNodeType::AstLiteralExpr)
         {
             ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
             AstLiteralExpr* lit = assert_cast<AstLiteralExpr*>(expr);
@@ -137,8 +136,7 @@ struct AstFIOperandShape
             }
             return ret;
         }
-
-        if (expr->GetAstNodeType() == AstNodeType::AstDereferenceExpr)
+        else if (expr->GetAstNodeType() == AstNodeType::AstDereferenceExpr)
         {
             AstNodeBase* derefExprOperand = assert_cast<AstDereferenceExpr*>(expr)->GetOperand();
             return InternalTryMatchIndexShape(derefExprOperand);
@@ -198,8 +196,7 @@ struct AstFIOperandShape
             ret.m_mainVariable = derefVarExpr->GetOperand();
             return ret;
         }
-
-        if (root->GetAstNodeType() == AstNodeType::AstPointerArithmeticExpr)
+        else if (root->GetAstNodeType() == AstNodeType::AstPointerArithmeticExpr)
         {
             AstPointerArithmeticExpr* paExpr = assert_cast<AstPointerArithmeticExpr*>(root);
             TestAssert(!paExpr->GetTypeId().RemovePointer().IsCppClassType());
@@ -240,8 +237,7 @@ struct AstFIOperandShape
                 }
             }
         }
-
-        if (root->GetAstNodeType() == AstNodeType::AstReinterpretCastExpr)
+        else if (root->GetAstNodeType() == AstNodeType::AstReinterpretCastExpr)
         {
             AstReinterpretCastExpr* expr = assert_cast<AstReinterpretCastExpr*>(root);
             TestAssert(!expr->GetTypeId().RemovePointer().IsCppClassType());
