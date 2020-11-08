@@ -1828,3 +1828,335 @@ TEST(PaperBenchmark, TpchQuery10)
     printf("******* TPCH Query 10 *******\n");
     BenchmarkTpchQuery<BuildTpchQuery10>();
 }
+
+namespace {
+
+void BuildTpchQuery5()
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    auto nationRow = x_tpchtable_nation.GetTableRow();
+    auto nation_joinkey1 = nationRow->GetSqlField(&TpchNationTableRow::n_regionkey);
+
+    auto nation_hashtable = new HashTableContainer();
+    nation_hashtable->m_row = nationRow;
+    nation_hashtable->m_groupByFields.push_back(nation_joinkey1);
+
+    auto nation_table_container = new SqlTableContainer("nation");
+
+    auto nation_table_reader = new SqlTableRowGenerator();
+    nation_table_reader->m_src = nation_table_container;
+    nation_table_reader->m_dst = nationRow;
+
+    auto nation_hash_table_outputter = new HashJoinHashTableOutputter();
+    nation_hash_table_outputter->m_inputRow = nationRow;
+    nation_hash_table_outputter->m_container = nation_hashtable;
+
+    auto stage1 = new QueryPlanPipelineStage();
+    stage1->m_generator = nation_table_reader;
+    stage1->m_outputter = nation_hash_table_outputter;
+
+    auto regionRow = x_tpchtable_region.GetTableRow();
+    auto region_table_container = new SqlTableContainer("region");
+
+    auto region_table_reader = new SqlTableRowGenerator();
+    region_table_reader->m_src = region_table_container;
+    region_table_reader->m_dst = regionRow;
+
+    auto region_filter = new SqlCompareWithStringLiteralOperator(regionRow->GetSqlField(&TpchRegionTableRow::r_name),
+                                                                 "AFRICA",
+                                                                 SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto region_filter_processor = new SqlFilterProcessor(region_filter);
+    auto region_join_processor = new TableHashJoinProcessor();
+    region_join_processor->m_container = nation_hashtable;
+    region_join_processor->m_inputRowJoinFields.push_back(regionRow->GetSqlField(&TpchRegionTableRow::r_regionkey));
+
+    auto region_nation_joinkey = nationRow->GetSqlField(&TpchNationTableRow::n_nationkey);
+    auto region_nation_hashtable = new HashTableContainer();
+    region_nation_hashtable->m_row = nationRow;
+    region_nation_hashtable->m_groupByFields.push_back(region_nation_joinkey);
+
+    auto region_nation_hashtable_outputter = new HashJoinHashTableOutputter();
+    region_nation_hashtable_outputter->m_inputRow = nationRow;
+    region_nation_hashtable_outputter->m_container = region_nation_hashtable;
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = region_table_reader;
+    stage2->m_processor.push_back(region_filter_processor);
+    stage2->m_processor.push_back(region_join_processor);
+    stage2->m_outputter = region_nation_hashtable_outputter;
+
+    auto custRow = x_tpchtable_customer.GetTableRow();
+    auto cust_table_container = new SqlTableContainer("customer");
+
+    auto cust_table_reader = new SqlTableRowGenerator();
+    cust_table_reader->m_src = cust_table_container;
+    cust_table_reader->m_dst = custRow;
+
+    auto cust_join_processor = new TableHashJoinProcessor();
+    cust_join_processor->m_container = region_nation_hashtable;
+    cust_join_processor->m_inputRowJoinFields.push_back(custRow->GetSqlField(&TpchCustomerTableRow::c_nationkey));
+
+    auto cust_projection_row_field0 = custRow->GetSqlField(&TpchCustomerTableRow::c_custkey);
+    auto cust_projection_row_field1 = nationRow->GetSqlField(&TpchNationTableRow::n_nationkey);
+
+    auto cust_projection_row = new SqlProjectionRow({
+                                                        cust_projection_row_field0,
+                                                        cust_projection_row_field1
+                                                    });
+    auto cust_projection_processor = new SqlProjectionProcessor();
+    cust_projection_processor->m_output = cust_projection_row;
+
+    auto cust_joinkey = cust_projection_row->GetSqlProjectionField(0);
+    auto cust_hashtable = new HashTableContainer();
+    cust_hashtable->m_row = cust_projection_row;
+    cust_hashtable->m_groupByFields.push_back(cust_joinkey);
+
+    auto cust_hashtable_outputter = new HashJoinHashTableOutputter();
+    cust_hashtable_outputter->m_inputRow = cust_projection_row;
+    cust_hashtable_outputter->m_container = cust_hashtable;
+
+    auto stage3 = new QueryPlanPipelineStage();
+    stage3->m_generator = cust_table_reader;
+    stage3->m_processor.push_back(cust_join_processor);
+    stage3->m_processor.push_back(cust_projection_processor);
+    stage3->m_outputter = cust_hashtable_outputter;
+
+    auto ordersRow = x_tpchtable_orders.GetTableRow();
+    auto orders_table_container = new SqlTableContainer("orders");
+
+    auto orders_table_reader = new SqlTableRowGenerator();
+    orders_table_reader->m_src = orders_table_container;
+    orders_table_reader->m_dst = ordersRow;
+
+    auto orders_filter_1 = new SqlComparisonOperator(
+                AstComparisonExprType::GREATER_EQUAL,
+                ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderdate),
+                new SqlLiteral(static_cast<uint32_t>(757411200)));
+    auto orders_filter_2 = new SqlComparisonOperator(
+                AstComparisonExprType::LESS_THAN,
+                ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderdate),
+                new SqlLiteral(static_cast<uint32_t>(1072944000)));
+    auto orders_filter = new SqlBinaryLogicalOperator(true /*isAnd*/, orders_filter_1, orders_filter_2);
+    auto orders_filter_processor = new SqlFilterProcessor(orders_filter);
+
+    auto orders_join_processor = new TableHashJoinProcessor();
+    orders_join_processor->m_container = cust_hashtable;
+    orders_join_processor->m_inputRowJoinFields.push_back(ordersRow->GetSqlField(&TpchOrdersTableRow::o_custkey));
+
+    auto orders_projection_field0 = cust_projection_row->GetSqlProjectionField(1);
+    auto orders_projection_field1 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderkey);
+
+    auto orders_projection_row = new SqlProjectionRow({
+                                                      orders_projection_field0,
+                                                      orders_projection_field1
+                                                  });
+    auto orders_projection_processor = new SqlProjectionProcessor();
+    orders_projection_processor->m_output = orders_projection_row;
+
+    auto orders_joinkey = orders_projection_row->GetSqlProjectionField(1);
+    auto orders_hashtable = new HashTableContainer();
+    orders_hashtable->m_row = orders_projection_row;
+    orders_hashtable->m_groupByFields.push_back(orders_joinkey);
+
+    auto orders_hashtable_outputter = new HashJoinHashTableOutputter();
+    orders_hashtable_outputter->m_inputRow = orders_projection_row;
+    orders_hashtable_outputter->m_container = orders_hashtable;
+
+    auto stage4 = new QueryPlanPipelineStage();
+    stage4->m_generator = orders_table_reader;
+    stage4->m_processor.push_back(orders_filter_processor);
+    stage4->m_processor.push_back(orders_join_processor);
+    stage4->m_processor.push_back(orders_projection_processor);
+    stage4->m_outputter = orders_hashtable_outputter;
+
+    auto suppRow = x_tpchtable_supplier.GetTableRow();
+    auto supp_table_container = new SqlTableContainer("supplier");
+
+    auto supp_table_reader = new SqlTableRowGenerator();
+    supp_table_reader->m_src = supp_table_container;
+    supp_table_reader->m_dst = suppRow;
+
+    auto supp_join_processor = new TableHashJoinProcessor();
+    supp_join_processor->m_container = region_nation_hashtable;
+    supp_join_processor->m_inputRowJoinFields.push_back(suppRow->GetSqlField(&TpchSupplierTableRow::s_nationkey));
+
+    auto supp_projection_field0 = nationRow->GetSqlField(&TpchNationTableRow::n_name);
+    auto supp_projection_field1 = nationRow->GetSqlField(&TpchNationTableRow::n_nationkey);
+    auto supp_projection_field2 = suppRow->GetSqlField(&TpchSupplierTableRow::s_suppkey);
+
+    auto supp_projection_row = new SqlProjectionRow({
+                                                        supp_projection_field0,
+                                                        supp_projection_field1,
+                                                        supp_projection_field2
+                                                    });
+    auto supp_projection_processor = new SqlProjectionProcessor();
+    supp_projection_processor->m_output = supp_projection_row;
+
+    auto supp_joinkey = supp_projection_row->GetSqlProjectionField(2);
+    auto supp_hashtable = new HashTableContainer();
+    supp_hashtable->m_row = supp_projection_row;
+    supp_hashtable->m_groupByFields.push_back(supp_joinkey);
+
+    auto supp_hashtable_outputter = new HashJoinHashTableOutputter();
+    supp_hashtable_outputter->m_inputRow = supp_projection_row;
+    supp_hashtable_outputter->m_container = supp_hashtable;
+
+    auto stage5 = new QueryPlanPipelineStage();
+    stage5->m_generator = supp_table_reader;
+    stage5->m_processor.push_back(supp_join_processor);
+    stage5->m_processor.push_back(supp_projection_processor);
+    stage5->m_outputter = supp_hashtable_outputter;
+
+    auto lineitemRow = x_tpchtable_lineitem.GetTableRow();
+    auto lineitem_table_container = new SqlTableContainer("lineitem");
+
+    auto lineitem_table_reader = new SqlTableRowGenerator();
+    lineitem_table_reader->m_src = lineitem_table_container;
+    lineitem_table_reader->m_dst = lineitemRow;
+
+    auto lineitem_orders_join_processor = new TableHashJoinProcessor();
+    lineitem_orders_join_processor->m_container = orders_hashtable;
+    lineitem_orders_join_processor->m_inputRowJoinFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_orderkey));
+
+    auto lineitem_supp_join_processor = new TableHashJoinProcessor();
+    lineitem_supp_join_processor->m_container = supp_hashtable;
+    lineitem_supp_join_processor->m_inputRowJoinFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_suppkey));
+
+    auto lineitem_filter = new SqlComparisonOperator(
+                AstComparisonExprType::EQUAL,
+                orders_projection_row->GetSqlProjectionField(0),
+                supp_projection_row->GetSqlProjectionField(1));
+    auto lineitem_filter_processor = new SqlFilterProcessor(lineitem_filter);
+
+    auto aggregation_row_field0_init = supp_projection_row->GetSqlProjectionField(0);
+    auto aggregation_row_field1_init = new SqlLiteral(static_cast<double>(0));
+
+    auto aggregation_row = new SqlAggregationRow({
+                                                     aggregation_row_field0_init,
+                                                     aggregation_row_field1_init
+                                                 });
+
+    auto sum_expr = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                lineitemRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice),
+                new SqlArithmeticOperator(
+                    TypeId::Get<double>(),
+                    AstArithmeticExprType::SUB,
+                    new SqlLiteral(static_cast<double>(1)),
+                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_discount)));
+
+    auto aggregation_row_field1_update = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                sum_expr,
+                aggregation_row->GetSqlProjectionField(1));
+    aggregation_row->SetUpdateExpr(1, aggregation_row_field1_update);
+
+    auto groupby_container = new HashTableContainer();
+    groupby_container->m_row = supp_projection_row;
+    groupby_container->m_groupByFields.push_back(supp_projection_row->GetSqlProjectionField(0));
+
+    auto groupby_outputter = new GroupByHashTableOutputter();
+    groupby_outputter->m_container = groupby_container;
+    groupby_outputter->m_inputRow = supp_projection_row;
+    groupby_outputter->m_aggregationRow = aggregation_row;
+
+    auto stage6 = new QueryPlanPipelineStage();
+    stage6->m_generator = lineitem_table_reader;
+    stage6->m_processor.push_back(lineitem_orders_join_processor);
+    stage6->m_processor.push_back(lineitem_supp_join_processor);
+    stage6->m_processor.push_back(lineitem_filter_processor);
+    stage6->m_outputter = groupby_outputter;
+
+    auto groupby_result_reader = new GroupByHashTableGenerator();
+    groupby_result_reader->m_container = groupby_container;
+    groupby_result_reader->m_dst = aggregation_row;
+
+    auto temptable_container = new TempTableContainer();
+
+    auto temptable_outputter = new TempTableRowOutputter();
+    temptable_outputter->m_src = aggregation_row;
+    temptable_outputter->m_dst = temptable_container;
+
+    auto stage7 = new QueryPlanPipelineStage();
+    stage7->m_generator = groupby_result_reader;
+    stage7->m_outputter = temptable_outputter;
+
+    auto stage8 = new QueryPlanOrderByStage();
+    stage8->m_row = aggregation_row;
+    stage8->m_container = temptable_container;
+    stage8->m_orderByFields.push_back(std::make_pair(aggregation_row->GetSqlProjectionField(1), false /*isAscend*/));
+
+    auto temptable_reader = new TempTableRowGenerator();
+    temptable_reader->m_dst = aggregation_row;
+    temptable_reader->m_container = temptable_container;
+
+    auto limit_processor = new LimitClauseProcessor();
+    limit_processor->m_limit = 20;
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(0));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(1));
+
+    auto stage9 = new QueryPlanPipelineStage();
+    stage9->m_generator = temptable_reader;
+    stage9->m_processor.push_back(limit_processor);
+    stage9->m_outputter = outputter;
+
+    auto plan = new QueryPlan();
+    plan->m_neededContainers.push_back(nation_table_container);
+    plan->m_neededContainers.push_back(region_table_container);
+    plan->m_neededContainers.push_back(cust_table_container);
+    plan->m_neededContainers.push_back(orders_table_container);
+    plan->m_neededContainers.push_back(supp_table_container);
+    plan->m_neededContainers.push_back(lineitem_table_container);
+    plan->m_neededContainers.push_back(nation_hashtable);
+    plan->m_neededContainers.push_back(region_nation_hashtable);
+    plan->m_neededContainers.push_back(cust_hashtable);
+    plan->m_neededContainers.push_back(orders_hashtable);
+    plan->m_neededContainers.push_back(supp_hashtable);
+    plan->m_neededContainers.push_back(groupby_container);
+    plan->m_neededContainers.push_back(temptable_container);
+    plan->m_stages.push_back(stage1);
+    plan->m_stages.push_back(stage2);
+    plan->m_stages.push_back(stage3);
+    plan->m_stages.push_back(stage4);
+    plan->m_stages.push_back(stage5);
+    plan->m_stages.push_back(stage6);
+    plan->m_stages.push_back(stage7);
+    plan->m_stages.push_back(stage8);
+    plan->m_stages.push_back(stage9);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery5_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    std::string expectedResult = "| ALGERIA | 52516.800000 |\n";
+
+    CheckTpchQueryCorrectness<BuildTpchQuery5>(expectedResult, false /*checkDebugInterp*/);
+}
+
+TEST(PaperBenchmark, TpchQuery5)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    printf("******* TPCH Query 5 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery5>();
+}
