@@ -36,6 +36,11 @@ enum class FIOperandShapeCategory
     // Variable dereference with variable offset, e.g. 'a[i]'
     //
     VARPTR_VAR,
+    // Variable dereference with constant literal offset, e.g. *(T*)(base + 123),
+    // where 'base' is a uintptr_t type.
+    // This shape is used by the frontend to access elements in a struct
+    //
+    VARPTR_LIT_DIRECT_OFFSET,
     // Literal (nonzero). e.g. '12'
     //
     LITERAL_NONZERO,

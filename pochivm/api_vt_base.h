@@ -29,6 +29,11 @@ public:
         return __pochivm_value_ptr->GetTypeId() == typeId;
     }
 
+    TypeId WARN_UNUSED GetType()
+    {
+        return __pochivm_value_ptr->GetTypeId();
+    }
+
     // Currently, the only operation supported is to convert this class to a Value<T, valueType>,
     // which fires an assert if the typename is not correct. In future, we should support
     // operations acting directly on this class.

@@ -122,7 +122,6 @@ public:
     virtual void FastInterpSetupSpillLocation() override final;
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
 
-private:
     AstNodeBase* m_operand;
 };
 

@@ -134,6 +134,13 @@ struct FIOperandShapeCategoryHelper
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             return varPtr[CONSTANT_PLACEHOLDER_ ## placeholder2];                                               \
         }                                                                                                       \
+        else if constexpr(osc == FIOperandShapeCategory::VARPTR_LIT_DIRECT_OFFSET)                              \
+        {                                                                                                       \
+            INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(placeholder1);                                           \
+            INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(placeholder2);                                           \
+            uintptr_t varPtr = *GetLocalVarAddress<uintptr_t>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);       \
+            return *reinterpret_cast<OperandType*>(varPtr + CONSTANT_PLACEHOLDER_ ## placeholder2);             \
+        }                                                                                                       \
         else                                                                                                    \
         {                                                                                                       \
             static_assert(type_dependent_false<OperandType>::value, "unexpected literal category");             \
@@ -178,6 +185,13 @@ struct FIOperandShapeCategoryHelper
             INTERNAL_DEFINE_CONSTANT_PLACEHOLDER(placeholder2, OscIndexType);                                   \
             OperandType* varPtr = *GetLocalVarAddress<OperandType*>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1); \
             return varPtr + CONSTANT_PLACEHOLDER_ ## placeholder2;                                              \
+        }                                                                                                       \
+        else if constexpr(osc == FIOperandShapeCategory::VARPTR_LIT_DIRECT_OFFSET)                              \
+        {                                                                                                       \
+            INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(placeholder1);                                           \
+            INTERNAL_DEFINE_INDEX_CONSTANT_PLACEHOLDER(placeholder2);                                           \
+            uintptr_t varPtr = *GetLocalVarAddress<uintptr_t>(sf, CONSTANT_PLACEHOLDER_ ## placeholder1);       \
+            return reinterpret_cast<OperandType*>(varPtr + CONSTANT_PLACEHOLDER_ ## placeholder2);              \
         }                                                                                                       \
         else                                                                                                    \
         {                                                                                                       \

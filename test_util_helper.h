@@ -268,7 +268,22 @@ public:
         }
 
         llvm::ExitOnError exitOnErr;
-        llvm::orc::JITTargetMachineBuilder jtmb = exitOnErr(llvm::orc::JITTargetMachineBuilder::detectHost());
+        llvm::orc::JITTargetMachineBuilder jtmb((llvm::Triple(llvm::sys::getProcessTriple())));
+
+        // The other part of this project are compiled using default options
+        //     "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87"
+        // For fair comparison, only enable the same set of CPU features used
+        // TODO: consider enable avx2
+        //
+        jtmb.getFeatures().AddFeature("cx8");
+        jtmb.getFeatures().AddFeature("fxsr");
+        jtmb.getFeatures().AddFeature("mmx");
+        jtmb.getFeatures().AddFeature("sse");
+        jtmb.getFeatures().AddFeature("sse2");
+        jtmb.getFeatures().AddFeature("x87");
+
+        jtmb.setCPU("x86-64");
+
         if (optLevel == 0)
         {
             jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::None);
@@ -285,7 +300,9 @@ public:
         {
             jtmb.setCodeGenOptLevel(llvm::CodeGenOpt::Aggressive);
         }
-        jtmb.setCodeModel(llvm::CodeModel::Small);
+        // We must use CodeModel::Medium, otherwise address of functions/data symbols would break down
+        //
+        jtmb.setCodeModel(llvm::CodeModel::Medium);
 
         m_jit = exitOnErr(llvm::orc::LLJITBuilder().setJITTargetMachineBuilder(jtmb).create());
 

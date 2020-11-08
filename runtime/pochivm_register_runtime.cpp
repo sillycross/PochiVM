@@ -256,6 +256,27 @@ static void RegisterRuntimeLibrary()
 
     RegisterConstructor<TestGeneratedFnPtr, uintptr_t>();
     RegisterMemberFn<&TestGeneratedFnPtr::execute>();
+
+    RegisterFreeFn<&MiniDbBackend::CreateQEHashTable>();
+    RegisterMemberFn<static_cast<uintptr_t&(MiniDbBackend::QEHashTable::*)(const uintptr_t&)>(&MiniDbBackend::QEHashTable::operator[])>();
+    RegisterFreeFn<&MiniDbBackend::HashString>();
+    RegisterFreeFn<&MiniDbBackend::CompareStringEqual>();
+    RegisterFreeFn<&MiniDbBackend::CompareString>();
+    RegisterMemberFn<static_cast<MiniDbBackend::QEHashTable::iterator(MiniDbBackend::QEHashTable::*)()>(&MiniDbBackend::QEHashTable::begin)>();
+    RegisterMemberFn<static_cast<MiniDbBackend::QEHashTable::iterator(MiniDbBackend::QEHashTable::*)()>(&MiniDbBackend::QEHashTable::end)>();
+    RegisterMemberFn<&MiniDbBackend::QEHashTable::iterator::operator*>();
+    RegisterMemberFn<&MiniDbBackend::QEHashTable::iterator::operator->>();
+
+    RegisterOutlineDefinedOverloadedOperator<MiniDbBackend::QEHashTable::iterator, MiniDbBackend::QEHashTable::iterator, AstComparisonExprType::EQUAL>();
+    RegisterOutlineDefinedOverloadedOperator<MiniDbBackend::QEHashTable::iterator, MiniDbBackend::QEHashTable::iterator, AstComparisonExprType::NOT_EQUAL>();
+
+    RegisterOutlineIncrementOrDecrementOperator<MiniDbBackend::QEHashTable::iterator, true /*isIncrement*/>();
+    RegisterMemberObject<&std::pair<const uintptr_t, uintptr_t>::first>();
+    RegisterMemberObject<&std::pair<const uintptr_t, uintptr_t>::second>();
+
+    RegisterFreeFn<&MiniDbBackend::SortRows>();
+    RegisterFreeFn<&MiniDbBackend::DumpHashTable>();
+    RegisterConstructor<std::vector<uintptr_t>, size_t>();
 }
 
 // DO NOT MODIFY

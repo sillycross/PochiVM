@@ -5,6 +5,8 @@
 namespace MiniDbBackend
 {
 
+constexpr bool x_use_cpp_data_structure = false;
+
 class SqlValueBase
 {
 public:
@@ -112,7 +114,7 @@ public:
     {
         RowDef* rowPtr = reinterpret_cast<RowDef*>(0x1000000);
         size_t offset = reinterpret_cast<uintptr_t>(&(rowPtr->*memPtr)) - reinterpret_cast<uintptr_t>(rowPtr);
-        return new SqlField(PochiVM::TypeId::Get<FieldType>(), this, offset);
+        return new SqlField(PochiVM::TypeId::Get<std::decay_t<FieldType>>(), this, offset);
     }
 };
 
@@ -193,6 +195,8 @@ public:
         TestAssert(ordinal < m_fields.size());
         return m_fields[ordinal];
     }
+
+    PochiVM::Block WARN_UNUSED Codegen();
 
 private:
     std::vector<SqlValueBase*> m_values;
@@ -344,28 +348,11 @@ private:
     SqlValueBase* m_operand;
 };
 
-class SqlCountAggregator : public SqlValueBase
-{
-public:
-    SqlCountAggregator(SqlValueBase* oldAggregatedValue)
-        : SqlValueBase(oldAggregatedValue->GetType())
-        , m_oldAggregatedValue(oldAggregatedValue)
-    {
-        TestAssert(oldAggregatedValue->GetType().IsPrimitiveIntType());
-    }
-
-    virtual PochiVM::ValueVT WARN_UNUSED Codegen() override final;
-
-private:
-    SqlValueBase* m_oldAggregatedValue;
-};
-
 class SqlRowContainer
 {
 public:
     virtual ~SqlRowContainer() { }
     virtual PochiVM::Block WARN_UNUSED EmitDeclaration() = 0;
-    virtual PochiVM::VariableVT WARN_UNUSED GetVariable() = 0;
 };
 
 class SqlTableContainer : public SqlRowContainer
@@ -377,7 +364,6 @@ public:
     { }
 
     virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
-    virtual PochiVM::VariableVT WARN_UNUSED GetVariable() override final;
 
     std::string m_tableName;
     PochiVM::Variable<std::vector<uintptr_t>*>* m_var;
@@ -391,7 +377,6 @@ public:
     { }
 
     virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
-    virtual PochiVM::VariableVT WARN_UNUSED GetVariable() override final;
 
     PochiVM::Variable<std::vector<uintptr_t>>* m_var;
 };
@@ -402,10 +387,40 @@ public:
     AggregatedRowContainer(SqlAggregationRow* row) : m_var(nullptr), m_row(row) { }
 
     virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
-    virtual PochiVM::VariableVT WARN_UNUSED GetVariable() override final;
 
     PochiVM::Variable<uintptr_t>* m_var;
     SqlAggregationRow* m_row;
+};
+
+class GroupByHashTableContainer : public SqlRowContainer
+{
+public:
+    GroupByHashTableContainer()
+        : m_var(nullptr)
+    { }
+
+    virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
+
+    PochiVM::Block WARN_UNUSED EmitProbe(const PochiVM::Variable<uintptr_t>& input, const PochiVM::Variable<size_t>& output);
+
+    using CmpFnPrototype = bool(*)(uintptr_t, uintptr_t) noexcept;
+    using HashFnPrototype = size_t(*)(uintptr_t) noexcept;
+
+    std::vector<SqlField*> m_groupByFields;
+    PochiVM::Variable<QueryExecutionTempAllocator>* m_alloc;
+    // If use cpp data structure
+    //
+    PochiVM::Variable<QEHashTable>* m_var;
+    // If not use cpp data structure
+    //
+    PochiVM::Variable<uintptr_t*>* m_keys;
+    PochiVM::Variable<uintptr_t*>* m_values;
+    PochiVM::Variable<size_t>* m_tableSize;
+    PochiVM::Variable<size_t>* m_count;
+    std::string m_cmpFnName;
+    std::string m_hashFnName;
+
+    SqlRow* m_row;
 };
 
 // A piece of logic which creates a stream of SQL rows from some source
@@ -458,10 +473,19 @@ class QueryPlanPipelineStage : public QueryPlanPipelineStageBase
 public:
     virtual PochiVM::Scope WARN_UNUSED Codegen() override final;
 
-    std::vector<SqlRow*> m_neededRows;
     QueryPlanRowGenerator* m_generator;
     std::vector<QueryPlanRowProcessor*> m_processor;
     QueryPlanRowOutputter* m_outputter;
+};
+
+class QueryPlanOrderByStage : public QueryPlanPipelineStageBase
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen() override final;
+
+    TempTableContainer* m_container;
+    std::vector<SqlField*> m_orderByFields;
+    SqlRow* m_row;
 };
 
 class SqlTableRowGenerator : public QueryPlanRowGenerator
@@ -482,13 +506,30 @@ public:
     SqlRow* m_dst;
 };
 
+class GroupByHashTableGenerator : public QueryPlanRowGenerator
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+
+    GroupByHashTableContainer* m_container;
+    SqlRow* m_dst;
+};
+
+class TempTableRowGenerator : public QueryPlanRowGenerator
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+    TempTableContainer* m_container;
+    SqlRow* m_dst;
+};
+
 class TempTableRowOutputter : public QueryPlanRowOutputter
 {
 public:
     virtual void Codegen(PochiVM::Scope insertPoint) override final;
 
     SqlRow* m_src;
-    SqlTableContainer* m_dst;
+    TempTableContainer* m_dst;
 };
 
 class AggregationOutputter : public QueryPlanRowOutputter
@@ -498,6 +539,16 @@ public:
 
     SqlAggregationRow* m_row;
     AggregatedRowContainer* m_container;
+};
+
+class GroupByHashTableOutputter : public QueryPlanRowOutputter
+{
+public:
+    virtual void Codegen(PochiVM::Scope insertPoint) override final;
+
+    SqlRow* m_inputRow;
+    SqlAggregationRow* m_aggregationRow;
+    GroupByHashTableContainer* m_container;
 };
 
 class SqlResultOutputter : public QueryPlanRowOutputter
@@ -520,11 +571,19 @@ public:
     SqlValueBase* m_condition;
 };
 
+class SqlProjectionProcessor : public QueryPlanRowProcessor
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+
+    SqlProjectionRow* m_output;
+};
+
 class QueryPlan
 {
 public:
     std::vector<SqlRowContainer*> m_neededContainers;
-    std::vector<QueryPlanPipelineStage*> m_stages;
+    std::vector<QueryPlanPipelineStageBase*> m_stages;
 
     void CodeGen();
 };
@@ -532,15 +591,9 @@ public:
 struct QueryCodegenContext
 {
     std::map<SqlRow*, PochiVM::Variable<uintptr_t>*> m_rowMap;
-    std::map<SqlRowContainer*, PochiVM::VariableVT*> m_containerMap;
     PochiVM::Variable<SqlResultPrinter*>* m_sqlResultPrinter;
     PochiVM::Function* m_curFunction;
-
-    PochiVM::VariableVT& GetContainer(SqlRowContainer* which)
-    {
-        TestAssert(m_containerMap.count(which));
-        return *m_containerMap[which];
-    }
+    PochiVM::Block* m_fnStartBlock;
 
     PochiVM::Variable<uintptr_t>& GetRow(SqlRow* which)
     {

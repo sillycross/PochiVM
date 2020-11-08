@@ -55,7 +55,6 @@ TEST(MiniDbBackendUnitTest, SimpleSelect)
     stage->m_generator = generator;
     stage->m_processor.push_back(row_processor);
     stage->m_outputter = outputter;
-    stage->m_neededRows.push_back(tableRow);
 
     auto plan = new QueryPlan();
     plan->m_stages.push_back(stage);
@@ -217,13 +216,14 @@ void BenchmarkTpchQuery()
 }
 
 template<auto buildQueryFn>
-void CheckTpchQueryCorrectness(const std::string& expectedResult)
+void CheckTpchQueryCorrectness(const std::string& expectedResult, bool checkDebugInterp = true)
 {
     buildQueryFn();
 
     thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
 
     using FnPrototype = void(*)(SqlResultPrinter*);
+    if (checkDebugInterp)
     {
         auto interpFn = thread_pochiVMContext->m_curModule->
                                GetDebugInterpGeneratedFunction<FnPrototype>("execute_query");
@@ -242,6 +242,15 @@ void CheckTpchQueryCorrectness(const std::string& expectedResult)
     }
 
     thread_pochiVMContext->m_curModule->EmitIR();
+
+#if 0
+    std::string _dst;
+    llvm::raw_string_ostream rso(_dst /*target*/);
+    thread_pochiVMContext->m_curModule->GetBuiltLLVMModule()->print(rso, nullptr);
+    std::string &dump = rso.str();
+
+    AssertIsExpectedOutput(dump);
+#endif
     thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
 
     SimpleJIT jit;
@@ -320,8 +329,6 @@ void BuildTpchQuery6()
     stage->m_generator = generator;
     stage->m_processor.push_back(row_filter_processor);
     stage->m_outputter = aggregation_outputter;
-    stage->m_neededRows.push_back(tableRow);
-    stage->m_neededRows.push_back(aggregation_row);
 
     auto aggregation_row_reader = new AggregationRowGenerator();
     aggregation_row_reader->m_src = aggregator_container;
@@ -335,7 +342,6 @@ void BuildTpchQuery6()
     auto stage2 = new QueryPlanPipelineStage();
     stage2->m_generator = aggregation_row_reader;
     stage2->m_outputter = outputter;
-    stage2->m_neededRows.push_back(aggregation_row);
 
     auto plan = new QueryPlan();
     plan->m_stages.push_back(stage);
@@ -374,4 +380,277 @@ TEST(PaperBenchmark, TpchQuery6)
 
     printf("******* TPCH Query 6 *******\n");
     BenchmarkTpchQuery<BuildTpchQuery6>();
+}
+
+namespace
+{
+
+void BuildTpchQuery1()
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    auto tableRow = x_tpchtable_lineitem.GetTableRow();
+    auto where_clause_lhs = tableRow->GetSqlField(&TpchLineItemTableRow::l_shipdate);
+    auto where_clause_rhs = new SqlLiteral(static_cast<uint32_t>(904719600));
+    auto where_cond = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL, where_clause_lhs, where_clause_rhs);
+
+    auto table_src = new SqlTableContainer("lineitem");
+
+    auto generator = new SqlTableRowGenerator();
+    generator->m_src = table_src;
+    generator->m_dst = tableRow;
+
+    auto row_filter_processor = new SqlFilterProcessor(where_cond);
+
+    auto groupby_field1 = tableRow->GetSqlField(&TpchLineItemTableRow::l_returnflag);
+    auto groupby_field2 = tableRow->GetSqlField(&TpchLineItemTableRow::l_linestatus);
+
+    auto groupby_container = new GroupByHashTableContainer();
+    groupby_container->m_row = tableRow;
+    groupby_container->m_groupByFields.push_back(groupby_field1);
+    groupby_container->m_groupByFields.push_back(groupby_field2);
+
+    auto aggregation_row_init_field0 = tableRow->GetSqlField(&TpchLineItemTableRow::l_returnflag);
+    auto aggregation_row_init_field1 = tableRow->GetSqlField(&TpchLineItemTableRow::l_linestatus);
+    auto aggregation_row_init_field2 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field3 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field4 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field5 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field6 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field7 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field8 = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_init_field9 = new SqlLiteral(static_cast<int64_t>(0));
+
+    auto aggregation_row = new SqlAggregationRow({
+        aggregation_row_init_field0,
+        aggregation_row_init_field1,
+        aggregation_row_init_field2,
+        aggregation_row_init_field3,
+        aggregation_row_init_field4,
+        aggregation_row_init_field5,
+        aggregation_row_init_field6,
+        aggregation_row_init_field7,
+        aggregation_row_init_field8,
+        aggregation_row_init_field9
+    });
+
+    auto aggregation_row_update_field2 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(2),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_quantity));
+    aggregation_row->SetUpdateExpr(2, aggregation_row_update_field2);
+
+    auto aggregation_row_update_field3 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(3),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice));
+    aggregation_row->SetUpdateExpr(3, aggregation_row_update_field3);
+
+    auto update_field4_expr1 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::SUB,
+                new SqlLiteral(static_cast<double>(1)),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_discount));
+    auto update_field4_expr2 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice),
+                update_field4_expr1);
+    auto aggregation_row_update_field4 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(4),
+                update_field4_expr2);
+    aggregation_row->SetUpdateExpr(4, aggregation_row_update_field4);
+
+    auto update_field5_expr1 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::SUB,
+                new SqlLiteral(static_cast<double>(1)),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_discount));
+    auto update_field5_expr2 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice),
+                update_field5_expr1);
+    auto update_field5_expr3 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                new SqlLiteral(static_cast<double>(1)),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_tax));
+    auto update_field5_expr4 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                update_field5_expr2,
+                update_field5_expr3);
+    auto aggregation_row_update_field5 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(5),
+                update_field5_expr4);
+    aggregation_row->SetUpdateExpr(5, aggregation_row_update_field5);
+
+    auto aggregation_row_update_field6 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(6),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_quantity));
+    aggregation_row->SetUpdateExpr(6, aggregation_row_update_field6);
+
+    auto aggregation_row_update_field7 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(7),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice));
+    aggregation_row->SetUpdateExpr(7, aggregation_row_update_field7);
+
+    auto aggregation_row_update_field8 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(8),
+                tableRow->GetSqlField(&TpchLineItemTableRow::l_discount));
+    aggregation_row->SetUpdateExpr(8, aggregation_row_update_field8);
+
+    auto aggregation_row_update_field9 = new SqlArithmeticOperator(
+                TypeId::Get<int64_t>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(9),
+                new SqlLiteral(static_cast<int64_t>(1)));
+    aggregation_row->SetUpdateExpr(9, aggregation_row_update_field9);
+
+    auto groupby_outputter = new GroupByHashTableOutputter();
+    groupby_outputter->m_container = groupby_container;
+    groupby_outputter->m_inputRow = tableRow;
+    groupby_outputter->m_aggregationRow = aggregation_row;
+
+    auto stage1 = new QueryPlanPipelineStage();
+    stage1->m_generator = generator;
+    stage1->m_processor.push_back(row_filter_processor);
+    stage1->m_outputter = groupby_outputter;
+
+    auto groupby_result_reader = new GroupByHashTableGenerator();
+    groupby_result_reader->m_container = groupby_container;
+    groupby_result_reader->m_dst = aggregation_row;
+
+    auto projection_row_field0 = aggregation_row->GetSqlProjectionField(0);
+    auto projection_row_field1 = aggregation_row->GetSqlProjectionField(1);
+    auto projection_row_field2 = aggregation_row->GetSqlProjectionField(2);
+    auto projection_row_field3 = aggregation_row->GetSqlProjectionField(3);
+    auto projection_row_field4 = aggregation_row->GetSqlProjectionField(4);
+    auto projection_row_field5 = aggregation_row->GetSqlProjectionField(5);
+    auto projection_row_field6 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::DIV,
+                aggregation_row->GetSqlProjectionField(6),
+                new SqlCastOperator(TypeId::Get<double>(), aggregation_row->GetSqlProjectionField(9)));
+    auto projection_row_field7 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::DIV,
+                aggregation_row->GetSqlProjectionField(7),
+                new SqlCastOperator(TypeId::Get<double>(), aggregation_row->GetSqlProjectionField(9)));
+    auto projection_row_field8 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::DIV,
+                aggregation_row->GetSqlProjectionField(8),
+                new SqlCastOperator(TypeId::Get<double>(), aggregation_row->GetSqlProjectionField(9)));
+    auto projection_row_field9 = aggregation_row->GetSqlProjectionField(9);
+
+    auto projection_row = new SqlProjectionRow({
+        projection_row_field0,
+        projection_row_field1,
+        projection_row_field2,
+        projection_row_field3,
+        projection_row_field4,
+        projection_row_field5,
+        projection_row_field6,
+        projection_row_field7,
+        projection_row_field8,
+        projection_row_field9
+    });
+
+    auto projection_row_processor = new SqlProjectionProcessor();
+    projection_row_processor->m_output = projection_row;
+
+    auto temptable_container = new TempTableContainer();
+
+    auto temptable_outputter = new TempTableRowOutputter();
+    temptable_outputter->m_src = projection_row;
+    temptable_outputter->m_dst = temptable_container;
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = groupby_result_reader;
+    stage2->m_processor.push_back(projection_row_processor);
+    stage2->m_outputter = temptable_outputter;
+
+    auto stage3 = new QueryPlanOrderByStage();
+    stage3->m_row = projection_row;
+    stage3->m_container = temptable_container;
+    stage3->m_orderByFields.push_back(projection_row->GetSqlProjectionField(0));
+    stage3->m_orderByFields.push_back(projection_row->GetSqlProjectionField(1));
+
+    auto temptable_reader = new TempTableRowGenerator();
+    temptable_reader->m_dst = projection_row;
+    temptable_reader->m_container = temptable_container;
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(0));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(1));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(2));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(3));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(4));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(5));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(6));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(7));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(8));
+    outputter->m_projections.push_back(projection_row->GetSqlProjectionField(9));
+
+    auto stage4 = new QueryPlanPipelineStage();
+    stage4->m_generator = temptable_reader;
+    stage4->m_outputter = outputter;
+
+    auto plan = new QueryPlan();
+    plan->m_neededContainers.push_back(table_src);
+    plan->m_neededContainers.push_back(groupby_container);
+    plan->m_neededContainers.push_back(temptable_container);
+    plan->m_stages.push_back(stage1);
+    plan->m_stages.push_back(stage2);
+    plan->m_stages.push_back(stage3);
+    plan->m_stages.push_back(stage4);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery1_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    std::string expectedResult =
+        "| A | F | 11799894.000000 | 17694594440.489922 | 16809747534.070972 | 17481727589.532120 | 25.510857 | 38254.943185 | 0.050024 | 462544 |\n"
+        "| N | F | 307146.000000 | 461415894.149998 | 438370222.578399 | 456021204.722030 | 25.557164 | 38393.733912 | 0.050182 | 12018 |\n"
+        "| N | O | 23232475.000000 | 34817796765.830833 | 33077127289.602264 | 34400024394.849609 | 25.529154 | 38259.759511 | 0.049991 | 910037 |\n"
+        "| R | F | 11788252.000000 | 17672163035.450062 | 16787827349.368053 | 17459618619.351471 | 25.495168 | 38220.660065 | 0.050049 | 462372 |\n";
+
+    CheckTpchQueryCorrectness<BuildTpchQuery1>(expectedResult, false /*checkDebugInterp*/);
+}
+
+TEST(PaperBenchmark, TpchQuery1)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    printf("******* TPCH Query 1 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery1>();
 }

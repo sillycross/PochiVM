@@ -517,6 +517,20 @@ public:
         }
     }
 
+    std::string GetNextAvailableFnName(const std::string& prefix)
+    {
+        int i = 0;
+        while (true)
+        {
+            std::string candidate = prefix + std::to_string(i);
+            if (!m_functions.count(candidate))
+            {
+                return candidate;
+            }
+            i++;
+        }
+    }
+
     void PrepareForDebugInterp()
     {
         TestAssert(!m_debugInterpPrepared);

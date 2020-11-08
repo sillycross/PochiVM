@@ -5,6 +5,8 @@
 #include "ast_variable.h"
 #include "common_expr.h"
 #include "lang_constructs.h"
+#include "cast_expr.h"
+#include "arith_expr.h"
 
 namespace PochiVM
 {
@@ -170,6 +172,11 @@ struct AstFIOperandShape
             inst->PopulateConstantPlaceholder<uint64_t>(ph1, m_mainVariable->GetFastInterpOffset());
             inst->PopulateConstantPlaceholder<uint64_t>(ph2, m_indexLiteral->GetAsU64());
         }
+        else if (m_kind == FIOperandShapeCategory::VARPTR_LIT_DIRECT_OFFSET)
+        {
+            inst->PopulateConstantPlaceholder<uint64_t>(ph1, m_mainVariable->GetFastInterpOffset());
+            inst->PopulateConstantPlaceholder<uint64_t>(ph2, m_indexLiteral->GetAsU64());
+        }
         else if (m_kind == FIOperandShapeCategory::ZERO)
         {
             /* nothing */
@@ -227,6 +234,40 @@ struct AstFIOperandShape
                         ret.m_kind = FIOperandShapeCategory::VARPTR_LIT_NONZERO;
                         ret.m_indexType = litExpr->GetTypeId().GetDefaultFastInterpTypeId();
                         ret.m_mainVariable = assert_cast<AstDereferenceVariableExpr*>(paExpr->m_base)->GetOperand();
+                        ret.m_indexLiteral = litExpr;
+                        return ret;
+                    }
+                }
+            }
+        }
+
+        if (root->GetAstNodeType() == AstNodeType::AstReinterpretCastExpr)
+        {
+            AstReinterpretCastExpr* expr = assert_cast<AstReinterpretCastExpr*>(root);
+            TestAssert(!expr->GetTypeId().RemovePointer().IsCppClassType());
+            if (expr->m_operand->GetAstNodeType() == AstNodeType::AstArithmeticExpr)
+            {
+                AstArithmeticExpr* arithExpr = assert_cast<AstArithmeticExpr*>(expr->m_operand);
+                TestAssert(arithExpr->GetTypeId() == TypeId::Get<uint64_t>() || arithExpr->GetTypeId() == TypeId::Get<int64_t>());
+                if (arithExpr->m_op == AstArithmeticExprType::ADD &&
+                    arithExpr->m_lhs->GetAstNodeType() == AstNodeType::AstDereferenceVariableExpr &&
+                    arithExpr->m_rhs->GetAstNodeType() == AstNodeType::AstLiteralExpr)
+                {
+                    AstDereferenceVariableExpr* derefVar = assert_cast<AstDereferenceVariableExpr*>(arithExpr->m_lhs);
+                    AstLiteralExpr* litExpr = assert_cast<AstLiteralExpr*>(arithExpr->m_rhs);
+                    uint64_t value = litExpr->GetAsU64();
+                    if (value == 0)
+                    {
+                        ret.m_kind = FIOperandShapeCategory::VARPTR_DEREF;
+                        ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
+                        ret.m_mainVariable = derefVar->GetOperand();
+                        return ret;
+                    }
+                    else if (value < (1ULL << 31))
+                    {
+                        ret.m_kind = FIOperandShapeCategory::VARPTR_LIT_DIRECT_OFFSET;
+                        ret.m_indexType = TypeId::Get<int32_t>().GetDefaultFastInterpTypeId();
+                        ret.m_mainVariable = derefVar->GetOperand();
                         ret.m_indexLiteral = litExpr;
                         return ret;
                     }
