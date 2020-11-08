@@ -245,8 +245,6 @@ struct GeneratedKeyCmpFnOperator
     {
         using FnPrototype = bool(*)(KeyType, KeyType) noexcept;
         return PochiVM::GeneratedFunctionPointer<FnPrototype>(m_cmpFn)(lhs, rhs);
-        //return MiniDbBackend::CompareStringEqual(reinterpret_cast<char*>(lhs) + 56, reinterpret_cast<char*>(rhs) + 56)
-        //        && MiniDbBackend::CompareStringEqual(reinterpret_cast<char*>(lhs) + 58, reinterpret_cast<char*>(rhs) + 58);
     }
     uintptr_t m_cmpFn;
 };
@@ -258,26 +256,8 @@ struct GeneratedKeyHashFnOperator
     {
         using FnPrototype = size_t(*)(KeyType) noexcept;
         return PochiVM::GeneratedFunctionPointer<FnPrototype>(m_hashFn)(k);
-        // return MiniDbBackend::HashString(reinterpret_cast<char*>(k) + 56) * 13331ULL
-        //        + MiniDbBackend::HashString(reinterpret_cast<char*>(k) + 58);
     }
     uintptr_t m_hashFn;
-};
-
-struct GeneratedKeyCmpFnOperator2
-{
-    using KeyType = uintptr_t;
-    bool operator()(const KeyType& lhs, const KeyType& rhs) const
-    {
-        using FnPrototype = bool(*)(KeyType, KeyType) noexcept;
-        return PochiVM::GeneratedFunctionPointer<FnPrototype>(m_cmpFn)(lhs, rhs);
-        // int x = MiniDbBackend::CompareString(reinterpret_cast<char**>(lhs)[0], reinterpret_cast<char**>(rhs)[0]);
-        // if (x != 0) { return x < 0; }
-        // x = MiniDbBackend::CompareString(reinterpret_cast<char**>(lhs)[1], reinterpret_cast<char**>(rhs)[1]);
-        // if (x != 0) { return x < 0; }
-        // return false;
-    }
-    uintptr_t m_cmpFn;
 };
 
 namespace MiniDbBackend
@@ -294,7 +274,7 @@ inline QEHashTable CreateQEHashTable(uintptr_t hashFn, uintptr_t equalFn)
 
 inline void SortRows(uintptr_t* rowsStart, size_t numRows, uintptr_t cmpFn)
 {
-    std::sort(rowsStart, rowsStart + numRows, GeneratedKeyCmpFnOperator2 { cmpFn });
+    std::sort(rowsStart, rowsStart + numRows, GeneratedKeyCmpFnOperator { cmpFn });
 }
 
 inline void DumpHashTable(QEHashTable& ht, std::vector<uintptr_t>& output)

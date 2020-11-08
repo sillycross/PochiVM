@@ -509,7 +509,7 @@ public:
     virtual PochiVM::Scope WARN_UNUSED Codegen() override final;
 
     TempTableContainer* m_container;
-    std::vector<SqlField*> m_orderByFields;
+    std::vector<std::pair<SqlField*, bool /*isAscending*/>> m_orderByFields;
     SqlRow* m_row;
 };
 
@@ -611,6 +611,14 @@ public:
     virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
 
     SqlProjectionRow* m_output;
+};
+
+class LimitClauseProcessor : public QueryPlanRowProcessor
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+
+    int m_limit;
 };
 
 class TableHashJoinProcessor : public QueryPlanRowProcessor

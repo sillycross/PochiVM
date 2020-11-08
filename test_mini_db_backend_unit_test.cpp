@@ -587,8 +587,8 @@ void BuildTpchQuery1()
     auto stage3 = new QueryPlanOrderByStage();
     stage3->m_row = projection_row;
     stage3->m_container = temptable_container;
-    stage3->m_orderByFields.push_back(projection_row->GetSqlProjectionField(0));
-    stage3->m_orderByFields.push_back(projection_row->GetSqlProjectionField(1));
+    stage3->m_orderByFields.push_back(std::make_pair(projection_row->GetSqlProjectionField(0), true /*isAscend*/));
+    stage3->m_orderByFields.push_back(std::make_pair(projection_row->GetSqlProjectionField(1), true /*isAscent*/));
 
     auto temptable_reader = new TempTableRowGenerator();
     temptable_reader->m_dst = projection_row;
@@ -790,7 +790,7 @@ void BuildTpchQuery12()
     auto stage4 = new QueryPlanOrderByStage();
     stage4->m_row = aggregation_row;
     stage4->m_container = temptable_container;
-    stage4->m_orderByFields.push_back(aggregation_row->GetSqlProjectionField(0));
+    stage4->m_orderByFields.push_back(std::make_pair(aggregation_row->GetSqlProjectionField(0), true /*isAscend*/));
 
     auto temptable_reader = new TempTableRowGenerator();
     temptable_reader->m_dst = aggregation_row;
@@ -1273,4 +1273,241 @@ TEST(PaperBenchmark, TpchQuery14)
 
     printf("******* TPCH Query 14 *******\n");
     BenchmarkTpchQuery<BuildTpchQuery14>();
+}
+
+namespace {
+
+void BuildTpchQuery3()
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    auto custRow = x_tpchtable_customer.GetTableRow();
+    auto cust_joinkey1 = custRow->GetSqlField(&TpchCustomerTableRow::c_custkey);
+
+    auto hashtable = new HashTableContainer();
+    hashtable->m_row = custRow;
+    hashtable->m_groupByFields.push_back(cust_joinkey1);
+
+    auto cust_table_container = new SqlTableContainer("customer");
+
+    auto cust_table_reader = new SqlTableRowGenerator();
+    cust_table_reader->m_src = cust_table_container;
+    cust_table_reader->m_dst = custRow;
+
+    auto cust_filter = new SqlCompareWithStringLiteralOperator(custRow->GetSqlField(&TpchCustomerTableRow::c_mktsegment),
+                                                               "BUILDING",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto cust_filter_processor = new SqlFilterProcessor(cust_filter);
+
+    auto hash_join_outputter = new HashJoinHashTableOutputter();
+    hash_join_outputter->m_inputRow = custRow;
+    hash_join_outputter->m_container = hashtable;
+
+    auto stage1 = new QueryPlanPipelineStage();
+    stage1->m_generator = cust_table_reader;
+    stage1->m_processor.push_back(cust_filter_processor);
+    stage1->m_outputter = hash_join_outputter;
+
+    auto ordersRow = x_tpchtable_orders.GetTableRow();
+    auto orders_joinkey1 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderkey);
+
+    auto hashtable2 = new HashTableContainer();
+    hashtable2->m_row = ordersRow;
+    hashtable2->m_groupByFields.push_back(orders_joinkey1);
+
+    auto orders_table_container = new SqlTableContainer("orders");
+
+    auto orders_table_reader = new SqlTableRowGenerator();
+    orders_table_reader->m_src = orders_table_container;
+    orders_table_reader->m_dst = ordersRow;
+
+    auto orders_filter = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN,
+                                                   ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderdate),
+                                                   new SqlLiteral(static_cast<uint32_t>(795254400)));
+    auto orders_filter_processor = new SqlFilterProcessor(orders_filter);
+
+    auto orders_join_processor = new TableHashJoinProcessor();
+    orders_join_processor->m_container = hashtable;
+    orders_join_processor->m_inputRowJoinFields.push_back(ordersRow->GetSqlField(&TpchOrdersTableRow::o_custkey));
+
+    auto hash_join_outputter2 = new HashJoinHashTableOutputter();
+    hash_join_outputter2->m_inputRow = ordersRow;
+    hash_join_outputter2->m_container = hashtable2;
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = orders_table_reader;
+    stage2->m_processor.push_back(orders_filter_processor);
+    stage2->m_processor.push_back(orders_join_processor);
+    stage2->m_outputter = hash_join_outputter2;
+
+    auto lineitemRow = x_tpchtable_lineitem.GetTableRow();
+
+    auto lineitem_table_container = new SqlTableContainer("lineitem");
+
+    auto lineitem_table_reader = new SqlTableRowGenerator();
+    lineitem_table_reader->m_src = lineitem_table_container;
+    lineitem_table_reader->m_dst = lineitemRow;
+
+    auto lineitem_filter = new SqlComparisonOperator(AstComparisonExprType::GREATER_THAN,
+                                                     lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipdate),
+                                                     new SqlLiteral(static_cast<uint32_t>(795254400)));
+    auto lineitem_filter_processor = new SqlFilterProcessor(lineitem_filter);
+
+    auto lineitem_join_processor = new TableHashJoinProcessor();
+    lineitem_join_processor->m_container = hashtable2;
+    lineitem_join_processor->m_inputRowJoinFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_orderkey));
+
+    auto aggregation_row_field0_init = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderkey);
+    auto aggregation_row_field1_init = new SqlLiteral(static_cast<double>(0));
+    auto aggregation_row_field2_init = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderdate);
+    auto aggregation_row_field3_init = ordersRow->GetSqlField(&TpchOrdersTableRow::o_shippriority);
+
+    auto aggregation_row = new SqlAggregationRow({
+                                                     aggregation_row_field0_init,
+                                                     aggregation_row_field1_init,
+                                                     aggregation_row_field2_init,
+                                                     aggregation_row_field3_init
+                                                 });
+
+    auto sum_expr = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                lineitemRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice),
+                new SqlArithmeticOperator(
+                    TypeId::Get<double>(),
+                    AstArithmeticExprType::SUB,
+                    new SqlLiteral(static_cast<double>(1)),
+                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_discount)));
+
+    auto aggregation_row_field1_update = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                sum_expr,
+                aggregation_row->GetSqlProjectionField(1));
+    aggregation_row->SetUpdateExpr(1, aggregation_row_field1_update);
+
+    auto groupby_field1 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderkey);
+    auto groupby_field2 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderdate);
+    auto groupby_field3 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_shippriority);
+
+    auto groupby_container = new HashTableContainer();
+    groupby_container->m_row = ordersRow;
+    groupby_container->m_groupByFields.push_back(groupby_field1);
+    groupby_container->m_groupByFields.push_back(groupby_field2);
+    groupby_container->m_groupByFields.push_back(groupby_field3);
+
+    auto groupby_outputter = new GroupByHashTableOutputter();
+    groupby_outputter->m_container = groupby_container;
+    groupby_outputter->m_inputRow = ordersRow;
+    groupby_outputter->m_aggregationRow = aggregation_row;
+
+    auto stage3 = new QueryPlanPipelineStage();
+    stage3->m_generator = lineitem_table_reader;
+    stage3->m_processor.push_back(lineitem_filter_processor);
+    stage3->m_processor.push_back(lineitem_join_processor);
+    stage3->m_outputter = groupby_outputter;
+
+    auto groupby_result_reader = new GroupByHashTableGenerator();
+    groupby_result_reader->m_container = groupby_container;
+    groupby_result_reader->m_dst = aggregation_row;
+
+    auto temptable_container = new TempTableContainer();
+
+    auto temptable_outputter = new TempTableRowOutputter();
+    temptable_outputter->m_src = aggregation_row;
+    temptable_outputter->m_dst = temptable_container;
+
+    auto stage4 = new QueryPlanPipelineStage();
+    stage4->m_generator = groupby_result_reader;
+    stage4->m_outputter = temptable_outputter;
+
+    auto stage5 = new QueryPlanOrderByStage();
+    stage5->m_row = aggregation_row;
+    stage5->m_container = temptable_container;
+    stage5->m_orderByFields.push_back(std::make_pair(aggregation_row->GetSqlProjectionField(1), false /*isAscend*/));
+    stage5->m_orderByFields.push_back(std::make_pair(aggregation_row->GetSqlProjectionField(2), true /*isAscend*/));
+
+    auto temptable_reader = new TempTableRowGenerator();
+    temptable_reader->m_dst = aggregation_row;
+    temptable_reader->m_container = temptable_container;
+
+    auto limit_processor = new LimitClauseProcessor();
+    limit_processor->m_limit = 20;
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(0));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(1));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(2));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(3));
+
+    auto stage6 = new QueryPlanPipelineStage();
+    stage6->m_generator = temptable_reader;
+    stage6->m_processor.push_back(limit_processor);
+    stage6->m_outputter = outputter;
+
+    auto plan = new QueryPlan();
+    plan->m_neededContainers.push_back(cust_table_container);
+    plan->m_neededContainers.push_back(orders_table_container);
+    plan->m_neededContainers.push_back(lineitem_table_container);
+    plan->m_neededContainers.push_back(hashtable);
+    plan->m_neededContainers.push_back(hashtable2);
+    plan->m_neededContainers.push_back(groupby_container);
+    plan->m_neededContainers.push_back(temptable_container);
+    plan->m_stages.push_back(stage1);
+    plan->m_stages.push_back(stage2);
+    plan->m_stages.push_back(stage3);
+    plan->m_stages.push_back(stage4);
+    plan->m_stages.push_back(stage5);
+    plan->m_stages.push_back(stage6);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery3_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    std::string expectedResult =
+        "| 56515460 | 386191.289900 | 792057600 | 0 |\n"
+        "| 38559075 | 340093.917200 | 791366400 | 0 |\n"
+        "| 28666663 | 301296.454700 | 792576000 | 0 |\n"
+        "| 53469703 | 281069.901600 | 794217600 | 0 |\n"
+        "| 45613187 | 266925.396100 | 792748800 | 0 |\n"
+        "| 52263431 | 254077.847600 | 794476800 | 0 |\n"
+        "| 26894336 | 246784.136700 | 793699200 | 0 |\n"
+        "| 50551300 | 224597.129300 | 794044800 | 0 |\n"
+        "| 43752419 | 220553.883700 | 789465600 | 0 |\n"
+        "| 19974213 | 185434.449100 | 793180800 | 0 |\n"
+        "| 22083299 | 183986.848000 | 792748800 | 0 |\n"
+        "| 37017408 | 183120.638600 | 792489600 | 0 |\n"
+        "| 26112001 | 180333.315600 | 790416000 | 0 |\n"
+        "| 4143395 | 178770.101200 | 791712000 | 0 |\n"
+        "| 31777029 | 177249.845200 | 790848000 | 0 |\n"
+        "| 37973732 | 174125.616900 | 791971200 | 0 |\n"
+        "| 33717218 | 171613.598900 | 791971200 | 0 |\n"
+        "| 31945287 | 167527.535000 | 793180800 | 0 |\n"
+        "| 14591234 | 162619.165200 | 794908800 | 0 |\n"
+        "| 10786852 | 161931.240100 | 792662400 | 0 |\n";
+
+    CheckTpchQueryCorrectness<BuildTpchQuery3>(expectedResult, false /*checkDebugInterp*/);
+}
+
+TEST(PaperBenchmark, TpchQuery3)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    printf("******* TPCH Query 3 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery3>();
 }

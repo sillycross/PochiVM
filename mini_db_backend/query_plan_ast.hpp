@@ -476,16 +476,16 @@ inline Scope WARN_UNUSED QueryPlanOrderByStage::Codegen()
         std::vector<ValueVT> r1v1, r1v2;
         for (size_t i = 0; i < m_orderByFields.size(); i++)
         {
-            r1v1.push_back(m_orderByFields[i]->Codegen());
-            r1v2.push_back(m_orderByFields[i]->Codegen());
+            r1v1.push_back(m_orderByFields[i].first->Codegen());
+            r1v2.push_back(m_orderByFields[i].first->Codegen());
         }
 
         thread_queryCodegenContext.m_rowMap[m_row] = &row2;
         std::vector<ValueVT> r2v1, r2v2;
         for (size_t i = 0; i < m_orderByFields.size(); i++)
         {
-            r2v1.push_back(m_orderByFields[i]->Codegen());
-            r2v2.push_back(m_orderByFields[i]->Codegen());
+            r2v1.push_back(m_orderByFields[i].first->Codegen());
+            r2v2.push_back(m_orderByFields[i].first->Codegen());
         }
 
         for (size_t i = 0; i < m_orderByFields.size(); i++)
@@ -494,7 +494,10 @@ inline Scope WARN_UNUSED QueryPlanOrderByStage::Codegen()
             {
                 fn.GetBody().Append(
                     If(!CreateComparisonExpr(r1v1[i], r2v1[i], AstComparisonExprType::EQUAL)).Then(
-                        Return(CreateComparisonExpr(r1v2[i], r2v2[i], AstComparisonExprType::LESS_THAN))));
+                        Return(CreateComparisonExpr(r1v2[i], r2v2[i],
+                                                    m_orderByFields[i].second ?
+                                                        AstComparisonExprType::LESS_THAN :
+                                                        AstComparisonExprType::GREATER_THAN))));
             }
             else
             {
@@ -512,7 +515,7 @@ inline Scope WARN_UNUSED QueryPlanOrderByStage::Codegen()
                         Assign(i2, i2 + 1)
                     ),
                     If (*i1 != *i2).Then(
-                        Return(*i1 < *i2)
+                        Return((m_orderByFields[i].second ? (*i1 < *i2) : (*i1 > *i2)))
                     )
                 ));
             }
@@ -786,6 +789,21 @@ inline Scope WARN_UNUSED SqlProjectionProcessor::Codegen(Scope insertPoint)
     insertPoint.Append(Block(
         Declare(*row, alloc.Allocate(Literal<size_t>(m_output->GetRowSize()))),
         m_output->Codegen(),
+        ret
+    ));
+    return ret;
+}
+
+inline Scope WARN_UNUSED LimitClauseProcessor::Codegen(Scope insertPoint)
+{
+    Scope ret;
+    auto count = thread_queryCodegenContext.m_curFunction->NewVariable<int>();
+    thread_queryCodegenContext.m_fnStartBlock->Append(Declare(count, 0));
+    insertPoint.Append(Block(
+        Increment(count),
+        If(count > m_limit).Then(
+            Break()
+        ),
         ret
     ));
     return ret;
