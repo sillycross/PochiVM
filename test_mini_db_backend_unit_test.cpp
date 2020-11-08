@@ -850,3 +850,258 @@ TEST(PaperBenchmark, TpchQuery12)
     printf("******* TPCH Query 12 *******\n");
     BenchmarkTpchQuery<BuildTpchQuery12>();
 }
+
+namespace
+{
+
+void BuildTpchQuery19()
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    auto partRow = x_tpchtable_part.GetTableRow();
+    auto joinkey1 = partRow->GetSqlField(&TpchPartTableRow::p_partkey);
+
+    auto hashtable = new HashTableContainer();
+    hashtable->m_row = partRow;
+    hashtable->m_groupByFields.push_back(joinkey1);
+
+    auto part_table_container = new SqlTableContainer("part");
+
+    auto part_table_reader = new SqlTableRowGenerator();
+    part_table_reader->m_src = part_table_container;
+    part_table_reader->m_dst = partRow;
+
+    auto hash_join_outputter = new HashJoinHashTableOutputter();
+    hash_join_outputter->m_inputRow = partRow;
+    hash_join_outputter->m_container = hashtable;
+
+    auto stage1 = new QueryPlanPipelineStage();
+    stage1->m_generator = part_table_reader;
+    stage1->m_outputter = hash_join_outputter;
+
+    auto lineitemRow = x_tpchtable_lineitem.GetTableRow();
+    auto lineitem_table_container = new SqlTableContainer("lineitem");
+
+    auto lineitem_table_reader = new SqlTableRowGenerator();
+    lineitem_table_reader->m_src = lineitem_table_container;
+    lineitem_table_reader->m_dst = lineitemRow;
+
+    auto join_processor = new TableHashJoinProcessor();
+    join_processor->m_container = hashtable;
+    join_processor->m_inputRowJoinFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_partkey));
+
+    auto where_0_0_1 = new SqlCompareWithStringLiteralOperator(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode),
+                                                               "AIR",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_0_0_2 = new SqlCompareWithStringLiteralOperator(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode),
+                                                               "AIR REG",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_0_1 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_0_0_1, where_0_0_2);
+    auto where_0_2 = new SqlCompareWithStringLiteralOperator(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipinstruct),
+                                                            "DELIVER IN PERSON",
+                                                            SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+
+    auto where_1_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_brand),
+                                                             "Brand#12",
+                                                             SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_1_2_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "SM CASE",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_1_2_2 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "SM BOX",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_1_2_3 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "SM PACK",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_1_2_4 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "SM PKG",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_1_2_p2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_1_2_1, where_1_2_2);
+    auto where_1_2_p3 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_1_2_p2, where_1_2_3);
+    auto where_1_2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_1_2_p3, where_1_2_4);
+    auto where_1_3 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(1)));
+    auto where_1_4 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(11)));
+    auto where_1_5 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(1)));
+    auto where_1_6 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(5)));
+
+    auto where_1_p2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_1_1, where_1_2);
+    auto where_1_p3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_1_p2, where_1_3);
+    auto where_1_p4 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_1_p3, where_1_4);
+    auto where_1_p5 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_1_p4, where_1_5);
+    auto where_1 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_1_p5, where_1_6);
+
+    auto where_2_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_brand),
+                                                             "Brand#23",
+                                                             SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_2_2_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "MED BAG",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_2_2_2 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "MED BOX",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_2_2_3 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "MED PKG",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_2_2_4 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "MED PACK",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_2_2_p2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_2_2_1, where_2_2_2);
+    auto where_2_2_p3 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_2_2_p2, where_2_2_3);
+    auto where_2_2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_2_2_p3, where_2_2_4);
+    auto where_2_3 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(10)));
+    auto where_2_4 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(20)));
+    auto where_2_5 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(1)));
+    auto where_2_6 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(10)));
+
+    auto where_2_p2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_2_1, where_2_2);
+    auto where_2_p3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_2_p2, where_2_3);
+    auto where_2_p4 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_2_p3, where_2_4);
+    auto where_2_p5 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_2_p4, where_2_5);
+    auto where_2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_2_p5, where_2_6);
+
+    auto where_3_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_brand),
+                                                             "Brand#34",
+                                                             SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_3_2_1 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "LG CASE",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_3_2_2 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "LG BOX",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_3_2_3 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "LG PACK",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_3_2_4 = new SqlCompareWithStringLiteralOperator(partRow->GetSqlField(&TpchPartTableRow::p_container),
+                                                               "LG PKG",
+                                                               SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_3_2_p2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_3_2_1, where_3_2_2);
+    auto where_3_2_p3 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_3_2_p2, where_3_2_3);
+    auto where_3_2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_3_2_p3, where_3_2_4);
+    auto where_3_3 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(20)));
+    auto where_3_4 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               lineitemRow->GetSqlField(&TpchLineItemTableRow::l_quantity),
+                                               new SqlLiteral(static_cast<double>(30)));
+    auto where_3_5 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(1)));
+    auto where_3_6 = new SqlComparisonOperator(AstComparisonExprType::LESS_EQUAL,
+                                               partRow->GetSqlField(&TpchPartTableRow::p_size),
+                                               new SqlLiteral(static_cast<int>(15)));
+
+    auto where_3_p2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_3_1, where_3_2);
+    auto where_3_p3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_3_p2, where_3_3);
+    auto where_3_p4 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_3_p3, where_3_4);
+    auto where_3_p5 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_3_p4, where_3_5);
+    auto where_3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_3_p5, where_3_6);
+
+    auto where_0_p2 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_1, where_2);
+    auto where_0_p3 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_0_p2, where_3);
+
+    auto where_p2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_0_1, where_0_2);
+    auto where_clause = new SqlBinaryLogicalOperator(true /*isAnd*/, where_p2, where_0_p3);
+
+    auto filter_processor = new SqlFilterProcessor(where_clause);
+
+    auto aggregation_row_init_field0 = new SqlLiteral(static_cast<double>(0));
+
+    auto aggregation_row = new SqlAggregationRow({ aggregation_row_init_field0 });
+
+    auto sum_expr_1 = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::SUB,
+                new SqlLiteral(static_cast<double>(1)),
+                lineitemRow->GetSqlField(&TpchLineItemTableRow::l_discount));
+    auto sum_expr = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::MUL,
+                lineitemRow->GetSqlField(&TpchLineItemTableRow::l_extendedprice),
+                sum_expr_1);
+    auto update_field0_expr = new SqlArithmeticOperator(
+                TypeId::Get<double>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(0),
+                sum_expr);
+    aggregation_row->SetUpdateExpr(0, update_field0_expr);
+
+    auto aggregator_container = new AggregatedRowContainer(aggregation_row);
+    auto aggregation_outputter = new AggregationOutputter();
+    aggregation_outputter->m_row = aggregation_row;
+    aggregation_outputter->m_container = aggregator_container;
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = lineitem_table_reader;
+    stage2->m_processor.push_back(join_processor);
+    stage2->m_processor.push_back(filter_processor);
+    stage2->m_outputter = aggregation_outputter;
+
+    auto aggregation_row_reader = new AggregationRowGenerator();
+    aggregation_row_reader->m_src = aggregator_container;
+    aggregation_row_reader->m_dst = aggregation_row;
+
+    auto aggregation_field_0_result = aggregation_row->GetSqlProjectionField(0);
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(aggregation_field_0_result);
+
+    auto stage3 = new QueryPlanPipelineStage();
+    stage3->m_generator = aggregation_row_reader;
+    stage3->m_outputter = outputter;
+
+    auto plan = new QueryPlan();
+    plan->m_neededContainers.push_back(part_table_container);
+    plan->m_neededContainers.push_back(hashtable);
+    plan->m_neededContainers.push_back(lineitem_table_container);
+    plan->m_neededContainers.push_back(aggregator_container);
+    plan->m_stages.push_back(stage1);
+    plan->m_stages.push_back(stage2);
+    plan->m_stages.push_back(stage3);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery19_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    std::string expectedResult = "| 18654.358500 |\n";
+
+    CheckTpchQueryCorrectness<BuildTpchQuery19>(expectedResult, false /*checkDebugInterp*/);
+}
+
+TEST(PaperBenchmark, TpchQuery19)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    printf("******* TPCH Query 19 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery19>();
+}

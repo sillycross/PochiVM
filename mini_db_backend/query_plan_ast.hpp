@@ -35,6 +35,21 @@ inline ReferenceVT WARN_UNUSED SqlField::CodegenForWrite()
     return *ReinterpretCast(GetType().AddPointer(), var + Literal<size_t>(m_offset));
 }
 
+inline Value<char> WARN_UNUSED SqlField::CodegenStringOffsetContent(int offset)
+{
+    TestAssert(GetType() == TypeId::Get<char*>());
+    if (m_owner->GetRowType() == SqlRowType::TABLE_ROW)
+    {
+        Variable<uintptr_t>& var = m_owner->GetAddress();
+        return *ReinterpretCast<char*>(var + Literal<size_t>(m_offset + static_cast<size_t>(offset)));
+    }
+    else
+    {
+        Value<char*> v(Codegen());
+        return v[offset];
+    }
+}
+
 inline ValueVT WARN_UNUSED SqlLiteral::Codegen()
 {
     return Literal(GetType(), m_value);
@@ -77,16 +92,16 @@ inline ValueVT WARN_UNUSED SqlCompareWithStringLiteralOperator::Codegen()
 {
     std::function<Value<bool>(int, Value<bool>)> genExpr = [&](int offset, Value<bool> prefix) -> Value<bool>
     {
-        Value<char*> v(m_sqlField->Codegen());
+        Value<char> v = m_sqlField->CodegenStringOffsetContent(offset);
         if (m_stringLit[offset] == '\0')
         {
             if (m_mode == CompareMode::EQUAL)
             {
-                return prefix && v[offset] == '\0';
+                return prefix && v == '\0';
             }
             else if (m_mode == CompareMode::NOT_EQUAL)
             {
-                return prefix || v[offset] != '\0';
+                return prefix || v != '\0';
             }
             else
             {
@@ -100,22 +115,22 @@ inline ValueVT WARN_UNUSED SqlCompareWithStringLiteralOperator::Codegen()
             {
                 if (offset == 0)
                 {
-                    return genExpr(offset + 1, v[offset] != m_stringLit[offset]);
+                    return genExpr(offset + 1, v != m_stringLit[offset]);
                 }
                 else
                 {
-                    return genExpr(offset + 1, prefix || v[offset] != m_stringLit[offset]);
+                    return genExpr(offset + 1, prefix || v != m_stringLit[offset]);
                 }
             }
             else
             {
                 if (offset == 0)
                 {
-                    return genExpr(offset + 1, v[offset] == m_stringLit[offset]);
+                    return genExpr(offset + 1, v == m_stringLit[offset]);
                 }
                 else
                 {
-                    return genExpr(offset + 1, prefix && v[offset] == m_stringLit[offset]);
+                    return genExpr(offset + 1, prefix && v == m_stringLit[offset]);
                 }
             }
         }

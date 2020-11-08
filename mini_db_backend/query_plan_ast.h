@@ -94,6 +94,7 @@ public:
 
     virtual PochiVM::ValueVT WARN_UNUSED Codegen() override final;
     PochiVM::ReferenceVT WARN_UNUSED CodegenForWrite();
+    PochiVM::Value<char> WARN_UNUSED CodegenStringOffsetContent(int offset);
 
     SqlRow* m_owner;
     size_t m_offset;
