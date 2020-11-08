@@ -348,6 +348,30 @@ private:
     SqlValueBase* m_operand;
 };
 
+class SqlCompareWithStringLiteralOperator : public SqlValueBase
+{
+public:
+    enum class CompareMode
+    {
+        EQUAL,
+        NOT_EQUAL,
+        START_WITH
+    };
+
+    SqlCompareWithStringLiteralOperator(SqlField* sqlField, const char* stringLit, CompareMode mode)
+        : SqlValueBase(PochiVM::TypeId::Get<bool>())
+        , m_sqlField(sqlField)
+        , m_stringLit(stringLit)
+        , m_mode(mode)
+    { }
+
+    virtual PochiVM::ValueVT WARN_UNUSED Codegen() override final;
+
+    SqlField* m_sqlField;
+    const char* m_stringLit;
+    CompareMode m_mode;
+};
+
 class SqlRowContainer
 {
 public:
@@ -392,16 +416,15 @@ public:
     SqlAggregationRow* m_row;
 };
 
-class GroupByHashTableContainer : public SqlRowContainer
+class HashTableContainer : public SqlRowContainer
 {
 public:
-    GroupByHashTableContainer()
-        : m_var(nullptr)
-    { }
-
     virtual PochiVM::Block WARN_UNUSED EmitDeclaration() override final;
 
-    PochiVM::Block WARN_UNUSED EmitProbe(const PochiVM::Variable<uintptr_t>& input, const PochiVM::Variable<size_t>& output);
+    PochiVM::Block WARN_UNUSED EmitProbe(const PochiVM::Variable<uintptr_t>& input,
+                                         const PochiVM::Variable<size_t>& output,
+                                         bool emitCheckExpand = true);
+    PochiVM::Block WARN_UNUSED EmitCheckExpand();
 
     using CmpFnPrototype = bool(*)(uintptr_t, uintptr_t) noexcept;
     using HashFnPrototype = size_t(*)(uintptr_t) noexcept;
@@ -416,6 +439,7 @@ public:
     PochiVM::Variable<uintptr_t*>* m_keys;
     PochiVM::Variable<uintptr_t*>* m_values;
     PochiVM::Variable<size_t>* m_tableSize;
+    PochiVM::Variable<size_t>* m_expandThreshold;
     PochiVM::Variable<size_t>* m_count;
     std::string m_cmpFnName;
     std::string m_hashFnName;
@@ -511,7 +535,7 @@ class GroupByHashTableGenerator : public QueryPlanRowGenerator
 public:
     virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
 
-    GroupByHashTableContainer* m_container;
+    HashTableContainer* m_container;
     SqlRow* m_dst;
 };
 
@@ -548,7 +572,16 @@ public:
 
     SqlRow* m_inputRow;
     SqlAggregationRow* m_aggregationRow;
-    GroupByHashTableContainer* m_container;
+    HashTableContainer* m_container;
+};
+
+class HashJoinHashTableOutputter : public QueryPlanRowOutputter
+{
+public:
+    virtual void Codegen(PochiVM::Scope insertPoint) override final;
+
+    SqlRow* m_inputRow;
+    HashTableContainer* m_container;
 };
 
 class SqlResultOutputter : public QueryPlanRowOutputter
@@ -577,6 +610,15 @@ public:
     virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
 
     SqlProjectionRow* m_output;
+};
+
+class TableHashJoinProcessor : public QueryPlanRowProcessor
+{
+public:
+    virtual PochiVM::Scope WARN_UNUSED Codegen(PochiVM::Scope insertPoint) override final;
+
+    std::vector<SqlField*> m_inputRowJoinFields;
+    HashTableContainer* m_container;
 };
 
 class QueryPlan

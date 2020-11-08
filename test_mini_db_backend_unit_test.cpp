@@ -405,7 +405,7 @@ void BuildTpchQuery1()
     auto groupby_field1 = tableRow->GetSqlField(&TpchLineItemTableRow::l_returnflag);
     auto groupby_field2 = tableRow->GetSqlField(&TpchLineItemTableRow::l_linestatus);
 
-    auto groupby_container = new GroupByHashTableContainer();
+    auto groupby_container = new HashTableContainer();
     groupby_container->m_row = tableRow;
     groupby_container->m_groupByFields.push_back(groupby_field1);
     groupby_container->m_groupByFields.push_back(groupby_field2);
@@ -653,4 +653,200 @@ TEST(PaperBenchmark, TpchQuery1)
 
     printf("******* TPCH Query 1 *******\n");
     BenchmarkTpchQuery<BuildTpchQuery1>();
+}
+
+namespace
+{
+
+void BuildTpchQuery12()
+{
+    thread_pochiVMContext->m_curModule = new AstModule("test");
+
+    auto ordersRow = x_tpchtable_orders.GetTableRow();
+    auto joinkey1 = ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderkey);
+
+    auto hashtable = new HashTableContainer();
+    hashtable->m_row = ordersRow;
+    hashtable->m_groupByFields.push_back(joinkey1);
+
+    auto orders_table_container = new SqlTableContainer("orders");
+
+    auto orders_table_reader = new SqlTableRowGenerator();
+    orders_table_reader->m_src = orders_table_container;
+    orders_table_reader->m_dst = ordersRow;
+
+    auto hash_join_outputter = new HashJoinHashTableOutputter();
+    hash_join_outputter->m_inputRow = ordersRow;
+    hash_join_outputter->m_container = hashtable;
+
+    auto stage1 = new QueryPlanPipelineStage();
+    stage1->m_generator = orders_table_reader;
+    stage1->m_outputter = hash_join_outputter;
+
+    auto lineitemRow = x_tpchtable_lineitem.GetTableRow();
+    auto where_clause_1_1 = new SqlCompareWithStringLiteralOperator(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode),
+                                                                    "MAIL",
+                                                                    SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_clause_1_2 = new SqlCompareWithStringLiteralOperator(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode),
+                                                                    "SHIP",
+                                                                    SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto where_clause_1 = new SqlBinaryLogicalOperator(false /*isAnd*/, where_clause_1_1, where_clause_1_2);
+    auto where_clause_2 = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN,
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_commitdate),
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_receiptdate));
+    auto where_clause_3 = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN,
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipdate),
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_commitdate));
+    auto where_clause_4 = new SqlComparisonOperator(AstComparisonExprType::GREATER_EQUAL,
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_receiptdate),
+                                                    new SqlLiteral(static_cast<uint32_t>(757411200)));
+    auto where_clause_5 = new SqlComparisonOperator(AstComparisonExprType::LESS_THAN,
+                                                    lineitemRow->GetSqlField(&TpchLineItemTableRow::l_receiptdate),
+                                                    new SqlLiteral(static_cast<uint32_t>(788947200)));
+
+    auto where_part_2 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_clause_1, where_clause_2);
+    auto where_part_3 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_part_2, where_clause_3);
+    auto where_part_4 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_part_3, where_clause_4);
+    auto where_part_5 = new SqlBinaryLogicalOperator(true /*isAnd*/, where_part_4, where_clause_5);
+
+    auto filter_processor = new SqlFilterProcessor(where_part_5);
+
+    auto lineitem_table_container = new SqlTableContainer("lineitem");
+
+    auto lineitem_table_reader = new SqlTableRowGenerator();
+    lineitem_table_reader->m_src = lineitem_table_container;
+    lineitem_table_reader->m_dst = lineitemRow;
+
+    auto join_processor = new TableHashJoinProcessor();
+    join_processor->m_container = hashtable;
+    join_processor->m_inputRowJoinFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_orderkey));
+
+    auto aggregation_row_init_field0 = lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode);
+    auto aggregation_row_init_field1 = new SqlLiteral(static_cast<int64_t>(0));
+    auto aggregation_row_init_field2 = new SqlLiteral(static_cast<int64_t>(0));
+
+    auto aggregation_row = new SqlAggregationRow({ aggregation_row_init_field0,
+                                                   aggregation_row_init_field1,
+                                                   aggregation_row_init_field2
+                                                 });
+
+    auto field1_cmp_1 = new SqlCompareWithStringLiteralOperator(ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderpriority),
+                                                                "1-URGENT",
+                                                                SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto field1_cmp_2 = new SqlCompareWithStringLiteralOperator(ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderpriority),
+                                                                "2-HIGH",
+                                                                SqlCompareWithStringLiteralOperator::CompareMode::EQUAL);
+    auto field1_cmp_result = new SqlBinaryLogicalOperator(false /*isAnd*/, field1_cmp_1, field1_cmp_2);
+    auto aggregation_row_update_field1 = new SqlArithmeticOperator(
+                TypeId::Get<int64_t>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(1),
+                new SqlCastOperator(TypeId::Get<int64_t>(), field1_cmp_result));
+    aggregation_row->SetUpdateExpr(1, aggregation_row_update_field1);
+
+    auto field2_cmp_1 = new SqlCompareWithStringLiteralOperator(ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderpriority),
+                                                                "1-URGENT",
+                                                                SqlCompareWithStringLiteralOperator::CompareMode::NOT_EQUAL);
+    auto field2_cmp_2 = new SqlCompareWithStringLiteralOperator(ordersRow->GetSqlField(&TpchOrdersTableRow::o_orderpriority),
+                                                                "2-HIGH",
+                                                                SqlCompareWithStringLiteralOperator::CompareMode::NOT_EQUAL);
+    auto field2_cmp_result = new SqlBinaryLogicalOperator(true /*isAnd*/, field2_cmp_1, field2_cmp_2);
+    auto aggregation_row_update_field2 = new SqlArithmeticOperator(
+                TypeId::Get<int64_t>(),
+                AstArithmeticExprType::ADD,
+                aggregation_row->GetSqlProjectionField(2),
+                new SqlCastOperator(TypeId::Get<int64_t>(), field2_cmp_result));
+    aggregation_row->SetUpdateExpr(2, aggregation_row_update_field2);
+
+    auto groupby_container = new HashTableContainer();
+    groupby_container->m_row = lineitemRow;
+    groupby_container->m_groupByFields.push_back(lineitemRow->GetSqlField(&TpchLineItemTableRow::l_shipmode));
+
+    auto groupby_outputter = new GroupByHashTableOutputter();
+    groupby_outputter->m_container = groupby_container;
+    groupby_outputter->m_inputRow = lineitemRow;
+    groupby_outputter->m_aggregationRow = aggregation_row;
+
+    auto stage2 = new QueryPlanPipelineStage();
+    stage2->m_generator = lineitem_table_reader;
+    stage2->m_processor.push_back(filter_processor);
+    stage2->m_processor.push_back(join_processor);
+    stage2->m_outputter = groupby_outputter;
+
+    auto groupby_result_reader = new GroupByHashTableGenerator();
+    groupby_result_reader->m_container = groupby_container;
+    groupby_result_reader->m_dst = aggregation_row;
+
+    auto temptable_container = new TempTableContainer();
+
+    auto temptable_outputter = new TempTableRowOutputter();
+    temptable_outputter->m_src = aggregation_row;
+    temptable_outputter->m_dst = temptable_container;
+
+    auto stage3 = new QueryPlanPipelineStage();
+    stage3->m_generator = groupby_result_reader;
+    stage3->m_outputter = temptable_outputter;
+
+    auto stage4 = new QueryPlanOrderByStage();
+    stage4->m_row = aggregation_row;
+    stage4->m_container = temptable_container;
+    stage4->m_orderByFields.push_back(aggregation_row->GetSqlProjectionField(0));
+
+    auto temptable_reader = new TempTableRowGenerator();
+    temptable_reader->m_dst = aggregation_row;
+    temptable_reader->m_container = temptable_container;
+
+    auto outputter = new SqlResultOutputter();
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(0));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(1));
+    outputter->m_projections.push_back(aggregation_row->GetSqlProjectionField(2));
+
+    auto stage5 = new QueryPlanPipelineStage();
+    stage5->m_generator = temptable_reader;
+    stage5->m_outputter = outputter;
+
+    auto plan = new QueryPlan();
+    plan->m_neededContainers.push_back(orders_table_container);
+    plan->m_neededContainers.push_back(lineitem_table_container);
+    plan->m_neededContainers.push_back(hashtable);
+    plan->m_neededContainers.push_back(groupby_container);
+    plan->m_neededContainers.push_back(temptable_container);
+    plan->m_stages.push_back(stage1);
+    plan->m_stages.push_back(stage2);
+    plan->m_stages.push_back(stage3);
+    plan->m_stages.push_back(stage4);
+    plan->m_stages.push_back(stage5);
+
+    plan->CodeGen();
+
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+}
+
+}   // anonymous namespace
+
+TEST(MiniDbBackendUnitTest, TpchQuery12_Correctness)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    std::string expectedResult =
+        "| MAIL | 1917 | 2942 |\n"
+        "| SHIP | 1948 | 2890 |\n";
+
+    CheckTpchQueryCorrectness<BuildTpchQuery12>(expectedResult, false /*checkDebugInterp*/);
+}
+
+TEST(PaperBenchmark, TpchQuery12)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+
+    TpchLoadDatabase();
+
+    printf("******* TPCH Query 12 *******\n");
+    BenchmarkTpchQuery<BuildTpchQuery12>();
 }

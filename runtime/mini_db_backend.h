@@ -126,6 +126,7 @@ public:
         : m_listHead(0)
         , m_currentAddress(8)
         , m_currentAddressEnd(0)
+        , m_largeAllocationHead(0)
     { }
 
     ~QueryExecutionTempAllocator()
@@ -140,10 +141,14 @@ public:
 
     uintptr_t Allocate(size_t size)
     {
-        // TODO: support large size allocation
-        //
         size_t alignment = 8;
-        TestAssert(size <= g_queryExecutionMemoryPool.x_memoryChunkSize - 4096);
+        if (size > g_queryExecutionMemoryPool.x_memoryChunkSize - 4096)
+        {
+            char* buf = new char[size + 8];
+            *reinterpret_cast<uintptr_t*>(buf) = m_largeAllocationHead;
+            m_largeAllocationHead = reinterpret_cast<uintptr_t>(buf);
+            return reinterpret_cast<uintptr_t>(buf) + 8;
+        }
         AlignCurrentAddress(alignment);
         if (m_currentAddress + size > m_currentAddressEnd)
         {
@@ -184,6 +189,13 @@ private:
 
     void FreeAllMemoryChunks()
     {
+        while (m_largeAllocationHead != 0)
+        {
+            uintptr_t next = *reinterpret_cast<uintptr_t*>(m_largeAllocationHead);
+            char* c = reinterpret_cast<char*>(m_largeAllocationHead);
+            delete [] c;
+            m_largeAllocationHead = next;
+        }
         while (m_listHead != 0)
         {
             uintptr_t next = *reinterpret_cast<uintptr_t*>(m_listHead);
@@ -197,6 +209,7 @@ private:
     uintptr_t m_listHead;
     uintptr_t m_currentAddress;
     uintptr_t m_currentAddressEnd;
+    uintptr_t m_largeAllocationHead;
 };
 
 

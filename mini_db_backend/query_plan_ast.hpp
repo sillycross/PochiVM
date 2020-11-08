@@ -73,6 +73,56 @@ inline ValueVT WARN_UNUSED SqlCastOperator::Codegen()
     return StaticCast(GetType(), m_operand->Codegen());
 }
 
+inline ValueVT WARN_UNUSED SqlCompareWithStringLiteralOperator::Codegen()
+{
+    std::function<Value<bool>(int, Value<bool>)> genExpr = [&](int offset, Value<bool> prefix) -> Value<bool>
+    {
+        Value<char*> v(m_sqlField->Codegen());
+        if (m_stringLit[offset] == '\0')
+        {
+            if (m_mode == CompareMode::EQUAL)
+            {
+                return prefix && v[offset] == '\0';
+            }
+            else if (m_mode == CompareMode::NOT_EQUAL)
+            {
+                return prefix || v[offset] != '\0';
+            }
+            else
+            {
+                TestAssert(m_mode == CompareMode::START_WITH);
+                return prefix;
+            }
+        }
+        else
+        {
+            if (m_mode == CompareMode::NOT_EQUAL)
+            {
+                if (offset == 0)
+                {
+                    return genExpr(offset + 1, v[offset] != m_stringLit[offset]);
+                }
+                else
+                {
+                    return genExpr(offset + 1, prefix || v[offset] != m_stringLit[offset]);
+                }
+            }
+            else
+            {
+                if (offset == 0)
+                {
+                    return genExpr(offset + 1, v[offset] == m_stringLit[offset]);
+                }
+                else
+                {
+                    return genExpr(offset + 1, prefix && v[offset] == m_stringLit[offset]);
+                }
+            }
+        }
+    };
+    return genExpr(0, Literal<bool>(true) /*unused*/);
+}
+
 inline Block WARN_UNUSED SqlAggregationRow::EmitInit()
 {
     Block result;
@@ -173,7 +223,7 @@ inline Block WARN_UNUSED AggregatedRowContainer::EmitDeclaration()
     return result;
 }
 
-inline Block WARN_UNUSED GroupByHashTableContainer::EmitDeclaration()
+inline Block WARN_UNUSED HashTableContainer::EmitDeclaration()
 {
     m_alloc = new Variable<QueryExecutionTempAllocator>(thread_queryCodegenContext.m_curFunction->NewVariable<QueryExecutionTempAllocator>());
 
@@ -305,14 +355,17 @@ inline Block WARN_UNUSED GroupByHashTableContainer::EmitDeclaration()
         m_keys = new Variable<uintptr_t*>(thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>());
         m_values = new Variable<uintptr_t*>(thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>());
         m_tableSize = new Variable<size_t>(thread_queryCodegenContext.m_curFunction->NewVariable<size_t>());
+        m_expandThreshold = new Variable<size_t>(thread_queryCodegenContext.m_curFunction->NewVariable<size_t>());
         m_count = new Variable<size_t>(thread_queryCodegenContext.m_curFunction->NewVariable<size_t>());
         size_t initialSize = 32;
+        size_t expandThreshold = 12;
         m_cmpFnName = cmpFnName;
         m_hashFnName = hashFnName;
         return Block(Declare(*m_alloc),
                      Declare(*m_keys, ReinterpretCast<uintptr_t*>(m_alloc->Allocate(Literal<size_t>(8 * initialSize)))),
                      Declare(*m_values, ReinterpretCast<uintptr_t*>(m_alloc->Allocate(Literal<size_t>(8 * initialSize)))),
                      Declare(*m_tableSize, initialSize),
+                     Declare(*m_expandThreshold, expandThreshold),
                      Declare(*m_count, static_cast<size_t>(0)),
                      For(Declare(i, 0), i < static_cast<int>(initialSize), Increment(i)).Do(
                          Assign((*m_keys)[i], Literal<uintptr_t>(0))
@@ -320,17 +373,60 @@ inline Block WARN_UNUSED GroupByHashTableContainer::EmitDeclaration()
     }
 }
 
-inline Block WARN_UNUSED GroupByHashTableContainer::EmitProbe(const Variable<uintptr_t>& input, const Variable<size_t>& output)
+inline Block WARN_UNUSED HashTableContainer::EmitProbe(const Variable<uintptr_t>& input,
+                                                       const Variable<size_t>& output,
+                                                       bool emitCheckExpand)
 {
     TestAssert(!x_use_cpp_data_structure);
     auto quadratic_probe_factor = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
     return Block(
+        emitCheckExpand ? EmitCheckExpand() : Block(),
         Declare(output, Call<HashFnPrototype>(m_hashFnName, input) % (*m_tableSize)),
         Declare(quadratic_probe_factor, static_cast<size_t>(0)),
         While((*m_keys)[output] != Literal<size_t>(0) &&
               !Call<CmpFnPrototype>(m_cmpFnName, input, (*m_keys)[output])).Do(
             Increment(quadratic_probe_factor),
             Assign(output, (output + quadratic_probe_factor * quadratic_probe_factor) % (*m_tableSize))
+        )
+    );
+}
+
+inline Block WARN_UNUSED HashTableContainer::EmitCheckExpand()
+{
+    TestAssert(!x_use_cpp_data_structure);
+    auto newKeys = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    auto newValues = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    auto i1 = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto i = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto input = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t>();
+    auto slot = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto quadratic_probe_factor = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto newTableSize = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    return Block(
+        If(*m_count >= *m_expandThreshold).Then(
+            Declare(newTableSize, *m_tableSize + *m_tableSize),
+            Declare(newKeys, ReinterpretCast<uintptr_t*>(m_alloc->Allocate(Literal<size_t>(8) * (newTableSize)))),
+            Declare(newValues, ReinterpretCast<uintptr_t*>(m_alloc->Allocate(Literal<size_t>(8) * (newTableSize)))),
+            For(Declare(i1, static_cast<size_t>(0)), i1 < newTableSize, Increment(i1)).Do(
+                Assign(newKeys[i1], Literal<uintptr_t>(0))
+            ),
+            For(Declare(i, static_cast<size_t>(0)), i < *m_tableSize, Increment(i)).Do(
+                Declare(input, (*m_keys)[i]),
+                If(input != Literal<size_t>(0)).Then(
+                    Declare(slot, Call<HashFnPrototype>(m_hashFnName, input) % newTableSize),
+                    Declare(quadratic_probe_factor, static_cast<size_t>(0)),
+                    While(newKeys[slot] != Literal<size_t>(0)).Do(
+                        Increment(quadratic_probe_factor),
+                        Assign(slot, (slot + quadratic_probe_factor * quadratic_probe_factor) % newTableSize)
+                    ),
+                    Assign(newKeys[slot], (*m_keys)[i]),
+                    Assign(newValues[slot], (*m_values)[i])
+                )
+            ),
+            Assign(*m_keys, newKeys),
+            Assign(*m_values, newValues),
+            Assign(*m_tableSize, newTableSize),
+            Assign(*m_expandThreshold, *m_expandThreshold + *m_expandThreshold)
         )
     );
 }
@@ -564,7 +660,6 @@ inline void GroupByHashTableOutputter::Codegen(Scope insertPoint)
         thread_queryCodegenContext.m_rowMap[m_aggregationRow] = &newAggRow;
         initBlock.Append(Assign(*aggRowAddr, newAggRow));
         initBlock.Append(m_aggregationRow->EmitInit());
-        // initBlock.Append(m_aggregationRow->EmitUpdate());
         thread_queryCodegenContext.m_rowMap.erase(thread_queryCodegenContext.m_rowMap.find(m_aggregationRow));
     }
 
@@ -576,6 +671,48 @@ inline void GroupByHashTableOutputter::Codegen(Scope insertPoint)
         updateBlock.Append(m_aggregationRow->EmitUpdate());
         thread_queryCodegenContext.m_rowMap.erase(thread_queryCodegenContext.m_rowMap.find(m_aggregationRow));
     }
+}
+
+inline void HashJoinHashTableOutputter::Codegen(Scope insertPoint)
+{
+    TestAssert(!x_use_cpp_data_structure);
+    auto slot = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    Variable<uintptr_t>& inputRow = thread_queryCodegenContext.GetRow(m_inputRow);
+    auto vecAddr = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t**>();
+    auto vec = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    int initSize = 8;
+    auto newVec = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    auto oldSize = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto newSize = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto expandedVec = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    auto i = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    insertPoint.Append(Block(
+        m_container->EmitProbe(inputRow, slot),
+        If((*m_container->m_keys)[slot] == Literal<size_t>(0)).Then(
+            Assign((*m_container->m_keys)[slot], inputRow),
+            Declare(newVec, ReinterpretCast<uintptr_t*>(m_container->m_alloc->Allocate(Literal<size_t>(8 * static_cast<size_t>(initSize + 2)))) + 2),
+            Assign(newVec[-2], Literal<size_t>(static_cast<size_t>(initSize))),
+            Assign(newVec[-1], Literal<size_t>(0)),
+            Assign((*m_container->m_values)[slot], ReinterpretCast<uintptr_t>(newVec)),
+            Increment(*m_container->m_count)
+        ),
+        Declare(vecAddr, ReinterpretCast<uintptr_t**>((*m_container->m_values) + slot)),
+        Declare(vec, *vecAddr),
+        If(vec[-2] == vec[-1]).Then(
+            Declare(oldSize, vec[-1]),
+            Declare(newSize, oldSize + oldSize),
+            Declare(expandedVec, ReinterpretCast<uintptr_t*>(m_container->m_alloc->Allocate(Literal<size_t>(8) * (newSize + Literal<size_t>(2)))) + 2),
+            Assign(expandedVec[-2], newSize),
+            Assign(expandedVec[-1], oldSize),
+            For(Declare(i, Literal<size_t>(0)), i < oldSize, Increment(i)).Do(
+                Assign(expandedVec[i], vec[i])
+            ),
+            Assign(*vecAddr, expandedVec),
+            Assign(vec, expandedVec)
+        ),
+        Assign(vec[vec[-1]], inputRow),
+        Assign(vec[-1], vec[-1] + Literal<size_t>(1))
+    ));
 }
 
 inline void SqlResultOutputter::Codegen(Scope insertPoint)
@@ -636,6 +773,43 @@ inline Scope WARN_UNUSED SqlProjectionProcessor::Codegen(Scope insertPoint)
         m_output->Codegen(),
         ret
     ));
+    return ret;
+}
+
+inline Scope WARN_UNUSED TableHashJoinProcessor::Codegen(Scope insertPoint)
+{
+    Scope ret;
+    auto alloc = thread_queryCodegenContext.m_curFunction->NewVariable<QueryExecutionTempAllocator>();
+    auto tmpRow = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t>();
+    Variable<uintptr_t>* matchedRow = new Variable<uintptr_t>(thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t>());
+    thread_queryCodegenContext.m_fnStartBlock->Append(Block(
+        Declare(alloc),
+        Declare(tmpRow, alloc.Allocate(Literal<size_t>(m_container->m_row->GetRowSize())))
+    ));
+    TestAssert(!thread_queryCodegenContext.m_rowMap.count(m_container->m_row));
+    thread_queryCodegenContext.m_rowMap[m_container->m_row] = &tmpRow;
+
+    TestAssert(m_inputRowJoinFields.size() == m_container->m_groupByFields.size());
+    for (size_t i = 0; i < m_inputRowJoinFields.size(); i++)
+    {
+        insertPoint.Append(Assign(m_container->m_groupByFields[i]->CodegenForWrite(), m_inputRowJoinFields[i]->Codegen()));
+    }
+    auto slot = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto vec = thread_queryCodegenContext.m_curFunction->NewVariable<uintptr_t*>();
+    auto vecSize = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    auto i = thread_queryCodegenContext.m_curFunction->NewVariable<size_t>();
+    insertPoint.Append(Block(
+        m_container->EmitProbe(tmpRow, slot, false /*emitCheckExpand*/),
+        If((*m_container->m_keys)[slot] != Literal<uintptr_t>(0)).Then(
+            Declare(vec, ReinterpretCast<uintptr_t*>((*m_container->m_values)[slot])),
+            Declare(vecSize, vec[-1]),
+            For(Declare(i, Literal<size_t>(0)), i < vecSize, Increment(i)).Do(
+                Declare(*matchedRow, vec[i]),
+                ret
+            )
+        )
+    ));
+    thread_queryCodegenContext.m_rowMap[m_container->m_row] = matchedRow;
     return ret;
 }
 
