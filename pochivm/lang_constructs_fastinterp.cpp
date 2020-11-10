@@ -229,30 +229,40 @@ static FastInterpBoilerplateInstance* WARN_UNUSED FIGenerateConditionalBranchHel
         }
     }
 
+    // Logical operators
+    // TODO: populate prediction for predict_false as well
+    //
+    if (cond->GetAstNodeType() == AstNodeType::AstLogicalAndOrExpr)
+    {
+        AstLogicalAndOrExpr* expr = assert_cast<AstLogicalAndOrExpr*>(cond);
+        if (expr->m_isAnd)
+        {
+            if (isFavourTrueBranch)
+            {
+                FastInterpBoilerplateInstance* rhs = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(expr->m_rhs, trueBr, falseBr);
+                FastInterpBoilerplateInstance* lhs = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(expr->m_lhs, rhs, falseBr);
+                return lhs;
+            }
+            else
+            {
+                FastInterpBoilerplateInstance* rhs = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(expr->m_rhs, trueBr, falseBr);
+                FastInterpBoilerplateInstance* lhs = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(expr->m_lhs, rhs, falseBr);
+                return lhs;
+            }
+        }
+        else
+        {
+            FastInterpBoilerplateInstance* rhs = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(expr->m_rhs, trueBr, falseBr);
+            FastInterpBoilerplateInstance* lhs = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(expr->m_lhs, trueBr, rhs);
+            return lhs;
+        }
+    }
+
     // General case: outlined conditional branch
     // FIOutlinedConditionalFavourTrueBranchImpl
     // FIOutlinedConditionalUnpredictableBranchImpl
     //
     {
-        // If we predict the branch to be true, and the operator is a logical operator, populate the prediction
-        //
-        if (isFavourTrueBranch)
-        {
-            if (cond->GetAstNodeType() == AstNodeType::AstLogicalAndOrExpr)
-            {
-                AstLogicalAndOrExpr* expr = assert_cast<AstLogicalAndOrExpr*>(cond);
-                if (expr->m_isAnd)
-                {
-                    expr->m_fiPrediction = AstFiLogicalOpPrediction::PREDICT_TRUE;
-                }
-            }
-            else if (cond->GetAstNodeType() == AstNodeType::AstLogicalNotExpr)
-            {
-                AstLogicalNotExpr* expr = assert_cast<AstLogicalNotExpr*>(cond);
-                expr->m_fiPrediction = AstFiLogicalOpPrediction::PREDICT_FALSE;
-            }
-        }
-
         TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(TypeId::Get<bool>()));
         FastInterpSnippet snippet = cond->PrepareForFastInterp(x_FINoSpill);
 
@@ -445,9 +455,10 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
         thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
     }
 
+    // Codegen the condition clause
+    //
     FastInterpBoilerplateInstance* condClauseEntry = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(
                 m_condClause, loopBody.m_entry, afterLoop.m_entry);
-
 
     // Now link everything together
     //
