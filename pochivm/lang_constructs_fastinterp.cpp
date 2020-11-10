@@ -94,16 +94,14 @@ FastInterpSnippet WARN_UNUSED AstScope::PrepareForFastInterp(FISpillLocation TES
     return result;
 }
 
-// Returns a snippet where m_tail is a conditional branch instance,
-// with all placeholders except the two branches populated.
-// placeholder 0 is for true branch, placeholder 1 is for false branch.
-//
 // If 'isFavourTrueBranch' is true, it generates code that would be more efficient
 // if the true branch is likely to be taken.
 // Otherwise, it generates code that does not bias toward true or false branch.
 //
 template<bool isFavourTrueBranch>
-static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBase* cond)
+static FastInterpBoilerplateInstance* WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBase* cond,
+                                                                                    FastInterpBoilerplateInstance* trueBr,
+                                                                                    FastInterpBoilerplateInstance* falseBr)
 {
     TestAssert(cond->GetTypeId().IsBool());
     thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
@@ -145,7 +143,9 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                                             expr->m_op));
                             lhs.PopulatePlaceholder(condBrInst, 0, 1);
                             rhs.PopulatePlaceholder(condBrInst, 2, 3);
-                            return FastInterpSnippet { condBrInst, condBrInst };
+                            condBrInst->PopulateBoilerplateFnPtrPlaceholder(0, trueBr);
+                            condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, falseBr);
+                            return condBrInst;
                         }
                     }
                 }
@@ -181,7 +181,10 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                                 numOFP,
                                 expr->m_op));
                 lhs.PopulatePlaceholder(condBrInst, 0, 1);
-                return snippet.AddContinuation(condBrInst);
+                snippet = snippet.AddContinuation(condBrInst);
+                condBrInst->PopulateBoilerplateFnPtrPlaceholder(0, trueBr);
+                condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, falseBr);
+                return snippet.m_entry;
             }
         }
 
@@ -219,7 +222,10 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                             numOFP,
                             expr->m_op));
             rhs.PopulatePlaceholder(condBrInst, 0, 1);
-            return snippet.AddContinuation(condBrInst);
+            snippet = snippet.AddContinuation(condBrInst);
+            condBrInst->PopulateBoilerplateFnPtrPlaceholder(0, trueBr);
+            condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, falseBr);
+            return snippet.m_entry;
         }
     }
 
@@ -258,7 +264,10 @@ static FastInterpSnippet WARN_UNUSED FIGenerateConditionalBranchHelper(AstNodeBa
                     FastInterpBoilerplateLibrary<BoilerplateName>::SelectBoilerplateBluePrint(
                         thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral(),
                         FIOpaqueParamsHelper::GetMaxOFP()));
-        return snippet.AddContinuation(condBrInst);
+        snippet = snippet.AddContinuation(condBrInst);
+        condBrInst->PopulateBoilerplateFnPtrPlaceholder(0, trueBr);
+        condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, falseBr);
+        return snippet.m_entry;
     }
 }
 
@@ -275,11 +284,7 @@ void AstIfStatement::FastInterpSetupSpillLocation()
 FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
-
-    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(m_condClause);
-    TestAssert(!condBrSnippet.IsEmpty());
-    FastInterpBoilerplateInstance* condBrInst = condBrSnippet.m_tail;
-    TestAssert(condBrInst != nullptr);
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
     FastInterpSnippet thenClause = m_thenClause->PrepareForFastInterp(x_FINoSpill);
     FastInterpSnippet elseClause;
@@ -319,10 +324,11 @@ FastInterpSnippet WARN_UNUSED AstIfStatement::PrepareForFastInterp(FISpillLocati
     }
 
     TestAssert(!thenClause.IsEmpty() && !elseClause.IsEmpty());
-    condBrInst->PopulateBoilerplateFnPtrPlaceholder(0, thenClause.m_entry);
-    condBrInst->PopulateBoilerplateFnPtrPlaceholder(1, elseClause.m_entry);
+
+    FastInterpBoilerplateInstance* condBrEntry = FIGenerateConditionalBranchHelper<false /*favourTrueBranch*/>(
+                m_condClause, thenClause.m_entry, elseClause.m_entry);
     return FastInterpSnippet {
-        condBrSnippet.m_entry, join
+        condBrEntry, join
     };
 }
 
@@ -335,15 +341,14 @@ void AstWhileLoop::FastInterpSetupSpillLocation()
 FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
-    FastInterpSnippet condBrSnippet = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(m_condClause);
-    TestAssert(condBrSnippet.m_entry != nullptr);
-
+    FastInterpBoilerplateInstance* loopEntry = FIGetNoopBoilerplate();
     FastInterpBoilerplateInstance* afterLoop = FIGetNoopBoilerplate();
 
     AutoScopedVarManagerFIBreakContinueTarget asvmfbct(afterLoop /*breakTarget*/,
                                                        m_body /*breakTargetScope*/,
-                                                       condBrSnippet.m_entry /*continueTarget*/,
+                                                       loopEntry /*continueTarget*/,
                                                        m_body /*continueTargetScope*/);
 
     FastInterpSnippet loopBody = m_body->PrepareForFastInterp(x_FINoSpill);
@@ -352,17 +357,20 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
         loopBody = loopBody.AddContinuation(FIGetNoopBoilerplate());
     }
 
-    condBrSnippet.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopBody.m_entry);
-    condBrSnippet.m_tail->PopulateBoilerplateFnPtrPlaceholder(1, afterLoop);
+    FastInterpBoilerplateInstance* condBrEntry = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(
+                m_condClause, loopBody.m_entry, afterLoop);
+
+    loopEntry->PopulateBoilerplateFnPtrPlaceholder(0, condBrEntry);
+
     if (!loopBody.IsUncontinuable())
     {
-        loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condBrSnippet.m_entry);
+        loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopEntry);
     }
 
-    condBrSnippet.m_entry->SetAlignmentLog2(4);
+    loopEntry->SetAlignmentLog2(4);
 
     return FastInterpSnippet {
-        condBrSnippet.m_entry, afterLoop
+        loopEntry, afterLoop
     };
 }
 
@@ -377,6 +385,7 @@ void AstForLoop::FastInterpSetupSpillLocation()
 FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation TESTBUILD_ONLY(spillLoc))
 {
     TestAssert(spillLoc.IsNoSpill());
+    thread_pochiVMContext->m_fastInterpStackFrameManager->AssertNoTemp();
 
     AutoScopedVariableManagerScope asvms(this);
 
@@ -402,7 +411,6 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     size_t numVarsInInitBlock = thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope();
 #endif
 
-    FastInterpSnippet condClause = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(m_condClause);
     TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetCurrentScope() == this);
     TestAssert(thread_pochiVMContext->m_scopedVariableManager.GetNumObjectsInCurrentScope() == numVarsInInitBlock);
 
@@ -437,32 +445,33 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
         thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
     }
 
+    FastInterpBoilerplateInstance* condClauseEntry = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(
+                m_condClause, loopBody.m_entry, afterLoop.m_entry);
+
+
     // Now link everything together
     //
     TestAssert(!startClause.IsUncontinuable());
-    TestAssert(!condClause.IsEmpty() && !condClause.IsUncontinuable());
     TestAssert(!loopBody.IsEmpty());
     TestAssert(!loopStep.IsEmpty() && !loopStep.IsUncontinuable());
     TestAssert(!afterLoop.IsEmpty() && !afterLoop.IsUncontinuable());
-    condClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopBody.m_entry);
-    condClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(1, afterLoop.m_entry);
     if (!loopBody.IsUncontinuable())
     {
         loopBody.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, loopStep.m_entry);
     }
-    loopStep.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClause.m_entry);
+    loopStep.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClauseEntry);
 
-    condClause.m_entry->SetAlignmentLog2(4);
+    condClauseEntry->SetAlignmentLog2(4);
 
     if (startClause.IsEmpty())
     {
         return FastInterpSnippet {
-            condClause.m_entry, afterLoop.m_tail
+            condClauseEntry, afterLoop.m_tail
         };
     }
     else
     {
-        startClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClause.m_entry);
+        startClause.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClauseEntry);
         return FastInterpSnippet {
             startClause.m_entry, afterLoop.m_tail
         };
