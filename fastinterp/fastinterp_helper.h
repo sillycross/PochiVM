@@ -124,7 +124,6 @@ protected:
 #endif
     { }
 
-private:
     void MaterializeCodeSection(uint8_t* destAddr, uint64_t* fixupValues, bool shouldStripLITC) const
     {
         TestAssert(reinterpret_cast<uint64_t>(destAddr) % x_fastinterp_function_alignment == 0);
@@ -172,28 +171,6 @@ private:
             TestAssert(m_symbol64FixupArray[i].m_offset + sizeof(uint64_t) <= trueContentLength);
             uint64_t addend = static_cast<uint64_t>(fixupValues[m_symbol64FixupArray[i].m_ordinalIntoPlaceholderArray]);
             UnalignedAddAndWriteback<uint64_t>(destAddr + m_symbol64FixupArray[i].m_offset, addend);
-        }
-
-        // Rewrite jmp and jcc instructions if possible
-        //
-        {
-            uint32_t limit = m_jmp32ArrayLength;
-            if (shouldStripLITC)
-            {
-                TestAssert(limit > 0 && m_jmp32OffsetArray[limit - 1] == trueContentLength + x86_64_jmp_opcode_num_bytes);
-                limit--;
-            }
-            for (uint32_t i = 0; i < limit; i++)
-            {
-                x86_64_try_rewrite_jmp_instruction(destAddr + m_jmp32OffsetArray[i]);
-            }
-        }
-
-        {
-            for (uint32_t i = 0; i < m_jcc32ArrayLength; i++)
-            {
-                x86_64_try_rewrite_jcc_instruction(destAddr + m_jcc32OffsetArray[i]);
-            }
         }
     }
 
