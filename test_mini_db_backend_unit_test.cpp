@@ -108,8 +108,8 @@ template<auto buildQueryFn>
 void BenchmarkTpchQuery()
 {
     const int numRuns = 10;
-    AstModule* modules[numRuns * 4];
-    for (int i = 0; i < numRuns * 4; i++)
+    AstModule* modules[numRuns * 5];
+    for (int i = 0; i < numRuns * 5; i++)
     {
         buildQueryFn();
         modules[i] = thread_pochiVMContext->m_curModule;
@@ -132,6 +132,18 @@ void BenchmarkTpchQuery()
             //
             thread_pochiVMContext->m_fastInterpGeneratedProgram = nullptr;
         }
+    }
+
+    double debugInterpCodegenTime = 1e100;
+    for (int i = 0; i < numRuns * 2; i++)
+    {
+        thread_pochiVMContext->m_curModule = modules[i];
+        double ts;
+        {
+            AutoTimer t(&ts);
+            thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+        }
+        debugInterpCodegenTime = std::min(debugInterpCodegenTime, ts);
     }
 
     using FnPrototype = void(*)(SqlResultPrinter*);
@@ -194,6 +206,21 @@ void BenchmarkTpchQuery()
         }
     }
 
+    double debugInterpPerformance = 1e100;
+    thread_pochiVMContext->m_curModule = modules[0];
+    for (int i = 0; i < numRuns; i++)
+    {
+        DebugInterpFunction<FnPrototype> debugInterpFn = thread_pochiVMContext->m_curModule->
+                GetDebugInterpGeneratedFunction<FnPrototype>("execute_query");
+        double ts;
+        SqlResultPrinter printer;
+        {
+            AutoTimer t(&ts);
+            debugInterpFn(&printer);
+        }
+        debugInterpPerformance = std::min(debugInterpPerformance, ts);
+    }
+
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
@@ -202,6 +229,7 @@ void BenchmarkTpchQuery()
     printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1]);
     printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
     printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
+    printf("DbgInterp:  %.7lf\n", debugInterpCodegenTime);
     printf("==============================\n\n");
 
     printf("==============================\n");
@@ -212,7 +240,15 @@ void BenchmarkTpchQuery()
     printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
     printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
+    printf("DbgInterp:  %.7lf\n", debugInterpPerformance);
     printf("==============================\n");
+
+    // For Excel
+    //
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpCodegenTime, llvmCodegenTime[0], llvmCodegenTime[1], llvmCodegenTime[2], llvmCodegenTime[3], debugInterpCodegenTime);
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 template<auto buildQueryFn>

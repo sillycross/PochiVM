@@ -7,7 +7,7 @@
 
 // Uncomment to enable running paper microbenchmarks
 //
-//#define ENABLE_PAPER_MICROBENCHMARKS
+#define ENABLE_PAPER_MICROBENCHMARKS
 
 #ifdef ENABLE_PAPER_MICROBENCHMARKS
 #define PAPER_MICROBENCHMARK_TEST_PREFIX PaperMicrobenchmark
@@ -28,6 +28,16 @@ double GetBestResultOfRuns(std::function<double()> lambda, int numRuns = 10)
         bestResult = std::min(bestResult, result);
     }
     return bestResult;
+}
+
+double TimeDebugInterpCodegenTime()
+{
+    double ts;
+    {
+        AutoTimer t(&ts);
+        thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    }
+    return ts;
 }
 
 }   // anonymous namespace
@@ -141,6 +151,20 @@ double TimeLLVMPerformance(TestJitHelper& jit)
     return ts;
 }
 
+double TimeDebugInterpPerformance()
+{
+    double ts;
+    using FnPrototype = uint64_t(*)(int) noexcept;
+    DebugInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetDebugInterpGeneratedFunction<FnPrototype>("fib_nth");
+    {
+        AutoTimer t(&ts);
+        uint64_t ret = interpFn(40);
+        ReleaseAssert(ret == 102334155);
+    }
+    return ts;
+}
+
 }   // namespace PaperMicrobenchmarkFibonacciSequence
 
 TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
@@ -151,6 +175,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
 
     using namespace PaperMicrobenchmarkFibonacciSequence;
 
+    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
+        SetupModuleForCodegenTiming();
+        return TimeDebugInterpCodegenTime();
+    });
+
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -160,6 +189,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
     TimeFastInterpCodegenTime();
     double fastInterpPerformance = GetBestResultOfRuns([]() {
         return TimeFastInterpPerformance();
+    });
+
+    TimeDebugInterpCodegenTime();
+    double debugInterpPerformance = GetBestResultOfRuns([]() {
+        return TimeDebugInterpPerformance();
     });
 
     double llvmCodegenTime[4], llvmPerformance[4];
@@ -199,6 +233,13 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
     printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
+
+    // For Excel
+    //
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkEulerSieve
@@ -338,6 +379,30 @@ double TimeLLVMPerformance(TestJitHelper& jit)
     return ts;
 }
 
+double TimeDebugInterpPerformance()
+{
+    double ts;
+    using FnPrototype = int(*)(int, int*, int*) noexcept;
+    DebugInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetDebugInterpGeneratedFunction<FnPrototype>("euler_sieve");
+
+    int n = 100000000;
+    int* lp = new int[static_cast<size_t>(n + 10)];
+    memset(lp, 0, sizeof(int) * static_cast<size_t>(n + 10));
+    int* pr = new int[static_cast<size_t>(n + 10)];
+    memset(pr, 0, sizeof(int) * static_cast<size_t>(n + 10));
+
+    {
+        AutoTimer t(&ts);
+        int ret = interpFn(n, lp, pr);
+        ReleaseAssert(ret == 5761455);
+    }
+
+    delete [] lp;
+    delete [] pr;
+    return ts;
+}
+
 }   // namespace PaperMicrobenchmarkEulerSieve
 
 TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
@@ -348,6 +413,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
 
     using namespace PaperMicrobenchmarkEulerSieve;
 
+    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
+        SetupModuleForCodegenTiming();
+        return TimeDebugInterpCodegenTime();
+    });
+
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -357,6 +427,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
     TimeFastInterpCodegenTime();
     double fastInterpPerformance = GetBestResultOfRuns([]() {
         return TimeFastInterpPerformance();
+    });
+
+    TimeDebugInterpCodegenTime();
+    double debugInterpPerformance = GetBestResultOfRuns([]() {
+        return TimeDebugInterpPerformance();
     });
 
     double llvmCodegenTime[4], llvmPerformance[4];
@@ -396,6 +471,13 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
     printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
+
+    // For Excel
+    //
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkQuickSort
@@ -559,6 +641,40 @@ double TimeLLVMPerformance(TestJitHelper& jit)
     return ts;
 }
 
+double TimeDebugInterpPerformance()
+{
+    double ts;
+    using FnPrototype = void(*)(int*, int, int) noexcept;
+    DebugInterpFunction<FnPrototype> interpFn = thread_pochiVMContext->m_curModule->
+            GetDebugInterpGeneratedFunction<FnPrototype>("quicksort");
+
+    int n = 5000000;
+    int* a = new int[static_cast<size_t>(n)];
+    for (int i = 0; i < n; i++)
+    {
+        a[i] = i;
+    }
+
+    std::mt19937 mt_rand(123 /*seed*/);
+    for (int i = 0; i < n; i++)
+    {
+        std::swap(a[i], a[mt_rand() % static_cast<size_t>(i + 1)]);
+    }
+
+    {
+        AutoTimer t(&ts);
+        interpFn(a, 0, n - 1);
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        ReleaseAssert(a[i] == i);
+    }
+
+    delete [] a;
+    return ts;
+}
+
 }   // namespace PaperMicrobenchmarkQuickSort
 
 TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
@@ -569,6 +685,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
 
     using namespace PaperMicrobenchmarkQuickSort;
 
+    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
+        SetupModuleForCodegenTiming();
+        return TimeDebugInterpCodegenTime();
+    });
+
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -578,6 +699,11 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
     TimeFastInterpCodegenTime();
     double fastInterpPerformance = GetBestResultOfRuns([]() {
         return TimeFastInterpPerformance();
+    });
+
+    TimeDebugInterpCodegenTime();
+    double debugInterpPerformance = GetBestResultOfRuns([]() {
+        return TimeDebugInterpPerformance();
     });
 
     double llvmCodegenTime[4], llvmPerformance[4];
@@ -617,6 +743,13 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
     printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
+
+    // For Excel
+    //
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkBrainfxxkCompiler
@@ -1331,23 +1464,23 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, BrainfxxkMandelbrot)
 namespace PaperMicrobenchmarkAMillionIncrement
 {
 
-void CreateFunction(std::string fnName)
+void CreateFunction(std::string fnName, int numIncrements)
 {
     using FnPrototype = int(*)(int, int) noexcept;
     auto [fn, a, b] = NewFunction<FnPrototype>(fnName);
 
     fn.SetBody();
-    for (int i = 0; i < 1000000; i++)
+    for (int i = 0; i < numIncrements; i++)
     {
         fn.GetBody().Append(Assign(a, a + b));
     }
     fn.GetBody().Append(Return(a));
 }
 
-void SetupModule()
+void SetupModule(int numIncrements)
 {
     thread_pochiVMContext->m_curModule = new AstModule("test");
-    CreateFunction("largefn");
+    CreateFunction("largefn", numIncrements);
     ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
 }
 
@@ -1391,7 +1524,7 @@ std::pair<TestJitHelper, double> TimeLLVMCodegenTime(int optLevel)
     return std::make_pair(std::move(jit), ts);
 }
 
-double TimeFastInterpPerformance()
+double TimeFastInterpPerformance(int numIncrements)
 {
     double ts;
     using FnPrototype = int(*)(int, int) noexcept;
@@ -1400,13 +1533,13 @@ double TimeFastInterpPerformance()
 
     {
         AutoTimer t(&ts);
-        ReleaseAssert(interpFn(1, 2) == 2000001);
+        ReleaseAssert(interpFn(1, 2) == 2 * numIncrements + 1);
     }
 
     return ts;
 }
 
-double TimeLLVMPerformance(TestJitHelper& jit)
+double TimeLLVMPerformance(TestJitHelper& jit, int numIncrements)
 {
     double ts;
     using FnPrototype = int(*)(int, int) noexcept;
@@ -1414,7 +1547,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
     {
         AutoTimer t(&ts);
-        ReleaseAssert(jitFn(1, 2) == 2000001);
+        ReleaseAssert(jitFn(1, 2) ==  2 * numIncrements + 1);
     }
 
     return ts;
@@ -1422,7 +1555,7 @@ double TimeLLVMPerformance(TestJitHelper& jit)
 
 }   // PaperMicrobenchmarkAMillionIncrement
 
-TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
+void TestAMillionIncrementScaling(int numIncrements)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1430,34 +1563,40 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
 
     using namespace PaperMicrobenchmarkAMillionIncrement;
 
-    double fastinterpCodegenTime = GetBestResultOfRuns([]() {
-        SetupModule();
+    double fastinterpCodegenTime = GetBestResultOfRuns([&]() {
+        SetupModule(numIncrements);
         return TimeFastInterpCodegenTime();
     });
 
-    SetupModule();
+    SetupModule(numIncrements);
     TimeFastInterpCodegenTime();
-    double fastInterpPerformance = GetBestResultOfRuns([]() {
-        return TimeFastInterpPerformance();
+    double fastInterpPerformance = GetBestResultOfRuns([&]() {
+        return TimeFastInterpPerformance(numIncrements);
     });
+
+    int llvmNumRuns = 2;
+    if (numIncrements >= 500000) {
+        llvmNumRuns = 1;
+    }
 
     double llvmCodegenTime[4], llvmPerformance[4];
     for (int optLevel = 0; optLevel <= 3; optLevel ++)
     {
+        // TestJitHelper jit;
         llvmCodegenTime[optLevel] = GetBestResultOfRuns([&]() {
-            SetupModule();
+            SetupModule(numIncrements);
             auto result = TimeLLVMCodegenTime(optLevel);
+            // jit = std::move(result.first);
             return result.second;
-        }, 1 /*numRuns*/);
-
-        SetupModule();
-        TestJitHelper jit = RunLLVMCodegenForExecution(optLevel);
+        }, llvmNumRuns /*numRuns*/);
+/*
         llvmPerformance[optLevel] = GetBestResultOfRuns([&]() {
-            return TimeLLVMPerformance(jit);
+            return TimeLLVMPerformance(jit, numIncrements);
         });
+        */
     }
 
-    printf("******* A million increment Microbenchmark *******\n");
+    printf("******* A million increment Microbenchmark (%d increments) *******\n", numIncrements);
 
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
@@ -1478,6 +1617,58 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement)
     printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
     printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
+
+    // For Excel
+    //
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastinterpCodegenTime, llvmCodegenTime[0], llvmCodegenTime[1], llvmCodegenTime[2], llvmCodegenTime[3]);
+    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
+           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3]);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_0)
+{
+    TestAMillionIncrementScaling(10000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_1)
+{
+    TestAMillionIncrementScaling(50000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_2)
+{
+    TestAMillionIncrementScaling(100000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_3)
+{
+    TestAMillionIncrementScaling(200000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_4)
+{
+    TestAMillionIncrementScaling(300000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_5)
+{
+    TestAMillionIncrementScaling(400000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_6)
+{
+    TestAMillionIncrementScaling(600000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_7)
+{
+    TestAMillionIncrementScaling(800000);
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, AMillionIncrement_8)
+{
+    TestAMillionIncrementScaling(1000000);
 }
 
 namespace PaperRegexMiniExample
@@ -1625,4 +1816,29 @@ TEST(PaperRegexMiniExample, Correctness)
         int out = jitFn(&input);
         ReleaseAssert(out == 2);
     }
+}
+
+TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, DumpQsortInputFile)
+{
+    int n = 5000000;
+    int* a = new int[static_cast<size_t>(n)];
+    for (int i = 0; i < n; i++)
+    {
+        a[i] = i;
+    }
+
+    std::mt19937 mt_rand(123 /*seed*/);
+    for (int i = 0; i < n; i++)
+    {
+        std::swap(a[i], a[mt_rand() % static_cast<size_t>(i + 1)]);
+    }
+
+    FILE* fp = fopen("qsort_input.txt", "w");
+    ReleaseAssert(fp != nullptr);
+    fprintf(fp, "%d\n", n);
+    for (int i = 0; i < n; i++)
+    {
+        fprintf(fp, "%d\n", a[i]);
+    }
+    fclose(fp);
 }
