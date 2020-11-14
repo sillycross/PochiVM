@@ -30,16 +30,6 @@ double GetBestResultOfRuns(std::function<double()> lambda, int numRuns = 10)
     return bestResult;
 }
 
-double TimeDebugInterpCodegenTime()
-{
-    double ts;
-    {
-        AutoTimer t(&ts);
-        thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
-    }
-    return ts;
-}
-
 }   // anonymous namespace
 
 namespace PaperMicrobenchmarkFibonacciSequence
@@ -175,11 +165,6 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
 
     using namespace PaperMicrobenchmarkFibonacciSequence;
 
-    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
-        SetupModuleForCodegenTiming();
-        return TimeDebugInterpCodegenTime();
-    });
-
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -191,55 +176,19 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, FibonacciSeq)
         return TimeFastInterpPerformance();
     });
 
-    TimeDebugInterpCodegenTime();
-    double debugInterpPerformance = GetBestResultOfRuns([]() {
-        return TimeDebugInterpPerformance();
-    });
-
-    double llvmCodegenTime[4], llvmPerformance[4];
-    for (int optLevel = 0; optLevel <= 3; optLevel ++)
-    {
-        llvmCodegenTime[optLevel] = GetBestResultOfRuns([&]() {
-            SetupModuleForCodegenTiming();
-            auto result = TimeLLVMCodegenTime(optLevel);
-            return result.second;
-        });
-
-        SetupModuleForExecution();
-        TestJitHelper jit = RunLLVMCodegenForExecution(optLevel);
-        llvmPerformance[optLevel] = GetBestResultOfRuns([&]() {
-            return TimeLLVMPerformance(jit);
-        });
-    }
-
     printf("******* Fibonacci Sequence Microbenchmark *******\n");
 
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
-
-    // For Excel
-    //
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkEulerSieve
@@ -413,11 +362,6 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
 
     using namespace PaperMicrobenchmarkEulerSieve;
 
-    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
-        SetupModuleForCodegenTiming();
-        return TimeDebugInterpCodegenTime();
-    });
-
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -429,55 +373,19 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, EulerSieve)
         return TimeFastInterpPerformance();
     });
 
-    TimeDebugInterpCodegenTime();
-    double debugInterpPerformance = GetBestResultOfRuns([]() {
-        return TimeDebugInterpPerformance();
-    });
-
-    double llvmCodegenTime[4], llvmPerformance[4];
-    for (int optLevel = 0; optLevel <= 3; optLevel ++)
-    {
-        llvmCodegenTime[optLevel] = GetBestResultOfRuns([&]() {
-            SetupModuleForCodegenTiming();
-            auto result = TimeLLVMCodegenTime(optLevel);
-            return result.second;
-        });
-
-        SetupModuleForExecution();
-        TestJitHelper jit = RunLLVMCodegenForExecution(optLevel);
-        llvmPerformance[optLevel] = GetBestResultOfRuns([&]() {
-            return TimeLLVMPerformance(jit);
-        });
-    }
-
     printf("******* Euler Sieve Microbenchmark *******\n");
 
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
-
-    // For Excel
-    //
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkQuickSort
@@ -685,11 +593,6 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
 
     using namespace PaperMicrobenchmarkQuickSort;
 
-    double debuginterpCodegenTime = GetBestResultOfRuns([]() {
-        SetupModuleForCodegenTiming();
-        return TimeDebugInterpCodegenTime();
-    });
-
     double fastinterpCodegenTime = GetBestResultOfRuns([]() {
         SetupModuleForCodegenTiming();
         return TimeFastInterpCodegenTime();
@@ -701,55 +604,19 @@ TEST(PAPER_MICROBENCHMARK_TEST_PREFIX, QuickSort)
         return TimeFastInterpPerformance();
     });
 
-    TimeDebugInterpCodegenTime();
-    double debugInterpPerformance = GetBestResultOfRuns([]() {
-        return TimeDebugInterpPerformance();
-    });
-
-    double llvmCodegenTime[4], llvmPerformance[4];
-    for (int optLevel = 0; optLevel <= 3; optLevel ++)
-    {
-        llvmCodegenTime[optLevel] = GetBestResultOfRuns([&]() {
-            SetupModuleForCodegenTiming();
-            auto result = TimeLLVMCodegenTime(optLevel);
-            return result.second;
-        });
-
-        SetupModuleForExecution();
-        TestJitHelper jit = RunLLVMCodegenForExecution(optLevel);
-        llvmPerformance[optLevel] = GetBestResultOfRuns([&]() {
-            return TimeLLVMPerformance(jit);
-        });
-    }
-
     printf("******* Quicksort Microbenchmark *******\n");
 
     printf("==============================\n");
     printf("   Codegen Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastinterpCodegenTime / 100);
-    printf("LLVM -O0:   %.7lf\n", llvmCodegenTime[0] / 100);
-    printf("LLVM -O1:   %.7lf\n", llvmCodegenTime[1] / 100);
-    printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2] / 100);
-    printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3] / 100);
     printf("==============================\n\n");
 
     printf("==============================\n");
     printf("  Execution Time Comparison\n");
     printf("------------------------------\n");
     printf("FastInterp: %.7lf\n", fastInterpPerformance);
-    printf("LLVM -O0:   %.7lf\n", llvmPerformance[0]);
-    printf("LLVM -O1:   %.7lf\n", llvmPerformance[1]);
-    printf("LLVM -O2:   %.7lf\n", llvmPerformance[2]);
-    printf("LLVM -O3:   %.7lf\n", llvmPerformance[3]);
     printf("==============================\n");
-
-    // For Excel
-    //
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastinterpCodegenTime / 100, llvmCodegenTime[0] / 100, llvmCodegenTime[1] / 100, llvmCodegenTime[2] / 100, llvmCodegenTime[3] / 100, debuginterpCodegenTime / 100);
-    printf("%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\t%.7lf\n",
-           fastInterpPerformance, llvmPerformance[0], llvmPerformance[1], llvmPerformance[2], llvmPerformance[3], debugInterpPerformance);
 }
 
 namespace PaperMicrobenchmarkBrainfxxkCompiler
