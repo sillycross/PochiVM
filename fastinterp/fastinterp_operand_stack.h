@@ -220,8 +220,8 @@ class FIStackFrameManager
 public:
     FIStackFrameManager()
         : m_planner()
-        , m_integralOperandStack(&m_planner, x_fastinterp_max_integral_params)
-        , m_floatOperandStack(&m_planner, x_fastinterp_max_floating_point_params)
+        , m_integralOperandStack(&m_planner, 1)
+        , m_floatOperandStack(&m_planner, 1)
     { }
 
     void Reset(uint32_t startOffset)
@@ -284,11 +284,11 @@ public:
     {
         if (typeId.IsFloatingPoint())
         {
-            return m_floatOperandStack.GetNumNoSpill() < x_fastinterp_max_floating_point_params;
+            return m_floatOperandStack.GetNumNoSpill() < 1;
         }
         else
         {
-            return m_integralOperandStack.GetNumNoSpill() < x_fastinterp_max_integral_params;
+            return m_integralOperandStack.GetNumNoSpill() < 1;
         }
     }
 
