@@ -62,62 +62,19 @@ inline std::unique_ptr<FastInterpGeneratedProgram> WARN_UNUSED FastInterpCodegen
     // Repeat: pick a node with no inbound-degree, chase its outlink until we reach an end or a visited node.
     //
     int32_t codeSectionLength = 0;
-    size_t numInstantiated = 0;
-    for (int pass = 0; pass < 2; pass++)
+    for (size_t i = 0; i < m_allBoilerplateInstances.size(); i++)
     {
-        for (size_t i = 0; i < m_allBoilerplateInstances.size(); i++)
-        {
-            FastInterpBoilerplateInstance* instance = m_allBoilerplateInstances[i];
+        FastInterpBoilerplateInstance* instance = m_allBoilerplateInstances[i];
 
-            // In pass 1, only start with node with no inbound-degree.
-            // After pass 1, the remaining are loops.
-            //
-            if (instance->m_populatedRelativeCodeAddress || (pass == 0 && instance->m_isContinuationOfAnotherInstance))
-            {
-                continue;
-            }
-            // Align the beginning of a code sequence to 16 bytes, it helps with CPU pipelining.
-            // There is no cost in this case: since this is the beginning of a code sequence,
-            // the inserted nops are never executed.
-            //
-            instance->SetAlignmentLog2(4);
-            while (true)
-            {
-                numInstantiated++;
-                int padding = codeSectionLength & ((1 << instance->m_log2CodeSectionAlignment) - 1);
-                if (padding != 0) { padding = (1 << instance->m_log2CodeSectionAlignment) - padding; }
-                codeSectionLength += padding;
-                instance->m_relativeCodeAddr = codeSectionLength;
-                instance->m_codeSectionPaddingRequired = static_cast<uint16_t>(padding);
-                codeSectionLength += static_cast<int32_t>(instance->m_owner->GetCodeSectionLength());
-                instance->m_populatedRelativeCodeAddress = true;
-                if (instance->m_litcInstanceOrd == static_cast<uint32_t>(-1))
-                {
-                    break;
-                }
-                else
-                {
-                    TestAssert(instance->m_litcInstanceOrd < m_allBoilerplateInstances.size());
-                    FastInterpBoilerplateInstance* nextInstance = m_allBoilerplateInstances[instance->m_litcInstanceOrd];
-                    TestAssert(nextInstance->m_isContinuationOfAnotherInstance);
-                    if (nextInstance->m_populatedRelativeCodeAddress)
-                    {
-                        break;
-                    }
-                    instance->m_shouldStripLITC = true;
-                    instance = nextInstance;
-                    codeSectionLength -= x86_64_rip_relative_jmp_instruction_len;
-                }
-            }
-        }
-        // If in the first pass, we have instantiated everything, just break out.
-        //
-        if (numInstantiated == m_allBoilerplateInstances.size())
-        {
-            break;
-        }
+        int padding = codeSectionLength & ((1 << instance->m_log2CodeSectionAlignment) - 1);
+        if (padding != 0) { padding = (1 << instance->m_log2CodeSectionAlignment) - padding; }
+        codeSectionLength += padding;
+        instance->m_relativeCodeAddr = codeSectionLength;
+        instance->m_codeSectionPaddingRequired = static_cast<uint16_t>(padding);
+        codeSectionLength += static_cast<int32_t>(instance->m_owner->GetCodeSectionLength());
+        instance->m_populatedRelativeCodeAddress = true;
+        instance->m_shouldStripLITC = false;
     }
-    TestAssert(numInstantiated == m_allBoilerplateInstances.size());
 
 #ifdef TESTBUILD
     // Just to make sure we have placed every boilerplate instance
