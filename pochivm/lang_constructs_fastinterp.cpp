@@ -446,6 +446,11 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     FastInterpSnippet afterLoop = thread_pochiVMContext->m_scopedVariableManager.FIGenerateDestructorSequenceUntilScope(this);
     afterLoop = FastInterpSnippet(afterLoopHead, afterLoopHead).AddContinuation(afterLoop);
 
+    // Codegen the condition clause
+    //
+    FastInterpBoilerplateInstance* condClauseEntry = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(
+                m_condClause, loopBody.m_entry, afterLoop.m_entry);
+
     // Pop off the variable scope
     //
     const std::vector<DestructorIREmitter*>& list = thread_pochiVMContext->m_scopedVariableManager.GetObjectsInCurrentScope();
@@ -454,11 +459,6 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
         AstVariable* var = assert_cast<AstVariable*>(*rit);
         thread_pochiVMContext->m_fastInterpStackFrameManager->PopLocalVar(var->GetTypeId().RemovePointer());
     }
-
-    // Codegen the condition clause
-    //
-    FastInterpBoilerplateInstance* condClauseEntry = FIGenerateConditionalBranchHelper<true /*favourTrueBranch*/>(
-                m_condClause, loopBody.m_entry, afterLoop.m_entry);
 
     // Now link everything together
     //
