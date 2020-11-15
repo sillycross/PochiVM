@@ -101,19 +101,18 @@ public:
         m_owner = newBluePrint;
     }
 
-    void SetAlignmentLog2(uint16_t log2CodeSectionAlignment)
+    void SetAlignmentLog2(uint16_t /*log2CodeSectionAlignment*/)
     {
-        TestAssert(log2CodeSectionAlignment <= 6);
-        m_log2CodeSectionAlignment = log2CodeSectionAlignment;
+        m_log2CodeSectionAlignment = 0;
     }
 
 private:
     FastInterpBoilerplateInstance(TempArenaAllocator& alloc,
                                   const FastInterpBoilerplateBluePrint* owner,
                                   uint32_t ordinalInArray,
-                                  uint16_t log2CodeSectionAlignment)
+                                  uint16_t /*log2CodeSectionAlignment*/)
         : m_owner(owner)
-        , m_log2CodeSectionAlignment(log2CodeSectionAlignment)
+        , m_log2CodeSectionAlignment(0)
         , m_codeSectionPaddingRequired(0)
         , m_ordinalInArray(ordinalInArray)
         , m_litcInstanceOrd(static_cast<uint32_t>(-1))
