@@ -108,11 +108,17 @@ template<auto buildQueryFn>
 void BenchmarkTpchQuery()
 {
     const int numRuns = 10;
+    double buildAstTime = 1e100;
     AstModule* modules[numRuns * 5];
     for (int i = 0; i < numRuns * 5; i++)
     {
-        buildQueryFn();
+        double ts;
+        {
+            AutoTimer t(&ts);
+            buildQueryFn();
+        }
         modules[i] = thread_pochiVMContext->m_curModule;
+        buildAstTime = std::min(buildAstTime, ts);
     }
 
     double fastInterpCodegenTime = 1e100;
@@ -230,6 +236,7 @@ void BenchmarkTpchQuery()
     printf("LLVM -O2:   %.7lf\n", llvmCodegenTime[2]);
     printf("LLVM -O3:   %.7lf\n", llvmCodegenTime[3]);
     printf("DbgInterp:  %.7lf\n", debugInterpCodegenTime);
+    printf("BuildAst:   %.7lf\n", buildAstTime);
     printf("==============================\n\n");
 
     printf("==============================\n");
