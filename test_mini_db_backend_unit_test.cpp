@@ -9,6 +9,16 @@
 using namespace MiniDbBackend;
 using namespace PochiVM;
 
+// Uncomment to enable running TPCH benchmarks
+//
+#define ENABLE_TPCH_BENCHMARKS
+
+#ifdef ENABLE_TPCH_BENCHMARKS
+#define TPCH_BENCHMARK_TEST_PREFIX TpchBenchmark
+#else
+#define TPCH_BENCHMARK_TEST_PREFIX DISABLED_TpchBenchmark
+#endif
+
 TEST(MiniDbBackendUnitTest, LoadDatabase)
 {
     TpchLoadDatabase();
@@ -413,7 +423,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery6_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery6>(expectedResult);
 }
 
-TEST(PaperBenchmark, TpchQuery6)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery6)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -686,7 +696,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery1_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery1>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery1)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery1)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -882,7 +892,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery12_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery12>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery12)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery12)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1137,7 +1147,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery19_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery19>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery19)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery19)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1306,7 +1316,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery14_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery14>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery14)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery14)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1543,7 +1553,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery3_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery3>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery3)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery3)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -1860,7 +1870,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery10_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery10>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery10)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery10)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;
@@ -2192,7 +2202,7 @@ TEST(MiniDbBackendUnitTest, TpchQuery5_Correctness)
     CheckTpchQueryCorrectness<BuildTpchQuery5>(expectedResult, false /*checkDebugInterp*/);
 }
 
-TEST(PaperBenchmark, TpchQuery5)
+TEST(TPCH_BENCHMARK_TEST_PREFIX, TpchQuery5)
 {
     AutoThreadPochiVMContext apv;
     AutoThreadErrorContext arc;

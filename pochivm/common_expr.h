@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast_expr_base.h"
+#include "ast_mem2reg.h"
 
 namespace PochiVM
 {
@@ -38,7 +39,7 @@ public:
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_operand);
     }
@@ -81,7 +82,7 @@ public:
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
@@ -200,7 +201,7 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstExceptionAddressPlaceholder::DebugInterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
@@ -224,7 +225,7 @@ class AstAssignExpr : public AstNodeBase
 public:
     AstAssignExpr(AstNodeBase* dst, AstNodeBase* src)
         : AstNodeBase(AstNodeType::AstAssignExpr, TypeId::Get<void>())
-        , m_fiInlineShape(FIShape::INVALID), m_dst(dst), m_src(src)
+        , m_fiInlineShape(FIShape::INVALID), m_isLhsMem2RegVar(false), m_dst(dst), m_src(src), m_mem2regDst(nullptr)
     {
         TestAssert(m_src->GetTypeId().IsPrimitiveType() || m_src->GetTypeId().IsPointerType());
         TestAssert(m_dst->GetTypeId() == m_src->GetTypeId().AddPointer());
@@ -247,6 +248,7 @@ public:
 
     GEN_CLASS_METHOD_SELECTOR(SelectImpl, AstAssignExpr, InterpImpl, AstTypeHelper::primitive_or_pointer_type)
 
+    AstNodeBase* GetSrc() const { return m_src; }
     AstNodeBase* GetDst() const { return m_dst; }
 
     virtual void SetupDebugInterpImpl() override final
@@ -254,7 +256,7 @@ public:
         m_debugInterpFn = SelectImpl(m_src->GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_src);
         fn(m_dst);
@@ -264,6 +266,15 @@ public:
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
     virtual void FastInterpSetupSpillLocation() override final;
+
+    void SetLhsMem2Reg(AstRegisterCachedVariableExpr* expr)
+    {
+        TestAssert(!m_isLhsMem2RegVar && expr->m_variable == m_dst);
+        m_isLhsMem2RegVar = true;
+        m_mem2regDst = expr;
+    }
+
+    bool IsLhsMem2Reg() const { return m_isLhsMem2RegVar; }
 
 private:
 
@@ -280,8 +291,14 @@ private:
     FIShape m_fiInlineShape;
     bool m_fiIsLhsSpill;
 
+    // Whether the LHS has been transformed to be a mem2reg variable
+    //
+    bool m_isLhsMem2RegVar;
+
     AstNodeBase* m_dst;
     AstNodeBase* m_src;
+
+    AstRegisterCachedVariableExpr* m_mem2regDst;
 };
 
 class AstPointerArithmeticExpr : public AstNodeBase
@@ -322,7 +339,7 @@ public:
         m_debugInterpFn = SelectImpl(m_base->GetTypeId(), m_index->GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_base);
         fn(m_index);
@@ -367,7 +384,7 @@ public:
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 };
 
 // A TRASH pointer known at codegen time
@@ -411,7 +428,7 @@ public:
         ReleaseAssert(false && "unimplemented");
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 };
 
 // Converts a rvalue to a temporary reference, so it matches the expectation of a C++ function
@@ -444,7 +461,7 @@ public:
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_operand);
     }

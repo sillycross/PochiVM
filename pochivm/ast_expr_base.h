@@ -47,7 +47,8 @@ public:
         AstRvalueToConstPrimitiveRefExpr,
         AstExceptionAddressPlaceholder,
         AstPointerArithmeticExpr,
-        AstGeneratedFunctionPointerExpr
+        AstGeneratedFunctionPointerExpr,
+        AstRegisterCachedVariableExpr
     };
 
     AstNodeType() {}
@@ -89,6 +90,7 @@ public:
         case AstNodeType::AstExceptionAddressPlaceholder: return "AstExceptionAddressPlaceholder";
         case AstNodeType::AstPointerArithmeticExpr: return "AstPointerArithmeticExpr";
         case AstNodeType::AstGeneratedFunctionPointerExpr: return "AstGeneratedFunctionPointerExpr";
+        case AstNodeType::AstRegisterCachedVariableExpr: return "AstRegisterCachedVariableExpr";
         }
         __builtin_unreachable();
     }
@@ -98,7 +100,7 @@ private:
 };
 
 // The base class of all expressions
-// WARNING: All derived classes must have this class as the first base class! Or DebugInterp() breaks!
+// WARNING: All derived classes must have this class as the first base class! Or DebugInterp() and TraverseAstTree() breaks!
 //
 class AstNodeBase : NonCopyable, NonMovable
 {
@@ -148,7 +150,7 @@ public:
 
     // For each of the children c of this node, invoke fn(c)
     //
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) = 0;
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) = 0;
 
     // Returns the AstNodeType of this node
     //
@@ -220,8 +222,34 @@ inline void TraverseAstTree(AstNodeBase* root,
     //
     FunctionRef<void(AstNodeBase*)> RecurseFactory;
     auto _lambda = [&fn, &RecurseFactory](AstNodeBase* p) {
-        p->ForEachChildren([p, &fn, &RecurseFactory](AstNodeBase* c) {
+        p->ForEachChildren([p, &fn, &RecurseFactory](AstNodeBase*& c) {
             fn(c, p, [&RecurseFactory, c]() {
+                RecurseFactory(c);
+            });
+        });
+    };
+    RecurseFactory = _lambda;
+
+    fn(root, nullptr, [&RecurseFactory, root]() {
+        RecurseFactory(root);
+    });
+}
+
+// Same as above, except that the 'cur' is by reference and may be modified.
+// The 'Recurse()' call always acts on the up-to-date 'cur'.
+//
+inline void TraverseAstTreeByRef(AstNodeBase* root,
+                                 FunctionRef<void(AstNodeBase*& /*cur*/,
+                                                  AstNodeBase* /*parent*/,
+                                                  FunctionRef<void(void)> /*Recurse*/)> fn)
+{
+    FunctionRef<void(AstNodeBase*)> RecurseFactory;
+    auto _lambda = [&fn, &RecurseFactory](AstNodeBase* p) {
+        p->ForEachChildren([p, &fn, &RecurseFactory](AstNodeBase*& c) {
+            // Here, 'c' is captured by reference, so the 'Recurse()' lambda
+            // always act on the up-to-date value of 'cur'.
+            //
+            fn(c, p, [&RecurseFactory, &c]() {
                 RecurseFactory(c);
             });
         });

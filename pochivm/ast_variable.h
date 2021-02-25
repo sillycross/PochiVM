@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast_expr_base.h"
-#include "common_expr.h"
 #include "pochivm_context.h"
 #include "scoped_variable_manager.h"
 
@@ -27,6 +26,7 @@ public:
         , m_debugInterpOffset(static_cast<uint32_t>(-1))
         , m_fastInterpOffset(static_cast<uint32_t>(-1))
         , m_fastInterpDtorCallOp(nullptr)
+        , m_isEligibleForMem2Reg(!GetTypeId().RemovePointer().IsCppClassType())
     {
         TestAssert(GetTypeId().IsPointerType());
     }
@@ -63,7 +63,7 @@ public:
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
     virtual void FastInterpSetupSpillLocation() override final { }
@@ -101,6 +101,9 @@ public:
         return m_fastInterpOffset;
     }
 
+    bool IsEligibleForMem2Reg() const { return m_isEligibleForMem2Reg; }
+    void SetNotEligibleForMem2Reg() { m_isEligibleForMem2Reg = false; }
+
 private:
     // name of the variable
     //
@@ -128,6 +131,10 @@ private:
     // Reusable callOp to destruct this variable
     //
     FastInterpBoilerplateInstance* m_fastInterpDtorCallOp;
+    // Whether this variable is eligible for mem2reg transform
+    // It is eligible iff its address is never taken
+    //
+    bool m_isEligibleForMem2Reg;
 };
 
 }   // namespace PochiVM

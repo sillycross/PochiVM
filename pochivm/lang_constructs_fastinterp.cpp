@@ -379,6 +379,20 @@ FastInterpSnippet WARN_UNUSED AstWhileLoop::PrepareForFastInterp(FISpillLocation
 
     loopEntry->SetAlignmentLog2(4);
 
+    if (!m_mem2RegInitList.empty())
+    {
+        FastInterpSnippet snippet = FIMem2RegGenerateInitLogic(m_mem2RegInitList);
+        snippet = snippet.AddContinuation(loopEntry);
+        loopEntry = snippet.m_entry;
+    }
+
+    if (!m_mem2RegWritebackList.empty())
+    {
+        FastInterpSnippet snippet = FIMem2RegGenerateWritebackLogic(m_mem2RegWritebackList);
+        snippet = FastInterpSnippet { afterLoop, afterLoop }.AddContinuation(snippet);
+        afterLoop = snippet.m_tail;
+    }
+
     return FastInterpSnippet {
         loopEntry, afterLoop
     };
@@ -473,6 +487,20 @@ FastInterpSnippet WARN_UNUSED AstForLoop::PrepareForFastInterp(FISpillLocation T
     loopStep.m_tail->PopulateBoilerplateFnPtrPlaceholder(0, condClauseEntry);
 
     condClauseEntry->SetAlignmentLog2(4);
+
+    if (!m_mem2RegInitList.empty())
+    {
+        // The mem2reg region is after the start-block, not before.
+        //
+        FastInterpSnippet snippet = FIMem2RegGenerateInitLogic(m_mem2RegInitList);
+        startClause = startClause.AddContinuation(snippet);
+    }
+
+    if (!m_mem2RegWritebackList.empty())
+    {
+        FastInterpSnippet snippet = FIMem2RegGenerateWritebackLogic(m_mem2RegWritebackList);
+        afterLoop = afterLoop.AddContinuation(snippet);
+    }
 
     if (startClause.IsEmpty())
     {

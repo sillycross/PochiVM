@@ -69,7 +69,7 @@ public:
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_operand);
     }

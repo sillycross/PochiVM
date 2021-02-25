@@ -5,6 +5,7 @@
 #include "pochivm_context.h"
 #include "ast_variable.h"
 #include "destructor_helper.h"
+#include "ast_mem2reg.h"
 
 namespace PochiVM
 {
@@ -49,9 +50,9 @@ public:
         m_debugInterpFn = SelectImpl(GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
-        fn(m_operand);
+        fn(*reinterpret_cast<AstNodeBase**>(&m_operand));
     }
 
     virtual FastInterpSnippet PrepareForFastInterp(FISpillLocation spillLoc) override final;
@@ -107,7 +108,7 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBlock::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -125,6 +126,8 @@ public:
         TestAssert(stmt->GetTypeId().IsVoid());
         m_contents.push_back(stmt);
     }
+
+    std::vector<AstNodeBase*>& GetContents() { return m_contents; }
 
 private:
     std::vector<AstNodeBase*> m_contents;
@@ -179,7 +182,7 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstScope::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         for (AstNodeBase* stmt : m_contents)
         {
@@ -188,13 +191,15 @@ public:
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
-    void FastInterpSetupSpillLocation() override;
+    virtual void FastInterpSetupSpillLocation() override final;
 
     void Append(AstNodeBase* stmt)
     {
         TestAssert(stmt->GetTypeId().IsVoid());
         m_contents.push_back(stmt);
     }
+
+    std::vector<AstNodeBase*>& GetContents() { return m_contents; }
 
 private:
     std::vector<AstNodeBase*> m_contents;
@@ -247,13 +252,13 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstIfStatement::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         // The order is important: reachability analysis relies on this order
         //
         fn(m_condClause);
-        fn(m_thenClause);
-        if (m_elseClause != nullptr) { fn(m_elseClause); }
+        fn(*reinterpret_cast<AstNodeBase**>(&m_thenClause));
+        if (m_elseClause != nullptr) { fn(*reinterpret_cast<AstNodeBase**>(&m_elseClause)); }
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
@@ -267,7 +272,7 @@ private:
 
 // while-loop construct
 //
-class AstWhileLoop : public AstNodeBase
+class AstWhileLoop : public AstNodeBase, public Mem2RegEligibleRegion
 {
 public:
     AstWhileLoop(AstNodeBase* condClause, AstScope* body)
@@ -325,10 +330,10 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstWhileLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_condClause);
-        fn(m_body);
+        fn(*reinterpret_cast<AstNodeBase**>(&m_body));
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
@@ -341,7 +346,7 @@ private:
 
 // For-loop construct
 //
-class AstForLoop : public AstNodeBase
+class AstForLoop : public AstNodeBase, public Mem2RegEligibleRegion
 {
 public:
     AstForLoop(AstBlock* startClause,
@@ -416,14 +421,14 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstForLoop::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         // The order is important: reachability analysis relies on this order
         //
-        fn(m_startClause);
+        fn(*reinterpret_cast<AstNodeBase**>(&m_startClause));
         fn(m_condClause);
-        fn(m_body);
-        fn(m_stepClause);
+        fn(*reinterpret_cast<AstNodeBase**>(&m_body));
+        fn(*reinterpret_cast<AstNodeBase**>(&m_stepClause));
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
@@ -432,6 +437,7 @@ public:
     AstBlock* GetInitBlock() const { return m_startClause; }
     AstScope* GetBody() const { return m_body; }
     AstBlock* GetStepBlock() const { return m_stepClause; }
+    AstNodeBase* GetCondClause() const { return m_condClause; }
 
 private:
     AstBlock* m_startClause;
@@ -472,7 +478,7 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstBreakOrContinueStmt::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final { }
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final { }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
     virtual void FastInterpSetupSpillLocation() override final { }

@@ -73,7 +73,7 @@ struct FIOutlinedPointerArithmeticImpl
              FINumOpaqueFloatingParams numOFP,
              FIPowerOfTwoObjectSize powerOfTwoObjectSize,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, uintptr_t base, IndexType offset) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, uintptr_t base, IndexType offset) noexcept
     {
         size_t scale;
         if constexpr(powerOfTwoObjectSize != FIPowerOfTwoObjectSize::NOT_POWER_OF_TWO)
@@ -101,16 +101,16 @@ struct FIOutlinedPointerArithmeticImpl
 
         if constexpr(!spillOutput)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., uintptr_t) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., uintptr_t) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., result);
         }
         else
         {
             DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<uintptr_t>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
         }
     }
 

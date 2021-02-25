@@ -19,7 +19,7 @@ struct FICallExprSpillStackAddrImpl
     // constant placeholder 0: offset to spill
     //
     template<bool isFakeSpillForNoParamCase>
-    static void f([[maybe_unused]] uintptr_t oldStackframe, uintptr_t newStackFrame) noexcept
+    static void f([[maybe_unused]] uintptr_t oldStackframe, DEF_MEM2REG_PARAMS, uintptr_t newStackFrame) noexcept
     {
         if constexpr(!isFakeSpillForNoParamCase)
         {
@@ -28,15 +28,15 @@ struct FICallExprSpillStackAddrImpl
 
             // Its continuation keeps computing parameters for this function call
             //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe, PASS_MEM2REG_PARAMS);
         }
         else
         {
             // This is a fake spill, its continuation is the function call
             //
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame, PASS_MEM2REG_PARAMS);
         }
     }
 

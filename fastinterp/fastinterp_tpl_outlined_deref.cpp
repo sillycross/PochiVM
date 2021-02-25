@@ -74,6 +74,7 @@ struct FIOutlinedDereferenceImpl
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
     static void f(uintptr_t stackframe,
+                  DEF_MEM2REG_PARAMS,
                   OpaqueParams... opaqueParams,
                   typename std::conditional<isLhsQAP, OperandType*, IndexOperandType>::type qa1,
                   [[maybe_unused]] IndexOperandType qa2) noexcept
@@ -96,16 +97,16 @@ struct FIOutlinedDereferenceImpl
 
         if constexpr(!spillOutput)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., OperandType) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., OperandType) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., result);
         }
         else
         {
             DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
         }
     }
 

@@ -35,7 +35,7 @@ struct FIUnpredictableLogicalAndOrImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool lhsCond) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, bool lhsCond) noexcept
     {
         if constexpr(isAnd)
         {
@@ -43,29 +43,29 @@ struct FIUnpredictableLogicalAndOrImpl
             {
                 if (lhsCond)
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., bool) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., false);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., bool) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., false);
                 }
             }
             else
             {
                 if (lhsCond)
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
                     DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = false;
 
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
             }
         }
@@ -75,29 +75,29 @@ struct FIUnpredictableLogicalAndOrImpl
             {
                 if (!lhsCond)
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., bool) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., true);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., bool) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., true);
                 }
             }
             else
             {
                 if (!lhsCond)
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
                     DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = true;
 
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
             }
         }
@@ -147,7 +147,7 @@ struct FIPredictableLogicalAndOrImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool lhsCond) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, bool lhsCond) noexcept
     {
         if constexpr(isAnd)
         {
@@ -157,29 +157,29 @@ struct FIPredictableLogicalAndOrImpl
                 //
                 if (unlikely(lhsCond))
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., bool) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., false);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., bool) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., false);
                 }
             }
             else
             {
                 if (unlikely(lhsCond))
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
                     DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = false;
 
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
             }
         }
@@ -189,29 +189,29 @@ struct FIPredictableLogicalAndOrImpl
             {
                 if (unlikely(!lhsCond))
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., bool) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., true);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., bool) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., true);
                 }
             }
             else
             {
                 if (unlikely(!lhsCond))
                 {
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
                 else
                 {
                     DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                     *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = true;
 
-                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+                    DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                    BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
                 }
             }
         }

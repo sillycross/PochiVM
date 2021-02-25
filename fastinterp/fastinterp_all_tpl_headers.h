@@ -8,3 +8,4 @@
 #include "fastinterp_tpl_operandshape.h"
 #include "fastinterp_tpl_object_size_kind.h"
 #include "fastinterp_tpl_stackframe_category.h"
+#include "fastinterp_mem2reg_helper.h"

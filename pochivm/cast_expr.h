@@ -71,7 +71,7 @@ public:
         m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_operand);
     }
@@ -112,7 +112,7 @@ public:
         m_debugInterpFn = SelectImpl(m_operand->GetTypeId(), GetTypeId());
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_operand);
     }

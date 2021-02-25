@@ -103,7 +103,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_lhs);
         fn(m_rhs);
@@ -254,7 +254,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         fn(m_lhs);
         fn(m_rhs);

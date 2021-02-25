@@ -58,6 +58,7 @@ struct FIOutlinedAssignImpl
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
     static void f(uintptr_t stackframe,
+                  DEF_MEM2REG_PARAMS,
                   OpaqueParams... opaqueParams,
                   typename std::conditional<isLhsQAP, OperandType*, OperandType>::type qa1,
                   [[maybe_unused]] OperandType qa2) noexcept
@@ -78,8 +79,8 @@ struct FIOutlinedAssignImpl
 
         *lhs = rhs;
 
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
     }
 
     static auto metavars()

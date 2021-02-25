@@ -99,14 +99,14 @@ struct FIFullyInlineAssignImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams) noexcept
     {
         OperandType* lhs = FIOperandShapeCategoryHelper::get_address_0_1<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
         OperandType rhs = FIOperandShapeCategoryHelper::get_2_3<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
         *lhs = rhs;
 
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
     }
 
     static auto metavars()

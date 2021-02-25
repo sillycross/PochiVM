@@ -47,6 +47,8 @@ struct FIOutlinedReturnImpl
     template<typename T>
     using WorkaroundVoidType = typename std::conditional<std::is_same<T, void>::value, void*, T>::type;
 
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
     template<typename ReturnType,
              bool isNoExcept,
              bool exceptionThrown,
@@ -54,6 +56,7 @@ struct FIOutlinedReturnImpl
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
     static FIReturnType<ReturnType, isNoExcept> f(uintptr_t /*stackframe*/,
+                                                  DEF_MEM2REG_PARAMS,
                                                   OpaqueParams... /*opaqueParams*/,
                                                   [[maybe_unused]] WorkaroundVoidType<ReturnType> qa) noexcept
     {

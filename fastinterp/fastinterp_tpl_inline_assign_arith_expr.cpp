@@ -114,7 +114,7 @@ struct FIFullyInlineAssignArithExprImpl
              FINumOpaqueFloatingParams numOFP,
              AstArithmeticExprType operatorType,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams) noexcept
     {
         OperandType lhs = FIOperandShapeCategoryHelper::get_1_2<OperandType, LhsIndexType, lhsShapeCategory>(stackframe);
         OperandType rhs = FIOperandShapeCategoryHelper::get_3_4<OperandType, RhsIndexType, rhsShapeCategory>(stackframe);
@@ -123,8 +123,8 @@ struct FIFullyInlineAssignArithExprImpl
         DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
         *GetLocalVarAddress<OperandType>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
-        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+        DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+        BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
     }
 
     static auto metavars()

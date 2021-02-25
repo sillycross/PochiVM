@@ -66,6 +66,7 @@ private:
         , m_debugInterpStoreRetValFn(nullptr)
         , m_llvmEntryBlock(nullptr)
         , m_isNoExcept(false)
+        , m_isSpecialMem2RegWholeRegion(false)
         , m_fastInterpStackFrameSize(static_cast<uint32_t>(-1))
         , m_fastInterpStackFrameSizeCategory(FIStackframeSizeCategory::X_END_OF_ENUM)
         , m_fastInterpCppEntryPoint(nullptr)
@@ -295,6 +296,25 @@ public:
         return m_fastInterpCppEntryPoint;
     }
 
+    void SetAsSpecialMem2RegWholeRegion()
+    {
+        m_isSpecialMem2RegWholeRegion = true;
+        m_paramMem2regList.clear();
+    }
+
+    void AddSpecialMem2RegVariable(AstRegisterCachedVariableExpr* expr)
+    {
+        AstVariable* target = expr->m_variable;
+        for (AstVariable* var : m_params)
+        {
+            if (var == target)
+            {
+                m_paramMem2regList.push_back(expr);
+                break;
+            }
+        }
+    }
+
 private:
 
     void DebugInterpSetParam(uintptr_t newStackFrameBase, size_t i, AstNodeBase* param)
@@ -341,9 +361,11 @@ private:
     llvm::BasicBlock* m_llvmEntryBlock;
 
     bool m_isNoExcept;
+    bool m_isSpecialMem2RegWholeRegion;
     uint32_t m_fastInterpStackFrameSize;
     FIStackframeSizeCategory m_fastInterpStackFrameSizeCategory;
     void* m_fastInterpCppEntryPoint;
+    std::vector<AstRegisterCachedVariableExpr*> m_paramMem2regList;
 };
 
 namespace internal
@@ -691,7 +713,7 @@ private:
     std::string m_moduleName;
     // We are using std::map (not std::unordered_map) so that the iteration order is deterministic.
     // This is required to make tests happy (so IR dump output is deterministic).
-    // The perf hit should be small. TODO: consider use std::unordered_map in release?
+    // The perf hit should be small.
     //
 #ifdef TESTBUILD
     std::map<std::string, AstFunction*> m_functions;
@@ -735,7 +757,7 @@ public:
     }
 
     virtual llvm::Value* WARN_UNUSED EmitIRImpl() override final;
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> /*fn*/) override final {}
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> /*fn*/) override final {}
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
     virtual void FastInterpSetupSpillLocation() override final { }
 
@@ -909,7 +931,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         for (auto it = m_params.begin(); it != m_params.end(); it++)
         {
@@ -1028,11 +1050,11 @@ public:
         m_debugInterpFn = AstTypeHelper::GetClassMethodPtr(&AstDeclareVariable::InterpImpl);
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
-        if (m_assignExpr != nullptr) { fn(m_assignExpr); }
-        if (m_callExpr != nullptr) { fn(m_callExpr); }
-        fn(m_variable);
+        if (m_assignExpr != nullptr) { fn(*reinterpret_cast<AstNodeBase**>(&m_assignExpr)); }
+        if (m_callExpr != nullptr) { fn(*reinterpret_cast<AstNodeBase**>(&m_callExpr)); }
+        fn(*reinterpret_cast<AstNodeBase**>(&m_variable));
     }
 
     virtual FastInterpSnippet WARN_UNUSED PrepareForFastInterp(FISpillLocation spillLoc) override final;
@@ -1089,7 +1111,7 @@ public:
         }
     }
 
-    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*)> fn) override final
+    virtual void ForEachChildren(FunctionRef<void(AstNodeBase*&)> fn) override final
     {
         if (m_retVal != nullptr)
         {

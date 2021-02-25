@@ -27,7 +27,7 @@ struct FICallExprStoreParamImpl
     template<typename ParamType,
              FICallExprParamOrd paramOrd,
              bool hasMore>
-    static void f([[maybe_unused]] uintptr_t oldStackframe, uintptr_t newStackFrame, ParamType qa) noexcept
+    static void f([[maybe_unused]] uintptr_t oldStackframe, DEF_MEM2REG_PARAMS, uintptr_t newStackFrame, ParamType qa) noexcept
     {
         uint64_t offset;
         if constexpr(paramOrd == FICallExprParamOrd::FIRST_NON_INLINE_PARAM_ORD)
@@ -44,13 +44,13 @@ struct FICallExprStoreParamImpl
 
         if constexpr(hasMore)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uintptr_t) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe, newStackFrame);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, uintptr_t) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe, PASS_MEM2REG_PARAMS, newStackFrame);
         }
         else
         {
-             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-             BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame);
+             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+             BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame, PASS_MEM2REG_PARAMS);
         }
     }
 
@@ -83,7 +83,7 @@ struct FICallExprStoreParamNewSfSpilledImpl
     template<typename ParamType,
              FICallExprParamOrd paramOrd,
              bool hasMore>
-    static void f([[maybe_unused]] uintptr_t oldStackframe, ParamType qa) noexcept
+    static void f([[maybe_unused]] uintptr_t oldStackframe, DEF_MEM2REG_PARAMS, ParamType qa) noexcept
     {
         uintptr_t newStackFrame;
         {
@@ -106,13 +106,13 @@ struct FICallExprStoreParamNewSfSpilledImpl
 
         if constexpr(hasMore)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(oldStackframe, PASS_MEM2REG_PARAMS);
         }
         else
         {
-             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-             BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame);
+             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+             BOILERPLATE_FNPTR_PLACEHOLDER_0(newStackFrame, PASS_MEM2REG_PARAMS);
         }
     }
 

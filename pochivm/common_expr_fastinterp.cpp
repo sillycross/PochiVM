@@ -177,6 +177,16 @@ void AstAssignExpr::FastInterpSetupSpillLocation()
     TestAssert(m_fiInlineShape == FIShape::INVALID);
     Auto(TestAssert(m_fiInlineShape != FIShape::INVALID));
 
+    // Special case: LHS is a mem2reg variable
+    //
+    if (m_isLhsMem2RegVar)
+    {
+        thread_pochiVMContext->m_fastInterpStackFrameManager->ReserveTemp(m_src->GetTypeId());
+        m_src->FastInterpSetupSpillLocation();
+        m_fiInlineShape = FIShape::INLINE_LHS;
+        return;
+    }
+
     // Case var = osc op osc
     // FIFullyInlineAssignArithExprImpl
     //
@@ -249,6 +259,32 @@ FastInterpSnippet WARN_UNUSED AstAssignExpr::PrepareForFastInterp(FISpillLocatio
 {
     TestAssert(spillLoc.IsNoSpill());
     TestAssert(m_fiInlineShape != FIShape::INVALID);
+
+    if (m_isLhsMem2RegVar)
+    {
+        TestAssert(m_fiInlineShape == FIShape::INLINE_LHS);
+        TestAssert(thread_pochiVMContext->m_fastInterpStackFrameManager->CanReserveWithoutSpill(m_src->GetTypeId()));
+        FastInterpSnippet snippet = m_src->PrepareForFastInterp(x_FINoSpill);
+
+        FINumOpaqueIntegralParams numOIP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillIntegral();
+        FINumOpaqueFloatingParams numOFP = thread_pochiVMContext->m_fastInterpStackFrameManager->GetNumNoSpillFloat();
+        if (m_src->GetTypeId().IsFloatingPoint())
+        {
+            numOIP = FIOpaqueParamsHelper::GetMaxOIP();
+        }
+        else
+        {
+            numOFP = FIOpaqueParamsHelper::GetMaxOFP();
+        }
+        FastInterpBoilerplateInstance* inst = thread_pochiVMContext->m_fastInterpEngine->InstantiateBoilerplate(
+                    FastInterpBoilerplateLibrary<FIMem2RegInsertValue>::SelectBoilerplateBluePrint(
+                        m_src->GetTypeId().GetOneLevelPtrFastInterpTypeId(),
+                        false /*fromStack*/,
+                        static_cast<FIMem2RegOrdinal>(m_mem2regDst->m_regOrdinal),
+                        numOIP,
+                        numOFP));
+        return snippet.AddContinuation(inst);
+    }
 
     if (m_fiInlineShape == FIShape::INLINE_ARITH)
     {

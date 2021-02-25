@@ -24,9 +24,9 @@ struct FIOutlinedConditionalFavourTrueBranchImpl
     template<FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, bool cond) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, bool cond) noexcept
     {
-        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::UnlikelyMode, OpaqueParams...>(cond, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::UnlikelyMode, MEM2REG_TYPES, OpaqueParams...>(cond, stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
     }
 
     static auto metavars()

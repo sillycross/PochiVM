@@ -36,7 +36,7 @@ struct FIPointerCastImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, uint64_t qa) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, uint64_t qa) noexcept
     {
         if constexpr(isNoopCast)
         {
@@ -45,8 +45,8 @@ struct FIPointerCastImpl
             DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<uint64_t>(stackframe, CONSTANT_PLACEHOLDER_0) = qa;
 
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
         }
         else
         {
@@ -58,16 +58,16 @@ struct FIPointerCastImpl
 
             if constexpr(!spillOutput)
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., uint64_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., uint64_t) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., result);
             }
             else
             {
                 DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
                 *GetLocalVarAddress<uint64_t>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
             }
         }
     }

@@ -11,6 +11,7 @@ static_assert(false, "This file should only be included by fastinterp_tpl_*.cpp"
 #include "fastinterp_context.h"
 #include "pochivm/cxx2a_bit_cast_helper.h"
 #include "fastinterp_tpl_boilerplate_attributes.hpp"
+#include "fastinterp_mem2reg_helper.h"
 
 // fastinterp_tpl
 //

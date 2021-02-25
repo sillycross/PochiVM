@@ -98,7 +98,7 @@ struct FIPartialInlinedComparisonUnpredictableBranchImpl
              FINumOpaqueFloatingParams numOFP,
              AstComparisonExprType operatorType,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType qaOperand) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, OperandType qaOperand) noexcept
     {
         OperandType lhs, rhs;
         if constexpr(isInlinedSideLhs)
@@ -113,7 +113,7 @@ struct FIPartialInlinedComparisonUnpredictableBranchImpl
         }
 
         bool result = EvaluateComparisonExpression<OperandType, operatorType>(lhs, rhs);
-        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::OptForSizeMode, OpaqueParams...>(result, stackframe, opaqueParams...);
+        FIConditionalJumpHelper::execute_0_1<FIConditionalJumpHelper::Mode::OptForSizeMode, MEM2REG_TYPES, OpaqueParams...>(result, stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
     }
 
     static auto metavars()

@@ -39,6 +39,8 @@ struct FICallExprImpl
     template<typename T>
     using WorkaroundVoidType = typename std::conditional<std::is_same<T, void>::value, void*, T>::type;
 
+#pragma clang diagnostic ignored "-Wuninitialized"
+
     // Unlike most of the other operators, this operator allows no OpaqueParams.
     // GHC has no callee-saved registers, all registers are invalidated after a call.
     // Therefore, it is always a waste to have register-pinned opaque parameters:
@@ -53,7 +55,7 @@ struct FICallExprImpl
              bool spillReturnValue,
              bool isCalleeNoExcept,
              FIStackframeSizeCategory stackframeSizeCategoryEnum>
-    static void f(uintptr_t stackframe) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS) noexcept
     {
         constexpr int newStackframeSize = FIStackframeSizeCategoryHelper::internal_get_stackframe_size(
                     static_cast<int>(stackframeSizeCategoryEnum));
@@ -67,8 +69,8 @@ struct FICallExprImpl
             // preventing tail call optimization on our continuation.
             //
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(
-                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, newStackframe);
+                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, MEM2REG_TYPES, __attribute__((__noescape__)) uint8_t*) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, newStackframe);
         }
         else
         {
@@ -76,21 +78,23 @@ struct FICallExprImpl
             // preventing tail call optimization on our continuation.
             //
             DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_1_NO_TAILCALL(
-                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, __attribute__((__noescape__)) uint8_t*) noexcept);
-            returnValue = BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, newStackframe);
+                        FIReturnType<ReturnType, isCalleeNoExcept>(*)(uintptr_t, MEM2REG_TYPES, __attribute__((__noescape__)) uint8_t*) noexcept);
+            returnValue = BOILERPLATE_FNPTR_PLACEHOLDER_1(stackframe, PASS_MEM2REG_PARAMS, newStackframe);
         }
 
         if constexpr(std::is_same<ReturnType, void>::value)
         {
             if constexpr(isCalleeNoExcept)
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS);
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uint64_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, uint64_t) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
         else if constexpr(spillReturnValue)
@@ -101,13 +105,15 @@ struct FICallExprImpl
 
             if constexpr(isCalleeNoExcept)
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe);
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS);
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, uint64_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, FIReturnValueHelper::HasException<ReturnType>(returnValue));
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, uint64_t) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
         else
@@ -115,13 +121,15 @@ struct FICallExprImpl
             ReturnType ret = FIReturnValueHelper::GetReturnValue<ReturnType, isCalleeNoExcept>(returnValue);
             if constexpr(isCalleeNoExcept)
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, ret);
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, ReturnType) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS, ret);
             }
             else
             {
-                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, ReturnType, uint64_t) noexcept);
-                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, ret, FIReturnValueHelper::HasException<ReturnType>(returnValue));
+                DEF_MEM2REG_DUMMYS;
+                DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, ReturnType, uint64_t) noexcept);
+                BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_DUMMYS, ret, FIReturnValueHelper::HasException<ReturnType>(returnValue));
             }
         }
     }

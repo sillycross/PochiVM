@@ -15,13 +15,15 @@ struct FIThrowExceptionImpl
         return true;
     }
 
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
     // Placeholder rules:
     // constant placeholder 0: stack offset, if the exnAddr is not quickaccess
     // cpp placeholder 0: the cpp helper that sets std::exception_ptr
     // boilerplate placeholder 0: continuation to cleanup logic
     //
     template<bool isQuickAccess>
-    static void f(uintptr_t stackframe, [[maybe_unused]] uintptr_t qa) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, [[maybe_unused]] uintptr_t qa) noexcept
     {
         uintptr_t exnAddr;
         if constexpr(isQuickAccess)

@@ -10,6 +10,8 @@ add_library(pochivm
   scoped_variable_manager_llvm.cpp
   exception_helper_llvm.cpp
   ast_catch_throw_llvm.cpp
+  ast_mem2reg_llvm.cpp
+  
   codegen_context.cpp
   arith_expr_fastinterp.cpp
   ast_variable_fastinterp.cpp
@@ -20,7 +22,10 @@ add_library(pochivm
   cast_expr_fastinterp.cpp
   scoped_variable_manager_fastinterp.cpp
   ast_catch_throw_fastinterp.cpp
+  ast_mem2reg_fastinterp.cpp
+  
   pochivm_function_pointer.cpp
+  mem2reg_pass.cpp
   $<TARGET_OBJECTS:fastinterp>
 )
 

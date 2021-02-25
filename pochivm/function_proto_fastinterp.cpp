@@ -3,6 +3,8 @@
 #include "codegen_context.hpp"
 #include "destructor_helper.h"
 #include "scoped_variable_manager.h"
+#include "mem2reg_pass.h"
+#include "ast_mem2reg.h"
 
 namespace PochiVM
 {
@@ -524,11 +526,22 @@ void AstFunction::PrepareForFastInterp()
     TestAssert(thread_llvmContext->m_curFunction == nullptr);
     thread_pochiVMContext->m_fastInterpStackFrameManager->Reset(static_cast<uint32_t>(m_params.size() + 1) * 8);
     thread_llvmContext->m_curFunction = this;
+
+    // Run mem2reg pass
+    //
+    ApplyMem2RegPass(this);
+
     AutoSetScopedVarManagerOperationMode assvm(ScopedVariableManager::OperationMode::FASTINTERP);
 
     for (size_t index = 0; index < m_params.size(); index++)
     {
         m_params[index]->SetFastInterpOffset((index + 1) * 8);
+    }
+
+    FastInterpSnippet mem2regInit;
+    if (m_isSpecialMem2RegWholeRegion)
+    {
+        mem2regInit = FIMem2RegGenerateInitLogic(m_paramMem2regList);
     }
 
     m_body->FastInterpSetupSpillLocation();
@@ -559,6 +572,11 @@ void AstFunction::PrepareForFastInterp()
                         FastInterpBoilerplateLibrary<FIAbortTrapImpl>::SelectBoilerplateBluePrint(true));
             body = body.AddContinuation(FastInterpSnippet { inst, nullptr });
         }
+    }
+
+    if (m_isSpecialMem2RegWholeRegion)
+    {
+        body = mem2regInit.AddContinuation(body);
     }
 
     // Align the entry point of the function to 16 bytes

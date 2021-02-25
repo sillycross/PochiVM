@@ -67,7 +67,7 @@ struct FIOutlinedComparisonExprImpl
              FINumOpaqueIntegralParams numOIP,
              FINumOpaqueFloatingParams numOFP,
              typename... OpaqueParams>
-    static void f(uintptr_t stackframe, OpaqueParams... opaqueParams, OperandType qa1, [[maybe_unused]] OperandType qa2) noexcept
+    static void f(uintptr_t stackframe, DEF_MEM2REG_PARAMS, OpaqueParams... opaqueParams, OperandType qa1, [[maybe_unused]] OperandType qa2) noexcept
     {
         OperandType lhs, rhs;
         if constexpr(!isLhsQAP)
@@ -90,16 +90,16 @@ struct FIOutlinedComparisonExprImpl
 
         if constexpr(!spillOutput)
         {
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams..., bool) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams..., result);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams..., bool) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams..., result);
         }
         else
         {
             DEFINE_INDEX_CONSTANT_PLACEHOLDER_0;
             *GetLocalVarAddress<bool>(stackframe, CONSTANT_PLACEHOLDER_0) = result;
 
-            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, OpaqueParams...) noexcept);
-            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, opaqueParams...);
+            DEFINE_BOILERPLATE_FNPTR_PLACEHOLDER_0(void(*)(uintptr_t, MEM2REG_TYPES, OpaqueParams...) noexcept);
+            BOILERPLATE_FNPTR_PLACEHOLDER_0(stackframe, PASS_MEM2REG_PARAMS, opaqueParams...);
         }
     }
 
