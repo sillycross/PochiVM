@@ -38,6 +38,7 @@ FastInterpSnippet WARN_UNUSED AstReinterpretCastExpr::PrepareForFastInterp(FISpi
     if (spillLoc.IsNoSpill())
     {
         // this is a no-op, since reinterpret_cast is a no-op at bit-level
+        // TODO: FIXME: casting int to float changes the register location..
         //
         return snippet;
     }
