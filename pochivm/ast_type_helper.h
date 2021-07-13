@@ -18,6 +18,18 @@ namespace PochiVM
 namespace AstTypeHelper
 {
 
+// Pochi implicit conversions for arithmetic differ slightly from C++.
+// C++ promotes all integers smaller than sizeof(int) to the signed int type before
+// adding. Pochi just implicitly converts the "smaller" type to the "larger" type
+// of the expression where the type sizing is defined as 
+// (u)int8_t < (u)int16_t < (u)int32_t < (u)int64_t < float < double.
+// 
+template <typename T, typename U>
+struct ArithReturnType {
+    using type = typename std::conditional<sizeof(T) <= sizeof(int16_t) || sizeof(U) <= sizeof(int16_t),
+                                           typename std::conditional<sizeof(T) <= sizeof(U), U, T>::type,
+                                           typename std::common_type<T, U>::type>::type;
+};
 // Give each non-pointer type a unique label
 //
 enum AstTypeLabelEnum
@@ -592,6 +604,30 @@ struct primitive_type_supports_binary_op : std::integral_constant<bool,
         is_primitive_type<T>::value &&
         ((primitive_type_supports_binary_op_internal<T>::value & (static_cast<uint64_t>(1) << static_cast<int>(op))) != 0)
 > {};
+
+template <typename T, AstArithmeticExprType expr_type>
+struct primitive_type_supports_arithmetic_expr_type : std::integral_constant<bool,
+        is_primitive_type<T>::value && 
+        ((expr_type == AstArithmeticExprType::ADD && primitive_type_supports_binary_op<T, BinaryOps::ADD>::value) ||
+        (expr_type == AstArithmeticExprType::SUB && primitive_type_supports_binary_op<T, BinaryOps::SUB>::value) ||
+        (expr_type == AstArithmeticExprType::MUL && primitive_type_supports_binary_op<T, BinaryOps::MUL>::value) ||
+        (expr_type == AstArithmeticExprType::DIV && primitive_type_supports_binary_op<T, BinaryOps::DIV>::value) ||
+        (expr_type == AstArithmeticExprType::MOD && primitive_type_supports_binary_op<T, BinaryOps::MODULO>::value))
+> {};
+
+template <typename T, AstComparisonExprType expr_type>
+struct primitive_type_supports_comparison_expr_type : std::integral_constant<bool,
+        is_primitive_type<T>::value && 
+        ((expr_type == AstComparisonExprType::EQUAL && primitive_type_supports_binary_op<T, BinaryOps::EQUAL>::value) ||
+        (expr_type == AstComparisonExprType::NOT_EQUAL && primitive_type_supports_binary_op<T, BinaryOps::EQUAL>::value) ||
+        (expr_type == AstComparisonExprType::LESS_THAN && primitive_type_supports_binary_op<T, BinaryOps::GREATER>::value) ||
+        (expr_type == AstComparisonExprType::GREATER_THAN && primitive_type_supports_binary_op<T, BinaryOps::GREATER>::value) ||
+        (expr_type == AstComparisonExprType::LESS_EQUAL && primitive_type_supports_binary_op<T, BinaryOps::GREATER>::value
+                                                        && primitive_type_supports_binary_op<T, BinaryOps::EQUAL>::value) ||
+        (expr_type == AstComparisonExprType::GREATER_EQUAL && primitive_type_supports_binary_op<T, BinaryOps::GREATER>::value
+                                                           && primitive_type_supports_binary_op<T, BinaryOps::EQUAL>::value))
+> {};
+
 
 // static_cast_offset<T, U>::get()
 // On static_cast-able <T, U>-pair (T, U must both be pointers),

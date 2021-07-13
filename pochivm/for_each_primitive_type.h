@@ -63,6 +63,23 @@ F(char, uint32_t)      \
 F(char, int64_t)       \
 F(char, uint64_t)
 
+#define ENUMERATE_ALL_TYPES(fn, a, b, c, d)       \
+    fn<a, a>();                                   \
+    fn<a, b>();                                   \
+    fn<b, a>();                                   \
+    fn<a, c>();                                   \
+    fn<c, a>();                                   \
+    fn<a, d>();                                   \
+    fn<d, a>();                                   \
+    fn<b, b>();                                   \
+    fn<b, c>();                                   \
+    fn<c, b>();                                   \
+    fn<b, d>();                                   \
+    fn<d, b>();                                   \
+    fn<c, d>();                                   \
+    fn<d, d>();                                   \
+    fn<d, c>();
+
 namespace PochiVM
 {
 
