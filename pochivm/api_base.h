@@ -117,11 +117,23 @@ Value<T>::operator Value<U>() const
 
 // Arithmetic ops convenience operator overloading
 //
-template<typename T, typename = std::enable_if_t<
-             AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
-Value<T> operator+(const Value<T>& lhs, const Value<T>& rhs)
+template <typename T, typename U,
+          typename = std::enable_if_t<AstTypeHelper::primitive_type_supports_binary_op<U, AstTypeHelper::BinaryOps::ADD>::value>,
+          typename = std::enable_if_t<AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
+Value<typename std::common_type<T, U>::type> operator+(const Value<T> &lhs, const Value<U> &rhs)
 {
-    return Value<T>(new AstArithmeticExpr(AstArithmeticExprType::ADD, lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    using return_type = typename std::common_type<T, U>::type;
+    static_assert(std::is_signed<T>::value == std::is_signed<U>::value ||
+                      std::is_floating_point<return_type>::value,
+                  "cannot add two values of different signedness");
+    if(!std::is_same<T, return_type>::value)
+        return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                        StaticCast<return_type>(lhs).__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    if(!std::is_same<U, return_type>::value)
+        return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                        lhs.__pochivm_value_ptr, StaticCast<return_type>(rhs).__pochivm_value_ptr));
+    return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                    lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
 template<typename T, typename = std::enable_if_t<
