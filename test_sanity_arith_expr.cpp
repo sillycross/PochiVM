@@ -190,7 +190,7 @@ void AdditionWithDifferentTypesHelper(T lhs, U rhs)
 }
 
 template <typename T, typename U>
-void TestAdditionWithDifferentTypes(T v1, U v2) {
+void TestAdditionWithDifferentTypesSingleCase(T v1, U v2) {
     AdditionWithDifferentTypesHelper(v1, v2);
     AdditionWithDifferentTypesHelper(v2, v1);
 }
@@ -212,16 +212,16 @@ void TestAdditionSignedWithPromotion() {
     int32_t neg_32 = -15;
     int64_t pos_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
     int64_t neg_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::min()) - 1;
-    #define F(v1, v2) TestAdditionWithDifferentTypes(v1, v2);
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
     FOR_EACH_PARAMS(pos_32, neg_32, pos_64, neg_64)
     #undef F
     int32_t max_32 = std::numeric_limits<int32_t>::max();
     int32_t min_32 = std::numeric_limits<int32_t>::min();
 
-    TestAdditionWithDifferentTypes(max_32, pos_64);
-    TestAdditionWithDifferentTypes(max_32, neg_64);
-    TestAdditionWithDifferentTypes(min_32, pos_64);
-    TestAdditionWithDifferentTypes(min_32, neg_64);
+    TestAdditionWithDifferentTypesSingleCase(max_32, pos_64);
+    TestAdditionWithDifferentTypesSingleCase(max_32, neg_64);
+    TestAdditionWithDifferentTypesSingleCase(min_32, pos_64);
+    TestAdditionWithDifferentTypesSingleCase(min_32, neg_64);
 
     float pos_float = static_cast<float>(1.234567);
     float neg_float = static_cast<float>(-1.234567);
@@ -230,36 +230,36 @@ void TestAdditionSignedWithPromotion() {
     int64_t small_pos_64 = 15;
     int64_t small_neg_64 = -15;
 
-    TestAdditionWithDifferentTypes(pos_float, pos_32);
-    TestAdditionWithDifferentTypes(pos_float, neg_32);
-    TestAdditionWithDifferentTypes(pos_float, small_pos_64);
-    TestAdditionWithDifferentTypes(pos_float, small_neg_64);
-    TestAdditionWithDifferentTypes(pos_double, pos_32);
-    TestAdditionWithDifferentTypes(pos_double, neg_32);
-    TestAdditionWithDifferentTypes(pos_double, max_32);
-    TestAdditionWithDifferentTypes(pos_double, min_32);
-    TestAdditionWithDifferentTypes(pos_double, small_pos_64);
-    TestAdditionWithDifferentTypes(pos_double, small_neg_64);
-    TestAdditionWithDifferentTypes(pos_double, pos_64);
-    TestAdditionWithDifferentTypes(pos_double, neg_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, neg_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, small_neg_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, max_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, min_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, small_neg_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_64);
 
-    TestAdditionWithDifferentTypes(pos_double, pos_float);
-    TestAdditionWithDifferentTypes(pos_double, neg_float);
-    TestAdditionWithDifferentTypes(neg_double, pos_float);
-    TestAdditionWithDifferentTypes(neg_double, neg_float);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_float);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_float);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_float);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_float);
 
-    TestAdditionWithDifferentTypes(neg_float, pos_32);
-    TestAdditionWithDifferentTypes(neg_float, neg_32);
-    TestAdditionWithDifferentTypes(neg_float, small_pos_64);
-    TestAdditionWithDifferentTypes(neg_float, small_neg_64);
-    TestAdditionWithDifferentTypes(neg_double, pos_32);
-    TestAdditionWithDifferentTypes(neg_double, neg_32);
-    TestAdditionWithDifferentTypes(neg_double, max_32);
-    TestAdditionWithDifferentTypes(neg_double, min_32);
-    TestAdditionWithDifferentTypes(neg_double, small_pos_64);
-    TestAdditionWithDifferentTypes(neg_double, small_neg_64);
-    TestAdditionWithDifferentTypes(neg_double, pos_64);
-    TestAdditionWithDifferentTypes(neg_double, neg_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_float, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_float, neg_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_float, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_float, small_neg_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, max_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, min_32);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, small_neg_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_64);
+    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_64);
 }
 
 void TestAdditionUnsignedWithPromotion() {
@@ -267,19 +267,19 @@ void TestAdditionUnsignedWithPromotion() {
     uint32_t max_32 = std::numeric_limits<uint32_t>::max();
     uint64_t pos_64 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1;
     uint64_t max_64 = std::numeric_limits<uint64_t>::max();
-    #define F(v1, v2) TestAdditionWithDifferentTypes(v1, v2);
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
     FOR_EACH_PARAMS(pos_32, max_32, pos_64, max_64)
     #undef F
     uint64_t small_pos_64 = 15;
     float pos_float = static_cast<float>(1.234567);
     double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + static_cast<double>(3.03);
 
-    TestAdditionWithDifferentTypes(pos_float, pos_32);
-    TestAdditionWithDifferentTypes(pos_float, small_pos_64);
-    TestAdditionWithDifferentTypes(pos_float, pos_double);
-    TestAdditionWithDifferentTypes(pos_double, pos_32);
-    TestAdditionWithDifferentTypes(pos_double, max_32);
-    TestAdditionWithDifferentTypes(pos_double, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, small_pos_64);
+    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_double);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, max_32);
+    TestAdditionWithDifferentTypesSingleCase(pos_double, small_pos_64);
 }
 
 void TestAdditionWithPromotion() {
