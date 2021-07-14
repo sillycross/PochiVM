@@ -120,26 +120,29 @@ Value<T>::operator Value<U>() const
 template <typename T, typename U,
           typename = std::enable_if_t<AstTypeHelper::primitive_type_supports_binary_op<U, AstTypeHelper::BinaryOps::ADD>::value>,
           typename = std::enable_if_t<AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
-Value<typename std::common_type<T, U>::type> operator+(const Value<T> &lhs, const Value<U> &rhs)
+Value<typename AstTypeHelper::ArithReturnType<T, U>::type> operator+(const Value<T> &lhs, const Value<U> &rhs)
 {
-    using ReturnType = typename std::common_type<T, U>::type;
+    using ReturnType = typename AstTypeHelper::ArithReturnType<T, U>::type;
     static_assert(std::is_signed<T>::value == std::is_signed<U>::value ||
                       std::is_floating_point<ReturnType>::value,
                   "cannot add two values of different signedness");
     if constexpr (!std::is_same<T, ReturnType>::value)
     {
-        static_assert(std::is_same<ReturnType, U>::value, "rhs type is not the same as return type");
+        static_assert(std::is_same<ReturnType, U>::value, "internal bug: rhs type is not the same as return type");
         return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                         StaticCast<ReturnType>(lhs).__pochivm_value_ptr, rhs.__pochivm_value_ptr));
     }
     else if constexpr (!std::is_same<U, ReturnType>::value) 
     {
-        static_assert(std::is_same<ReturnType, T>::value, "lhs type is not the same as return type");
+        static_assert(std::is_same<ReturnType, T>::value, "internal bug: lhs type is not the same as return type");
         return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                         lhs.__pochivm_value_ptr, StaticCast<ReturnType>(rhs).__pochivm_value_ptr));
     }
-    return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
-                                                    lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    else {
+        static_assert(std::is_same<T, U>::value, "internal bug: lhs and rhs don't have the same time");
+        return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                       lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    }
 }
 
 template<typename T, typename = std::enable_if_t<

@@ -18,6 +18,18 @@ namespace PochiVM
 namespace AstTypeHelper
 {
 
+// Pochi implicit conversions for arithmetic differ slightly from C++.
+// C++ promotes all integers less than 32 bits to 32 bit signed ints before
+// adding. Pochi just implicitly converts the "smaller" type to the "larger" type
+// of the expression where the type sizing is defined as 
+// (u)int8_t < (u)int16_t < (u)int32_t < (u)int64_t < float < double.
+// 
+template <typename T, typename U>
+struct ArithReturnType {
+    typedef typename std::conditional<sizeof(T) <= sizeof(int16_t) || sizeof(U) <= sizeof(int16_t),
+                                      typename std::conditional<sizeof(T) <= sizeof(U), U, T>::type,
+                                      typename std::common_type<T, U>::type>::type type;
+};
 // Give each non-pointer type a unique label
 //
 enum AstTypeLabelEnum

@@ -153,7 +153,7 @@ void AdditionWithDifferentTypesHelper(T lhs, U rhs)
     AutoThreadErrorContext arc;
     AutoThreadLLVMCodegenContext alc;
     NewModule("test");
-    using FnPrototype = decltype(lhs + rhs) (*)(T, U);
+    using FnPrototype = typename AstTypeHelper::ArithReturnType<T, U>::type (*)(T, U);
     auto [fn, a, b] = NewFunction<FnPrototype>("MyFn");
     fn.SetBody(
         Return(a + b)
@@ -172,22 +172,22 @@ void AdditionWithDifferentTypesHelper(T lhs, U rhs)
     SimpleJIT jit;
     jit.SetModule(thread_pochiVMContext->m_curModule);
     FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
-    std::vector<decltype(jitFn(lhs, rhs))> answers = {jitFn(lhs, rhs), interpFn(lhs, rhs), fastinterpFn(lhs, rhs)};
+    std::vector<typename AstTypeHelper::ArithReturnType<T, U>::type> answers = {jitFn(lhs, rhs), interpFn(lhs, rhs), fastinterpFn(lhs, rhs)};
 
     // Ignore warnings about implicit float/double conversions/promotions
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"
     #pragma clang diagnostic ignored "-Wdouble-promotion"
 
-    static_assert(sizeof(lhs) >= sizeof(int32_t) && sizeof(rhs) >= sizeof(int32_t), "This test doesn't work with 8/16 bit types due to c++ conversion rules");
-    auto expected = lhs + rhs;
+    // static_assert(sizeof(lhs) >= sizeof(int32_t) && sizeof(rhs) >= sizeof(int32_t), "This test doesn't work with 8/16 bit types due to c++ conversion rules");
+    typename AstTypeHelper::ArithReturnType<T, U>::type expected = lhs + rhs;
 
     #pragma clang diagnostic pop
 
     ReleaseAssert(typeid(answers[0]) == typeid(expected));
     for(auto answer : answers)
-        CompareResults(static_cast<decltype(lhs + rhs)>(lhs),
-                    static_cast<decltype(lhs + rhs)>(rhs), answer, expected);
+        CompareResults(static_cast<typename AstTypeHelper::ArithReturnType<T, U>::type>(lhs),
+                    static_cast<typename AstTypeHelper::ArithReturnType<T, U>::type>(rhs), answer, expected);
 }
 
 template <typename T, typename U>
@@ -196,7 +196,7 @@ void TestAdditionWithDifferentTypesSingleCase(T v1, U v2) {
     AdditionWithDifferentTypesHelper(v2, v1);
 }
 
-#define FOR_EACH_PARAMS(a, b, c, d) \
+#define ENUMERATE_ALL_PARAMS(a, b, c, d) \
 F(a, a) \
 F(a, b) \
 F(a, c) \
@@ -208,13 +208,20 @@ F(c, c) \
 F(c, d) \
 F(d, d)
 
+#define ENUMERATE_ALL_PARAMS_WITH_FIRST(a, b, c, d, e) \
+F(a, b) \
+F(a, c) \
+F(a, d) \
+F(a, e)
+
 void TestAdditionSignedWithPromotion() {
+    // TODO: Add tests for 8/16 bit types
     int32_t pos_32 = 15;
     int32_t neg_32 = -15;
     int64_t pos_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
     int64_t neg_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::min()) - 1;
     #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
-    FOR_EACH_PARAMS(pos_32, neg_32, pos_64, neg_64)
+    ENUMERATE_ALL_PARAMS(pos_32, neg_32, pos_64, neg_64)
     #undef F
     int32_t max_32 = std::numeric_limits<int32_t>::max();
     int32_t min_32 = std::numeric_limits<int32_t>::min();
@@ -264,17 +271,27 @@ void TestAdditionSignedWithPromotion() {
 }
 
 void TestAdditionUnsignedWithPromotion() {
+    uint8_t pos_8 = 15;
+    uint8_t max_8 = std::numeric_limits<uint8_t>::max();
+    uint16_t pos_16 = 15;
+    uint16_t max_16 = std::numeric_limits<uint16_t>::max();
     uint32_t pos_32 = 15;
     uint32_t max_32 = std::numeric_limits<uint32_t>::max();
     uint64_t pos_64 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1;
     uint64_t max_64 = std::numeric_limits<uint64_t>::max();
     #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
-    FOR_EACH_PARAMS(pos_32, max_32, pos_64, max_64)
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_16, max_16)
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_32, max_32)
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_64, max_64)
+    ENUMERATE_ALL_PARAMS(pos_16, max_16, pos_32, max_32)
+    ENUMERATE_ALL_PARAMS(pos_16, max_16, pos_64, max_64)
+    ENUMERATE_ALL_PARAMS(pos_64, max_64, pos_32, max_32)
     #undef F
     uint64_t small_pos_64 = 15;
     float pos_float = static_cast<float>(1.234567);
     double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + static_cast<double>(3.03);
 
+    // TODO: Add tests for 8/16 bit types
     TestAdditionWithDifferentTypesSingleCase(pos_float, pos_32);
     TestAdditionWithDifferentTypesSingleCase(pos_float, small_pos_64);
     TestAdditionWithDifferentTypesSingleCase(pos_float, pos_double);
@@ -432,3 +449,4 @@ TEST(Sanity, ArithAndCompareExpr)
 
     TestAdditionWithPromotion();
 }
+
