@@ -214,59 +214,27 @@ F(a, d) \
 F(a, e)
 
 void TestAdditionSignedWithPromotion() {
-    // TODO: Add tests for 8/16 bit types
-    int32_t pos_32 = 15;
-    int32_t neg_32 = -15;
+    int8_t pos_8 = 15;
+    int8_t neg_8 = -15;
+    int16_t pos_16 = static_cast<int16_t>(std::numeric_limits<int8_t>::max()) + 1;
+    int16_t neg_16 = static_cast<int16_t>(std::numeric_limits<int8_t>::min()) - 1;
+    int32_t pos_32 = static_cast<int32_t>(std::numeric_limits<int16_t>::max()) + 1;
+    int32_t neg_32 = static_cast<int32_t>(std::numeric_limits<int16_t>::min()) - 1;
     int64_t pos_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
     int64_t neg_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::min()) - 1;
-    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
-    ENUMERATE_ALL_PARAMS(pos_32, neg_32, pos_64, neg_64)
-    #undef F
-    int32_t max_32 = std::numeric_limits<int32_t>::max();
-    int32_t min_32 = std::numeric_limits<int32_t>::min();
-
-    TestAdditionWithDifferentTypesSingleCase(max_32, pos_64);
-    TestAdditionWithDifferentTypesSingleCase(max_32, neg_64);
-    TestAdditionWithDifferentTypesSingleCase(min_32, pos_64);
-    TestAdditionWithDifferentTypesSingleCase(min_32, neg_64);
-
     float pos_float = static_cast<float>(1.234567);
     float neg_float = static_cast<float>(-1.234567);
     double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + 3.03;
     double neg_double = static_cast<double>(std::numeric_limits<float>::min()) - 3.03;
-    int64_t small_pos_64 = 15;
-    int64_t small_neg_64 = -15;
 
-    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_float, neg_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_float, small_pos_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_float, small_neg_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, max_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, min_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, small_pos_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, small_neg_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_64);
-
-    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_float);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, neg_float);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_float);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_float);
-
-    TestAdditionWithDifferentTypesSingleCase(neg_float, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_float, neg_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_float, small_pos_64);
-    TestAdditionWithDifferentTypesSingleCase(neg_float, small_neg_64);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, max_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, min_32);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, small_pos_64);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, small_neg_64);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, pos_64);
-    TestAdditionWithDifferentTypesSingleCase(neg_double, neg_64);
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_8, pos_16, pos_32, pos_double, pos_float)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_8, neg_16, neg_32, neg_double, neg_float)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_16, pos_32, pos_64, pos_float, pos_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_16, neg_32, neg_64, neg_float, neg_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_32, pos_32, pos_64, pos_float, pos_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_32, neg_32, neg_64, neg_float, neg_double)
+    #undef F
 }
 
 void TestAdditionUnsignedWithPromotion() {
@@ -290,13 +258,10 @@ void TestAdditionUnsignedWithPromotion() {
     float pos_float = static_cast<float>(1.234567);
     double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + static_cast<double>(3.03);
 
-    // TODO: Add tests for 8/16 bit types
-    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_float, small_pos_64);
-    TestAdditionWithDifferentTypesSingleCase(pos_float, pos_double);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, pos_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, max_32);
-    TestAdditionWithDifferentTypesSingleCase(pos_double, small_pos_64);
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_float, max_8, max_16, max_32, small_pos_64)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_double, max_8, max_16, max_32, max_64)
+    #undef F
 }
 
 void TestAdditionWithPromotion() {
