@@ -179,7 +179,6 @@ void AdditionWithDifferentTypesHelper(T lhs, U rhs)
     #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"
     #pragma clang diagnostic ignored "-Wdouble-promotion"
 
-    // static_assert(sizeof(lhs) >= sizeof(int32_t) && sizeof(rhs) >= sizeof(int32_t), "This test doesn't work with 8/16 bit types due to c++ conversion rules");
     typename AstTypeHelper::ArithReturnType<T, U>::type expected = lhs + rhs;
 
     #pragma clang diagnostic pop
