@@ -122,17 +122,23 @@ template <typename T, typename U,
           typename = std::enable_if_t<AstTypeHelper::primitive_type_supports_binary_op<T, AstTypeHelper::BinaryOps::ADD>::value> >
 Value<typename std::common_type<T, U>::type> operator+(const Value<T> &lhs, const Value<U> &rhs)
 {
-    using return_type = typename std::common_type<T, U>::type;
+    using ReturnType = typename std::common_type<T, U>::type;
     static_assert(std::is_signed<T>::value == std::is_signed<U>::value ||
-                      std::is_floating_point<return_type>::value,
+                      std::is_floating_point<ReturnType>::value,
                   "cannot add two values of different signedness");
-    if(!std::is_same<T, return_type>::value)
-        return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
-                                                        StaticCast<return_type>(lhs).__pochivm_value_ptr, rhs.__pochivm_value_ptr));
-    if(!std::is_same<U, return_type>::value)
-        return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
-                                                        lhs.__pochivm_value_ptr, StaticCast<return_type>(rhs).__pochivm_value_ptr));
-    return Value<return_type>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+    if constexpr (!std::is_same<T, ReturnType>::value)
+    {
+        static_assert(std::is_same<ReturnType, U>::value, "rhs is not the same as return type");
+        return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                        StaticCast<ReturnType>(lhs).__pochivm_value_ptr, rhs.__pochivm_value_ptr));
+    }
+    else if constexpr (!std::is_same<U, ReturnType>::value) 
+    {
+        static_assert(std::is_same<ReturnType, T>::value, "lhs is not the same as return type");
+        return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
+                                                        lhs.__pochivm_value_ptr, StaticCast<ReturnType>(rhs).__pochivm_value_ptr));
+    }
+    return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                     lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
 }
 
