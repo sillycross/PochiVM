@@ -26,9 +26,9 @@ namespace AstTypeHelper
 // 
 template <typename T, typename U>
 struct ArithReturnType {
-    typedef typename std::conditional<sizeof(T) <= sizeof(int16_t) || sizeof(U) <= sizeof(int16_t),
+    using type = typename std::conditional<sizeof(T) <= sizeof(int16_t) || sizeof(U) <= sizeof(int16_t),
                                       typename std::conditional<sizeof(T) <= sizeof(U), U, T>::type,
-                                      typename std::common_type<T, U>::type>::type type;
+                                      typename std::common_type<T, U>::type>::type;
 };
 // Give each non-pointer type a unique label
 //

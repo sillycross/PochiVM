@@ -139,7 +139,7 @@ Value<typename AstTypeHelper::ArithReturnType<T, U>::type> operator+(const Value
                                                         lhs.__pochivm_value_ptr, StaticCast<ReturnType>(rhs).__pochivm_value_ptr));
     }
     else {
-        static_assert(std::is_same<T, U>::value, "internal bug: lhs and rhs don't have the same time");
+        static_assert(std::is_same<T, U>::value && std::is_same<T, ReturnType>::value, "internal bug: type of lhs and rhs aren't the same as return type");
         return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                        lhs.__pochivm_value_ptr, rhs.__pochivm_value_ptr));
     }

@@ -146,6 +146,8 @@ void TestInterestingIntegerParams(std::function<std::function<void(T, T)>()> fnG
     }
 }
 
+// Test pochivm addition of two numbers with potentially different types.
+//
 template<typename T, typename U>
 void AdditionWithDifferentTypesHelper(T lhs, U rhs)
 {
@@ -213,6 +215,11 @@ F(a, c) \
 F(a, d) \
 F(a, e)
 
+// Tests addition of signed integers and floats/doubles where they may not have the same type so
+// integer->bigger integer promotion/integer->float promotion is required. The difference between
+// this and the unsigned integer test is that overflow in signed integer addition is UB so this test
+// can only enumerate the options that don't have overflow
+//
 void TestAdditionSignedWithPromotion() {
     int8_t pos_8 = 15;
     int8_t neg_8 = -15;
@@ -237,12 +244,15 @@ void TestAdditionSignedWithPromotion() {
     #undef F
 }
 
+// Tests addition of unsigned integers and floats/doubles where they may not have the same type so
+// integer->bigger integer promotion/integer->float promotion is required.
+//
 void TestAdditionUnsignedWithPromotion() {
     uint8_t pos_8 = 15;
     uint8_t max_8 = std::numeric_limits<uint8_t>::max();
-    uint16_t pos_16 = 15;
+    uint16_t pos_16 = std::numeric_limits<uint8_t>::max() + 1;
     uint16_t max_16 = std::numeric_limits<uint16_t>::max();
-    uint32_t pos_32 = 15;
+    uint32_t pos_32 = std::numeric_limits<uint16_t>::max() + 1;
     uint32_t max_32 = std::numeric_limits<uint32_t>::max();
     uint64_t pos_64 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1;
     uint64_t max_64 = std::numeric_limits<uint64_t>::max();
@@ -258,9 +268,10 @@ void TestAdditionUnsignedWithPromotion() {
     float pos_float = static_cast<float>(1.234567);
     double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + static_cast<double>(3.03);
 
+    // We must be careful to not cause overflow when adding with floats/doubles since that is UB
     #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
-    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_float, max_8, max_16, max_32, small_pos_64)
-    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_double, max_8, max_16, max_32, max_64)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_float, max_8, max_16, pos_32, small_pos_64)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_double, pos_float, max_16, max_32, pos_64)
     #undef F
 }
 
