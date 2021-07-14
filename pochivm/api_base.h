@@ -128,13 +128,13 @@ Value<typename std::common_type<T, U>::type> operator+(const Value<T> &lhs, cons
                   "cannot add two values of different signedness");
     if constexpr (!std::is_same<T, ReturnType>::value)
     {
-        static_assert(std::is_same<ReturnType, U>::value, "rhs is not the same as return type");
+        static_assert(std::is_same<ReturnType, U>::value, "rhs type is not the same as return type");
         return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                         StaticCast<ReturnType>(lhs).__pochivm_value_ptr, rhs.__pochivm_value_ptr));
     }
     else if constexpr (!std::is_same<U, ReturnType>::value) 
     {
-        static_assert(std::is_same<ReturnType, T>::value, "lhs is not the same as return type");
+        static_assert(std::is_same<ReturnType, T>::value, "lhs type is not the same as return type");
         return Value<ReturnType>(new AstArithmeticExpr(AstArithmeticExprType::ADD,
                                                         lhs.__pochivm_value_ptr, StaticCast<ReturnType>(rhs).__pochivm_value_ptr));
     }
