@@ -146,6 +146,140 @@ void TestInterestingIntegerParams(std::function<std::function<void(T, T)>()> fnG
     }
 }
 
+// Test pochivm addition of two numbers with potentially different types.
+//
+template<typename T, typename U>
+void AdditionWithDifferentTypesHelper(T lhs, U rhs)
+{
+    AutoThreadPochiVMContext apv;
+    AutoThreadErrorContext arc;
+    AutoThreadLLVMCodegenContext alc;
+    NewModule("test");
+    using FnPrototype = typename AstTypeHelper::ArithReturnType<T, U>::type (*)(T, U);
+    auto [fn, a, b] = NewFunction<FnPrototype>("MyFn");
+    fn.SetBody(
+        Return(a + b)
+    );
+    ReleaseAssert(thread_pochiVMContext->m_curModule->Validate());
+    thread_pochiVMContext->m_curModule->PrepareForDebugInterp();
+    thread_pochiVMContext->m_curModule->PrepareForFastInterp();
+    auto interpFn = thread_pochiVMContext->m_curModule->
+                           GetDebugInterpGeneratedFunction<FnPrototype>("MyFn");
+    ReleaseAssert(interpFn);
+    auto fastinterpFn = thread_pochiVMContext->m_curModule->
+                           GetFastInterpGeneratedFunction<FnPrototype>("MyFn");
+    ReleaseAssert(fastinterpFn);                                                 
+    thread_pochiVMContext->m_curModule->EmitIR();
+    thread_pochiVMContext->m_curModule->OptimizeIRIfNotDebugMode(2 /*optLevel*/);
+    SimpleJIT jit;
+    jit.SetModule(thread_pochiVMContext->m_curModule);
+    FnPrototype jitFn = jit.GetFunction<FnPrototype>("MyFn");
+    std::vector<typename AstTypeHelper::ArithReturnType<T, U>::type> answers = {jitFn(lhs, rhs), interpFn(lhs, rhs), fastinterpFn(lhs, rhs)};
+
+    // Ignore warnings about implicit float/double conversions/promotions
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"
+    #pragma clang diagnostic ignored "-Wdouble-promotion"
+
+    typename AstTypeHelper::ArithReturnType<T, U>::type expected = lhs + rhs;
+
+    #pragma clang diagnostic pop
+
+    ReleaseAssert(typeid(answers[0]) == typeid(expected));
+    for(auto answer : answers)
+        CompareResults(static_cast<typename AstTypeHelper::ArithReturnType<T, U>::type>(lhs),
+                    static_cast<typename AstTypeHelper::ArithReturnType<T, U>::type>(rhs), answer, expected);
+}
+
+template <typename T, typename U>
+void TestAdditionWithDifferentTypesSingleCase(T v1, U v2) {
+    AdditionWithDifferentTypesHelper(v1, v2);
+    AdditionWithDifferentTypesHelper(v2, v1);
+}
+
+#define ENUMERATE_ALL_PARAMS(a, b, c, d) \
+F(a, a) \
+F(a, b) \
+F(a, c) \
+F(a, d) \
+F(b, b) \
+F(b, c) \
+F(b, d) \
+F(c, c) \
+F(c, d) \
+F(d, d)
+
+#define ENUMERATE_ALL_PARAMS_WITH_FIRST(a, b, c, d, e) \
+F(a, b) \
+F(a, c) \
+F(a, d) \
+F(a, e)
+
+// Tests addition of signed integers and floats/doubles where they may not have the same type so
+// integer->bigger integer promotion/integer->float promotion is required. The difference between
+// this and the unsigned integer test is that overflow in signed integer addition is UB so this test
+// can only enumerate the options that don't have overflow
+//
+void TestAdditionSignedWithPromotion() {
+    int8_t pos_8 = 15;
+    int8_t neg_8 = -15;
+    int16_t pos_16 = static_cast<int16_t>(std::numeric_limits<int8_t>::max()) + 1;
+    int16_t neg_16 = static_cast<int16_t>(std::numeric_limits<int8_t>::min()) - 1;
+    int32_t pos_32 = static_cast<int32_t>(std::numeric_limits<int16_t>::max()) + 1;
+    int32_t neg_32 = static_cast<int32_t>(std::numeric_limits<int16_t>::min()) - 1;
+    int64_t pos_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
+    int64_t neg_64 = static_cast<int64_t>(std::numeric_limits<int32_t>::min()) - 1;
+    float pos_float = static_cast<float>(1.234567);
+    float neg_float = static_cast<float>(-1.234567);
+    double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + 3.03;
+    double neg_double = static_cast<double>(std::numeric_limits<float>::min()) - 3.03;
+
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_8, pos_16, pos_32, pos_double, pos_float)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_8, neg_16, neg_32, neg_double, neg_float)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_16, pos_32, pos_64, pos_float, pos_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_16, neg_32, neg_64, neg_float, neg_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_32, pos_32, pos_64, pos_float, pos_double)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(neg_32, neg_32, neg_64, neg_float, neg_double)
+    #undef F
+}
+
+// Tests addition of unsigned integers and floats/doubles where they may not have the same type so
+// integer->bigger integer promotion/integer->float promotion is required.
+//
+void TestAdditionUnsignedWithPromotion() {
+    uint8_t pos_8 = 15;
+    uint8_t max_8 = std::numeric_limits<uint8_t>::max();
+    uint16_t pos_16 = std::numeric_limits<uint8_t>::max() + 1;
+    uint16_t max_16 = std::numeric_limits<uint16_t>::max();
+    uint32_t pos_32 = std::numeric_limits<uint16_t>::max() + 1;
+    uint32_t max_32 = std::numeric_limits<uint32_t>::max();
+    uint64_t pos_64 = static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1;
+    uint64_t max_64 = std::numeric_limits<uint64_t>::max();
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_16, max_16)
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_32, max_32)
+    ENUMERATE_ALL_PARAMS(pos_8, max_8, pos_64, max_64)
+    ENUMERATE_ALL_PARAMS(pos_16, max_16, pos_32, max_32)
+    ENUMERATE_ALL_PARAMS(pos_16, max_16, pos_64, max_64)
+    ENUMERATE_ALL_PARAMS(pos_64, max_64, pos_32, max_32)
+    #undef F
+    uint64_t small_pos_64 = 15;
+    float pos_float = static_cast<float>(1.234567);
+    double pos_double = static_cast<double>(std::numeric_limits<float>::max()) + static_cast<double>(3.03);
+
+    // We must be careful to not cause overflow when adding with floats/doubles since that is UB
+    #define F(v1, v2) TestAdditionWithDifferentTypesSingleCase(v1, v2);
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_float, max_8, max_16, pos_32, small_pos_64)
+    ENUMERATE_ALL_PARAMS_WITH_FIRST(pos_double, pos_float, max_16, max_32, pos_64)
+    #undef F
+}
+
+void TestAdditionWithPromotion() {
+    TestAdditionSignedWithPromotion();
+    TestAdditionUnsignedWithPromotion();
+}
+
 template<typename T>
 void TestInterestingFloatParams(std::function<std::function<void(T, T)>()> fnGen, bool isDivOp)
 {
@@ -287,4 +421,7 @@ TEST(Sanity, ArithAndCompareExpr)
     //
     TestBoolParams(GetEqFn<bool>);
     TestBoolParams(GetNEqFn<bool>);
+
+    TestAdditionWithPromotion();
 }
+
