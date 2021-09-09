@@ -1,14 +1,25 @@
 ### PochiVM -- lightweight framework for easy and efficient code generation
 ------
-PochiVM is a JIT (just-in-time) code-generation framework backed by LLVM C++ API. 
-
+PochiVM is a JIT (just-in-time) code-generation framework backed by LLVM and a novel baseline compiler. 
+<!--
 JIT code-generation, the technique of compiling user logic (e.g. a SQL query, or a Javascript snippet) into native binary code on-the-fly, offers drastically improved performance compared with traditional interpretative approach, and is widely used in applications from SQL servers to web browsers. However, the steep learning curve of LLVM, and the large gap between "*what the low-level LLVM APIs provide*" and "*what a high-level application needs*" might have prevented many developers from trying it. 
-
+-->
 The goal of PochiVM is to enable any ordinary C++ user with no prior knowledge of LLVM or code-generation to enjoy the benefits of code-generation technology. It provides:
  - **Intuitive C-like language interface** to describe the logic of the generated code. Most of the core C language constructs, and certain C++ features including `constructor`/`destructor`/`scoped variable`/`exception` are supported. You write generated code just like you write the same logic in C/C++.
  - **Seamless and efficient interaction** with your C++ codebase. The generated program can access any C++ classes and functions using an intuitive syntax, even if they are templated, overloaded, virtual, or have non-primitive parameter/return types. Moreover, calls to C++ functions **can be inlined** into generated code, allowing the mix of C++ infrastructure and generated code with minimal overhead. 
+ - **Novel baseline compiler**. LLVM compilation produces good code, but incurs a high startup delay. We implemented a baseline compiler based on the novel copy-and-patch technique, that compiles the program in a negligble time similar to interpreters, but generates better code than LLVM -O0. This is important for complex applications (e.g., databases) that generates large programs at runtime.  
  - You write everything in completely valid C++ code. No fragile external text-preprocessor magic or C macro magic involved. Even IDE code hinting works (provided a decent IDE like QtCreator).
  - **User-friendly error handling**. Almost all static type errors will be caught by `static_assert`. Like C, all programming errors are caught when you compile the generated-code, never at execution phase.
+
+### Documentation / Getting Started 
+
+For full documentation of the APIs / getting started guide, check [here](https://sillycross.github.io/PochiVM).
+
+### License
+
+The ultimate goal of this project is to make the world a better place. While a restrictive license may reduce certain misuses that contradict our values, we believe software license is not the best solution to such problems. 
+
+Therefore, PochiVM is licensed under the same permissive license as LLVM ("[Apache License v2.0 with LLVM Exceptions](https://releases.llvm.org/10.0.0/LICENSE.TXT)"). We, however, humbly request you to consider refrain from using the software for projects that cause harm to the world. For more information and examples, see our [open-source software for a better world statement](oss-for-a-better-world.md).
 
 ### Toy Example
 In this example, We will codegen a function that takes a `std::vector<int>*` as parameter, and returns the number of distinct positive values in the vector. The generated function will construct a `std::set<int>` on the stack, then iterate through the vector and insert the positive values into the set, and finally return the `size()` of the set. We will demonstrate the basic language constructs, and the seamless interaction between C++ codebase (in this case, the C++ STL, a heavily templated libary) and the generated code. 
@@ -69,14 +80,6 @@ printf("The vector contains %d distinct positive values.", generatedFn(&vec));  
 Thanks to the inlining feature, the generated code will be just as efficient as writing the same logic in C++: the calls to the cheap C++ methods (constructors, destructors, `begin()`, `end()`, `std::vector<int>::iterator`'s overloaded `*`, `!=` and `++` operators, etc) will be inlined, and after they are inlined, LLVM optimizer will be able to figure out that `v->end()` is a loop invariant and will only evaluate it once. In the end, you will get the same optimized binary code as you can get by writing the same logic in C++.
 
 Of course, the above example is not really useful -- all logic of the generated function is already known at compile time, so you could have implemented it in C++ directly. However, if the logic is only known at runtime (for example, a SQL engine executing a query from user, or a web browser executing a Javascript snippet on a website), being able to JIT-compile the user logic into native binary code would often be much faster than an interpretative approach.
-
-### Documentation / Getting Started 
-
-For full documentation of the APIs / getting started guide, check [here](https://sillycross.github.io/PochiVM).
-
-### License
-
-PochiVM uses the same license as LLVM ("Apache License v2.0 with LLVM Exceptions"), check [here](https://releases.llvm.org/10.0.0/LICENSE.TXT).
 
 ### Q & A
 
