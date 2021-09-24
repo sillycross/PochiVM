@@ -114,6 +114,23 @@ public:
         return m_as_uint64_t;
     }
 
+    // Get value of literal as type T. Literal must be of type T
+    //
+    template <typename T, typename = std::enable_if_t<AstTypeHelper::is_primitive_type<T>::value>>
+    T GetAs()
+    {
+        static_assert(AstTypeHelper::is_primitive_type<T>::value, "Attempted to get literal as non-primitive type");
+        TestAssert(GetTypeId().IsType<T>() && "Can only call GetAs with original type of literal");
+    #define F(type)                             \
+        if constexpr(std::is_same<T, type>::value)  \
+        {                                           \
+            return m_as_##type;                     \
+        }
+        FOR_EACH_PRIMITIVE_TYPE
+    #undef F
+        TestAssert(false && "internal bug: unsupported primitive type");
+    }
+
 private:
     // Stores the literal value with a union of all possible primitive types
     //
